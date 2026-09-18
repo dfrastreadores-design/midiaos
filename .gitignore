@@ -33,3 +33,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Hostinger Build & Package
+hostinger_deploy.zip
+hostinger/.output/
