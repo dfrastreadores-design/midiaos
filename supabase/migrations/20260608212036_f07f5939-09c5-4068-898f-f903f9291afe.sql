@@ -1,0 +1,1 @@
+ALTER TABLE public.pi_assinaturas_cliente ADD COLUMN IF NOT EXISTS assinatura_url TEXT;

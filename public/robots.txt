@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Áreas privadas do sistema (não indexar)
+Disallow: /login
+Disallow: /minha-conta
+Disallow: /configuracoes
+Disallow: /owner
+Disallow: /usuarios
+Disallow: /api/
+Disallow: /assinar/
+Disallow: /lovable/
+
+Sitemap: https://midiaos.online/sitemap.xml

@@ -1,0 +1,2 @@
+ALTER TABLE public.pis ADD COLUMN IF NOT EXISTS valor_opec numeric;
+COMMENT ON COLUMN public.pis.valor_opec IS 'Valor interno para OPEC/uso interno em PIs de permuta. Não aparece no PI enviado ao cliente.';

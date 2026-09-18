@@ -1,0 +1,1658 @@
+// AUTO-GENERATED from Planilha.xlsx — tabela de preços TV
+import type { ProdutoTipo } from './mock-data';
+
+export type PriceRow = {
+  tipo: ProdutoTipo;
+  programa: string;
+  formato: string;
+  dia: string;
+  horario: string;
+  genero: string;
+  valorUnit: number;
+};
+
+export const priceTable: PriceRow[] = [
+  {
+    "tipo": "VT",
+    "programa": "VT Rotativo (todos os horários)",
+    "formato": "Rotativo 15s",
+    "dia": "SEG/DOM",
+    "horario": "00:01 ás 23:59",
+    "genero": "Rotativo",
+    "valorUnit": 1818
+  },
+  {
+    "tipo": "VT",
+    "programa": "VT Rotativo (todos os horários)",
+    "formato": "Rotativo 30s",
+    "dia": "SEG/DOM",
+    "horario": "00:01 ás 23:59",
+    "genero": "Rotativo",
+    "valorUnit": 2425
+  },
+  {
+    "tipo": "VT",
+    "programa": "VT Rotativo (todos os horários)",
+    "formato": "Rotativo 45s",
+    "dia": "SEG/DOM",
+    "horario": "00:01 ás 23:59",
+    "genero": "Rotativo",
+    "valorUnit": 3637
+  },
+  {
+    "tipo": "VT",
+    "programa": "VT Rotativo (todos os horários)",
+    "formato": "Rotativo 60s",
+    "dia": "SEG/DOM",
+    "horario": "00:01 ás 23:59",
+    "genero": "Rotativo",
+    "valorUnit": 4850
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "DF ALERTA",
+    "formato": "Gravado 60s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 13:25",
+    "genero": "Jornalismo",
+    "valorUnit": 14516
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "Gravado 60s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 16864
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "NA PISTA",
+    "formato": "Gravado 60s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 16864
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "Gravado 60s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 16864
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "Gravado 60s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 14516
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "DF ALERTA",
+    "formato": "Break 60s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 13:25",
+    "genero": "Jornalismo",
+    "valorUnit": 10887
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "Break 60s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 12648
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "NA PISTA",
+    "formato": "Break 60s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 12648
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "Break 60s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 12648
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "Break 60s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 10887
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "DF ALERTA",
+    "formato": "Link ao vivo 120s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 13:35",
+    "genero": "Jornalismo",
+    "valorUnit": 21774
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "Link ao vivo 120s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 25296
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "NA PISTA",
+    "formato": "Link ao vivo 120s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 25296
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "Link ao vivo 120s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 25296
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "Link ao vivo 120s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 21774
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "DF ALERTA",
+    "formato": "Link ao vivo 180s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 13:35",
+    "genero": "Jornalismo",
+    "valorUnit": 27218
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "Link ao vivo 180s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 31620
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "NA PISTA",
+    "formato": "Link ao vivo 180s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 31620
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "Link ao vivo 180s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 31620
+  },
+  {
+    "tipo": "Merchan",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "Link ao vivo 180s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 31620
+  },
+  {
+    "tipo": "Insert",
+    "programa": "DF ALERTA",
+    "formato": "10s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 12:35",
+    "genero": "Jornalismo",
+    "valorUnit": 3629
+  },
+  {
+    "tipo": "Insert",
+    "programa": "JORNAL LOCAL 1",
+    "formato": "10s",
+    "dia": "SEG/SEX",
+    "horario": "12:35 às 13:25",
+    "genero": "Jornalismo",
+    "valorUnit": 4216
+  },
+  {
+    "tipo": "Insert",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "10s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 4216
+  },
+  {
+    "tipo": "Insert",
+    "programa": "CB PODER",
+    "formato": "10s",
+    "dia": "SEG A QUA",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 4100
+  },
+  {
+    "tipo": "Insert",
+    "programa": "CB SAÚDE",
+    "formato": "10s",
+    "dia": "QUI",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 4100
+  },
+  {
+    "tipo": "Insert",
+    "programa": "NA PISTA",
+    "formato": "10s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 4216
+  },
+  {
+    "tipo": "Insert",
+    "programa": "CB AGRO",
+    "formato": "10s",
+    "dia": "SEX",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 4100
+  },
+  {
+    "tipo": "Insert",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "10s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 4216
+  },
+  {
+    "tipo": "Insert",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "10s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 3629
+  },
+  {
+    "tipo": "Patrocínio",
+    "programa": "DF ALERTA Abertura e Fechamento Vinheta 5 Seg Insert 10 seg",
+    "formato": "Insert 10s + Vinheta 5s",
+    "dia": "SEG/SEX",
+    "horario": "11:50 às 13:25",
+    "genero": "Jornalismo",
+    "valorUnit": 6350
+  },
+  {
+    "tipo": "Patrocínio",
+    "programa": "JORNAL LOCAL NOITE Abertura e Fechamento Vinheta 5 Seg Insert 10 seg",
+    "formato": "Insert 10s + Vinheta 5s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 7377
+  },
+  {
+    "tipo": "Patrocínio",
+    "programa": "CB PODER Abertura e Fechamento Vinheta 5 Seg Insert 10 seg",
+    "formato": "Insert 10s + Vinheta 5s",
+    "dia": "SEG A QUA",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 7175
+  },
+  {
+    "tipo": "Patrocínio",
+    "programa": "CB SAÚDE Abertura e Fechamento Vinheta 5 Seg Insert 10 Seg",
+    "formato": "Insert 10s + Vinheta 5s",
+    "dia": "QUI",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 7175
+  },
+  {
+    "tipo": "Patrocínio",
+    "programa": "NA PISTA Abertura e Fechamento Vinheta 5 Seg Insert 10 seg",
+    "formato": "Insert 10s + Vinheta 5s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 7377
+  },
+  {
+    "tipo": "Patrocínio",
+    "programa": "CB AGRO Abertura e Fechamento Vinheta 5 Seg Insert 10 seg",
+    "formato": "Insert 10s + Vinheta 5s",
+    "dia": "SEX",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 7175
+  },
+  {
+    "tipo": "Patrocínio",
+    "programa": "ENTRE AMIGOS E VIOLA Abertura e Fechamento Vinheta 5 Seg Insert 10 seg",
+    "formato": "Insert 10s + Vinheta 5s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 7377
+  },
+  {
+    "tipo": "Patrocínio",
+    "programa": "INSPIRA NEGÓCIOS Abertura e Fechamento Vinheta 5 Seg Insert 10 seg",
+    "formato": "Insert 10s + Vinheta 5s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 6350
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 15min",
+    "dia": "SEG/SEX",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 1500
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 15min",
+    "dia": "SAB",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 3000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 15min",
+    "dia": "DOM",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 3000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 30min",
+    "dia": "SEG/SEX",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 3000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 30min",
+    "dia": "SAB",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 5000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 30min",
+    "dia": "DOM",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 5000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 45min",
+    "dia": "SEG/SEX",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 5000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 45min",
+    "dia": "SAB",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 7000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 45min",
+    "dia": "DOM",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 7000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 60min",
+    "dia": "SEG/SEX",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 1500
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 60min",
+    "dia": "SAB",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 3000
+  },
+  {
+    "tipo": "Projeto Especial",
+    "programa": "A DEFINIR",
+    "formato": "Programa 60min",
+    "dia": "DOM",
+    "horario": "A DEFINIR",
+    "genero": "GÊNERO",
+    "valorUnit": 3000
+  },
+  {
+    "tipo": "VT",
+    "programa": "FICA COM A GENTE",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "10:45 às 11:00",
+    "genero": "Culinária",
+    "valorUnit": 3772
+  },
+  {
+    "tipo": "VT",
+    "programa": "DF ALERTA",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 12:35",
+    "genero": "Jornalismo",
+    "valorUnit": 5444
+  },
+  {
+    "tipo": "VT",
+    "programa": "JORNAL LOCAL",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "12:35 às 13:25",
+    "genero": "Jornalismo",
+    "valorUnit": 6324
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB PODER",
+    "formato": "15s",
+    "dia": "SEG/QUA",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 6150
+  },
+  {
+    "tipo": "VT",
+    "programa": "A TARDE É SUA",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "15:00 às 17:00",
+    "genero": "Celebridade s",
+    "valorUnit": 4424
+  },
+  {
+    "tipo": "VT",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 6324
+  },
+  {
+    "tipo": "VT",
+    "programa": "BRASIL DO POVO",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "18:50 às 19:55",
+    "genero": "Jornalismo",
+    "valorUnit": 4813
+  },
+  {
+    "tipo": "VT",
+    "programa": "REDE TV! NEWS",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "19:55 às 20:30",
+    "genero": "Jornalismo",
+    "valorUnit": 8519
+  },
+  {
+    "tipo": "VT",
+    "programa": "TV FAMA",
+    "formato": "15s",
+    "dia": "SEG/TER/QUI/SEX",
+    "horario": "21:30 às 22:45",
+    "genero": "Celebridade s",
+    "valorUnit": 8294
+  },
+  {
+    "tipo": "VT",
+    "programa": "LEITURA DINÂMICA",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "00:30 às 01:30",
+    "genero": "Jornalismo",
+    "valorUnit": 3775
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB REPRISE",
+    "formato": "15s",
+    "dia": "SEG/SEX",
+    "horario": "03:00 às 03:30",
+    "genero": "REPRISE",
+    "valorUnit": 6150
+  },
+  {
+    "tipo": "VT",
+    "programa": "SENSACIONAL",
+    "formato": "15s",
+    "dia": "SEG",
+    "horario": "22:45 às 00:00",
+    "genero": "Entrevista",
+    "valorUnit": 6881
+  },
+  {
+    "tipo": "VT",
+    "programa": "INSPIRA NEGÓCIOS (reprise)",
+    "formato": "15s",
+    "dia": "SEG",
+    "horario": "14:00 às 14:30",
+    "genero": "Entrevista",
+    "valorUnit": 5444
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "15s",
+    "dia": "TER",
+    "horario": "22:45 às 00:30",
+    "genero": "Reality",
+    "valorUnit": 6499
+  },
+  {
+    "tipo": "VT",
+    "programa": "SUPERPOP",
+    "formato": "15s",
+    "dia": "QUA",
+    "horario": "22:45 às 00:00",
+    "genero": "Auditório",
+    "valorUnit": 7382
+  },
+  {
+    "tipo": "VT",
+    "programa": "NA PISTA",
+    "formato": "15s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 6324
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB SAÚDE",
+    "formato": "15s",
+    "dia": "QUI",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 6150
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "15s",
+    "dia": "QUI",
+    "horario": "22:45 às 23:45",
+    "genero": "Reality",
+    "valorUnit": 6499
+  },
+  {
+    "tipo": "VT",
+    "programa": "É NOTÍCIA",
+    "formato": "15s",
+    "dia": "QUI",
+    "horario": "23:45 às 00:45",
+    "genero": "Entrevista",
+    "valorUnit": 6359
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB AGRO",
+    "formato": "15s",
+    "dia": "SEX",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 6150
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "15s",
+    "dia": "SEX",
+    "horario": "22:45 às 00:30",
+    "genero": "Reality",
+    "valorUnit": 6499
+  },
+  {
+    "tipo": "VT",
+    "programa": "BRASIL DO POVO",
+    "formato": "15s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Jornalismo",
+    "valorUnit": 4813
+  },
+  {
+    "tipo": "VT",
+    "programa": "REDE TV! NEWS",
+    "formato": "15s",
+    "dia": "SAB",
+    "horario": "19:55 às 20:30",
+    "genero": "Jornalismo",
+    "valorUnit": 8519
+  },
+  {
+    "tipo": "VT",
+    "programa": "RAPIDINHAS DA FAMA",
+    "formato": "15s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Celebridades",
+    "valorUnit": 6150
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "15s",
+    "dia": "SAB",
+    "horario": "19:55 às 20:30",
+    "genero": "Reality",
+    "valorUnit": 6499
+  },
+  {
+    "tipo": "VT",
+    "programa": "MEGA SONHO",
+    "formato": "15s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Game Show",
+    "valorUnit": 10928
+  },
+  {
+    "tipo": "VT",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "15s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 6324
+  },
+  {
+    "tipo": "VT",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "15s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 5444
+  },
+  {
+    "tipo": "VT",
+    "programa": "NA PISTA REPRISE",
+    "formato": "15s",
+    "dia": "DOM",
+    "horario": "11:30 às 12:00",
+    "genero": "Automotivo",
+    "valorUnit": 6324
+  },
+  {
+    "tipo": "VT",
+    "programa": "PARA AQUI!",
+    "formato": "15s",
+    "dia": "DOM",
+    "horario": "18:45 às 23:00",
+    "genero": "Auditório",
+    "valorUnit": 6873
+  },
+  {
+    "tipo": "VT",
+    "programa": "RODADA DE NEGÓCIOS",
+    "formato": "15s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Entrevista",
+    "valorUnit": 5684
+  },
+  {
+    "tipo": "VT",
+    "programa": "MEGA SONHO REPRISE",
+    "formato": "15s",
+    "dia": "DOM",
+    "horario": "00:30 às 01:40",
+    "genero": "Game Show",
+    "valorUnit": 10928
+  },
+  {
+    "tipo": "VT",
+    "programa": "FICA COM A GENTE",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "10:45 às 11:00",
+    "genero": "Culinária",
+    "valorUnit": 6518
+  },
+  {
+    "tipo": "VT",
+    "programa": "DF ALERTA",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 12:35",
+    "genero": "Jornalismo",
+    "valorUnit": 7258
+  },
+  {
+    "tipo": "VT",
+    "programa": "JORNAL LOCAL",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "12:35 às 13:25",
+    "genero": "Jornalismo",
+    "valorUnit": 8432
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB PODER",
+    "formato": "30s",
+    "dia": "SEG/QUA",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 8200
+  },
+  {
+    "tipo": "VT",
+    "programa": "A TARDE É SUA",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "15:00 às 17:00",
+    "genero": "Celebridade s",
+    "valorUnit": 5898
+  },
+  {
+    "tipo": "VT",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 8432
+  },
+  {
+    "tipo": "VT",
+    "programa": "BRASIL DO POVO",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "18:50 às 19:55",
+    "genero": "Jornalismo",
+    "valorUnit": 6418
+  },
+  {
+    "tipo": "VT",
+    "programa": "REDE TV! NEWS",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "19:55 às 20:30",
+    "genero": "Jornalismo",
+    "valorUnit": 11359
+  },
+  {
+    "tipo": "VT",
+    "programa": "TV FAMA",
+    "formato": "30s",
+    "dia": "SEG/TER/QU I/SEX",
+    "horario": "21:30 às 22:45",
+    "genero": "Celebridade s",
+    "valorUnit": 11059
+  },
+  {
+    "tipo": "VT",
+    "programa": "LEITURA DINÂMICA",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "00:30 às 01:30",
+    "genero": "Jornalismo",
+    "valorUnit": 5033
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB REPRISE",
+    "formato": "30s",
+    "dia": "SEG/SEX",
+    "horario": "03:00 às 03:30",
+    "genero": "REPRISE",
+    "valorUnit": 8200
+  },
+  {
+    "tipo": "VT",
+    "programa": "SENSACIONAL",
+    "formato": "30s",
+    "dia": "SEG",
+    "horario": "22:45 às 00:00",
+    "genero": "Entrevista",
+    "valorUnit": 9175
+  },
+  {
+    "tipo": "VT",
+    "programa": "INSPIRA NEGÓCIOS (reprise)",
+    "formato": "30s",
+    "dia": "SEG",
+    "horario": "14:00 às 14:30",
+    "genero": "Entrevista",
+    "valorUnit": 7258
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "30s",
+    "dia": "TER",
+    "horario": "22:45 às 00:30",
+    "genero": "Reality",
+    "valorUnit": 8665
+  },
+  {
+    "tipo": "VT",
+    "programa": "SUPERPOP",
+    "formato": "30s",
+    "dia": "QUA",
+    "horario": "22:45 às 00:00",
+    "genero": "Auditório",
+    "valorUnit": 9842
+  },
+  {
+    "tipo": "VT",
+    "programa": "NA PISTA",
+    "formato": "30s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 8432
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB SAÚDE",
+    "formato": "30s",
+    "dia": "QUI",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 8200
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "30s",
+    "dia": "QUI",
+    "horario": "22:45 às 23:45",
+    "genero": "Reality",
+    "valorUnit": 8665
+  },
+  {
+    "tipo": "VT",
+    "programa": "É NOTÍCIA",
+    "formato": "30s",
+    "dia": "QUI",
+    "horario": "23:45 às 00:45",
+    "genero": "Entrevista",
+    "valorUnit": 8479
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB AGRO",
+    "formato": "30s",
+    "dia": "SEX",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 8200
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "30s",
+    "dia": "SEX",
+    "horario": "22:45 às 00:30",
+    "genero": "Reality",
+    "valorUnit": 8665
+  },
+  {
+    "tipo": "VT",
+    "programa": "BRASIL DO POVO",
+    "formato": "30s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Jornalismo",
+    "valorUnit": 6418
+  },
+  {
+    "tipo": "VT",
+    "programa": "REDE TV! NEWS",
+    "formato": "30s",
+    "dia": "SAB",
+    "horario": "19:55 às 20:30",
+    "genero": "Jornalismo",
+    "valorUnit": 11359
+  },
+  {
+    "tipo": "VT",
+    "programa": "RAPIDINHAS DA FAMA",
+    "formato": "30s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Celebridades",
+    "valorUnit": 8200
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "30s",
+    "dia": "SAB",
+    "horario": "19:55 às 20:30",
+    "genero": "Reality",
+    "valorUnit": 8665
+  },
+  {
+    "tipo": "VT",
+    "programa": "MEGA SONHO",
+    "formato": "30s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Game Show",
+    "valorUnit": 14570
+  },
+  {
+    "tipo": "VT",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "30s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 8432
+  },
+  {
+    "tipo": "VT",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "30s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 7258
+  },
+  {
+    "tipo": "VT",
+    "programa": "NA PISTA REPRISE",
+    "formato": "30s",
+    "dia": "DOM",
+    "horario": "11:30 às 12:00",
+    "genero": "Automotivo",
+    "valorUnit": 8432
+  },
+  {
+    "tipo": "VT",
+    "programa": "PARA AQUI!",
+    "formato": "30s",
+    "dia": "DOM",
+    "horario": "18:45 às 23:00",
+    "genero": "Auditório",
+    "valorUnit": 9164
+  },
+  {
+    "tipo": "VT",
+    "programa": "RODADA DE NEGÓCIOS",
+    "formato": "30s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Entrevista",
+    "valorUnit": 7579
+  },
+  {
+    "tipo": "VT",
+    "programa": "MEGA SONHO REPRISE",
+    "formato": "30s",
+    "dia": "DOM",
+    "horario": "00:30 às 01:40",
+    "genero": "Game Show",
+    "valorUnit": 14570
+  },
+  {
+    "tipo": "VT",
+    "programa": "FICA COM A GENTE",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "10:45 às 11:00",
+    "genero": "Culinária",
+    "valorUnit": 9777
+  },
+  {
+    "tipo": "VT",
+    "programa": "DF ALERTA",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 12:35",
+    "genero": "Jornalismo",
+    "valorUnit": 10887
+  },
+  {
+    "tipo": "VT",
+    "programa": "JORNAL LOCAL",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "12:35 às 13:25",
+    "genero": "Jornalismo",
+    "valorUnit": 12648
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB PODER",
+    "formato": "45s",
+    "dia": "SEG/QUA",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 12300
+  },
+  {
+    "tipo": "VT",
+    "programa": "A TARDE É SUA",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "15:00 às 17:00",
+    "genero": "Celebridade s",
+    "valorUnit": 8847
+  },
+  {
+    "tipo": "VT",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 12648
+  },
+  {
+    "tipo": "VT",
+    "programa": "BRASIL DO POVO",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "18:50 às 19:55",
+    "genero": "Jornalismo",
+    "valorUnit": 9627
+  },
+  {
+    "tipo": "VT",
+    "programa": "REDE TV! NEWS",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "19:55 às 20:30",
+    "genero": "Jornalismo",
+    "valorUnit": 17039
+  },
+  {
+    "tipo": "VT",
+    "programa": "TV FAMA",
+    "formato": "45s",
+    "dia": "SEG/TER/QU I/SEX",
+    "horario": "21:30 às 22:45",
+    "genero": "Celebridade s",
+    "valorUnit": 16589
+  },
+  {
+    "tipo": "VT",
+    "programa": "LEITURA DINÂMICA",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "00:30 às 01:30",
+    "genero": "Jornalismo",
+    "valorUnit": 7550
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB REPRISE",
+    "formato": "45s",
+    "dia": "SEG/SEX",
+    "horario": "03:00 às 03:30",
+    "genero": "REPRISE",
+    "valorUnit": 12300
+  },
+  {
+    "tipo": "VT",
+    "programa": "SENSACIONAL",
+    "formato": "45s",
+    "dia": "SEG",
+    "horario": "22:45 às 00:00",
+    "genero": "Entrevista",
+    "valorUnit": 13763
+  },
+  {
+    "tipo": "VT",
+    "programa": "INSPIRA NEGÓCIOS (reprise)",
+    "formato": "45s",
+    "dia": "SEG",
+    "horario": "14:00 às 14:30",
+    "genero": "Entrevista",
+    "valorUnit": 10887
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "45s",
+    "dia": "TER",
+    "horario": "22:45 às 00:30",
+    "genero": "Reality",
+    "valorUnit": 12998
+  },
+  {
+    "tipo": "VT",
+    "programa": "SUPERPOP",
+    "formato": "45s",
+    "dia": "QUA",
+    "horario": "22:45 às 00:00",
+    "genero": "Auditório",
+    "valorUnit": 14763
+  },
+  {
+    "tipo": "VT",
+    "programa": "NA PISTA",
+    "formato": "45s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 12648
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB SAÚDE",
+    "formato": "45s",
+    "dia": "QUI",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 12300
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "45s",
+    "dia": "QUI",
+    "horario": "22:45 às 23:45",
+    "genero": "Reality",
+    "valorUnit": 12998
+  },
+  {
+    "tipo": "VT",
+    "programa": "É NOTÍCIA",
+    "formato": "45s",
+    "dia": "QUI",
+    "horario": "23:45 às 00:45",
+    "genero": "Entrevista",
+    "valorUnit": 12719
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB AGRO",
+    "formato": "45s",
+    "dia": "SEX",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 12300
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "45s",
+    "dia": "SEX",
+    "horario": "22:45 às 00:30",
+    "genero": "Reality",
+    "valorUnit": 12998
+  },
+  {
+    "tipo": "VT",
+    "programa": "BRASIL DO POVO",
+    "formato": "45s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Jornalismo",
+    "valorUnit": 9627
+  },
+  {
+    "tipo": "VT",
+    "programa": "REDE TV! NEWS",
+    "formato": "45s",
+    "dia": "SAB",
+    "horario": "19:55 às 20:30",
+    "genero": "Jornalismo",
+    "valorUnit": 17039
+  },
+  {
+    "tipo": "VT",
+    "programa": "RAPIDINHAS DA FAMA",
+    "formato": "45s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Celebridades",
+    "valorUnit": 12300
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "45s",
+    "dia": "SAB",
+    "horario": "19:55 às 20:30",
+    "genero": "Reality",
+    "valorUnit": 12998
+  },
+  {
+    "tipo": "VT",
+    "programa": "MEGA SONHO",
+    "formato": "45s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Game Show",
+    "valorUnit": 21855
+  },
+  {
+    "tipo": "VT",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "45s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 12648
+  },
+  {
+    "tipo": "VT",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "45s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 10887
+  },
+  {
+    "tipo": "VT",
+    "programa": "NA PISTA REPRISE",
+    "formato": "45s",
+    "dia": "DOM",
+    "horario": "11:30 às 12:00",
+    "genero": "Automotivo",
+    "valorUnit": 12648
+  },
+  {
+    "tipo": "VT",
+    "programa": "PARA AQUI!",
+    "formato": "45s",
+    "dia": "DOM",
+    "horario": "18:45 às 23:00",
+    "genero": "Auditório",
+    "valorUnit": 13746
+  },
+  {
+    "tipo": "VT",
+    "programa": "RODADA DE NEGÓCIOS",
+    "formato": "45s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Entrevista",
+    "valorUnit": 11368
+  },
+  {
+    "tipo": "VT",
+    "programa": "MEGA SONHO REPRISE",
+    "formato": "45s",
+    "dia": "DOM",
+    "horario": "00:30 às 01:40",
+    "genero": "Game Show",
+    "valorUnit": 21855
+  },
+  {
+    "tipo": "VT",
+    "programa": "FICA COM A GENTE",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "10:45 às 11:00",
+    "genero": "Culinária",
+    "valorUnit": 13036
+  },
+  {
+    "tipo": "VT",
+    "programa": "DF ALERTA",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "11:00 às 12:35",
+    "genero": "Jornalismo",
+    "valorUnit": 14516
+  },
+  {
+    "tipo": "VT",
+    "programa": "JORNAL LOCAL",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "12:35 às 13:25",
+    "genero": "Jornalismo",
+    "valorUnit": 16864
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB PODER",
+    "formato": "60s",
+    "dia": "SEG/QUA",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 16400
+  },
+  {
+    "tipo": "VT",
+    "programa": "A TARDE É SUA",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "15:00 às 17:00",
+    "genero": "Celebridade s",
+    "valorUnit": 11796
+  },
+  {
+    "tipo": "VT",
+    "programa": "JORNAL LOCAL NOITE",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "18:00 às 18:50",
+    "genero": "Jornalismo",
+    "valorUnit": 16864
+  },
+  {
+    "tipo": "VT",
+    "programa": "BRASIL DO POVO",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "18:50 às 19:55",
+    "genero": "Jornalismo",
+    "valorUnit": 12836
+  },
+  {
+    "tipo": "VT",
+    "programa": "REDE TV! NEWS",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "19:55 às 20:30",
+    "genero": "Jornalismo",
+    "valorUnit": 22718
+  },
+  {
+    "tipo": "VT",
+    "programa": "TV FAMA",
+    "formato": "60s",
+    "dia": "SEG/TER/QU I/SEX",
+    "horario": "21:30 às 22:45",
+    "genero": "Celebridade s",
+    "valorUnit": 22118
+  },
+  {
+    "tipo": "VT",
+    "programa": "LEITURA DINÂMICA",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "00:30 às 01:30",
+    "genero": "Jornalismo",
+    "valorUnit": 10066
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB REPRISE",
+    "formato": "60s",
+    "dia": "SEG/SEX",
+    "horario": "03:00 às 03:30",
+    "genero": "REPRISE",
+    "valorUnit": 16400
+  },
+  {
+    "tipo": "VT",
+    "programa": "SENSACIONAL",
+    "formato": "60s",
+    "dia": "SEG",
+    "horario": "22:45 às 00:00",
+    "genero": "Entrevista",
+    "valorUnit": 18350
+  },
+  {
+    "tipo": "VT",
+    "programa": "INSPIRA NEGÓCIOS (reprise)",
+    "formato": "60s",
+    "dia": "SEG",
+    "horario": "14:00 às 14:30",
+    "genero": "Entrevista",
+    "valorUnit": 14516
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "60s",
+    "dia": "TER",
+    "horario": "22:45 às 00:30",
+    "genero": "Reality",
+    "valorUnit": 17330
+  },
+  {
+    "tipo": "VT",
+    "programa": "SUPERPOP",
+    "formato": "60s",
+    "dia": "QUA",
+    "horario": "22:45 às 00:00",
+    "genero": "Auditório",
+    "valorUnit": 19684
+  },
+  {
+    "tipo": "VT",
+    "programa": "NA PISTA",
+    "formato": "60s",
+    "dia": "QUI",
+    "horario": "14:00 às 14:30",
+    "genero": "Automotivo",
+    "valorUnit": 16864
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB SAÚDE",
+    "formato": "60s",
+    "dia": "QUI",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 16400
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "60s",
+    "dia": "QUI",
+    "horario": "22:45 às 23:45",
+    "genero": "Reality",
+    "valorUnit": 17330
+  },
+  {
+    "tipo": "VT",
+    "programa": "É NOTÍCIA",
+    "formato": "60s",
+    "dia": "QUI",
+    "horario": "23:45 às 00:45",
+    "genero": "Entrevista",
+    "valorUnit": 16958
+  },
+  {
+    "tipo": "VT",
+    "programa": "CB AGRO",
+    "formato": "60s",
+    "dia": "SEX",
+    "horario": "13:25 às 13:55",
+    "genero": "Entrevista",
+    "valorUnit": 16400
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "60s",
+    "dia": "SEX",
+    "horario": "22:45 às 00:30",
+    "genero": "Reality",
+    "valorUnit": 17330
+  },
+  {
+    "tipo": "VT",
+    "programa": "BRASIL DO POVO",
+    "formato": "60s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Jornalismo",
+    "valorUnit": 12836
+  },
+  {
+    "tipo": "VT",
+    "programa": "REDE TV! NEWS",
+    "formato": "60s",
+    "dia": "SAB",
+    "horario": "19:55 às 20:30",
+    "genero": "Jornalismo",
+    "valorUnit": 22718
+  },
+  {
+    "tipo": "VT",
+    "programa": "RAPIDINHAS DA FAMA",
+    "formato": "60s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Celebridades",
+    "valorUnit": 16400
+  },
+  {
+    "tipo": "VT",
+    "programa": "OPERAÇÃO DE RISCO",
+    "formato": "60s",
+    "dia": "SAB",
+    "horario": "19:55 às 20:30",
+    "genero": "Reality",
+    "valorUnit": 17330
+  },
+  {
+    "tipo": "VT",
+    "programa": "MEGA SONHO",
+    "formato": "60s",
+    "dia": "SAB",
+    "horario": "18:00 às 19:55",
+    "genero": "Game Show",
+    "valorUnit": 29140
+  },
+  {
+    "tipo": "VT",
+    "programa": "ENTRE AMIGOS E VIOLA",
+    "formato": "60s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Música",
+    "valorUnit": 16864
+  },
+  {
+    "tipo": "VT",
+    "programa": "INSPIRA NEGÓCIOS",
+    "formato": "60s",
+    "dia": "DOM",
+    "horario": "11:00 às 11:30",
+    "genero": "Entrevista",
+    "valorUnit": 14516
+  },
+  {
+    "tipo": "VT",
+    "programa": "NA PISTA REPRISE",
+    "formato": "60s",
+    "dia": "DOM",
+    "horario": "11:30 às 12:00",
+    "genero": "Automotivo",
+    "valorUnit": 16864
+  },
+  {
+    "tipo": "VT",
+    "programa": "PARA AQUI!",
+    "formato": "60s",
+    "dia": "DOM",
+    "horario": "18:45 às 23:00",
+    "genero": "Auditório",
+    "valorUnit": 18328
+  },
+  {
+    "tipo": "VT",
+    "programa": "RODADA DE NEGÓCIOS",
+    "formato": "60s",
+    "dia": "DOM",
+    "horario": "10:00 às 11:00",
+    "genero": "Entrevista",
+    "valorUnit": 15158
+  },
+  {
+    "tipo": "VT",
+    "programa": "MEGA SONHO REPRISE",
+    "formato": "60s",
+    "dia": "DOM",
+    "horario": "00:30 às 01:40",
+    "genero": "Game Show",
+    "valorUnit": 29140
+  }
+];
+
+export const productTypes: ProdutoTipo[] = ["VT", "Merchan", "Insert", "Patrocínio", "Projeto Especial"];
+
+export function programsByType(tipo: ProdutoTipo): string[] {
+  return Array.from(new Set(priceTable.filter(r => r.tipo === tipo).map(r => r.programa)));
+}
+
+export function formatsByTypeAndProgram(tipo: ProdutoTipo, programa: string): string[] {
+  return Array.from(new Set(priceTable.filter(r => r.tipo === tipo && r.programa === programa).map(r => r.formato)));
+}
+
+export function findPrice(tipo: ProdutoTipo, programa: string, formato: string): PriceRow | undefined {
+  return priceTable.find(r => r.tipo === tipo && r.programa === programa && r.formato === formato);
+}

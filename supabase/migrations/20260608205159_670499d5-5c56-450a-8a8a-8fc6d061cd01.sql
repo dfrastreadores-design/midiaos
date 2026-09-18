@@ -1,0 +1,3 @@
+ALTER TABLE public.pi_anexos
+  ADD COLUMN IF NOT EXISTS valor_bruto NUMERIC(14,2),
+  ADD COLUMN IF NOT EXISTS valor_liquido NUMERIC(14,2);

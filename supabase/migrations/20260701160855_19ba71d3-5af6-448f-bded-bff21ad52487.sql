@@ -1,0 +1,1 @@
+ALTER TYPE public.notificacao_tipo ADD VALUE IF NOT EXISTS 'pi_renovado';

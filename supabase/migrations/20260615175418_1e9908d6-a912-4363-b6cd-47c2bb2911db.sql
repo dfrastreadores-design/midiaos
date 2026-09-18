@@ -1,0 +1,1 @@
+ALTER TABLE public.propostas ADD COLUMN IF NOT EXISTS executivo_parceiro_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;

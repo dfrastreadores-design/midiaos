@@ -1,0 +1,1 @@
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS categorias_servicos text[] NOT NULL DEFAULT '{}'::text[];
