@@ -18,6 +18,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Textarea } from "@/components/ui/textarea";
 
+import { Building2, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { getMeuTenantPerfil } from "@/lib/tenants.functions";
+import { useUserRoles } from "@/hooks/use-roles";
+
 export const Route = createFileRoute("/minha-conta")({
   head: () => ({ meta: [{ title: "Minha Conta — Mídia.OS" }] }),
   component: MinhaConta,
@@ -180,12 +184,73 @@ function MinhaConta() {
             </CardContent>
           </Card>
 
+          <EmpresaVinculadaCard />
+
           <AssinaturaCard userId={form.user_id} />
 
           {editingSelf && <LgpdCard />}
         </div>
       )}
     </AppShell>
+  );
+}
+
+function EmpresaVinculadaCard() {
+  const fetchTenant = useServerFn(getMeuTenantPerfil);
+  const { data: tenant, isLoading } = useQuery({ queryKey: ["minha-conta-tenant"], queryFn: () => fetchTenant() });
+  const { roles, isSuperAdmin } = useUserRoles();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-primary" /> Empresa Vinculada
+        </CardTitle>
+        <CardDescription>
+          Organização à qual seu perfil está vinculado. Seus acessos aos dados são restritos a este ambiente.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="text-xs text-muted-foreground">Carregando dados da empresa…</div>
+        ) : !tenant ? (
+          <div className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+            Nenhuma empresa vinculada ao seu usuário.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border">
+              <div>
+                <div className="font-semibold text-sm">{tenant.nome_fantasia || tenant.razao_social}</div>
+                <div className="text-xs text-muted-foreground">
+                  {[tenant.razao_social, tenant.cnpj && `CNPJ: ${tenant.cnpj}`].filter(Boolean).join(" • ")}
+                </div>
+              </div>
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                {tenant.status?.toUpperCase() || "ATIVO"}
+              </Badge>
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Seus papéis e permissões concedidas:</Label>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {isSuperAdmin && (
+                  <Badge className="bg-amber-500 text-white font-bold">👑 Super Admin Global</Badge>
+                )}
+                {roles.map((r) => (
+                  <Badge key={r} variant="secondary" className="capitalize">
+                    {r.replace("_", " ")}
+                  </Badge>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                🛡️ Conforme as políticas de segurança da plataforma, você visualiza apenas os registros e configurações pertencentes à sua empresa e aos módulos atribuídos ao seu perfil.
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

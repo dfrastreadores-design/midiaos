@@ -77,13 +77,18 @@ export function useUserRoles() {
     };
   }, [user, loading]);
 
-  const isSuperAdmin = roles.includes("super_admin");
-  const isAdmin = isSuperAdmin || roles.includes("admin");
-  const isParceiroComercial = roles.includes("parceiro_comercial");
+  const isSuperAdmin = user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+  const isAdmin = isSuperAdmin || roles.includes("admin") || roles.includes("super_admin");
+  const isParceiroComercial = !isSuperAdmin && roles.includes("parceiro_comercial");
 
   const can = (path: string) => {
-    if (path.startsWith("/owner")) return isSuperAdmin;
-    if (path === "/monitoramento") return isSuperAdmin;
+    // O usuário rafaelrodrigo.as@gmail.com possui acesso irrestrito a todas as áreas
+    if (isSuperAdmin) return true;
+
+    // Bloqueio rigoroso de rotas restritas de plataforma para qualquer outro usuário
+    if (path.startsWith("/owner")) return false;
+    if (path === "/monitoramento") return false;
+
     if (path === "/usuarios" || path === "/configuracoes" || path === "/relatorio-sincronizacao" || path === "/layouts") return isAdmin;
     if (ADMIN_ONLY_ROUTES.has(path)) return isAdmin;
 
@@ -99,7 +104,6 @@ export function useUserRoles() {
     if (EXECUTIVO_OR_ADMIN_ROUTES.has(path)) return isAdmin || roles.includes("executivo");
     const permKey = ROUTE_PERMISSION[path];
     if (!permKey) return true;
-    if (isSuperAdmin) return true;
     if (isAdmin) return !adminManaged || perms.has(permKey);
     return perms.has(permKey);
   };

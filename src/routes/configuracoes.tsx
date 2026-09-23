@@ -33,6 +33,7 @@ import { fetchCnpj } from "@/lib/cnpj";
 import { supabase } from "@/integrations/supabase/client";
 import { getLogoSignedUrl } from "@/lib/logo-url";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
+import { getMeuTenantPerfil, updateMeuTenantPerfil } from "@/lib/tenants.functions";
 
 const ROLES: { key: "admin" | "executivo" | "opec" | "financeiro" | "producao" | "diretoria" | "parceiro_comercial"; label: string }[] = [
   { key: "admin", label: "Admin" },
@@ -108,11 +109,13 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   });
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-display font-semibold">Configurações</h1>
-        <p className="text-sm text-muted-foreground">Regras de notificação automática do sistema.</p>
+        <h1 className="text-2xl font-display font-semibold">Configurações da Empresa</h1>
+        <p className="text-sm text-muted-foreground">Perfil da empresa vinculada, CNPJs emissores, permissões e notificações.</p>
       </div>
+
+      <PerfilEmpresaCard />
 
       <Card>
         <CardHeader>
@@ -816,29 +819,255 @@ function EmissorasCard() {
 }
 
 function NovaEmissoraGate({ count, onNew }: { count: number; onNew: () => void }) {
-  const { isSuperAdmin } = useUserRoles();
-  const { isSingleEmpresa, loaded } = usePlatformConfig();
-  if (!loaded) return null;
+  const { isAdmin } = useUserRoles();
+  if (!isAdmin) return null;
+  return <Button onClick={onNew}><Plus className="h-4 w-4 mr-1" /> Nova emissora</Button>;
+}
 
-  // Multi-empresa: apenas super admin cadastra novos CNPJs
-  if (!isSingleEmpresa) {
-    if (!isSuperAdmin) {
-      return (
-        <div className="text-xs text-muted-foreground max-w-xs text-right">
-          Apenas o proprietário da plataforma pode cadastrar novos CNPJs de emissão.
-        </div>
-      );
+function PerfilEmpresaCard() {
+  const qc = useQueryClient();
+  const fetchTenant = useServerFn(getMeuTenantPerfil);
+  const saveTenant = useServerFn(updateMeuTenantPerfil);
+  const { data: tenant, isLoading } = useQuery({ queryKey: ["meu-tenant-perfil"], queryFn: () => fetchTenant() });
+
+  const [form, setForm] = useState({
+    razao_social: "",
+    nome_fantasia: "",
+    cnpj: "",
+    contato_nome: "",
+    contato_email: "",
+    contato_whatsapp: "",
+    logo_url: "",
+    cor_primaria: "#3B82F6",
+  });
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (tenant) {
+      setForm({
+        razao_social: tenant.razao_social ?? "",
+        nome_fantasia: tenant.nome_fantasia ?? "",
+        cnpj: tenant.cnpj ?? "",
+        contato_nome: tenant.contato_nome ?? "",
+        contato_email: tenant.contato_email ?? "",
+        contato_whatsapp: tenant.contato_whatsapp ?? "",
+        logo_url: tenant.logo_url ?? "",
+        cor_primaria: tenant.cor_primaria ?? "#3B82F6",
+      });
     }
-    return <Button onClick={onNew}><Plus className="h-4 w-4 mr-1" /> Nova emissora</Button>;
-  }
+  }, [tenant]);
 
-  // Single-empresa: um único CNPJ permitido
-  if (count >= 1) {
+  useEffect(() => {
+    let cancel = false;
+    if (!form.logo_url) {
+      setLogoPreview(null);
+      return;
+    }
+    if (form.logo_url.startsWith("data:") || form.logo_url.startsWith("http")) {
+      setLogoPreview(form.logo_url);
+      return;
+    }
+    getLogoSignedUrl(form.logo_url).then((url) => {
+      if (!cancel) setLogoPreview(url);
+    });
+    return () => { cancel = true; };
+  }, [form.logo_url]);
+
+  const saveMut = useMutation({
+    mutationFn: async () => saveTenant({ data: form }),
+    onSuccess: () => {
+      toast.success("Perfil da empresa atualizado com sucesso!");
+      qc.invalidateQueries({ queryKey: ["meu-tenant-perfil"] });
+      qc.invalidateQueries({ queryKey: ["my-tenant-branding"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handleLogoUpload = async (file: File) => {
+    try {
+      setLogoUploading(true);
+      const ext = file.name.split(".").pop();
+      const path = `tenant-logos/${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("logos").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      setForm((f) => ({ ...f, logo_url: path }));
+      toast.success("Logotipo enviado com sucesso");
+    } catch (err: any) {
+      toast.error(err?.message || "Falha ao enviar logotipo");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className="text-xs text-muted-foreground max-w-xs text-right">
-        Modo empresa única: apenas 1 CNPJ é permitido. Edite a emissora existente ou ative multi-empresa no painel do proprietário.
-      </div>
+      <Card>
+        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+          Carregando dados da empresa vinculada…
+        </CardContent>
+      </Card>
     );
   }
-  return <Button onClick={onNew}><Plus className="h-4 w-4 mr-1" /> Nova emissora</Button>;
+
+  if (!tenant) {
+    return (
+      <Card className="border-amber-200 bg-amber-50/50">
+        <CardContent className="py-6 flex items-center gap-3 text-amber-800">
+          <Building2 className="h-6 w-6 shrink-0 text-amber-600" />
+          <div>
+            <div className="font-semibold text-sm">Nenhuma empresa vinculada</div>
+            <p className="text-xs text-amber-700">Seu usuário ainda não foi associado a um perfil de empresa. Entre em contato com o suporte ou proprietário do sistema.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building2 className="h-5 w-5 text-primary" /> Perfil da Empresa Vinculada
+            </CardTitle>
+            <CardDescription>
+              Dados cadastrais da sua empresa. Apenas os colaboradores desta organização têm acesso a essas informações.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="font-semibold">Plano: {tenant.plano?.toUpperCase() || "ATIVO"}</Badge>
+            <Badge className="bg-emerald-600 text-white">Status: {tenant.status?.toUpperCase() || "ATIVO"}</Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-xs font-semibold">Razão Social *</Label>
+            <Input
+              value={form.razao_social}
+              onChange={(e) => setForm({ ...form, razao_social: e.target.value })}
+              placeholder="Razão social oficial da empresa"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold">Nome Fantasia / Marca</Label>
+            <Input
+              value={form.nome_fantasia}
+              onChange={(e) => setForm({ ...form, nome_fantasia: e.target.value })}
+              placeholder="Nome exibido no cabeçalho e relatórios"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold">
+              CNPJ da Empresa {cnpjLoading && <span className="text-muted-foreground">(consultando Receita…)</span>}
+            </Label>
+            <Input
+              value={form.cnpj}
+              onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
+              placeholder="00.000.000/0000-00"
+              onBlur={async (e) => {
+                const digits = e.target.value.replace(/\D/g, "");
+                if (digits.length !== 14) return;
+                try {
+                  setCnpjLoading(true);
+                  const d = await fetchCnpj(digits);
+                  setForm((f) => ({
+                    ...f,
+                    cnpj: digits,
+                    razao_social: d.razaoSocial || f.razao_social,
+                    nome_fantasia: d.nomeFantasia || f.nome_fantasia,
+                    contato_email: d.email || f.contato_email,
+                    contato_whatsapp: d.telefone || f.contato_whatsapp,
+                  }));
+                  toast.success("Dados cadastrais do CNPJ preenchidos");
+                } catch (err: any) {
+                  toast.error(err?.message || "Não foi possível consultar o CNPJ");
+                } finally {
+                  setCnpjLoading(false);
+                }
+              }}
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold">Nome do Responsável / Contato</Label>
+            <Input
+              value={form.contato_nome}
+              onChange={(e) => setForm({ ...form, contato_nome: e.target.value })}
+              placeholder="Ex: Roberto Gomes (Diretoria Comercial)"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold">E-mail Comercial Oficial</Label>
+            <Input
+              type="email"
+              value={form.contato_email}
+              onChange={(e) => setForm({ ...form, contato_email: e.target.value })}
+              placeholder="comercial@empresa.com.br"
+            />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold">WhatsApp / Telefone</Label>
+            <Input
+              value={form.contato_whatsapp}
+              onChange={(e) => setForm({ ...form, contato_whatsapp: e.target.value })}
+              placeholder="(61) 99999-9999"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="text-xs font-semibold">Logotipo da Empresa (exibido na interface e PDFs)</Label>
+            <div className="flex items-center gap-4 mt-1.5 flex-wrap">
+              {logoPreview ? (
+                <img
+                  src={logoPreview}
+                  alt="Logo da Empresa"
+                  className="h-14 w-auto max-w-[180px] object-contain border rounded-xl bg-white p-2 shadow-sm"
+                />
+              ) : (
+                <div className="h-14 w-28 border border-dashed rounded-xl flex items-center justify-center text-xs text-muted-foreground bg-muted/20">
+                  sem logo
+                </div>
+              )}
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml"
+                  disabled={logoUploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleLogoUpload(f);
+                  }}
+                  className="max-w-xs text-xs"
+                />
+                {form.logo_url && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs w-fit text-destructive hover:text-destructive"
+                    onClick={() => setForm((f) => ({ ...f, logo_url: "" }))}
+                  >
+                    Remover logotipo
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <Button
+            onClick={() => saveMut.mutate()}
+            disabled={saveMut.isPending || !form.razao_social.trim()}
+            className="rounded-xl px-6"
+          >
+            {saveMut.isPending ? "Salvando…" : "Salvar Dados da Empresa"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }

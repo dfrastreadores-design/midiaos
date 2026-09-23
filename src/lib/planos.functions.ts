@@ -29,9 +29,13 @@ export const MODULOS_DISPONIVEIS: { key: string; label: string }[] = [
 ];
 
 async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
+  const { data: userAuth } = await ctx.supabase.auth.getUser();
+  if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
+    return;
+  }
   const { data, error } = await ctx.supabase.rpc("is_super_admin", { _user_id: ctx.userId });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Acesso restrito ao proprietário da plataforma");
+  if (!data) throw new Error("Acesso restrito ao proprietário da plataforma (rafaelrodrigo.as@gmail.com)");
 }
 
 /** Lista planos (qualquer autenticado lê o catálogo). */

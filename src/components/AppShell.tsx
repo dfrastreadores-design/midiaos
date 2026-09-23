@@ -54,6 +54,7 @@ import { useTenantModulos } from "@/hooks/use-tenant-modulos";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useQuery } from "@tanstack/react-query";
 import { getInicio } from "@/lib/inicio.functions";
+import { Badge } from "@/components/ui/badge";
 
 
 const nav = [
@@ -110,7 +111,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     const hasMod = item.modulo == null || hasModulo(item.modulo);
     return canAccess && hasMod;
   });
-  const blocked = !rolesLoading && nav.some((n) => n.to === location.pathname) && !can(location.pathname);
+  const matchedNavItem = nav.find((item) =>
+    item.to === location.pathname || (item.to !== "/" && location.pathname.startsWith(item.to))
+  );
+
+  const blocked = !rolesLoading && (
+    (!isSuperAdmin && (location.pathname.startsWith("/owner") || location.pathname.startsWith("/monitoramento"))) ||
+    !can(location.pathname) ||
+    (matchedNavItem ? (!can(matchedNavItem.to) || (matchedNavItem.modulo != null && !hasModulo(matchedNavItem.modulo))) : false)
+  );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { logoSrc: tenantLogo, nome: tenantNome } = useTenantBranding();
   const brandLogo = tenantLogo ?? logoMidiaOS;
@@ -124,14 +133,16 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="hidden lg:flex w-72 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border/50 shadow-premium z-40">
         <div className="px-8 py-8 flex items-center gap-4 border-b border-sidebar-border/30 bg-white/95 backdrop-blur-sm sticky top-0 z-50">
-          <div className="size-12 rounded-xl bg-white shadow-sm flex items-center justify-center p-1.5 border border-slate-100">
+          <div className="size-12 rounded-xl bg-white shadow-sm flex items-center justify-center p-1.5 border border-slate-100 shrink-0">
             <img src={brandLogo} alt={brandAlt} className="h-full w-auto object-contain" />
           </div>
-          <div>
-            <div className="font-display font-bold text-lg tracking-tight text-sidebar flex items-center">
-              Mídia<span className="text-gold">.</span>OS
+          <div className="min-w-0 flex-1">
+            <div className="font-display font-bold text-lg tracking-tight text-sidebar truncate flex items-center gap-1.5">
+              {tenantNome || <>Mídia<span className="text-gold">.</span>OS</>}
             </div>
-            <div className="text-[10px] uppercase tracking-widest font-bold text-sidebar/40">Premium Suite</div>
+            <div className="text-[10px] uppercase tracking-widest font-bold text-sidebar/40 truncate">
+              {isSuperAdmin ? "👑 Gestão Global" : (tenantNome ? "Espaço da Empresa" : "Premium Suite")}
+            </div>
           </div>
         </div>
 
@@ -173,6 +184,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64 p-2 rounded-2xl shadow-premium border-sidebar-border/30 backdrop-blur-md">
               <DropdownMenuLabel className="px-3 py-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Minha conta</DropdownMenuLabel>
+              {isSuperAdmin && (
+                <DropdownMenuItem asChild className="rounded-xl focus:bg-amber-500/10 focus:text-amber-600 transition-all cursor-pointer py-2.5">
+                  <Link to="/owner">
+                    <ShieldCheck className="size-4 mr-3 text-amber-500" />
+                    <span className="font-bold text-amber-600">Painel do Proprietário</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
               {isAdmin && (
                 <>
                   <DropdownMenuItem onClick={() => setImpersonateOpen(true)} className="rounded-xl focus:bg-primary/5 focus:text-primary transition-all cursor-pointer py-2.5">
@@ -276,7 +295,14 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             </div>
             <div className="hidden lg:flex items-center gap-3">
               <div className="h-5 w-1 bg-gold/30 rounded-full" />
-              <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 select-none">Comercial Engine</h2>
+              <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 select-none">
+                {tenantNome ? `Empresa: ${tenantNome}` : "Comercial Engine"}
+              </h2>
+              {isSuperAdmin && (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs px-2.5 py-0.5 font-bold flex items-center gap-1">
+                  👑 Super Admin Global
+                </Badge>
+              )}
             </div>
             {(() => {
               const now = new Date();

@@ -2,14 +2,24 @@ import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
-console.log("🚀 [1/3] Compilando a aplicação para produção...");
-execSync("bun run build", { stdio: "inherit" });
+const skipBuild = process.argv.includes("--skip-build");
+
+if (!skipBuild) {
+  console.log("🚀 [1/3] Compilando a aplicação para produção...");
+  const cmd = process.platform === "win32"
+    ? `cmd /c "set NODE_OPTIONS=--max-old-space-size=4096 && npm run build"`
+    : `NODE_OPTIONS=--max-old-space-size=4096 npm run build`;
+  execSync(cmd, { stdio: "inherit" });
+} else {
+  console.log("⚡ [1/3] Pulando compilação (usando .output existente)...");
+}
 
 console.log("\n📦 [2/3] Organizando arquivos na pasta 'hostinger'...");
 const hostingerDir = path.resolve("./hostinger");
-if (!fs.existsSync(hostingerDir)) {
-  fs.mkdirSync(hostingerDir, { recursive: true });
+if (fs.existsSync(hostingerDir)) {
+  fs.rmSync(hostingerDir, { recursive: true, force: true });
 }
+fs.mkdirSync(hostingerDir, { recursive: true });
 
 // Copia recursiva de .output
 fs.cpSync("./.output", path.join(hostingerDir, ".output"), { recursive: true, force: true });
@@ -17,6 +27,9 @@ fs.copyFileSync("./hostinger.mjs", path.join(hostingerDir, "hostinger.mjs"));
 fs.copyFileSync("./package.json", path.join(hostingerDir, "package.json"));
 if (fs.existsSync("./.env")) {
   fs.copyFileSync("./.env", path.join(hostingerDir, ".env"));
+}
+if (fs.existsSync("./supabase/schema_completo.sql")) {
+  fs.copyFileSync("./supabase/schema_completo.sql", path.join(hostingerDir, "schema_banco_de_dados.sql"));
 }
 
 console.log("\n🗜️  [3/3] Criando arquivo hostinger_deploy.zip...");

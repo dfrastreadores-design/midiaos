@@ -165,16 +165,34 @@ export const listPis = createServerFn({ method: "GET" })
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
-    const roles = (roleRows ?? []).map(r => r.role);
+    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
     const isProducaoOnly = roles.includes("producao") && !roles.includes("admin") && !roles.includes("executivo") && !roles.includes("opec");
+
+    // Verificar se o usuário possui acesso amplo ou se é executivo restrito aos seus próprios PIs
+    const { data: userAuth } = await supabase.auth.getUser();
+    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const hasBroadRole = isSuper || roles.some((r: string) => ["admin", "diretoria", "opec", "financeiro", "super_admin"].includes(r));
+
+    let canViewAll = hasBroadRole;
+    if (!canViewAll && roles.length > 0) {
+      const { data: permRows } = await supabase
+        .from("role_permissions")
+        .select("permission_key")
+        .in("role", roles)
+        .eq("permission_key", "pi.view_all");
+      canViewAll = (permRows?.length ?? 0) > 0;
+    }
 
     let query = supabase
       .from("pis")
       .select("*, cliente:clientes(id,razao_social,nome_fantasia), agencia:agencias(id,razao_social,nome_fantasia)");
 
-    // Se for perfil produção, só vê PIs que tem produção interna agendada
+    // Se for perfil produção exclusivo, só vê PIs que têm produção interna agendada
     if (isProducaoOnly) {
       query = query.eq("producao_tipo", "interna");
+    } else if (!canViewAll) {
+      // Executivo / Usuário restrito: visualiza apenas os PIs atribuídos a ele ou criados por ele
+      query = query.or(`executivo_id.eq.${userId},created_by.eq.${userId}`);
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });

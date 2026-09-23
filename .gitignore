@@ -36,4 +36,4 @@ dist-ssr
 
 # Hostinger Build & Package
 hostinger_deploy.zip
-hostinger/.output/
+hostinger/

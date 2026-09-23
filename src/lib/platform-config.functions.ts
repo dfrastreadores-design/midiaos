@@ -40,9 +40,13 @@ export const savePlatformConfig = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: sa, error: eSa } = await context.supabase.rpc("is_super_admin", { _user_id: context.userId });
-    if (eSa) throw new Error(eSa.message);
-    if (!sa) throw new Error("Apenas o proprietário da plataforma pode alterar esta configuração.");
+    const { data: userAuth } = await context.supabase.auth.getUser();
+    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    if (!isSuper) {
+      const { data: sa, error: eSa } = await context.supabase.rpc("is_super_admin", { _user_id: context.userId });
+      if (eSa) throw new Error(eSa.message);
+      if (!sa) throw new Error("Apenas o proprietário da plataforma (rafaelrodrigo.as@gmail.com) pode alterar esta configuração.");
+    }
     const { error } = await context.supabase
       .from("system_settings")
       .upsert({ key: KEY, value: data, updated_by: context.userId } as never, { onConflict: "key" });

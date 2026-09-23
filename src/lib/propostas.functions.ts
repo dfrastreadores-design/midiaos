@@ -45,10 +45,24 @@ const PropostaSchema = z.object({
 export const listPropostas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("propostas")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { supabase, userId } = context;
+    const { data: roleRows } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+
+    const { data: userAuth } = await supabase.auth.getUser();
+    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const hasBroadRole = isSuper || roles.some((r: string) => ["admin", "diretoria", "super_admin"].includes(r));
+
+    let query = supabase.from("propostas").select("*");
+    if (!hasBroadRole) {
+      // Executivo / Parceiro: restringe às propostas de sua autoria, atribuição ou parceria
+      query = query.or(`executivo_id.eq.${userId},created_by.eq.${userId},executivo_parceiro_id.eq.${userId}`);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as Array<Record<string, unknown>>;
 

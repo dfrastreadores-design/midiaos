@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "pack:hostinger": "bun scripts/package-hostinger.mjs",
+    "pack:hostinger": "node scripts/package-hostinger.mjs",
     "deploy:hostinger": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-hostinger.ps1"
   },
   "dependencies": {

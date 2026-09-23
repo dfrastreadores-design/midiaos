@@ -11,7 +11,8 @@ Você pode enviar as alterações diretamente do seu terminal para a Hostinger s
 ### Como usar:
 1. Adicione as credenciais de FTP da sua Hostinger no seu arquivo `.env`:
    ```env
-   HOSTINGER_FTP_HOST=ftp.seudominio.com.br
+   # Use o IP do FTP da Hostinger (ex: 147.93.38.246) ou o host dedicado
+   HOSTINGER_FTP_HOST=147.93.38.246
    HOSTINGER_FTP_USER=seu-usuario-ftp
    HOSTINGER_FTP_PASS=sua-senha-ftp
    ```

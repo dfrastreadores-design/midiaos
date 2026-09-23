@@ -2,9 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
+  const { data: userAuth } = await ctx.supabase.auth.getUser();
+  if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
+    return;
+  }
   const { data, error } = await ctx.supabase.rpc("is_super_admin", { _user_id: ctx.userId });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Acesso restrito ao proprietário da plataforma");
+  if (!data) throw new Error("Acesso restrito ao proprietário da plataforma (rafaelrodrigo.as@gmail.com)");
 }
 
 export type TenantInput = {
@@ -484,6 +488,72 @@ export const getMyTenantBranding = createServerFn({ method: "GET" })
       .select("razao_social, nome_fantasia, logo_url, status, plano, produto_marca, cor_primaria, dominio_proprio")
       .eq("id", prof.tenant_id).single();
     return t as { razao_social: string; nome_fantasia: string | null; logo_url: string | null; status: string | null; plano: string | null; produto_marca: string | null; cor_primaria: string | null; dominio_proprio: string | null } | null;
+  });
+
+/** Retorna o perfil completo da empresa (tenant) vinculada ao usuário logado */
+export const getMeuTenantPerfil = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: prof } = await context.supabase
+      .from("profiles").select("tenant_id").eq("id", context.userId).single();
+    if (!prof?.tenant_id) return null;
+    const { data: t, error } = await context.supabase
+      .from("tenants")
+      .select("id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email, contato_whatsapp, logo_url, cor_primaria, produto_marca, status, plano, proximo_vencimento, created_at")
+      .eq("id", prof.tenant_id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return t;
+  });
+
+/** Permite que administradores da empresa atualizem os dados cadastrais da sua própria empresa */
+export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    razao_social: string;
+    nome_fantasia?: string | null;
+    cnpj?: string | null;
+    contato_nome?: string | null;
+    contato_email?: string | null;
+    contato_whatsapp?: string | null;
+    logo_url?: string | null;
+    cor_primaria?: string | null;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: userAuth } = await supabase.auth.getUser();
+    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    if (!isSuper) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .in("role", ["admin", "super_admin"]);
+      if (!roles || roles.length === 0) {
+        throw new Error("Apenas administradores podem atualizar os dados da empresa");
+      }
+    }
+
+    const { data: prof } = await supabase
+      .from("profiles").select("tenant_id").eq("id", userId).single();
+    if (!prof?.tenant_id) throw new Error("Usuário não está vinculado a nenhuma empresa");
+
+    const { error } = await supabase
+      .from("tenants")
+      .update({
+        razao_social: data.razao_social.trim(),
+        nome_fantasia: data.nome_fantasia?.trim() || null,
+        cnpj: data.cnpj?.trim() || null,
+        contato_nome: data.contato_nome?.trim() || null,
+        contato_email: data.contato_email?.trim() || null,
+        contato_whatsapp: data.contato_whatsapp?.trim() || null,
+        logo_url: data.logo_url || null,
+        cor_primaria: data.cor_primaria || null,
+      })
+      .eq("id", prof.tenant_id);
+
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 /** Cria um usuário já vinculado a um inquilino (somente proprietário da plataforma). */

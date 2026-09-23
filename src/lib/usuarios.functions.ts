@@ -6,11 +6,15 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const RoleEnum = z.enum(["admin", "executivo", "opec", "financeiro", "diretoria", "producao", "parceiro_comercial", "teste"]);
 
 async function assertAdmin(supabase: any, userId: string) {
+  const { data: userAuth } = await supabase.auth.getUser();
+  if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
+    return;
+  }
   const { data, error } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .eq("role", "admin")
+    .in("role", ["admin", "super_admin"])
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Apenas administradores podem executar esta ação");
@@ -56,17 +60,17 @@ export const listUsuarios = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    // Descobre se é super_admin (vê tudo) e qual o tenant do solicitante
-    const [{ data: meRoles }, { data: meProfile }] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", userId),
+    // Descobre se é o Super Admin exclusivo (rafaelrodrigo.as@gmail.com) e qual o tenant do solicitante
+    const [{ data: userAuth }, { data: meProfile }] = await Promise.all([
+      supabase.auth.getUser(),
       supabase.from("profiles").select("tenant_id").eq("id", userId).maybeSingle(),
     ]);
-    const isSuper = (meRoles ?? []).some((r) => r.role === "super_admin");
+    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
     const myTenant = (meProfile as any)?.tenant_id ?? null;
 
     let query = supabase.from("profiles").select("*").order("created_at", { ascending: false });
     if (!isSuper) {
-      // Esconde usuários demo (trial_ends_at preenchido) e limita ao tenant do solicitante
+      // Limita rigorosamente ao tenant da empresa do usuário logado
       query = query.is("trial_ends_at", null);
       if (myTenant) query = query.eq("tenant_id", myTenant);
       else query = query.is("tenant_id", null);
@@ -95,6 +99,13 @@ export const setUserRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertAdmin(supabase, userId);
+
+    const { data: userAuth } = await supabase.auth.getUser();
+    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    if (data.role === "super_admin" as any && !isSuper) {
+      throw new Error("Apenas o proprietário da plataforma (rafaelrodrigo.as@gmail.com) pode gerenciar a função super_admin");
+    }
+
     if (data.enabled) {
       const { error } = await supabase
         .from("user_roles")
@@ -174,6 +185,23 @@ export const createUsuario = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertAdmin(supabase, userId);
 
+    const { data: userAuth } = await supabase.auth.getUser();
+    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+
+    // Bloqueia qualquer tentativa de conceder super_admin
+    if (data.roles.includes("super_admin" as any) && !isSuper) {
+      throw new Error("Apenas o proprietário da plataforma pode criar super administradores");
+    }
+
+    // Busca o tenant_id do criador (administrador)
+    const { data: creatorProfile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const targetTenantId = creatorProfile?.tenant_id ?? null;
+
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -184,10 +212,15 @@ export const createUsuario = createServerFn({ method: "POST" })
     const newId = created.user?.id;
     if (!newId) throw new Error("Falha ao criar usuário");
 
-    // garante nome completo + telefone no profile (trigger cria com defaults)
+    // Garante nome completo, telefone e vinculação OBRIGATÓRIA ao tenant da empresa
     await supabaseAdmin
       .from("profiles")
-      .update({ nome: data.nome, telefone: data.telefone, cargo: data.cargo ?? null })
+      .update({
+        nome: data.nome,
+        telefone: data.telefone,
+        cargo: data.cargo ?? null,
+        tenant_id: targetTenantId,
+      })
       .eq("id", newId);
 
     // handle_new_user trigger may have assigned a default role; reset to requested
