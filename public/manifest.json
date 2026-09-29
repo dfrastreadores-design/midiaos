@@ -1,0 +1,63 @@
+{
+  "name": "Mídia.OS — Gestão Comercial de Mídia",
+  "short_name": "Mídia.OS",
+  "description": "Plataforma completa para gestão comercial de veículos de comunicação, TV, Rádio, DOOH, PIs digitais, propostas e redes sociais.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0d0d24",
+  "background_color": "#090a16",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Pedidos de Inserção (PI)",
+      "short_name": "PIs",
+      "description": "Consultar e gerenciar Pedidos de Inserção",
+      "url": "/pi",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Propostas Comerciais",
+      "short_name": "Propostas",
+      "description": "Criar e visualizar propostas",
+      "url": "/propostas",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Clientes",
+      "short_name": "Clientes",
+      "description": "Carteira de clientes e anunciantes",
+      "url": "/clientes",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"]
+}

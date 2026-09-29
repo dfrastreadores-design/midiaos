@@ -37,3 +37,8 @@ dist-ssr
 # Hostinger Build & Package
 hostinger_deploy.zip
 hostinger/
+
+# Local Database Backups
+backups/
+*.backup.json
+

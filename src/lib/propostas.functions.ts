@@ -19,7 +19,13 @@ const ItemSchema = z.object({
   valor_negociado: z.number(),
   total_insercoes: z.number().int(),
   dias_veiculacao: z.number().int().nonnegative().nullable().optional(),
-  link_modelo: z.string().trim().max(500).nullable().optional().transform((v) => (v && v.length ? v : null)),
+  link_modelo: z
+    .string()
+    .trim()
+    .max(500)
+    .nullable()
+    .optional()
+    .transform((v) => (v && v.length ? v : null)),
 });
 
 const PropostaSchema = z.object({
@@ -54,12 +60,15 @@ export const listPropostas = createServerFn({ method: "GET" })
 
     const { data: userAuth } = await supabase.auth.getUser();
     const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
-    const hasBroadRole = isSuper || roles.some((r: string) => ["admin", "diretoria", "super_admin"].includes(r));
+    const hasBroadRole =
+      isSuper || roles.some((r: string) => ["admin", "diretoria", "super_admin"].includes(r));
 
     let query = supabase.from("propostas").select("*");
     if (!hasBroadRole) {
       // Executivo / Parceiro: restringe às propostas de sua autoria, atribuição ou parceria
-      query = query.or(`executivo_id.eq.${userId},created_by.eq.${userId},executivo_parceiro_id.eq.${userId}`);
+      query = query.or(
+        `executivo_id.eq.${userId},created_by.eq.${userId},executivo_parceiro_id.eq.${userId}`,
+      );
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });
@@ -85,15 +94,28 @@ export const listPropostas = createServerFn({ method: "GET" })
         ? context.supabase.from("profiles").select("id,nome,email").in("id", userIds)
         : Promise.resolve({ data: [] as Array<{ id: string; nome: string; email: string }> }),
       clienteIds.length
-        ? context.supabase.from("clientes").select("id,razao_social,nome_fantasia").in("id", clienteIds)
-        : Promise.resolve({ data: [] as Array<{ id: string; razao_social: string; nome_fantasia: string | null }> }),
+        ? context.supabase
+            .from("clientes")
+            .select("id,razao_social,nome_fantasia")
+            .in("id", clienteIds)
+        : Promise.resolve({
+            data: [] as Array<{ id: string; razao_social: string; nome_fantasia: string | null }>,
+          }),
       agenciaIds.length
-        ? context.supabase.from("agencias").select("id,razao_social,nome_fantasia").in("id", agenciaIds)
-        : Promise.resolve({ data: [] as Array<{ id: string; razao_social: string; nome_fantasia: string | null }> }),
+        ? context.supabase
+            .from("agencias")
+            .select("id,razao_social,nome_fantasia")
+            .in("id", agenciaIds)
+        : Promise.resolve({
+            data: [] as Array<{ id: string; razao_social: string; nome_fantasia: string | null }>,
+          }),
     ]);
 
     const profilesMap = new Map(
-      (profsRes.data ?? []).map((p) => [p.id as string, { nome: p.nome as string, email: p.email as string }]),
+      (profsRes.data ?? []).map((p) => [
+        p.id as string,
+        { nome: p.nome as string, email: p.email as string },
+      ]),
     );
     const clientesMap = new Map((clientesRes.data ?? []).map((c) => [c.id as string, c]));
     const agenciasMap = new Map((agenciasRes.data ?? []).map((a) => [a.id as string, a]));
@@ -104,12 +126,11 @@ export const listPropostas = createServerFn({ method: "GET" })
       return {
         ...r,
         criado_por: prof?.nome ?? prof?.email ?? null,
-        cliente: r.cliente_id ? clientesMap.get(r.cliente_id as string) ?? null : null,
-        agencia: r.agencia_id ? agenciasMap.get(r.agencia_id as string) ?? null : null,
+        cliente: r.cliente_id ? (clientesMap.get(r.cliente_id as string) ?? null) : null,
+        agencia: r.agencia_id ? (agenciasMap.get(r.agencia_id as string) ?? null) : null,
       };
     });
   });
-
 
 export const getProposta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -117,20 +138,66 @@ export const getProposta = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: prop, error } = await context.supabase
       .from("propostas")
-      .select("*, tenant_id, itens:proposta_itens(*), cliente:clientes!propostas_cliente_id_fkey(id,razao_social,nome_fantasia,cnpj,logo_url), agencia:agencias!propostas_agencia_id_fkey(id,razao_social,nome_fantasia,cnpj,logo_url), executivo:profiles!propostas_executivo_id_fkey(id,nome,email,telefone,cargo)")
+      .select(
+        "*, tenant_id, itens:proposta_itens(*), cliente:clientes!propostas_cliente_id_fkey(id,razao_social,nome_fantasia,cnpj,logo_url), agencia:agencias!propostas_agencia_id_fkey(id,razao_social,nome_fantasia,cnpj,logo_url), executivo:profiles!propostas_executivo_id_fkey(id,nome,email,telefone,cargo)",
+      )
       .eq("id", data.id)
       .single();
     if (error) throw new Error(error.message);
+
+    // Enriquecer itens com dados de produtos (endereço, latitude, longitude, fotos) caso não estejam preenchidos no item
+    if (prop?.itens && Array.isArray(prop.itens) && prop.itens.length > 0) {
+      try {
+        const { data: prods } = await (context.supabase.from("produtos") as any)
+          .select("id, nome, programa, tipo, endereco_ponto, latitude, longitude, fotos");
+        if (prods && prods.length > 0) {
+          const prodsMap = new Map<string, any>();
+          const prodsByNome = new Map<string, any>();
+          for (const prod of prods) {
+            prodsMap.set(prod.id, prod);
+            if (prod.nome) prodsByNome.set(prod.nome.trim().toLowerCase(), prod);
+            if (prod.programa) prodsByNome.set(prod.programa.trim().toLowerCase(), prod);
+          }
+
+          prop.itens = prop.itens.map((it: any) => {
+            const matched = (it.produto_id ? prodsMap.get(it.produto_id) : null) ||
+              (it.programa ? prodsByNome.get(it.programa.trim().toLowerCase()) : null) ||
+              (it.tipo ? prodsByNome.get(it.tipo.trim().toLowerCase()) : null);
+
+            let fotos = Array.isArray(it.fotos) && it.fotos.length > 0 ? it.fotos : [];
+            if (fotos.length === 0 && matched?.fotos) {
+              if (Array.isArray(matched.fotos)) fotos = matched.fotos;
+              else if (typeof matched.fotos === "string") {
+                try { fotos = JSON.parse(matched.fotos); } catch { /* ignore */ }
+              }
+            }
+
+            return {
+              ...it,
+              endereco_ponto: it.endereco_ponto || matched?.endereco_ponto || null,
+              latitude: it.latitude ?? matched?.latitude ?? null,
+              longitude: it.longitude ?? matched?.longitude ?? null,
+              fotos,
+            };
+          });
+        }
+      } catch (err) {
+        console.warn("Aviso ao enriquecer itens da proposta com produtos:", err);
+      }
+    }
+
     return prop as any;
   });
 
 export const salvarPropostaLogo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      id: z.string().uuid(),
-      logo_data_url: z.string().max(3_000_000).nullable(),
-    }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        logo_data_url: z.string().max(3_000_000).nullable(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -169,20 +236,20 @@ export const vincularPropostaAoPi = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
-
-
 export const upsertProposta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PropostaSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { assertAnyRole } = await import("@/lib/roles.server");
-    await assertAnyRole(supabase as never, userId, ["admin", "executivo"]);
+    await assertAnyRole(supabase as never, userId, ["admin", "executivo", "diretoria"]);
     const { itens, id, ...rest } = data;
     let propId = id;
     if (propId) {
-      const { error } = await supabase.from("propostas").update(rest as never).eq("id", propId);
+      const { error } = await supabase
+        .from("propostas")
+        .update(rest as never)
+        .eq("id", propId);
       if (error) throw new Error(error.message);
       await supabase.from("proposta_itens").delete().eq("proposta_id", propId);
     } else {
@@ -216,7 +283,7 @@ export const upsertProposta = createServerFn({ method: "POST" })
             titulo: "Proposta Pronta!",
             mensagem: `A proposta para ${briefing.razao_social} - ${briefing.campanha} (Nº ${created.numero}) já está disponível.`,
             link: `/briefings?id=${rest.briefing_id}`,
-            metadata: { briefing_id: rest.briefing_id, proposta_id: propId }
+            metadata: { briefing_id: rest.briefing_id, proposta_id: propId },
           } as never);
         }
       }
@@ -305,7 +372,12 @@ export const converterPropostaEmPi = createServerFn({ method: "POST" })
     if (itensRaw.length > 0) {
       await supabase.from("pi_itens").insert(
         itensRaw.map((it) => {
-          const { id: _i, proposta_id: _p, created_at: _c, ...rest } = it as Record<string, unknown> & {
+          const {
+            id: _i,
+            proposta_id: _p,
+            created_at: _c,
+            ...rest
+          } = it as Record<string, unknown> & {
             id?: string;
             proposta_id?: string;
             created_at?: string;
@@ -318,11 +390,13 @@ export const converterPropostaEmPi = createServerFn({ method: "POST" })
     // Atualiza cadastros de cliente/agência via CNPJ (silencioso)
     try {
       const { refreshPartesPi } = await import("@/lib/pi.functions");
-      await (refreshPartesPi as unknown as (s: unknown, c: string | null, a: string | null) => Promise<void>)(
-        supabase,
-        prop.cliente_id ?? null,
-        prop.agencia_id ?? null,
-      );
+      await (
+        refreshPartesPi as unknown as (
+          s: unknown,
+          c: string | null,
+          a: string | null,
+        ) => Promise<void>
+      )(supabase, prop.cliente_id ?? null, prop.agencia_id ?? null);
     } catch (e) {
       console.warn("[converterPropostaEmPi] refresh CNPJ falhou:", (e as Error).message);
     }
@@ -349,18 +423,19 @@ export const cobrarRetornoCliente = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    
+
     // Buscar detalhes da proposta e do briefing vinculado
     const { data: prop, error: pErr } = await supabase
       .from("propostas")
       .select("numero, campanha, briefing_id, briefing:briefings(created_by, razao_social)")
       .eq("id", data.id)
       .single();
-    
+
     if (pErr) throw new Error(pErr.message);
 
     const briefing = prop.briefing as any;
-    if (!briefing?.created_by) throw new Error("Parceiro comercial não identificado para esta proposta.");
+    if (!briefing?.created_by)
+      throw new Error("Parceiro comercial não identificado para esta proposta.");
 
     // Buscar quem está cobrando (ADM)
     const { data: profile } = await supabase
@@ -378,7 +453,11 @@ export const cobrarRetornoCliente = createServerFn({ method: "POST" })
       titulo: "Cobrança de Retorno (ADM)",
       mensagem: `${solicitante} está solicitando o status do retorno da proposta Nº ${prop.numero} para o cliente: ${briefing.razao_social}.`,
       link: `/briefings?id=${prop.briefing_id}`,
-      metadata: { proposta_id: data.id, briefing_id: prop.briefing_id, tipo_evento: "cobranca_retorno_adm" }
+      metadata: {
+        proposta_id: data.id,
+        briefing_id: prop.briefing_id,
+        tipo_evento: "cobranca_retorno_adm",
+      },
     });
 
     return { ok: true };
@@ -473,17 +552,18 @@ export const gerarPropostaDoPi = createServerFn({ method: "POST" })
       if (itErr) throw new Error(itErr.message);
     }
 
-
     return { id: created.id, numero: created.numero };
   });
 
 export const marcarPropostaRecusada = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      id: z.string().uuid(),
-      motivo: z.string().trim().max(1000).optional(),
-    }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        motivo: z.string().trim().max(1000).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;

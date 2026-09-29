@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Send, Ban, Pencil, History as HistoryIcon, FileDown, Eye, Check, X, Trash2, FileSpreadsheet, PenLine, Copy, Calendar, RefreshCw, RotateCcw, MoreHorizontal, Sparkles as SparklesIcon } from "lucide-react";
+import { Plus, Send, Ban, Pencil, History as HistoryIcon, FileDown, Eye, Check, X, Trash2, FileSpreadsheet, PenLine, Copy, Calendar, RefreshCw, RotateCcw, MoreHorizontal, Sparkles as SparklesIcon, Clock } from "lucide-react";
 import { PosVendaDialog } from "@/components/PosVendaDialog";
 import { WhatsappQrDialog } from "@/components/WhatsappQrDialog";
 
@@ -22,6 +22,7 @@ import { listUsuarios } from "@/lib/usuarios.functions";
 import { getAssinaturaExecutivoDoPi, getAssinaturaClienteDoPi, getAssinaturaDiretoriaDoPi, criarLinkAssinaturaCliente } from "@/lib/assinaturas.functions";
 import { listStatusAprovacaoDiretoria } from "@/lib/aprovacao-diretoria.functions";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { calcularDiasUteisRestantes } from "@/lib/campanhas-renovacao.functions";
 
 import type { exportarPiExcel } from "@/lib/pi-excel";
 import { PiFormDialog } from "@/components/PiFormDialog";
@@ -242,6 +243,11 @@ function buildRenovacaoPrefill(full: any, targetMes: number, targetAno: number) 
 
 export const Route = createFileRoute("/pi")({
   head: () => ({ meta: [{ title: "Pedidos de Inserção — Mídia.OS" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    id: typeof search.id === "string" ? search.id : undefined,
+    renovar: typeof search.renovar === "string" ? search.renovar : undefined,
+    filtro: typeof search.filtro === "string" ? search.filtro : undefined,
+  }),
   component: PIPage,
 });
 
@@ -307,6 +313,8 @@ type PiRow = {
 function PIPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const routeSearch = Route.useSearch();
+  const [apenasRenovacao10d, setApenasRenovacao10d] = useState(routeSearch?.filtro === "renovacao_10d");
   const [search, setSearch] = useState("");
   const [fatFilter, setFatFilter] = useState<"todos" | "bruto" | "liquido">("todos");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -353,6 +361,40 @@ function PIPage() {
   const [prefill, setPrefill] = useState<NonNullable<Parameters<typeof PiFormDialog>[0]["initial"]> | undefined>(undefined);
   const [renovadoDeId, setRenovadoDeId] = useState<string | null>(null);
   const [renovarSource, setRenovarSource] = useState<{ full: any; initialMes: number; initialAno: number } | null>(null);
+
+  React.useEffect(() => {
+    if (routeSearch.renovar) {
+      (async () => {
+        try {
+          const full = await getPi({ data: { id: routeSearch.renovar! } }) as any;
+          if (full) {
+            const baseMes = full.mes_veiculacao ?? (new Date().getMonth() + 1);
+            const baseAno = full.ano_veiculacao ?? new Date().getFullYear();
+            const nextMes = (baseMes % 12) + 1;
+            const nextAno = baseAno + (baseMes === 12 ? 1 : 0);
+            setRenovarSource({ full, initialMes: nextMes, initialAno: nextAno });
+          }
+        } catch (e) {
+          console.warn("Falha ao abrir renovação via parâmetro URL:", e);
+        }
+      })();
+    }
+  }, [routeSearch.renovar]);
+
+  const handleRenovarPi = async (piId: string) => {
+    try {
+      const full = (await getPi({ data: { id: piId } })) as any;
+      if (full) {
+        const baseMes = full.mes_veiculacao ?? (new Date().getMonth() + 1);
+        const baseAno = full.ano_veiculacao ?? new Date().getFullYear();
+        const nextMes = (baseMes % 12) + 1;
+        const nextAno = baseAno + (baseMes === 12 ? 1 : 0);
+        setRenovarSource({ full, initialMes: nextMes, initialAno: nextAno });
+      }
+    } catch (e) {
+      toast.error("Falha ao carregar dados para renovação");
+    }
+  };
 
 
   const { user, loading: authLoading } = useAuth();
@@ -469,6 +511,21 @@ function PIPage() {
     const matchExec = execFilter === "todos" || p.executivo_id === execFilter;
     const matchSubst = showSubstituidos || p.status !== "substituido";
 
+    let matchRenovacao10d = true;
+    if (apenasRenovacao10d) {
+      let fimStr = p.periodo_fim;
+      if (!fimStr && p.mes_veiculacao && p.ano_veiculacao) {
+        const uDia = new Date(p.ano_veiculacao, p.mes_veiculacao, 0).getDate();
+        fimStr = `${p.ano_veiculacao}-${String(p.mes_veiculacao).padStart(2, "0")}-${String(uDia).padStart(2, "0")}`;
+      }
+      if (!fimStr || ["cancelado", "reprovado", "substituido"].includes(p.status)) {
+        matchRenovacao10d = false;
+      } else {
+        const du = calcularDiasUteisRestantes(fimStr);
+        matchRenovacao10d = du <= 10 && du >= -3;
+      }
+    }
+
     // Filtros por coluna
     const matchFNumero = !fNumero || p.numero.toLowerCase().includes(fNumero.toLowerCase());
     const matchFCliente = !fCliente || (
@@ -492,6 +549,7 @@ function PIPage() {
     const matchRoleVisibility = !isWaitingApproval || canSeeApproval;
 
     return matchSearch && matchFat && matchStatus && matchMes && matchAno && matchEntidade && matchPermuta && matchExec && matchSubst
+      && matchRenovacao10d
       && matchFNumero && matchFCliente && matchFCampanha
       && matchValorMin && matchValorMax && matchInsMin && matchInsMax && matchDescMin && matchDescMax
       && matchRoleVisibility;
@@ -646,12 +704,27 @@ function PIPage() {
                 </SelectContent>
               </Select>
             )}
-            {(search || statusFilter !== "todos" || fatFilter !== "todos" || mesFilter !== "todos" || anoFilter !== "todos" || entidadeFilter !== "todos" || permutaFilter !== "todos" || execFilter !== "todos" || fNumero || fCliente || fCampanha || fValorMin || fValorMax || fInsMin || fInsMax || fDescMin || fDescMax) && (
+            <Button
+              variant={apenasRenovacao10d ? "default" : "outline"}
+              size="sm"
+              onClick={() => setApenasRenovacao10d(!apenasRenovacao10d)}
+              className={`h-9 gap-1.5 text-xs font-semibold ${
+                apenasRenovacao10d
+                  ? "bg-amber-600 text-white hover:bg-amber-700"
+                  : "border-amber-300 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              }`}
+              title="Filtrar campanhas a 10 dias úteis ou menos do término para negociação de renovação"
+            >
+              <Clock className="size-3.5" />
+              <span>A Renovar (≤ 10 dias úteis)</span>
+            </Button>
+
+            {(search || apenasRenovacao10d || statusFilter !== "todos" || fatFilter !== "todos" || mesFilter !== "todos" || anoFilter !== "todos" || entidadeFilter !== "todos" || permutaFilter !== "todos" || execFilter !== "todos" || fNumero || fCliente || fCampanha || fValorMin || fValorMax || fInsMin || fInsMax || fDescMin || fDescMax) && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setSearch(""); setStatusFilter("todos"); setFatFilter("todos");
+                  setSearch(""); setApenasRenovacao10d(false); setStatusFilter("todos"); setFatFilter("todos");
                   setMesFilter("todos"); setAnoFilter("todos"); setEntidadeFilter("todos");
                   setPermutaFilter("todos"); setExecFilter("todos");
                   setFNumero(""); setFCliente(""); setFCampanha("");
@@ -818,6 +891,42 @@ function PIPage() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <Badge className={STATUS_COLOR[p.status]}>{STATUS_LABEL[p.status] ?? p.status}</Badge>
+                          {(() => {
+                            let fimStr = p.periodo_fim;
+                            if (!fimStr && p.mes_veiculacao && p.ano_veiculacao) {
+                              const uDia = new Date(p.ano_veiculacao, p.mes_veiculacao, 0).getDate();
+                              fimStr = `${p.ano_veiculacao}-${String(p.mes_veiculacao).padStart(2, "0")}-${String(uDia).padStart(2, "0")}`;
+                            }
+                            if (!fimStr || ["cancelado", "reprovado", "substituido"].includes(p.status)) return null;
+                            const du = calcularDiasUteisRestantes(fimStr);
+                            if (du <= 10 && du >= -3) {
+                              const badgeCls =
+                                du <= 3
+                                  ? "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-300 font-bold animate-pulse"
+                                  : du <= 6
+                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-300 font-bold"
+                                  : "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-300 font-medium";
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRenovarPi(p.id);
+                                  }}
+                                  className="text-left cursor-pointer"
+                                >
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[10px] w-fit hover:opacity-85 transition-opacity ${badgeCls}`}
+                                    title="Campanha a ≤ 10 dias úteis do término. Clique para iniciar a renovação."
+                                  >
+                                    ⏰ Renovar: {du === 0 ? "HOJE" : du < 0 ? "Vencido" : `${du}d úteis`}
+                                  </Badge>
+                                </button>
+                              );
+                            }
+                            return null;
+                          })()}
                           {anexosSet.has(p.id) && (
                             <Badge variant="outline" className="bg-sky-100 text-sky-700 text-[10px] w-fit" title="Este PI possui PDF importado/anexado">
                               PDF anexado

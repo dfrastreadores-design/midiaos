@@ -10,6 +10,7 @@ export const ROUTE_PERMISSION: Record<string, string> = {
   "/clientes": "module.clientes",
   "/agencias": "module.agencias",
   "/produtos": "module.produtos",
+  "/parceiros": "module.produtos",
   "/pi": "module.pi",
   "/propostas": "module.propostas",
   "/briefings": "module.briefings",
@@ -79,6 +80,7 @@ export function useUserRoles() {
 
   const isSuperAdmin = user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
   const isAdmin = isSuperAdmin || roles.includes("admin") || roles.includes("super_admin");
+  const isDiretoria = isSuperAdmin || roles.includes("diretoria");
   const isParceiroComercial = !isSuperAdmin && roles.includes("parceiro_comercial");
 
   const can = (path: string) => {
@@ -89,7 +91,13 @@ export function useUserRoles() {
     if (path.startsWith("/owner")) return false;
     if (path === "/monitoramento") return false;
 
-    if (path === "/usuarios" || path === "/configuracoes" || path === "/relatorio-sincronizacao" || path === "/layouts") return isAdmin;
+    if (
+      path === "/usuarios" ||
+      path === "/configuracoes" ||
+      path === "/relatorio-sincronizacao" ||
+      path === "/layouts"
+    )
+      return isAdmin;
     if (ADMIN_ONLY_ROUTES.has(path)) return isAdmin;
 
     // Influenciadores: somente admin e produção
@@ -110,5 +118,15 @@ export function useUserRoles() {
   const hasPermission = (key: string) =>
     isSuperAdmin || (isAdmin && !adminManaged) || perms.has(key);
 
-  return { roles, isAdmin, isSuperAdmin, isParceiroComercial, can, hasPermission, permissions: perms, loading: rolesLoading };
+  return {
+    roles,
+    isAdmin,
+    isSuperAdmin,
+    isDiretoria,
+    isParceiroComercial,
+    can,
+    hasPermission,
+    permissions: perms,
+    loading: rolesLoading,
+  };
 }

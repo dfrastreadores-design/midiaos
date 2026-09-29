@@ -262,3 +262,23 @@
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+/* iOS & Android Safe Area Insets (Notch, Dynamic Island, Home Indicator) */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+.pt-safe { padding-top: var(--sat); }
+.pb-safe { padding-bottom: max(var(--sab), 0.75rem); }
+.pl-safe { padding-left: var(--sal); }
+.pr-safe { padding-right: var(--sar); }
+
+/* Mobile Touch & Scroll Feel */
+html, body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+

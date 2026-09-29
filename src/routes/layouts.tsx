@@ -10,8 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/PageHeader";
 import { LayoutManagerDialog } from "@/components/LayoutManagerDialog";
+import { ImportarModeloPropostaDialog } from "@/components/ImportarModeloPropostaDialog";
+import { listProposalLayouts } from "@/lib/layouts.functions";
 import { getPiLayout, savePiLayout, DEFAULT_PI_LAYOUT, invalidatePiLayoutCache, type PiLayoutConfig } from "@/lib/pi-layout.functions";
-import { Loader2, Save, Settings2 } from "lucide-react";
+import { Loader2, Save, Settings2, Sliders, Presentation, Plus, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/layouts")({
@@ -22,7 +25,14 @@ export const Route = createFileRoute("/layouts")({
 function LayoutsPage() {
   const qc = useQueryClient();
   const [propostasOpen, setPropostasOpen] = useState(false);
+  const [importarModeloOpen, setImportarModeloOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any | null>(null);
   const [cfg, setCfg] = useState<PiLayoutConfig>(DEFAULT_PI_LAYOUT);
+
+  const { data: proposalLayouts = [], isLoading: loadingProposalLayouts } = useQuery({
+    queryKey: ["proposal_layouts"],
+    queryFn: () => listProposalLayouts(),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["pi_layout"],
@@ -137,23 +147,131 @@ function LayoutsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="propostas">
-          <Card>
-            <CardHeader>
-              <CardTitle>Layouts de Proposta</CardTitle>
-              <CardDescription>Cores, fontes, logo e opções de exibição da apresentação comercial.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button onClick={() => setPropostasOpen(true)}>
-                <Settings2 className="size-4 mr-2" /> Abrir gerenciador de layouts
+        <TabsContent value="propostas" className="space-y-4">
+          <Card className="border-primary/20 bg-linear-to-b from-primary/[0.03] to-transparent">
+            <CardHeader className="flex flex-row items-start justify-between gap-4 flex-wrap">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Presentation className="size-5 text-primary" />
+                  Modelo Próprio da Empresa (PDF & Slides Mapeados)
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Importe o modelo oficial da sua empresa (PDF ou imagens) e defina em qual slide e coordenadas a tabela de
+                  produtos, geolocalização e valores (ou Pacote de Mídia) serão inseridos automaticamente.
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => {
+                  setEditingTemplate(null);
+                  setImportarModeloOpen(true);
+                }}
+                className="gap-1.5"
+              >
+                <Plus className="size-4" /> Importar Modelo Próprio
               </Button>
-              <p className="text-xs text-muted-foreground border-t pt-3">
-                Para ajustes finos no código, edite <code>src/components/GerarApresentacaoDialog.tsx</code> (renderização)
-                e <code> src/components/LayoutManagerDialog.tsx</code> (campos configuráveis).
-              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingProposalLayouts ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                  <Loader2 className="size-4 animate-spin" /> Carregando modelos da empresa…
+                </div>
+              ) : proposalLayouts.filter((l) => l.slides && l.slides.length > 0).length === 0 ? (
+                <div className="rounded-xl border border-dashed p-6 text-center bg-muted/10 space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Nenhum modelo de slide importado para a sua empresa ainda.
+                  </p>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                    Você pode subir a apresentação institucional da sua empresa em PDF e configurar exatamente onde a Capa e a
+                    Tabela Comercial de Produtos/Valores serão geradas.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => {
+                      setEditingTemplate(null);
+                      setImportarModeloOpen(true);
+                    }}
+                  >
+                    <Sliders className="size-3.5 mr-1" /> Começar Importação
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {proposalLayouts
+                    .filter((l) => l.slides && l.slides.length > 0)
+                    .map((layout) => (
+                      <div
+                        key={layout.id}
+                        className="rounded-xl border bg-card p-3 shadow-xs hover:border-primary/50 transition flex flex-col justify-between gap-3"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-semibold text-sm truncate">{layout.name}</span>
+                            {layout.is_default && (
+                              <Badge variant="default" className="text-[10px] shrink-0">
+                                Padrão
+                              </Badge>
+                            )}
+                          </div>
+                          {layout.slides?.[0]?.imageUrl && (
+                            <div className="aspect-video rounded-md overflow-hidden bg-slate-900 border">
+                              <img
+                                src={layout.slides[0].imageUrl}
+                                alt="Capa"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground space-y-0.5">
+                            <p>🎞️ {layout.slides?.length || 0} slides configurados</p>
+                            <p>
+                              📍 Slide de produtos: #{Number(layout.mapeamento?.slideProdutosIndex ?? 1) + 1} (Topo:{" "}
+                              {layout.mapeamento?.tabela?.margemSuperiorPct ?? 24}%)
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-2 border-t">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-full gap-1"
+                            onClick={() => {
+                              setEditingTemplate(layout);
+                              setImportarModeloOpen(true);
+                            }}
+                          >
+                            <Sliders className="size-3.5" /> Editar Mapeamento
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Settings2 className="size-4" /> Layouts e Temas Padrão (Cores e Fontes)
+              </CardTitle>
+              <CardDescription>Cores, fontes, logo e opções de exibição do tema padrão.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" onClick={() => setPropostasOpen(true)}>
+                <Settings2 className="size-4 mr-2" /> Gerenciar Cores & Temas Padrão
+              </Button>
+            </CardContent>
+          </Card>
+
           <LayoutManagerDialog open={propostasOpen} onOpenChange={setPropostasOpen} />
+          <ImportarModeloPropostaDialog
+            open={importarModeloOpen}
+            onOpenChange={setImportarModeloOpen}
+            initial={editingTemplate}
+          />
         </TabsContent>
       </Tabs>
     </div>

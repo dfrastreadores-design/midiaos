@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const MidiaEnum = z.enum(["TV", "Radio", "DOOH"]);
+const MidiaEnum = z.string().min(1).max(60);
 
 const ConfigSchema = z.object({
   midia: MidiaEnum,

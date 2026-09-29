@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { MapPin, Loader2, Sparkles } from "lucide-react";
 import { listProdutos } from "@/lib/produtos.functions";
 import { geocodeAddress } from "@/lib/geocode.functions";
+import { ProdutoFotoImg } from "@/components/ProdutoFotoImg";
 
 type Props = {
   cliente: {
@@ -97,20 +98,27 @@ export function NearbyDoohSuggestions({ cliente }: Props) {
           ).map((p: any) => (
             <li
               key={p.id}
-              className="flex items-start justify-between gap-2 rounded-md bg-background/60 p-2 text-xs"
+              className="flex items-start justify-between gap-2.5 rounded-md bg-background/60 p-2 text-xs"
             >
-              <div className="min-w-0">
-                <div className="font-medium truncate">{p.nome}</div>
-                {p.endereco_ponto && (
-                  <div className="text-muted-foreground truncate">{p.endereco_ponto}</div>
-                )}
-                {p.distanceKm != null && (
-                  <div className="text-primary">
-                    {p.distanceKm < 1
-                      ? `${Math.round(p.distanceKm * 1000)} m do cliente`
-                      : `${p.distanceKm.toFixed(1)} km do cliente`}
+              <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                {p.fotos && p.fotos.length > 0 && (
+                  <div className="size-9 rounded-md overflow-hidden border shrink-0 bg-muted/30">
+                    <ProdutoFotoImg stored={p.fotos[0]} alt={p.nome} className="size-full object-cover" />
                   </div>
                 )}
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{p.nome}</div>
+                  {p.endereco_ponto && (
+                    <div className="text-muted-foreground truncate">{p.endereco_ponto}</div>
+                  )}
+                  {p.distanceKm != null && (
+                    <div className="text-primary font-medium">
+                      {p.distanceKm < 1
+                        ? `${Math.round(p.distanceKm * 1000)} m do cliente`
+                        : `${p.distanceKm.toFixed(1)} km do cliente`}
+                    </div>
+                  )}
+                </div>
               </div>
               <a
                 href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`}

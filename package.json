@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "pack:hostinger": "node scripts/package-hostinger.mjs",
-    "deploy:hostinger": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-hostinger.ps1"
+    "deploy:hostinger": "node scripts/deploy-hostinger.mjs",
+    "backup:prod": "node scripts/backup-producao.mjs"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
@@ -60,6 +61,7 @@
     "input-otp": "^1.4.2",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.575.0",
     "nitro": "3.0.260603-beta",
     "pdfjs-dist": "^5.7.284",

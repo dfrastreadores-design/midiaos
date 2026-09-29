@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,24 +20,31 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Pencil, Trash2, Tv, Radio, Monitor, Building2, Tags, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Tv, Radio, Monitor, Building2, Tags, Upload, Handshake, Download, FileSpreadsheet, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { listProdutos, upsertProduto, deleteProduto, listProdutoTipos, upsertProdutoTipo, deleteProdutoTipo } from "@/lib/produtos.functions";
 import { listMidiaConfig, upsertMidiaConfig } from "@/lib/midia-config.functions";
 import { useUserRoles } from "@/hooks/use-roles";
 import { formatBRL } from "@/lib/mock-data";
 import { LogoImg } from "@/components/LogoImg";
+import { ProdutoFotoImg } from "@/components/ProdutoFotoImg";
+import { ProdutoFotoGalleryModal } from "@/components/ProdutoFotoGalleryModal";
 import { ProdutoFormDialog, type Produto } from "@/components/ProdutoFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
+import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
 
 export const Route = createFileRoute("/produtos")({
   head: () => ({ meta: [{ title: "Produtos — Mídia.OS" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    parceiro: typeof search.parceiro === "string" ? search.parceiro : undefined,
+  }),
   component: ProdutosPage,
 });
 
-type Midia = "TV" | "Radio" | "DOOH";
+type Midia = string;
 
-const midiaLabel = { TV: "TV", Radio: "Rádio", DOOH: "DOOH" } as const;
+const midiaLabel: Record<string, string> = { TV: "TV", Radio: "Rádio", DOOH: "DOOH" };
+const getMidiaLabel = (m: string) => midiaLabel[m] || m;
 
 type MidiaConfig = {
   midia: Midia;
@@ -65,27 +72,57 @@ type ProdutoTipo = {
 
 function ProdutosPage() {
   const qc = useQueryClient();
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, can, hasPermission } = useUserRoles();
+  const canManage = isAdmin || can("/produtos") || hasPermission("module.produtos");
   const fetchList = useServerFn(listProdutos);
   const deleteFn = useServerFn(deleteProduto);
   const fetchConfigs = useServerFn(listMidiaConfig);
   const upsertConfigFn = useServerFn(upsertMidiaConfig);
   const fetchTipos = useServerFn(listProdutoTipos);
   
+  const searchParams = Route.useSearch();
   const [tab, setTab] = useState<Midia>("TV");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.parceiro || "");
   const [filtroTipo, setFiltroTipo] = useState<string>("__all__");
   const [filtroStatus, setFiltroStatus] = useState<"all" | "ativo" | "inativo">("all");
+  const [filtroOrigem, setFiltroOrigem] = useState<"all" | "proprio" | "parceiro">(
+    searchParams.parceiro ? "parceiro" : "all"
+  );
   const [editing, setEditing] = useState<Partial<Produto> | null>(null);
   const [open, setOpen] = useState(false);
   const [cfgOpen, setCfgOpen] = useState(false);
   const [cfgEditing, setCfgEditing] = useState<Partial<MidiaConfig> | null>(null);
   const [tiposOpen, setTiposOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [galleryFotos, setGalleryFotos] = useState<{ fotos: string[]; titulo: string; subtitulo?: string } | null>(null);
+  const [novaMidiaOpen, setNovaMidiaOpen] = useState(false);
+  const [novaMidiaNome, setNovaMidiaNome] = useState("");
 
   const { data, isLoading } = useQuery({ queryKey: ["produtos"], queryFn: () => fetchList() });
   const { data: configs } = useQuery({ queryKey: ["midia_config"], queryFn: () => fetchConfigs() });
   const { data: todosTipos = [] } = useQuery({ queryKey: ["produto_tipos"], queryFn: () => fetchTipos() });
+
+  const allProdutos = (data as Produto[]) ?? [];
+
+  const listaMidias = useMemo(() => {
+    const fromConfigs = ((configs as MidiaConfig[]) ?? []).map((c) => c.midia).filter(Boolean);
+    const fromProdutos = allProdutos.map((p) => p.midia).filter(Boolean);
+    return Array.from(new Set(["TV", "Radio", "DOOH", ...fromConfigs, ...fromProdutos]));
+  }, [configs, allProdutos]);
+
+  useEffect(() => {
+    if (searchParams.parceiro && allProdutos.length > 0) {
+      setSearch(searchParams.parceiro);
+      setFiltroOrigem("parceiro");
+      const hasInDooh = allProdutos.some(
+        (p) =>
+          p.midia === "DOOH" &&
+          (p.parceiro_nome?.toLowerCase().includes(searchParams.parceiro!.toLowerCase()) ||
+            p.parceiro_cnpj?.includes(searchParams.parceiro!))
+      );
+      if (hasInDooh) setTab("DOOH");
+    }
+  }, [searchParams.parceiro, allProdutos]);
 
   const delMut = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
@@ -107,26 +144,39 @@ function ProdutosPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const allProdutos = (data as Produto[]) ?? [];
   const q = search.trim().toLowerCase();
   const list = allProdutos.filter((p) => {
     if (p.midia !== tab) return false;
     if (filtroTipo !== "__all__" && (p.tipo ?? "") !== filtroTipo) return false;
     if (filtroStatus === "ativo" && !p.ativo) return false;
     if (filtroStatus === "inativo" && p.ativo) return false;
+    if (filtroOrigem === "proprio" && (p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id)) return false;
+    if (filtroOrigem === "parceiro" && !p.parceiro_cnpj && !p.parceiro_nome && !p.parceiro_id) return false;
     if (!q) return true;
-    return [p.nome, p.tipo, p.programa, p.formato, p.faixa]
+    return [p.nome, p.tipo, p.programa, p.formato, p.faixa, p.parceiro_nome, p.parceiro_cnpj]
       .filter(Boolean)
       .some((v) => String(v).toLowerCase().includes(q));
   });
   
-  // Extrair sugestões únicas para os campos
-  const tiposDaMidia = (todosTipos as ProdutoTipo[]).filter(t => t.midia === tab).map(t => t.nome);
-  const tiposSugeridos = Array.from(new Set([...tiposDaMidia, ...allProdutos.map(p => p.tipo).filter((v): v is string => Boolean(v))])).sort();
-  const programasSugeridos = Array.from(new Set(allProdutos.map(p => p.programa).filter(Boolean))).sort();
-  const formatosSugeridos = Array.from(new Set(allProdutos.map(p => p.formato).filter(Boolean))).sort();
-  const faixasSugeridas = Array.from(new Set(allProdutos.map(p => p.faixa).filter(Boolean))).sort();
+  // Função para retornar os tipos cadastrados para uma mídia específica deste inquilino
+  const getTiposPorMidia = (m: Midia) => {
+    const tiposDaMidia = (todosTipos as ProdutoTipo[])
+      .filter((t) => t.midia === m)
+      .map((t) => t.nome.trim())
+      .filter(Boolean);
+    const tiposDosProdutos = allProdutos
+      .filter((p) => p.midia === m && p.tipo && p.tipo.trim())
+      .map((p) => p.tipo!.trim());
+    return Array.from(new Set([...tiposDaMidia, ...tiposDosProdutos])).sort((a, b) =>
+      a.localeCompare(b, "pt-BR")
+    );
+  };
 
+  // Sugestões estritamente do que foi cadastrado pelo inquilino para a mídia ativa
+  const tiposSugeridos = getTiposPorMidia(tab);
+  const programasSugeridos = Array.from(new Set(allProdutos.filter(p => p.midia === tab).map(p => p.programa).filter(Boolean))).sort();
+  const formatosSugeridos = Array.from(new Set(allProdutos.filter(p => p.midia === tab).map(p => p.formato).filter(Boolean))).sort();
+  const faixasSugeridas = Array.from(new Set(allProdutos.filter(p => p.midia === tab).map(p => p.faixa).filter(Boolean))).sort();
 
   const currentCfg = ((configs as MidiaConfig[]) ?? []).find((c) => c.midia === tab);
 
@@ -151,23 +201,49 @@ function ProdutosPage() {
             Cadastro de produtos de TV, Rádio e DOOH (valor, tempo e inserções padrão).
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            <Upload className="size-4 mr-2" />Importar produtos
+        <div className="flex gap-2 flex-wrap items-center">
+          <Button variant="outline" asChild className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/40">
+            <Link to="/parceiros">
+              <Handshake className="size-4 text-purple-600" />
+              <span>Parceiros de Mídia</span>
+            </Link>
           </Button>
-          {isAdmin && (
-            <>
-              <Button variant="outline" onClick={() => setTiposOpen(true)}>
-                <Tags className="size-4 mr-2" />Tipos de Produto
-              </Button>
-              <Button variant="outline" onClick={openCfg}>
-                <Building2 className="size-4 mr-2" />Dados da emissora ({midiaLabel[tab]})
-              </Button>
-              <Button onClick={openNew}><Plus className="size-4 mr-2" />Novo Produto</Button>
-            </>
-          )}
-        </div>
 
+          <Button
+            variant="outline"
+            onClick={() => {
+              downloadModeloProdutosExcel("modelo-importacao-produtos-cliente.xlsx");
+              toast.success("Modelo de planilha (.xlsx) baixado com sucesso!");
+            }}
+            className="gap-2 text-xs"
+            title="Baixar planilha modelo (.xlsx) com instruções e exemplos de produtos para preenchimento"
+          >
+            <Download className="size-4 text-emerald-600" />
+            <span>Baixar Modelo (.xlsx)</span>
+          </Button>
+
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+            <Upload className="size-4" />
+            <span>Importar Planilha</span>
+          </Button>
+
+          <Button variant="outline" onClick={() => setTiposOpen(true)} className="gap-2">
+            <Tags className="size-4" />
+            <span>Tipos de Produto</span>
+          </Button>
+
+          {(isAdmin || canManage) && (
+            <Button variant="outline" onClick={openCfg} className="gap-2">
+              <Building2 className="size-4" />
+              <span>Dados da emissora ({midiaLabel[tab]})</span>
+            </Button>
+          )}
+
+          <Button onClick={openNew} className="gap-2 shadow-sm">
+            <Plus className="size-4" />
+            <span>Novo Produto</span>
+          </Button>
+        </div>
       </div>
 
       {currentCfg && (currentCfg.cnpj || currentCfg.razao_social) && (
@@ -182,14 +258,36 @@ function ProdutosPage() {
 
       <ImportarProdutosDialog open={importOpen} onOpenChange={setImportOpen} midiaPadrao={tab} />
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as Midia)}>
-        <TabsList>
-          <TabsTrigger value="TV"><Tv className="size-4 mr-1.5" />TV</TabsTrigger>
-          <TabsTrigger value="Radio"><Radio className="size-4 mr-1.5" />Rádio</TabsTrigger>
-          <TabsTrigger value="DOOH"><Monitor className="size-4 mr-1.5" />DOOH</TabsTrigger>
+      <Tabs value={tab} onValueChange={(v) => setTab(v)}>
+        <TabsList className="flex flex-wrap h-auto gap-1">
+          {listaMidias.map((m) => (
+            <TabsTrigger key={m} value={m} className="gap-1.5">
+              {m === "TV" ? (
+                <Tv className="size-4" />
+              ) : m === "Radio" ? (
+                <Radio className="size-4" />
+              ) : m === "DOOH" ? (
+                <Monitor className="size-4" />
+              ) : (
+                <Tags className="size-3.5" />
+              )}
+              {getMidiaLabel(m)}
+            </TabsTrigger>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setNovaMidiaOpen(true)}
+            className="h-8 px-2.5 text-xs text-primary gap-1 border-dashed border-primary/40 hover:bg-primary/10 ml-1"
+            title="Cadastrar nova mídia no sistema"
+          >
+            <Plus className="size-3.5" />
+            Nova Mídia
+          </Button>
         </TabsList>
 
-        {(["TV", "Radio", "DOOH"] as Midia[]).map((m) => (
+        {listaMidias.map((m) => (
           <TabsContent key={m} value={m} className="mt-4 space-y-3">
             <Card>
               <CardContent className="p-3 flex flex-wrap gap-2 items-center">
@@ -216,6 +314,14 @@ function ProdutosPage() {
                     <SelectItem value="inativo">Inativos</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={filtroOrigem} onValueChange={(v) => setFiltroOrigem(v as any)}>
+                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="Origem" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as origens</SelectItem>
+                    <SelectItem value="proprio">🏢 Próprios do Inquilino</SelectItem>
+                    <SelectItem value="parceiro">🤝 De Parceiros</SelectItem>
+                  </SelectContent>
+                </Select>
                 <div className="text-sm text-muted-foreground ml-auto">
                   {list.length} resultado{list.length === 1 ? "" : "s"}
                 </div>
@@ -227,6 +333,7 @@ function ProdutosPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>
+                      <TableHead>Origem / Parceiro</TableHead>
                       <TableHead>Programa / Faixa</TableHead>
                       <TableHead className="text-right">Duração</TableHead>
                       <TableHead className="text-right">Inserções</TableHead>
@@ -237,14 +344,133 @@ function ProdutosPage() {
                   </TableHeader>
                   <TableBody>
                     {isLoading && (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando…</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando…</TableCell></TableRow>
                     )}
-                    {!isLoading && list.length === 0 && (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum produto cadastrado.</TableCell></TableRow>
-                    )}
+                    {!isLoading && list.length === 0 && (() => {
+                      const totalMidia = allProdutos.filter((p) => p.midia === tab).length;
+                      if (totalMidia === 0) {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={8} className="py-12">
+                              <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
+                                <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                                  {tab === "TV" ? <Tv className="size-7" /> : tab === "Radio" ? <Radio className="size-7" /> : <Monitor className="size-7" />}
+                                </div>
+                                <div className="space-y-1">
+                                  <h3 className="font-semibold text-lg">Nenhum produto cadastrado para {midiaLabel[tab]}</h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    Você pode cadastrar produtos manualmente um a um ou importar todo o seu catálogo em lote via planilha Excel ou CSV.
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                                  <Button onClick={openNew} className="gap-2">
+                                    <Plus className="size-4" />
+                                    Cadastrar Manualmente
+                                  </Button>
+                                  <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+                                    <Upload className="size-4" />
+                                    Importar Planilha (.xlsx, .csv)
+                                  </Button>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={8} className="py-10 text-center space-y-2">
+                            <p className="text-sm text-muted-foreground">Nenhum produto encontrado com os filtros aplicados.</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSearch("");
+                                setFiltroTipo("__all__");
+                                setFiltroStatus("all");
+                                setFiltroOrigem("all");
+                              }}
+                            >
+                              Limpar filtros
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })()}
                     {list.map((p) => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.nome}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            {p.fotos && p.fotos.length > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setGalleryFotos({
+                                    fotos: p.fotos!,
+                                    titulo: p.nome,
+                                    subtitulo: [midiaLabel[p.midia], p.tipo, p.formato]
+                                      .filter(Boolean)
+                                      .join(" • "),
+                                  })
+                                }
+                                className="relative size-11 rounded-lg overflow-hidden border border-border/80 shadow-sm shrink-0 group hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer bg-muted/20 text-left"
+                                title="Clique para ver fotos do produto"
+                              >
+                                <ProdutoFotoImg
+                                  stored={p.fotos[0]}
+                                  alt={p.nome}
+                                  className="size-full object-cover group-hover:scale-110 transition-transform duration-200"
+                                />
+                                {p.fotos.length > 1 && (
+                                  <span className="absolute bottom-0 right-0 bg-black/85 text-[9px] font-bold text-white px-1 rounded-tl-sm shadow">
+                                    2 fotos
+                                  </span>
+                                )}
+                              </button>
+                            ) : (
+                              <div
+                                className="size-11 rounded-lg bg-muted/30 border border-dashed border-border/70 flex items-center justify-center text-muted-foreground/40 shrink-0"
+                                title="Sem foto cadastrada"
+                              >
+                                <Camera className="size-4" />
+                              </div>
+                            )}
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-foreground truncate max-w-[240px]" title={p.nome}>
+                                {p.nome}
+                              </span>
+                              {p.tipo && (
+                                <span className="text-[11px] text-muted-foreground truncate max-w-[240px]">
+                                  {p.tipo}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id ? (
+                            <div className="flex flex-col items-start gap-1">
+                              <div className="flex items-center gap-1">
+                                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 text-[10px] font-medium py-0">
+                                  🤝 Parceiro
+                                </Badge>
+                                {p.comissao_inquilino_pct != null && (
+                                  <Badge variant="outline" className="text-[10px] font-bold text-purple-700 dark:text-purple-300 border-purple-300 bg-purple-50 dark:bg-purple-950/40 py-0">
+                                    {p.comissao_inquilino_pct}% remuneração
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[170px]" title={p.parceiro_nome || undefined}>
+                                {p.parceiro_nome || "Parceiro de Mídia"}
+                              </span>
+                              {p.parceiro_cnpj && <span className="font-mono text-[10px] text-muted-foreground">{p.parceiro_cnpj}</span>}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 text-[10px] py-0 font-normal">
+                              🏢 Próprio
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           <div className="flex flex-col">
                             <span>{p.programa || "—"}</span>
@@ -260,14 +486,14 @@ function ProdutosPage() {
                           <Badge variant={p.ativo ? "default" : "outline"}>{p.ativo ? "Ativo" : "Inativo"}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {isAdmin && (
+                          {canManage && (
                             <div className="flex justify-end gap-1">
-                              <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setOpen(true); }}>
+                              <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setOpen(true); }} title="Editar produto">
                                 <Pencil className="size-4" />
                               </Button>
                               <Button size="icon" variant="ghost" onClick={() => {
                                 if (confirm(`Remover "${p.nome}"?`)) delMut.mutate(p.id);
-                              }}>
+                              }} title="Remover produto">
                                 <Trash2 className="size-4 text-destructive" />
                               </Button>
                             </div>
@@ -293,6 +519,17 @@ function ProdutosPage() {
           formatos: formatosSugeridos as string[],
           faixas: faixasSugeridas as string[],
         }}
+        getTiposParaMidia={getTiposPorMidia}
+      />
+
+      <ProdutoFotoGalleryModal
+        open={!!galleryFotos}
+        onOpenChange={(v) => {
+          if (!v) setGalleryFotos(null);
+        }}
+        fotos={galleryFotos?.fotos || []}
+        titulo={galleryFotos?.titulo || "Fotos do Produto"}
+        subtitulo={galleryFotos?.subtitulo}
       />
 
 
@@ -311,6 +548,54 @@ function ProdutosPage() {
         tipos={todosTipos as ProdutoTipo[]}
         midia={tab}
       />
+
+      <Dialog open={novaMidiaOpen} onOpenChange={setNovaMidiaOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cadastrar Nova Mídia</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const nome = novaMidiaNome.trim();
+              if (!nome) return;
+              try {
+                await upsertConfigFn({ data: { midia: nome } });
+                await qc.invalidateQueries({ queryKey: ["midia_config"] });
+                setTab(nome);
+                setNovaMidiaNome("");
+                setNovaMidiaOpen(false);
+                toast.success(`Mídia "${nome}" cadastrada com sucesso!`);
+              } catch (err: any) {
+                toast.error(err.message || "Erro ao cadastrar mídia");
+              }
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label>Nome da Mídia *</Label>
+              <Input
+                placeholder="Ex.: Internet, Jornal, Podcast, Cinema, Eventos..."
+                value={novaMidiaNome}
+                onChange={(e) => setNovaMidiaNome(e.target.value)}
+                autoFocus
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Ao cadastrar uma nova mídia, ela ficará disponível para seleção no cadastro de produtos e receberá uma aba dedicada.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setNovaMidiaOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={!novaMidiaNome.trim()}>
+                Cadastrar Mídia
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
@@ -331,11 +616,11 @@ function ProdutoTiposDialog({
   const tiposDaMidia = tipos.filter(t => t.midia === midia);
 
   const addMut = useMutation({
-    mutationFn: () => upsertFn({ data: { nome: novo, midia } }),
+    mutationFn: () => upsertFn({ data: { nome: novo.trim(), midia } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["produto_tipos"] });
       setNovo("");
-      toast.success("Tipo adicionado");
+      toast.success(`Tipo de produto cadastrado para ${midiaLabel[midia]}`);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -353,25 +638,35 @@ function ProdutoTiposDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Gerenciar Tipos de Produto ({midia})</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Tags className="size-5 text-primary" />
+            Tipos de Produto — {midiaLabel[midia]}
+          </DialogTitle>
         </DialogHeader>
+
+        <p className="text-xs text-muted-foreground">
+          Cada inquilino tem seus próprios tipos de produtos. Apenas os tipos cadastrados pelo seu inquilino aparecerão nos formulários e filtros.
+        </p>
         
         <div className="space-y-4 py-2">
           <div className="flex gap-2">
             <Input 
-              placeholder="Novo tipo (ex: VT, Spot...)" 
+              placeholder={`Novo tipo para ${midiaLabel[midia]} (ex: VT, Spot, Banner...)`} 
               value={novo} 
               onChange={(e) => setNovo(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && novo.trim() && addMut.mutate()}
             />
             <Button onClick={() => addMut.mutate()} disabled={!novo.trim() || addMut.isPending}>
-              Adicionar
+              {addMut.isPending ? "Salvando..." : "Adicionar"}
             </Button>
           </div>
 
           <div className="rounded-md border divide-y max-h-[300px] overflow-y-auto">
             {tiposDaMidia.length === 0 && (
-              <div className="p-4 text-center text-sm text-muted-foreground">Nenhum tipo cadastrado para esta mídia.</div>
+              <div className="p-6 text-center text-sm text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground">Nenhum tipo cadastrado para {midiaLabel[midia]}</p>
+                <p className="text-xs">Digite um nome acima para cadastrar seu primeiro tipo de produto.</p>
+              </div>
             )}
             {tiposDaMidia.map((t) => (
               <div key={t.id} className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
@@ -382,6 +677,7 @@ function ProdutoTiposDialog({
                   className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={() => confirm(`Remover o tipo "${t.nome}"?`) && delMut.mutate(t.id)}
                   disabled={delMut.isPending}
+                  title="Remover tipo"
                 >
                   <Trash2 className="size-4" />
                 </Button>

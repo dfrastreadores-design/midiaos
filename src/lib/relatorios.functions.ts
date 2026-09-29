@@ -404,22 +404,41 @@ export const gerarRelatorio = createServerFn({ method: "POST" })
       }
       case "produtos_catalogo": {
         const { data: prods } = await supabase.from("produtos").select("*").order("midia").order("nome");
-        const rows = (prods ?? []).map((p: any) => ({
-          midia: p.midia,
-          nome: p.nome,
-          programa: p.programa || "—",
-          faixa: p.faixa || "—",
-          duracao: `${p.duracao_segundos}s`,
-          insercoes: p.insercoes_padrao,
-          valor: Number(p.valor_unit),
-          ativo: p.ativo ? "Sim" : "Não",
-        }));
+        const rows = (prods ?? []).map((p: any) => {
+          let origem = "Próprio";
+          let pCnpj = p.parceiro_cnpj;
+          let pNome = p.parceiro_nome;
+          if (!pCnpj && p.detalhes_venda) {
+            try {
+              const meta = JSON.parse(p.detalhes_venda);
+              if (meta?._parceiro) {
+                pCnpj = meta._parceiro.cnpj;
+                pNome = meta._parceiro.nome;
+              }
+            } catch {}
+          }
+          if (pCnpj) {
+            origem = `Parceiro: ${pNome || pCnpj}`;
+          }
+          return {
+            midia: p.midia,
+            nome: p.nome,
+            origem,
+            programa: p.programa || "—",
+            faixa: p.faixa || "—",
+            duracao: `${p.duracao_segundos}s`,
+            insercoes: p.insercoes_padrao,
+            valor: Number(p.valor_unit),
+            ativo: p.ativo ? "Sim" : "Não",
+          };
+        });
         return {
           titulo: "Catálogo de produtos",
           geradoEm, filtros: {},
           columns: [
             { key: "midia", label: "Mídia" },
             { key: "nome", label: "Produto" },
+            { key: "origem", label: "Origem" },
             { key: "programa", label: "Programa" },
             { key: "faixa", label: "Faixa" },
             { key: "duracao", label: "Duração" },

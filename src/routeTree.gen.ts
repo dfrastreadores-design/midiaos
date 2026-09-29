@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VeiculosRouteImport } from './routes/veiculos'
 import { Route as UsuariosRouteImport } from './routes/usuarios'
 import { Route as TarefasRouteImport } from './routes/tarefas'
+import { Route as SocialMediaRouteImport } from './routes/social-media'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SiteRouteImport } from './routes/site'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
@@ -22,6 +23,7 @@ import { Route as ProdutosRouteImport } from './routes/produtos'
 import { Route as PiAnexosRouteImport } from './routes/pi-anexos'
 import { Route as PiRouteImport } from './routes/pi'
 import { Route as PermutaRouteImport } from './routes/permuta'
+import { Route as ParceirosRouteImport } from './routes/parceiros'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as MonitoramentoRouteImport } from './routes/monitoramento'
 import { Route as MinhaContaRouteImport } from './routes/minha-conta'
@@ -81,6 +83,11 @@ const TarefasRoute = TarefasRouteImport.update({
   path: '/tarefas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SocialMediaRoute = SocialMediaRouteImport.update({
+  id: '/social-media',
+  path: '/social-media',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -129,6 +136,11 @@ const PiRoute = PiRouteImport.update({
 const PermutaRoute = PermutaRouteImport.update({
   id: '/permuta',
   path: '/permuta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParceirosRoute = ParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OwnerRoute = OwnerRouteImport.update({
@@ -375,6 +387,7 @@ export interface FileRoutesByFullPath {
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
   '/owner': typeof OwnerRoute
+  '/parceiros': typeof ParceirosRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
@@ -385,6 +398,7 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof RelatoriosRoute
   '/site': typeof SiteRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/social-media': typeof SocialMediaRoute
   '/tarefas': typeof TarefasRoute
   '/usuarios': typeof UsuariosRoute
   '/veiculos': typeof VeiculosRoute
@@ -433,6 +447,7 @@ export interface FileRoutesByTo {
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
   '/owner': typeof OwnerRoute
+  '/parceiros': typeof ParceirosRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
@@ -442,6 +457,7 @@ export interface FileRoutesByTo {
   '/relatorio-sincronizacao': typeof RelatorioSincronizacaoRoute
   '/relatorios': typeof RelatoriosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/social-media': typeof SocialMediaRoute
   '/tarefas': typeof TarefasRoute
   '/usuarios': typeof UsuariosRoute
   '/veiculos': typeof VeiculosRoute
@@ -491,6 +507,7 @@ export interface FileRoutesById {
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
   '/owner': typeof OwnerRoute
+  '/parceiros': typeof ParceirosRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
@@ -501,6 +518,7 @@ export interface FileRoutesById {
   '/relatorios': typeof RelatoriosRoute
   '/site': typeof SiteRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/social-media': typeof SocialMediaRoute
   '/tarefas': typeof TarefasRoute
   '/usuarios': typeof UsuariosRoute
   '/veiculos': typeof VeiculosRoute
@@ -551,6 +569,7 @@ export interface FileRouteTypes {
     | '/minha-conta'
     | '/monitoramento'
     | '/owner'
+    | '/parceiros'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
@@ -561,6 +580,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/site'
     | '/sitemap.xml'
+    | '/social-media'
     | '/tarefas'
     | '/usuarios'
     | '/veiculos'
@@ -609,6 +629,7 @@ export interface FileRouteTypes {
     | '/minha-conta'
     | '/monitoramento'
     | '/owner'
+    | '/parceiros'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
@@ -618,6 +639,7 @@ export interface FileRouteTypes {
     | '/relatorio-sincronizacao'
     | '/relatorios'
     | '/sitemap.xml'
+    | '/social-media'
     | '/tarefas'
     | '/usuarios'
     | '/veiculos'
@@ -666,6 +688,7 @@ export interface FileRouteTypes {
     | '/minha-conta'
     | '/monitoramento'
     | '/owner'
+    | '/parceiros'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
@@ -676,6 +699,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/site'
     | '/sitemap.xml'
+    | '/social-media'
     | '/tarefas'
     | '/usuarios'
     | '/veiculos'
@@ -725,6 +749,7 @@ export interface RootRouteChildren {
   MinhaContaRoute: typeof MinhaContaRoute
   MonitoramentoRoute: typeof MonitoramentoRoute
   OwnerRoute: typeof OwnerRoute
+  ParceirosRoute: typeof ParceirosRoute
   PermutaRoute: typeof PermutaRoute
   PiRoute: typeof PiRoute
   PiAnexosRoute: typeof PiAnexosRoute
@@ -735,6 +760,7 @@ export interface RootRouteChildren {
   RelatoriosRoute: typeof RelatoriosRoute
   SiteRoute: typeof SiteRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SocialMediaRoute: typeof SocialMediaRoute
   TarefasRoute: typeof TarefasRoute
   UsuariosRoute: typeof UsuariosRoute
   VeiculosRoute: typeof VeiculosRoute
@@ -773,6 +799,13 @@ declare module '@tanstack/react-router' {
       path: '/tarefas'
       fullPath: '/tarefas'
       preLoaderRoute: typeof TarefasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/social-media': {
+      id: '/social-media'
+      path: '/social-media'
+      fullPath: '/social-media'
+      preLoaderRoute: typeof SocialMediaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -843,6 +876,13 @@ declare module '@tanstack/react-router' {
       path: '/permuta'
       fullPath: '/permuta'
       preLoaderRoute: typeof PermutaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parceiros': {
+      id: '/parceiros'
+      path: '/parceiros'
+      fullPath: '/parceiros'
+      preLoaderRoute: typeof ParceirosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/owner': {
@@ -1207,6 +1247,7 @@ const rootRouteChildren: RootRouteChildren = {
   MinhaContaRoute: MinhaContaRoute,
   MonitoramentoRoute: MonitoramentoRoute,
   OwnerRoute: OwnerRoute,
+  ParceirosRoute: ParceirosRoute,
   PermutaRoute: PermutaRoute,
   PiRoute: PiRoute,
   PiAnexosRoute: PiAnexosRoute,
@@ -1217,6 +1258,7 @@ const rootRouteChildren: RootRouteChildren = {
   RelatoriosRoute: RelatoriosRoute,
   SiteRoute: SiteRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SocialMediaRoute: SocialMediaRoute,
   TarefasRoute: TarefasRoute,
   UsuariosRoute: UsuariosRoute,
   VeiculosRoute: VeiculosRoute,

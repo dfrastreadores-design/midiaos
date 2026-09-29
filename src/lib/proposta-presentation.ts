@@ -6,6 +6,7 @@ import PptxGenJS from "pptxgenjs";
 import { applyTrialWatermark } from "@/lib/trial-watermark";
 import jsPDF from "jspdf";
 import autoTable, { type UserOptions } from "jspdf-autotable";
+import type { SlideTemplateItem, MapeamentoTemplateConfig } from "@/lib/layouts.functions";
 
 import tplSlide1 from "@/assets/proposta-template/hslide-1.jpg";
 import tplSlide2 from "@/assets/proposta-template/hslide-2.jpg";
@@ -42,6 +43,10 @@ type Item = {
   ano?: number | null;
   dias_semana?: string[] | null;
   dias_mes?: number[] | null;
+  endereco_ponto?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  fotos?: string[] | null;
 };
 
 const MESES_BR = [
@@ -73,8 +78,20 @@ function formatDias(it: Item): string {
   }
   return "";
 }
-function detalhesProduto(it: Item): string {
-  const partes = [formatPeriodo(it), formatDias(it)].filter(Boolean);
+function detalhesProduto(it: Item, opts?: { mostrarEndereco?: boolean }): string {
+  const partes: string[] = [];
+  const p = formatPeriodo(it);
+  if (p) partes.push(p);
+  const d = formatDias(it);
+  if (d) partes.push(d);
+
+  const showEnd = opts?.mostrarEndereco !== false;
+  if (showEnd && it.endereco_ponto) {
+    partes.push(`📍 ${it.endereco_ponto}`);
+  }
+  if (showEnd && it.latitude && it.longitude) {
+    partes.push(`🌐 GPS: ${it.latitude.toFixed(4)}, ${it.longitude.toFixed(4)}`);
+  }
   return partes.join(" · ");
 }
 
@@ -98,6 +115,9 @@ export type PropostaApresentacao = {
   valor_desconto: number;
   valor_negociado: number;
   total_insercoes: number;
+  modo_apresentacao?: "detalhado" | "pacote_midia";
+  mostrar_endereco?: boolean;
+  mostrar_fotos?: boolean;
   cliente?: Entidade;
   agencia?: Entidade;
   executivo?: {
@@ -194,10 +214,823 @@ const COR_HEADER = "0F5C7C"; // azul header
 const COR_AMARELO = "F7B500";
 const COR_TEXT_DARK = "1F2937";
 
+const TRANSPARENT_PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+async function safeAssetToDataUrl(url?: string | null): Promise<string> {
+  if (!url) return TRANSPARENT_PIXEL;
+  if (url.startsWith("data:")) return url;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return TRANSPARENT_PIXEL;
+    const blob = await r.blob();
+    return await new Promise((res) => {
+      const reader = new FileReader();
+      reader.onloadend = () => res((reader.result as string) || TRANSPARENT_PIXEL);
+      reader.onerror = () => res(TRANSPARENT_PIXEL);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return TRANSPARENT_PIXEL;
+  }
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = (hex || "").replace("#", "").trim();
+  if (clean.length === 3) {
+    const r = parseInt(clean[0] + clean[0], 16) || 0;
+    const g = parseInt(clean[1] + clean[1], 16) || 0;
+    const b = parseInt(clean[2] + clean[2], 16) || 0;
+    return [r, g, b];
+  }
+  const r = parseInt(clean.slice(0, 2), 16) || 0;
+  const g = parseInt(clean.slice(2, 4), 16) || 0;
+  const b = parseInt(clean.slice(4, 6), 16) || 0;
+  return [r, g, b];
+}
+
+async function gerarPptxPropostaCustomizada(
+  p: PropostaApresentacao,
+  dataStr: string,
+  slides: SlideTemplateItem[],
+  mapeamento: MapeamentoTemplateConfig | undefined,
+  _layoutConfig: any,
+) {
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE";
+  pptx.title = `Proposta ${p.numero}`;
+  const W = 13.33;
+  const H = 7.5;
+
+  const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+  const agenciaNome = p.agencia?.nome_fantasia || p.agencia?.razao_social || null;
+  const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
+
+  const sortedSlides = [...slides].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+  const [slideDataUrls, logoData] = await Promise.all([
+    Promise.all(sortedSlides.map((s) => safeAssetToDataUrl(s.imageUrl))),
+    logoToDataUrl(logoUrl),
+  ]);
+
+  const tblConfig = mapeamento?.tabela ?? {
+    margemSuperiorPct: 25,
+    margemInferiorPct: 15,
+    margemEsquerdaPct: 5,
+    margemDireitaPct: 5,
+    itensPorSlide: 10,
+    corHeader: "#0F5C7C",
+    corTextoHeader: "#FFFFFF",
+    corTexto: "#1F2937",
+    corLinhaDestaque: "#F7B500",
+  };
+
+  const capaConfig = mapeamento?.capa ?? {
+    mostrarLogoCliente: true,
+    mostrarNomeCliente: true,
+    mostrarCampanha: true,
+    mostrarNumeroProposta: true,
+    mostrarData: true,
+    posicaoVertical: "inferior",
+    posicaoHorizontal: "esquerda",
+    corTexto: "#FFFFFF",
+  };
+
+  const slideCapaIdx = Math.max(0, Math.min(mapeamento?.slideCapaIndex ?? 0, sortedSlides.length - 1));
+  const slideProdIdx = Math.max(0, Math.min(mapeamento?.slideProdutosIndex ?? (sortedSlides.length > 1 ? 1 : 0), sortedSlides.length - 1));
+
+  const corHeader = (tblConfig.corHeader || "#0F5C7C").replace("#", "");
+  const corTextoHeader = (tblConfig.corTextoHeader || "#FFFFFF").replace("#", "");
+  const corTexto = (tblConfig.corTexto || "#1F2937").replace("#", "");
+  const corDestaque = (tblConfig.corLinhaDestaque || "#F7B500").replace("#", "");
+  const corCapaTexto = (capaConfig.corTexto || "#FFFFFF").replace("#", "");
+
+  const addBackground = (slide: PptxGenJS.Slide, data: string) => {
+    if (data && data !== TRANSPARENT_PIXEL) {
+      slide.addImage({ data, x: 0, y: 0, w: W, h: H });
+    }
+  };
+
+  const itens = [...(p.itens ?? [])].sort((a, b) =>
+    (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
+    (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
+  );
+  const itensPorSlide = Math.max(1, tblConfig.itensPorSlide || 10);
+  const totalPaginas = Math.max(1, Math.ceil(itens.length / itensPorSlide));
+
+  for (let sIdx = 0; sIdx < sortedSlides.length; sIdx++) {
+    const bgData = slideDataUrls[sIdx];
+
+    if (sIdx === slideProdIdx) {
+      for (let pag = 0; pag < totalPaginas; pag++) {
+        const s = pptx.addSlide();
+        addBackground(s, bgData);
+
+        const inicio = pag * itensPorSlide;
+        const fim = Math.min(inicio + itensPorSlide, itens.length);
+        const slice = itens.slice(inicio, fim);
+        const isUltima = pag === totalPaginas - 1;
+
+        const xTable = (tblConfig.margemEsquerdaPct / 100) * W;
+        const yTable = (tblConfig.margemSuperiorPct / 100) * H;
+        const wRight = (tblConfig.margemDireitaPct / 100) * W;
+        const wTable = Math.max(4, W - xTable - wRight);
+        const yBottom = H - (tblConfig.margemInferiorPct / 100) * H;
+
+        const headerTexts: any[] = [
+          { text: "Cliente: ", options: { bold: true, color: corHeader, fontSize: 10 } },
+          { text: clienteNome, options: { color: corTexto, fontSize: 10 } },
+        ];
+        if (agenciaNome) {
+          headerTexts.push({ text: "   Agência: ", options: { bold: true, color: corHeader, fontSize: 10 } });
+          headerTexts.push({ text: agenciaNome, options: { color: corTexto, fontSize: 10 } });
+        }
+        headerTexts.push({ text: "   Campanha: ", options: { bold: true, color: corHeader, fontSize: 10 } });
+        headerTexts.push({ text: p.campanha, options: { color: corTexto, fontSize: 10 } });
+        headerTexts.push({
+          text: `   Nº ${p.numero}${totalPaginas > 1 ? ` (${pag + 1}/${totalPaginas})` : ""}`,
+          options: { color: corTexto, fontSize: 9, italic: true },
+        });
+
+        s.addText(headerTexts, {
+          x: xTable,
+          y: Math.max(0.2, yTable - 0.38),
+          w: wTable,
+          h: 0.32,
+          valign: "middle",
+        });
+
+        const isPacoteMidia = p.modo_apresentacao === "pacote_midia";
+        const showEndereco = p.mostrar_endereco !== false;
+        const showFotos = p.mostrar_fotos !== false;
+
+        let headerRow: PptxGenJS.TableRow;
+        let colW: number[];
+        let bodyRows: PptxGenJS.TableRow[];
+
+        if (isPacoteMidia) {
+          headerRow = [
+            { text: "Mídia / Tipo", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
+            { text: "Ponto / Produto / Endereço", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
+            { text: "Horário", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
+            { text: "Formato", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "center" } },
+            { text: "Ins/dia", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+            { text: "Total Ins.", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+            { text: "Fotos / Mapa", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "center" } },
+          ];
+          const colRatios = [0.14, 0.38, 0.12, 0.12, 0.08, 0.08, 0.08];
+          colW = colRatios.map((r) => r * wTable);
+
+          bodyRows = slice.map((it) => {
+            const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
+            const programaCell: PptxGenJS.TableCell = det
+              ? {
+                  text: [
+                    { text: it.programa || "—", options: { fontSize: 8.5, color: corTexto, bold: true } },
+                    { text: `\n${det}`, options: { fontSize: 7, italic: true, color: "4B5563" } },
+                  ],
+                  options: { fontSize: 8.5, color: corTexto },
+                }
+              : { text: it.programa || "—", options: { fontSize: 8.5, color: corTexto, bold: true } };
+
+            let fotoCell: PptxGenJS.TableCell;
+            if (showFotos && it.fotos && it.fotos.length > 0) {
+              fotoCell = {
+                text: `📷 Ver Fotos (${it.fotos.length})`,
+                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: it.fotos[0] } },
+              };
+            } else if (showEndereco && it.latitude && it.longitude) {
+              fotoCell = {
+                text: "🌐 Mapa GPS",
+                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` } },
+              };
+            } else if (it.link_modelo) {
+              fotoCell = {
+                text: "Ver Modelo",
+                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: it.link_modelo } },
+              };
+            } else {
+              fotoCell = { text: "—", options: { fontSize: 8, align: "center", color: "9CA3AF" } };
+            }
+
+            return [
+              { text: it.tipo, options: { fontSize: 8.5, color: corTexto } },
+              programaCell,
+              { text: it.horario || "—", options: { fontSize: 8.5, color: corTexto } },
+              { text: it.formato || "—", options: { fontSize: 8.5, align: "center", color: corTexto } },
+              { text: String(it.insercoes_dia), options: { fontSize: 8.5, align: "right", color: corTexto } },
+              { text: String(it.total_insercoes), options: { fontSize: 8.5, align: "right", color: corTexto } },
+              fotoCell,
+            ];
+          });
+        } else {
+          headerRow = [
+            { text: "Tipo", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
+            { text: "Programa / Ponto / Endereço", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
+            { text: "Horário", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
+            { text: "Formato", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "center" } },
+            { text: "Fotos", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "center" } },
+            { text: "Ins/dia", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+            { text: "Total Ins.", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+            { text: "Vlr Unit.", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+            { text: "Total Tabela", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+            { text: "Desc.", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+            { text: "Vlr Negociado", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+          ];
+          const colRatios = [0.08, 0.22, 0.08, 0.06, 0.06, 0.05, 0.07, 0.10, 0.10, 0.05, 0.13];
+          colW = colRatios.map((r) => r * wTable);
+
+          bodyRows = slice.map((it) => {
+            const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
+            const programaCell: PptxGenJS.TableCell = det
+              ? {
+                  text: [
+                    { text: it.programa || "—", options: { fontSize: 8.5, color: corTexto, bold: true } },
+                    { text: `\n${det}`, options: { fontSize: 7, italic: true, color: "4B5563" } },
+                  ],
+                  options: { fontSize: 8.5, color: corTexto },
+                }
+              : { text: it.programa || "—", options: { fontSize: 8.5, color: corTexto, bold: true } };
+
+            let fotoCell: PptxGenJS.TableCell;
+            if (showFotos && it.fotos && it.fotos.length > 0) {
+              fotoCell = {
+                text: "📷 Fotos",
+                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: it.fotos[0] } },
+              };
+            } else if (it.link_modelo) {
+              fotoCell = {
+                text: "Modelo",
+                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: it.link_modelo } },
+              };
+            } else {
+              fotoCell = { text: "—", options: { fontSize: 8, align: "center", color: "9CA3AF" } };
+            }
+
+            return [
+              { text: it.tipo, options: { fontSize: 8.5, color: corTexto } },
+              programaCell,
+              { text: it.horario || "—", options: { fontSize: 8.5, color: corTexto } },
+              { text: it.formato || "—", options: { fontSize: 8.5, align: "center", color: corTexto } },
+              fotoCell,
+              { text: String(it.insercoes_dia), options: { fontSize: 8.5, align: "right", color: corTexto } },
+              { text: String(it.total_insercoes), options: { fontSize: 8.5, align: "right", color: corTexto } },
+              { text: fmtBRL(it.valor_unit), options: { fontSize: 8.5, align: "right", color: corTexto } },
+              { text: fmtBRL(it.valor_tabela), options: { fontSize: 8.5, align: "right", color: corTexto } },
+              { text: `${(it.desconto || 0).toFixed(0)}%`, options: { fontSize: 8.5, align: "right", color: corTexto } },
+              it.valor_negociado > 0
+                ? { text: fmtBRL(it.valor_negociado), options: { fontSize: 8.5, align: "right", bold: true, color: corHeader } }
+                : { text: "Bonificação", options: { fontSize: 8.5, align: "right", bold: true, color: corDestaque, fill: { color: "FFF7E0" } } },
+            ];
+          });
+        }
+
+        s.addTable([headerRow, ...bodyRows], {
+          x: xTable,
+          y: yTable,
+          w: wTable,
+          colW,
+          border: { type: "solid", color: "E5E7EB", pt: 0.5 },
+          rowH: 0.32,
+        });
+
+        if (isUltima) {
+          const cardH = 0.95;
+          const cardY = Math.min(H - cardH - 0.35, yBottom - cardH);
+          const cards = isPacoteMidia
+            ? [
+                { titulo: "Total de Pontos", valor: `${itens.length} pontos` },
+                { titulo: "Total de Inserções", valor: String(p.total_insercoes) },
+                { titulo: "Praça / Campanha", valor: p.campanha || "Local" },
+                {
+                  titulo: "VALOR DO PACOTE DE MÍDIA",
+                  valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação",
+                  destaque: true,
+                },
+              ]
+            : [
+                { titulo: "Total Inserções", valor: String(p.total_insercoes) },
+                { titulo: "Valor Tabela", valor: fmtBRL(p.valor_tabela) },
+                {
+                  titulo: "Desconto",
+                  valor: p.valor_tabela > 0
+                    ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
+                    : fmtBRL(p.valor_desconto),
+                },
+                {
+                  titulo: "VALOR TOTAL DA PROPOSTA",
+                  valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação",
+                  destaque: true,
+                },
+              ];
+
+          const cw = wTable / cards.length;
+          cards.forEach((c, idx) => {
+            const cx = xTable + idx * cw + 0.05;
+            const w = cw - 0.1;
+            const bgC = c.destaque ? corDestaque : corHeader;
+            const txtC = c.destaque ? corHeader : corTextoHeader;
+
+            s.addShape("roundRect", {
+              x: cx, y: cardY, w, h: cardH,
+              fill: { color: bgC },
+              line: { color: bgC },
+              rectRadius: 0.08,
+            });
+            s.addText(c.titulo, {
+              x: cx, y: cardY + 0.06, w, h: 0.28,
+              fontSize: 10, color: txtC, align: "center", bold: true,
+            });
+            s.addText(c.valor, {
+              x: cx, y: cardY + 0.34, w, h: 0.55,
+              fontSize: 18, bold: true, color: txtC, align: "center", valign: "middle",
+            });
+          });
+        } else {
+          s.addText("continua →", {
+            x: xTable + wTable - 2.0,
+            y: H - 0.5,
+            w: 2.0,
+            h: 0.3,
+            fontSize: 10,
+            italic: true,
+            color: corHeader,
+            align: "right",
+          });
+        }
+
+        const footerTexts: any[] = [
+          { text: "Data: ", options: { bold: true, color: corHeader, fontSize: 8 } },
+          { text: dataStr, options: { color: corTexto, fontSize: 8 } },
+        ];
+        if (p.validade) {
+          footerTexts.push({ text: "    Validade: ", options: { bold: true, color: corHeader, fontSize: 8 } });
+          footerTexts.push({ text: `${fmtDataBR(p.validade)} (10 dias úteis)`, options: { color: corTexto, fontSize: 8 } });
+        }
+        s.addText(footerTexts, {
+          x: xTable,
+          y: H - 0.32,
+          w: wTable,
+          h: 0.25,
+          valign: "middle",
+          align: "center",
+        });
+      }
+    } else {
+      const s = pptx.addSlide();
+      addBackground(s, bgData);
+
+      if (sIdx === slideCapaIdx) {
+        if (capaConfig.mostrarLogoCliente && logoData) {
+          s.addImage({
+            data: logoData,
+            x: 0.8,
+            y: H - 3.2,
+            w: 3.2,
+            h: 2.2,
+            sizing: { type: "contain", w: 3.2, h: 2.2 },
+          });
+        } else if (capaConfig.mostrarNomeCliente) {
+          s.addText(clienteNome, {
+            x: 0.8,
+            y: H - 3.0,
+            w: 8.5,
+            h: 1.5,
+            fontSize: 24,
+            bold: true,
+            color: corCapaTexto,
+            align: "left",
+            valign: "middle",
+          });
+        }
+
+        const coverMeta: any[] = [];
+        if (capaConfig.mostrarCampanha && p.campanha) {
+          coverMeta.push({ text: p.campanha + "\n", options: { fontSize: 14, bold: true, color: corCapaTexto } });
+        }
+        if (capaConfig.mostrarNumeroProposta && p.numero) {
+          coverMeta.push({ text: `Proposta Comercial nº ${p.numero}  ·  `, options: { fontSize: 10, color: corCapaTexto } });
+        }
+        if (capaConfig.mostrarData) {
+          coverMeta.push({ text: `${dataStr}`, options: { fontSize: 10, color: corCapaTexto } });
+        }
+
+        if (coverMeta.length > 0) {
+          s.addText(coverMeta, {
+            x: 0.8,
+            y: H - 1.2,
+            w: 9.0,
+            h: 0.8,
+            valign: "top",
+          });
+        }
+      }
+
+      if (sIdx === sortedSlides.length - 1 && p.executivo?.nome) {
+        const perfilLines = [
+          p.executivo.nome,
+          p.executivo.cargo,
+          p.executivo.email,
+          p.executivo.telefone,
+        ].filter(Boolean);
+
+        perfilLines.forEach((line, i) => {
+          s.addText(String(line), {
+            x: 0.8,
+            y: H - 2.2 + i * 0.42,
+            w: 5.0,
+            h: 0.4,
+            fontSize: 14,
+            color: corCapaTexto,
+            align: "left",
+            valign: "middle",
+          });
+        });
+      }
+    }
+  }
+
+  const pptxBlob = (await pptx.write({ outputType: "blob" })) as Blob;
+  saveBlob(pptxBlob, `${slugify(clienteNome)}-Proposta-${p.numero}.pptx`);
+}
+
+async function gerarPdfPropostaCustomizada(
+  p: PropostaApresentacao,
+  dataStr: string,
+  slides: SlideTemplateItem[],
+  mapeamento: MapeamentoTemplateConfig | undefined,
+  _layoutConfig: any,
+  options?: { returnBlob?: boolean },
+): Promise<Blob | void> {
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+
+  const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+  const agenciaNome = p.agencia?.nome_fantasia || p.agencia?.razao_social || null;
+  const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
+
+  const sortedSlides = [...slides].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+  const [slideDataUrls, logoData] = await Promise.all([
+    Promise.all(sortedSlides.map((s) => safeAssetToDataUrl(s.imageUrl))),
+    logoToDataUrl(logoUrl),
+  ]);
+
+  const tblConfig = mapeamento?.tabela ?? {
+    margemSuperiorPct: 25,
+    margemInferiorPct: 15,
+    margemEsquerdaPct: 5,
+    margemDireitaPct: 5,
+    itensPorSlide: 10,
+    corHeader: "#0F5C7C",
+    corTextoHeader: "#FFFFFF",
+    corTexto: "#1F2937",
+    corLinhaDestaque: "#F7B500",
+  };
+
+  const capaConfig = mapeamento?.capa ?? {
+    mostrarLogoCliente: true,
+    mostrarNomeCliente: true,
+    mostrarCampanha: true,
+    mostrarNumeroProposta: true,
+    mostrarData: true,
+    posicaoVertical: "inferior",
+    posicaoHorizontal: "esquerda",
+    corTexto: "#FFFFFF",
+  };
+
+  const slideCapaIdx = Math.max(0, Math.min(mapeamento?.slideCapaIndex ?? 0, sortedSlides.length - 1));
+  const slideProdIdx = Math.max(0, Math.min(mapeamento?.slideProdutosIndex ?? (sortedSlides.length > 1 ? 1 : 0), sortedSlides.length - 1));
+
+  const rgbHeader = hexToRgb(tblConfig.corHeader || "#0F5C7C");
+  const rgbTextoHeader = hexToRgb(tblConfig.corTextoHeader || "#FFFFFF");
+  const rgbTexto = hexToRgb(tblConfig.corTexto || "#1F2937");
+  const rgbDestaque = hexToRgb(tblConfig.corLinhaDestaque || "#F7B500");
+  const rgbCapaTexto = hexToRgb(capaConfig.corTexto || "#FFFFFF");
+
+  const setBackground = (data: string) => {
+    if (data && data !== TRANSPARENT_PIXEL) {
+      try {
+        const fmt = data.startsWith("data:image/png") ? "PNG" : "JPEG";
+        doc.addImage(data, fmt, 0, 0, W, H, undefined, "FAST");
+      } catch { /* ignore */ }
+    }
+  };
+
+  const itens = [...(p.itens ?? [])].sort((a, b) =>
+    (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
+    (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
+  );
+  const itensPorSlide = Math.max(1, tblConfig.itensPorSlide || 10);
+  const totalPaginas = Math.max(1, Math.ceil(itens.length / itensPorSlide));
+
+  let pageCount = 0;
+
+  for (let sIdx = 0; sIdx < sortedSlides.length; sIdx++) {
+    const bgData = slideDataUrls[sIdx];
+
+    if (sIdx === slideProdIdx) {
+      for (let pag = 0; pag < totalPaginas; pag++) {
+        if (pageCount > 0) doc.addPage();
+        pageCount++;
+        setBackground(bgData);
+
+        const inicio = pag * itensPorSlide;
+        const fim = Math.min(inicio + itensPorSlide, itens.length);
+        const slice = itens.slice(inicio, fim);
+        const isUltima = pag === totalPaginas - 1;
+
+        const xTableMm = (tblConfig.margemEsquerdaPct / 100) * W;
+        const yTableMm = (tblConfig.margemSuperiorPct / 100) * H;
+        const mrTableMm = (tblConfig.margemDireitaPct / 100) * W;
+        const mbTableMm = (tblConfig.margemInferiorPct / 100) * H;
+        const wTableMm = Math.max(80, W - xTableMm - mrTableMm);
+
+        doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text("Cliente:", xTableMm, Math.max(10, yTableMm - 5));
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(rgbTexto[0], rgbTexto[1], rgbTexto[2]);
+        doc.text(clienteNome, xTableMm + 14, Math.max(10, yTableMm - 5));
+
+        let xCursor = xTableMm + 14 + doc.getTextWidth(clienteNome) + 8;
+        if (agenciaNome) {
+          doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+          doc.setFont("helvetica", "bold");
+          doc.text("Agência:", xCursor, Math.max(10, yTableMm - 5));
+          xCursor += 14;
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(rgbTexto[0], rgbTexto[1], rgbTexto[2]);
+          doc.text(agenciaNome, xCursor, Math.max(10, yTableMm - 5));
+          xCursor += doc.getTextWidth(agenciaNome) + 8;
+        }
+
+        doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+        doc.setFont("helvetica", "bold");
+        doc.text("Campanha:", xCursor, Math.max(10, yTableMm - 5));
+        xCursor += 17;
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(rgbTexto[0], rgbTexto[1], rgbTexto[2]);
+        doc.text(p.campanha, xCursor, Math.max(10, yTableMm - 5));
+
+        doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Nº ${p.numero}${totalPaginas > 1 ? ` (${pag + 1}/${totalPaginas})` : ""}`, W - mrTableMm, Math.max(10, yTableMm - 5), { align: "right" });
+
+        const isPacoteMidia = p.modo_apresentacao === "pacote_midia";
+        const showEndereco = p.mostrar_endereco !== false;
+        const showFotos = p.mostrar_fotos !== false;
+
+        let tableHead: string[][];
+        let tableBody: any[][];
+        let columnStyles: Record<number, any>;
+
+        if (isPacoteMidia) {
+          tableHead = [["Tipo / Mídia", "Ponto / Produto / Endereço", "Horário", "Form.", "Ins/dia", "Total Ins.", "Fotos / Mapa"]];
+          tableBody = slice.map((it) => {
+            const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
+            const programa = det ? `${it.programa || "—"}\n${det}` : (it.programa || "—");
+            let fotoLabel = "—";
+            if (showFotos && it.fotos && it.fotos.length > 0) {
+              fotoLabel = `📷 Fotos (${it.fotos.length})`;
+            } else if (showEndereco && it.latitude && it.longitude) {
+              fotoLabel = "🌐 Mapa GPS";
+            } else if (it.link_modelo) {
+              fotoLabel = "Modelo";
+            }
+            return [
+              it.tipo,
+              { content: programa, styles: { fontSize: 8 } },
+              it.horario || "—",
+              it.formato || "—",
+              String(it.insercoes_dia),
+              String(it.total_insercoes),
+              { content: fotoLabel, styles: { textColor: (fotoLabel !== "—" ? rgbHeader : rgbTexto) as any, fontStyle: fotoLabel !== "—" ? "bold" : "normal" } },
+            ];
+          });
+          columnStyles = {
+            3: { halign: "center" },
+            4: { halign: "right" },
+            5: { halign: "right" },
+            6: { halign: "center" },
+          };
+        } else {
+          tableHead = [["Tipo", "Programa / Ponto / Endereço", "Horário", "Form.", "Fotos", "Ins/dia", "Total Ins.", "Vlr Unit.", "Total Tabela", "Desc.", "Vlr Negociado"]];
+          tableBody = slice.map((it) => {
+            const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
+            const programa = det ? `${it.programa || "—"}\n${det}` : (it.programa || "—");
+            let fotoLabel = "—";
+            if (showFotos && it.fotos && it.fotos.length > 0) {
+              fotoLabel = "📷 Fotos";
+            } else if (it.link_modelo) {
+              fotoLabel = "Modelo";
+            }
+            return [
+              it.tipo,
+              { content: programa, styles: { fontSize: 8 } },
+              it.horario || "—",
+              it.formato || "—",
+              { content: fotoLabel, styles: { textColor: (fotoLabel !== "—" ? rgbHeader : rgbTexto) as any } },
+              String(it.insercoes_dia),
+              String(it.total_insercoes),
+              fmtBRL(it.valor_unit),
+              fmtBRL(it.valor_tabela),
+              `${(it.desconto || 0).toFixed(0)}%`,
+              it.valor_negociado > 0 ? fmtBRL(it.valor_negociado) : "Bonificação",
+            ];
+          });
+          columnStyles = {
+            3: { halign: "center" },
+            4: { halign: "center" },
+            5: { halign: "right" },
+            6: { halign: "right" },
+            7: { halign: "right" },
+            8: { halign: "right" },
+            9: { halign: "right" },
+            10: { halign: "right", fontStyle: "bold" },
+          };
+        }
+
+        autoTable(doc, {
+          startY: yTableMm,
+          head: tableHead,
+          body: tableBody,
+          margin: { left: xTableMm, right: mrTableMm },
+          styles: { fontSize: 8.5, cellPadding: 1.5, textColor: rgbTexto as any },
+          headStyles: { fillColor: rgbHeader as any, textColor: rgbTextoHeader as any },
+          columnStyles,
+          didParseCell: (data) => {
+            if (data.section === "body" && typeof data.cell.raw === "string" && data.cell.raw === "Bonificação") {
+              data.cell.styles.textColor = rgbDestaque as any;
+              data.cell.styles.fillColor = [255, 247, 224];
+              data.cell.styles.fontStyle = "bold";
+            }
+          },
+          didDrawCell: (data) => {
+            if (data.section === "body") {
+              const it = slice[data.row.index];
+              const linkCol = isPacoteMidia ? 6 : 4;
+              if (data.column.index === linkCol && it) {
+                if (it.fotos?.[0]) {
+                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.fotos[0] });
+                } else if (it.latitude && it.longitude) {
+                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` });
+                } else if (it.link_modelo) {
+                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.link_modelo });
+                }
+              }
+            }
+          },
+        });
+
+        if (isUltima) {
+          const cardY = Math.min(H - 30, H - mbTableMm - 22);
+          const cardH = 20;
+          const cards = isPacoteMidia
+            ? [
+                { t: "Total de Pontos", v: `${itens.length} pontos`, accent: false },
+                { t: "Total de Inserções", v: String(p.total_insercoes), accent: false },
+                { t: "Praça / Campanha", v: p.campanha || "Local", accent: false },
+                {
+                  t: "VALOR DO PACOTE DE MÍDIA",
+                  v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação",
+                  accent: true,
+                },
+              ]
+            : [
+                { t: "Total de inserções", v: String(p.total_insercoes), accent: false },
+                { t: "Valor de tabela", v: fmtBRL(p.valor_tabela), accent: false },
+                {
+                  t: "Desconto",
+                  v: p.valor_tabela > 0
+                    ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
+                    : fmtBRL(p.valor_desconto),
+                  accent: false,
+                },
+                {
+                  t: "VALOR TOTAL DA PROPOSTA",
+                  v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação",
+                  accent: true,
+                },
+              ];
+
+          const cardW = (wTableMm - (cards.length - 1) * 3) / cards.length;
+          cards.forEach((c, i) => {
+            const x = xTableMm + i * (cardW + 3);
+            if (c.accent) {
+              doc.setFillColor(rgbDestaque[0], rgbDestaque[1], rgbDestaque[2]);
+              doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+            } else {
+              doc.setFillColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+              doc.setTextColor(rgbTextoHeader[0], rgbTextoHeader[1], rgbTextoHeader[2]);
+            }
+            doc.roundedRect(x, cardY, cardW, cardH, 2, 2, "F");
+            doc.setFontSize(7.5);
+            doc.setFont("helvetica", "bold");
+            doc.text(c.t, x + cardW / 2, cardY + 6, { align: "center" });
+            doc.setFontSize(p.valor_negociado > 0 ? 12 : 10);
+            doc.text(c.v, x + cardW / 2, cardY + 15, { align: "center" });
+          });
+        } else {
+          doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "italic");
+          doc.text("continua →", W - mrTableMm, H - 10, { align: "right" });
+        }
+
+        const yFooter = H - 6;
+        doc.setFontSize(7.5);
+        doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+        doc.setFont("helvetica", "bold");
+        doc.text("Data:", xTableMm, yFooter);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(rgbTexto[0], rgbTexto[1], rgbTexto[2]);
+        doc.text(dataStr, xTableMm + 9, yFooter);
+        if (p.validade) {
+          doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
+          doc.setFont("helvetica", "bold");
+          doc.text("Validade:", xTableMm + 40, yFooter);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(rgbTexto[0], rgbTexto[1], rgbTexto[2]);
+          doc.text(`${fmtDataBR(p.validade)} (10 dias úteis)`, xTableMm + 55, yFooter);
+        }
+      }
+    } else {
+      if (pageCount > 0) doc.addPage();
+      pageCount++;
+      setBackground(bgData);
+
+      if (sIdx === slideCapaIdx) {
+        if (capaConfig.mostrarLogoCliente && logoData) {
+          try {
+            const fmt = logoData.startsWith("data:image/png") ? "PNG" : "JPEG";
+            doc.addImage(logoData, fmt, 20, H - 75, 70, 50, undefined, "FAST");
+          } catch { /* ignore */ }
+        } else if (capaConfig.mostrarNomeCliente) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(22);
+          doc.setTextColor(rgbCapaTexto[0], rgbCapaTexto[1], rgbCapaTexto[2]);
+          doc.text(clienteNome, 20, H - 45);
+        }
+
+        if (capaConfig.mostrarCampanha && p.campanha) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(14);
+          doc.setTextColor(rgbCapaTexto[0], rgbCapaTexto[1], rgbCapaTexto[2]);
+          doc.text(p.campanha, 20, H - 32);
+        }
+
+        const coverParts: string[] = [];
+        if (capaConfig.mostrarNumeroProposta && p.numero) {
+          coverParts.push(`Proposta Comercial nº ${p.numero}`);
+        }
+        if (capaConfig.mostrarData) {
+          coverParts.push(dataStr);
+        }
+        if (coverParts.length > 0) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(rgbCapaTexto[0], rgbCapaTexto[1], rgbCapaTexto[2]);
+          doc.text(coverParts.join("  ·  "), 20, H - 22);
+        }
+      }
+
+      if (sIdx === sortedSlides.length - 1 && p.executivo?.nome) {
+        const perfilLines = [
+          p.executivo.nome,
+          p.executivo.cargo,
+          p.executivo.email,
+          p.executivo.telefone,
+        ].filter(Boolean);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(14);
+        doc.setTextColor(rgbCapaTexto[0], rgbCapaTexto[1], rgbCapaTexto[2]);
+        perfilLines.forEach((line, i) => {
+          doc.text(String(line), 20, H - 45 + i * 8);
+        });
+      }
+    }
+  }
+
+  applyTrialWatermark(doc);
+  const blob = doc.output("blob") as Blob;
+  if (options?.returnBlob) return blob;
+  saveBlob(blob, `${slugify(clienteNome)}-Proposta-${p.numero}.pdf`);
+}
+
 // ====== PPTX ======
 export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: string, layoutConfig?: any) {
   const { p: pAdj, dataStr } = aplicarPadroes(p);
   p = pAdj;
+
+  const customSlides: SlideTemplateItem[] =
+    layoutConfig?.slides || layoutConfig?.config?.slides || [];
+  const customMapeamento: MapeamentoTemplateConfig | undefined =
+    layoutConfig?.mapeamento || layoutConfig?.config?.mapeamento;
+
+  if (customSlides && customSlides.length > 0) {
+    return await gerarPptxPropostaCustomizada(p, dataStr, customSlides, customMapeamento, layoutConfig);
+  }
+
   const pptx = new PptxGenJS();
   
   // Cores customizadas do layout
@@ -330,75 +1163,157 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
       s.addText(execTexts, { x: 0.4, y: 1.78, w: W - 0.8, h: 0.3, valign: "middle" });
     }
 
-    // Tabela de itens
-    const headerRow: PptxGenJS.TableRow = [
-      { text: "Tipo", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-      { text: "Programa", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-      { text: "Horário", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-      { text: "Form.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
-      { text: "Modelo", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
-      { text: "Ins/dia", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-      { text: "Total Ins.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-      { text: "Vlr Unit.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-      { text: "Total Tabela", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-      { text: "Desc.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-      { text: "Vlr Negociado", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-    ];
+    const isPacoteMidia = p.modo_apresentacao === "pacote_midia";
+    const showEndereco = p.mostrar_endereco !== false;
+    const showFotos = p.mostrar_fotos !== false;
 
-    const bodyRows: PptxGenJS.TableRow[] = slice.map((it) => {
-      const det = detalhesProduto(it);
-      const programaCell: PptxGenJS.TableCell = det
-        ? {
-            text: [
-              { text: it.programa || "—", options: { fontSize: 9, color: COR_TEXT_DARK } },
-              { text: `\n${det}`, options: { fontSize: 7, italic: true, color: "6B7280" } },
-            ],
-            options: { fontSize: 9, color: COR_TEXT_DARK },
-          }
-        : { text: it.programa || "—", options: { fontSize: 9, color: COR_TEXT_DARK } };
-      return [
-        { text: it.tipo, options: { fontSize: 9, color: COR_TEXT_DARK } },
-        programaCell,
-        { text: it.horario || "—", options: { fontSize: 9, color: COR_TEXT_DARK } },
-        { text: it.formato || "—", options: { fontSize: 9, align: "center", color: COR_TEXT_DARK } },
-        it.link_modelo
-          ? { text: "modelo", options: { fontSize: 9, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.link_modelo } } }
-          : { text: "—", options: { fontSize: 9, align: "center", color: COR_TEXT_DARK } },
-        { text: String(it.insercoes_dia), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-        { text: String(it.total_insercoes), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-        { text: fmtBRL(it.valor_unit), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-        { text: fmtBRL(it.valor_tabela), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-        { text: `${(it.desconto || 0).toFixed(0)}%`, options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-        it.valor_negociado > 0
-          ? { text: fmtBRL(it.valor_negociado), options: { fontSize: 9, align: "right", bold: true, color: COR_HEADER } }
-          : { text: "Bonificação", options: { fontSize: 9, align: "right", bold: true, color: "F7B500", fill: { color: "FFF7E0" } } },
+    let headerRow: PptxGenJS.TableRow;
+    let colW: number[];
+    let bodyRows: PptxGenJS.TableRow[];
+
+    if (isPacoteMidia) {
+      headerRow = [
+        { text: "Mídia / Tipo", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
+        { text: "Ponto / Produto / Endereço", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
+        { text: "Horário", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
+        { text: "Formato", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
+        { text: "Ins/dia", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+        { text: "Total Ins.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+        { text: "Fotos / Mapa", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
       ];
-    });
+      colW = [1.5, 4.5, 1.6, 1.4, 1.1, 1.2, 1.23];
+
+      bodyRows = slice.map((it) => {
+        const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
+        const programaCell: PptxGenJS.TableCell = det
+          ? {
+              text: [
+                { text: it.programa || "—", options: { fontSize: 9, bold: true, color: COR_TEXT_DARK } },
+                { text: `\n${det}`, options: { fontSize: 7.5, italic: true, color: "4B5563" } },
+              ],
+              options: { fontSize: 9, color: COR_TEXT_DARK },
+            }
+          : { text: it.programa || "—", options: { fontSize: 9, bold: true, color: COR_TEXT_DARK } };
+
+        let fotoCell: PptxGenJS.TableCell;
+        if (showFotos && it.fotos && it.fotos.length > 0) {
+          fotoCell = {
+            text: `📷 Fotos (${it.fotos.length})`,
+            options: { fontSize: 8.5, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.fotos[0] } },
+          };
+        } else if (showEndereco && it.latitude && it.longitude) {
+          fotoCell = {
+            text: "🌐 Mapa GPS",
+            options: { fontSize: 8.5, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` } },
+          };
+        } else if (it.link_modelo) {
+          fotoCell = {
+            text: "Modelo",
+            options: { fontSize: 8.5, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.link_modelo } },
+          };
+        } else {
+          fotoCell = { text: "—", options: { fontSize: 8.5, align: "center", color: "9CA3AF" } };
+        }
+
+        return [
+          { text: it.tipo, options: { fontSize: 9, color: COR_TEXT_DARK } },
+          programaCell,
+          { text: it.horario || "—", options: { fontSize: 9, color: COR_TEXT_DARK } },
+          { text: it.formato || "—", options: { fontSize: 9, align: "center", color: COR_TEXT_DARK } },
+          { text: String(it.insercoes_dia), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          { text: String(it.total_insercoes), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          fotoCell,
+        ];
+      });
+    } else {
+      headerRow = [
+        { text: "Tipo", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
+        { text: "Programa / Ponto / Endereço", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
+        { text: "Horário", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
+        { text: "Form.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
+        { text: "Fotos", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
+        { text: "Ins/dia", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+        { text: "Total Ins.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+        { text: "Vlr Unit.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+        { text: "Total Tabela", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+        { text: "Desc.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+        { text: "Vlr Negociado", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+      ];
+      colW = [1.0, 2.5, 0.9, 0.6, 0.7, 0.6, 0.75, 1.0, 1.2, 0.65, 1.53];
+
+      bodyRows = slice.map((it) => {
+        const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
+        const programaCell: PptxGenJS.TableCell = det
+          ? {
+              text: [
+                { text: it.programa || "—", options: { fontSize: 9, color: COR_TEXT_DARK } },
+                { text: `\n${det}`, options: { fontSize: 7, italic: true, color: "6B7280" } },
+              ],
+              options: { fontSize: 9, color: COR_TEXT_DARK },
+            }
+          : { text: it.programa || "—", options: { fontSize: 9, color: COR_TEXT_DARK } };
+
+        let fotoCell: PptxGenJS.TableCell;
+        if (showFotos && it.fotos && it.fotos.length > 0) {
+          fotoCell = {
+            text: "📷 Fotos",
+            options: { fontSize: 9, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.fotos[0] } },
+          };
+        } else if (it.link_modelo) {
+          fotoCell = {
+            text: "modelo",
+            options: { fontSize: 9, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.link_modelo } },
+          };
+        } else {
+          fotoCell = { text: "—", options: { fontSize: 9, align: "center", color: COR_TEXT_DARK } };
+        }
+
+        return [
+          { text: it.tipo, options: { fontSize: 9, color: COR_TEXT_DARK } },
+          programaCell,
+          { text: it.horario || "—", options: { fontSize: 9, color: COR_TEXT_DARK } },
+          { text: it.formato || "—", options: { fontSize: 9, align: "center", color: COR_TEXT_DARK } },
+          fotoCell,
+          { text: String(it.insercoes_dia), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          { text: String(it.total_insercoes), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          { text: fmtBRL(it.valor_unit), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          { text: fmtBRL(it.valor_tabela), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          { text: `${(it.desconto || 0).toFixed(0)}%`, options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          it.valor_negociado > 0
+            ? { text: fmtBRL(it.valor_negociado), options: { fontSize: 9, align: "right", bold: true, color: COR_HEADER } }
+            : { text: "Bonificação", options: { fontSize: 9, align: "right", bold: true, color: "F7B500", fill: { color: "FFF7E0" } } },
+        ];
+      });
+    }
 
     s.addTable([headerRow, ...bodyRows], {
       x: 0.4, y: 2.15, w: W - 0.8,
-      colW: [1.0, 2.1, 1.0, 0.6, 0.7, 0.6, 0.75, 1.1, 1.3, 0.65, 1.94],
+      colW,
       border: { type: "solid", color: "E5E7EB", pt: 0.5 },
       rowH: 0.34,
     });
 
-    // (Rodapé removido)
-
-
     // Totais somente na última página
     if (isUltima) {
       const cardY = H - 1.6;
-      const cards = [
-        { titulo: "Total de inserções", valor: String(p.total_insercoes) },
-        { titulo: "Valor de tabela", valor: fmtBRL(p.valor_tabela) },
-        { 
-          titulo: "Desconto", 
-          valor: p.valor_tabela > 0 
-            ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)` 
-            : fmtBRL(p.valor_desconto) 
-        },
-        { titulo: "Valor Bruto negociado", valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", destaque: true },
-      ];
+      const cards = isPacoteMidia
+        ? [
+            { titulo: "Total de Pontos", valor: `${itens.length} pontos` },
+            { titulo: "Total de Inserções", valor: String(p.total_insercoes) },
+            { titulo: "Praça / Campanha", valor: p.campanha || "Local" },
+            { titulo: "VALOR DO PACOTE DE MÍDIA", valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", destaque: true },
+          ]
+        : [
+            { titulo: "Total de inserções", valor: String(p.total_insercoes) },
+            { titulo: "Valor de tabela", valor: fmtBRL(p.valor_tabela) },
+            { 
+              titulo: "Desconto", 
+              valor: p.valor_tabela > 0 
+                ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)` 
+                : fmtBRL(p.valor_desconto) 
+            },
+            { titulo: "VALOR TOTAL DA PROPOSTA", valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", destaque: true },
+          ];
       cards.forEach((c, i) => {
         const cw = (W - 0.8) / cards.length;
         const x = 0.4 + i * cw + 0.08;
@@ -623,6 +1538,16 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
 export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: string, layoutConfig?: any, options?: { returnBlob?: boolean }): Promise<Blob | void> {
   const { p: pAdj, dataStr } = aplicarPadroes(p);
   p = pAdj;
+
+  const customSlides: SlideTemplateItem[] =
+    layoutConfig?.slides || layoutConfig?.config?.slides || [];
+  const customMapeamento: MapeamentoTemplateConfig | undefined =
+    layoutConfig?.mapeamento || layoutConfig?.config?.mapeamento;
+
+  if (customSlides && customSlides.length > 0) {
+    return await gerarPdfPropostaCustomizada(p, dataStr, customSlides, customMapeamento, layoutConfig, options);
+  }
+
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
   const W = doc.internal.pageSize.getWidth();   // 297
   const H = doc.internal.pageSize.getHeight();  // 210
@@ -789,31 +1714,88 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
     }
 
 
-    autoTable(doc, {
-      startY: 50,
-      head: [["Tipo", "Programa", "Horário", "Form.", "Modelo", "Ins/dia", "Total Ins.", "Vlr Unit.", "Total Tabela", "Desc.", "Vlr Negociado"]],
-      body: slice.map((it) => {
-        const det = detalhesProduto(it);
+    const isPacoteMidia = p.modo_apresentacao === "pacote_midia";
+    const showEndereco = p.mostrar_endereco !== false;
+    const showFotos = p.mostrar_fotos !== false;
+
+    let tableHead: string[][];
+    let tableBody: any[][];
+    let columnStyles: Record<number, any>;
+
+    if (isPacoteMidia) {
+      tableHead = [["Tipo / Mídia", "Ponto / Produto / Endereço", "Horário", "Formato", "Ins/dia", "Total Ins.", "Fotos / Mapa"]];
+      tableBody = slice.map((it) => {
+        const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
         const programa = det ? `${it.programa || "—"}\n${det}` : (it.programa || "—");
+        let fotoLabel = "—";
+        if (showFotos && it.fotos && it.fotos.length > 0) {
+          fotoLabel = `📷 Fotos (${it.fotos.length})`;
+        } else if (showEndereco && it.latitude && it.longitude) {
+          fotoLabel = "🌐 Mapa GPS";
+        } else if (it.link_modelo) {
+          fotoLabel = "Modelo";
+        }
         return [
           it.tipo,
-          { content: programa, styles: { fontSize: 9 } },
-          it.horario || "—", it.formato || "—",
-          it.link_modelo ? { content: "modelo", styles: { textColor: [15, 92, 124] as any } } : "—",
-          String(it.insercoes_dia), String(it.total_insercoes),
-          fmtBRL(it.valor_unit), fmtBRL(it.valor_tabela), `${(it.desconto || 0).toFixed(0)}%`,
+          { content: programa, styles: { fontSize: 8.5 } },
+          it.horario || "—",
+          it.formato || "—",
+          String(it.insercoes_dia),
+          String(it.total_insercoes),
+          { content: fotoLabel, styles: { textColor: (fotoLabel !== "—" ? [15, 92, 124] : [31, 41, 55]) as any, fontStyle: fotoLabel !== "—" ? "bold" : "normal" } },
+        ];
+      });
+      columnStyles = {
+        3: { halign: "center" },
+        4: { halign: "right" },
+        5: { halign: "right" },
+        6: { halign: "center" },
+      };
+    } else {
+      tableHead = [["Tipo", "Programa / Ponto / Endereço", "Horário", "Form.", "Fotos", "Ins/dia", "Total Ins.", "Vlr Unit.", "Total Tabela", "Desc.", "Vlr Negociado"]];
+      tableBody = slice.map((it) => {
+        const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
+        const programa = det ? `${it.programa || "—"}\n${det}` : (it.programa || "—");
+        let fotoLabel = "—";
+        if (showFotos && it.fotos && it.fotos.length > 0) {
+          fotoLabel = "📷 Fotos";
+        } else if (it.link_modelo) {
+          fotoLabel = "modelo";
+        }
+        return [
+          it.tipo,
+          { content: programa, styles: { fontSize: 8.5 } },
+          it.horario || "—",
+          it.formato || "—",
+          { content: fotoLabel, styles: { textColor: (fotoLabel !== "—" ? [15, 92, 124] : [31, 41, 55]) as any } },
+          String(it.insercoes_dia),
+          String(it.total_insercoes),
+          fmtBRL(it.valor_unit),
+          fmtBRL(it.valor_tabela),
+          `${(it.desconto || 0).toFixed(0)}%`,
           it.valor_negociado > 0 ? fmtBRL(it.valor_negociado) : "Bonificação",
         ];
-      }),
+      });
+      columnStyles = {
+        3: { halign: "center" },
+        4: { halign: "center" },
+        5: { halign: "right" },
+        6: { halign: "right" },
+        7: { halign: "right" },
+        8: { halign: "right" },
+        9: { halign: "right" },
+        10: { halign: "right", fontStyle: "bold" },
+      };
+    }
+
+    autoTable(doc, {
+      startY: 50,
+      head: tableHead,
+      body: tableBody,
       margin: { left: 10, right: 10 },
       styles: { fontSize: 9, cellPadding: 1.8 },
       headStyles: { fillColor: [15, 92, 124], textColor: 255 },
-      columnStyles: {
-        4: { halign: "center" },
-        5: { halign: "right" }, 6: { halign: "right" },
-        7: { halign: "right" }, 8: { halign: "right" },
-        9: { halign: "right" }, 10: { halign: "right", fontStyle: "bold" },
-      },
+      columnStyles,
       didParseCell: (data) => {
         if (data.section === "body" && typeof data.cell.raw === "string" && data.cell.raw === "Bonificação") {
           data.cell.styles.textColor = [247, 181, 0];
@@ -822,10 +1804,17 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
         }
       },
       didDrawCell: (data) => {
-        if (data.section === "body" && data.column.index === 4) {
+        if (data.section === "body") {
           const it = slice[data.row.index];
-          if (it?.link_modelo) {
-            (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.link_modelo });
+          const linkCol = isPacoteMidia ? 6 : 4;
+          if (data.column.index === linkCol && it) {
+            if (it.fotos?.[0]) {
+              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.fotos[0] });
+            } else if (it.latitude && it.longitude) {
+              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` });
+            } else if (it.link_modelo) {
+              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.link_modelo });
+            }
           }
         }
       },
@@ -895,19 +1884,25 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
 
 
     if (isUltima) {
-
-      const cards = [
-        { t: "Total de inserções", v: String(p.total_insercoes), accent: false },
-        { t: "Valor de tabela", v: fmtBRL(p.valor_tabela), accent: false },
-        { 
-          t: "Desconto", 
-          v: p.valor_tabela > 0 
-            ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)` 
-            : fmtBRL(p.valor_desconto), 
-          accent: false 
-        },
-        { t: "Valor Bruto negociado", v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", accent: true },
-      ];
+      const cards = isPacoteMidia
+        ? [
+            { t: "Total de Pontos", v: `${itens.length} pontos`, accent: false },
+            { t: "Total de Inserções", v: String(p.total_insercoes), accent: false },
+            { t: "Praça / Campanha", v: p.campanha || "Local", accent: false },
+            { t: "VALOR DO PACOTE DE MÍDIA", v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", accent: true },
+          ]
+        : [
+            { t: "Total de inserções", v: String(p.total_insercoes), accent: false },
+            { t: "Valor de tabela", v: fmtBRL(p.valor_tabela), accent: false },
+            { 
+              t: "Desconto", 
+              v: p.valor_tabela > 0 
+                ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)` 
+                : fmtBRL(p.valor_desconto), 
+              accent: false 
+            },
+            { t: "VALOR TOTAL DA PROPOSTA", v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", accent: true },
+          ];
       const cardY = H - 32;
       const cardH = 24;
       const cardW = (W - 20) / cards.length - 2;
@@ -1103,38 +2098,93 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
   y += 30;
 
   // 4. Tabela de Detalhamento
+  const isPacoteMidia = p.modo_apresentacao === "pacote_midia";
+  const mostrarEnd = p.mostrar_endereco !== false;
+  const mostrarFt = p.mostrar_fotos !== false;
+
   doc.setTextColor(0);
   doc.setFillColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
   doc.rect(15, y, 2, 6, "F");
   doc.setFontSize(12); doc.setFont("helvetica", "bold");
-  doc.text("3. DETALHAMENTO DOS PONTOS", 20, y + 5);
+  doc.text(isPacoteMidia ? "3. COBERTURA DO PACOTE DE MÍDIA" : "3. DETALHAMENTO DOS PONTOS E VALORES", 20, y + 5);
   y += 8;
+
+  const tableHead = isPacoteMidia
+    ? [["CÓD.", "FORMATO", "LOCALIZAÇÃO & ENDEREÇO", "INSERÇÕES", "MAPA / FOTOS"]]
+    : [["CÓD.", "FORMATO", "LOCALIZAÇÃO & ENDEREÇO", "INSERÇÕES", "VALOR MENSAL"]];
+
+  const tableBody = (p.itens || []).map((it, i) => {
+    let locStr = it.programa || "Ponto Estratégico";
+    if (mostrarEnd && it.endereco_ponto) {
+      locStr += `\n📍 ${it.endereco_ponto}`;
+    }
+    if (mostrarEnd && it.latitude && it.longitude) {
+      locStr += `\n🌐 GPS: ${it.latitude}, ${it.longitude}`;
+    }
+
+    if (isPacoteMidia) {
+      let linkLabel = "";
+      if (it.latitude && it.longitude) linkLabel += "🗺️ Ver no Mapa";
+      if (mostrarFt && it.fotos && it.fotos.length > 0) {
+        if (linkLabel) linkLabel += "\n";
+        linkLabel += `📸 Ver Fotos (${it.fotos.length})`;
+      }
+      return [
+        `Item ${i + 1}`,
+        it.formato || "DOOH",
+        locStr,
+        `${it.total_insercoes || 0} ins`,
+        linkLabel || "—"
+      ];
+    }
+
+    return [
+      `Item ${i + 1}`,
+      it.formato || "DOOH",
+      locStr,
+      `${it.total_insercoes || 0} ins`,
+      fmtBRL(it.valor_negociado)
+    ];
+  });
 
   autoTable(doc, {
     startY: y,
-    head: [["CÓD.", "FORMATO", "REGIÃO", "LOCALIZAÇÃO & REFERÊNCIA", "VALOR MENSAL"]],
-    body: (p.itens || []).map((it, i) => [
-      `Item ${i + 1}`,
-      it.formato || "DOOH",
-      p.cliente?.cidade || "Centro",
-      it.programa || "Ponto Estratégico",
-      fmtBRL(it.valor_negociado)
-    ]),
+    head: tableHead,
+    body: tableBody,
     headStyles: { fillColor: COR_NAVY as any, textColor: 255, fontSize: 8 },
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 8, cellPadding: 2.5 },
     columnStyles: {
-      4: { halign: "right", fontStyle: "bold" }
+      3: { halign: "center" },
+      4: { halign: isPacoteMidia ? "center" : "right", fontStyle: "bold" }
     },
-    margin: { left: 15, right: 15 }
+    margin: { left: 15, right: 15 },
+    didDrawCell: (data: any) => {
+      if (data.section === "body" && isPacoteMidia && data.column.index === 4) {
+        const it = p.itens?.[data.row.index];
+        if (!it) return;
+        if (it.latitude && it.longitude) {
+          doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height / 2, {
+            url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}`,
+          });
+        }
+        if (mostrarFt && it.fotos?.[0]) {
+          doc.link(data.cell.x, data.cell.y + data.cell.height / 2, data.cell.width, data.cell.height / 2, {
+            url: it.fotos[0],
+          });
+        }
+      }
+    }
   });
 
   const finalY = (doc as any).lastAutoTable.finalY + 10;
   
   // Total Investimento
-  doc.setFillColor(240, 240, 240);
-  doc.rect(15, finalY, W - 30, 8, "F");
-  doc.setFontSize(9); doc.setFont("helvetica", "bold");
-  doc.text(`TOTAL INVESTIMENTO MENSAL: ${fmtBRL(p.valor_negociado)}`, W - 20, finalY + 5.5, { align: "right" });
+  const labelTotal = isPacoteMidia ? "VALOR DO PACOTE DE MÍDIA" : "VALOR TOTAL DA PROPOSTA";
+  doc.setFillColor(COR_NAVY[0], COR_NAVY[1], COR_NAVY[2]);
+  doc.rect(15, finalY, W - 30, 9, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10); doc.setFont("helvetica", "bold");
+  doc.text(`${labelTotal}: ${fmtBRL(p.valor_negociado)}`, W - 20, finalY + 6, { align: "right" });
 
   // Footer
   doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(150);

@@ -13,29 +13,18 @@ jobs:
       - name: 📥 Clonar repositório
         uses: actions/checkout@v4
 
-      - name: ⚡ Configurar Bun
-        uses: oven-sh/setup-bun@v2
+      - name: ⚡ Configurar Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 22
 
       - name: 📦 Instalar dependências
-        run: bun install
+        run: npm install
 
-      - name: 🏗️ Compilar projeto para produção
-        run: bun run build
-
-      - name: 📂 Preparar arquivos de deploy
-        run: |
-          mkdir -p hostinger
-          cp -r .output hostinger/
-          cp hostinger.mjs hostinger/
-          cp package.json hostinger/
-
-      - name: 🚀 Upload FTP para a Hostinger
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.HOSTINGER_FTP_HOST }}
-          username: ${{ secrets.HOSTINGER_FTP_USER }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          local-dir: ./hostinger/
-          server-dir: /public_html/
+      - name: 🚀 Executar deploy automático na Hostinger
+        env:
+          HOSTINGER_FTP_HOST: ${{ secrets.HOSTINGER_FTP_HOST }}
+          HOSTINGER_FTP_USER: ${{ secrets.HOSTINGER_FTP_USER }}
+          HOSTINGER_FTP_PASS: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: node scripts/deploy-hostinger.mjs

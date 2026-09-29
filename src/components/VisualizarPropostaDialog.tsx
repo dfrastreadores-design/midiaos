@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, History, Clock } from "lucide-react";
+import { Loader2, History, Clock, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { getProposta, listProposalHistory } from "@/lib/propostas.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { gerarPptxProposta, gerarPdfProposta, gerarPdfPropostaSimplificada } fro
 import type { PropostaApresentacao } from "@/lib/proposta-presentation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PropostaAnexosSection } from "@/components/PropostaAnexosSection";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; propostaId: string | null };
 
@@ -26,6 +27,9 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [layoutModelo, setLayoutModelo] = useState<"padrao" | "simplificado">("padrao");
+  const [modoApresentacao, setModoApresentacao] = useState<"detalhado" | "pacote_midia">("detalhado");
+  const [mostrarEndereco, setMostrarEndereco] = useState(true);
+  const [mostrarFotos, setMostrarFotos] = useState(true);
 
   useEffect(() => {
     if (!open || !propostaId) { 
@@ -40,6 +44,10 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
         if (!p) throw new Error("Proposta não encontrada");
         setP(p as unknown as PropostaApresentacao & { numero: string; status?: string; tenant_id?: string });
         
+        if (p.modo_apresentacao) setModoApresentacao(p.modo_apresentacao);
+        if (typeof p.mostrar_endereco === "boolean") setMostrarEndereco(p.mostrar_endereco);
+        if (typeof p.mostrar_fotos === "boolean") setMostrarFotos(p.mostrar_fotos);
+
         // Buscar o layout padrão do inquilino se disponível
         if (p.tenant_id) {
           const { data: tenant } = await supabase.from('tenants').select('proposta_layout_padrao').eq('id', p.tenant_id).single();
@@ -80,10 +88,13 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
         ) : (
           <div className="space-y-4">
             <Tabs defaultValue="detalhes">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="detalhes">Detalhes da Proposta</TabsTrigger>
+                <TabsTrigger value="anexos" className="flex items-center gap-2">
+                  <Paperclip className="size-4" /> Anexos e Arquivos
+                </TabsTrigger>
                 <TabsTrigger value="historico" className="flex items-center gap-2">
-                  <History className="size-4" /> Histórico de Modificações
+                  <History className="size-4" /> Histórico
                 </TabsTrigger>
               </TabsList>
               
@@ -213,23 +224,42 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                   </div>
                 </ScrollArea>
               </TabsContent>
+
+              <TabsContent value="anexos" className="pt-4">
+                <PropostaAnexosSection propostaId={propostaId} />
+              </TabsContent>
             </Tabs>
           </div>
 
         )}
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">Modelo:</span>
-            <select 
-              value={layoutModelo} 
-              onChange={(e) => setLayoutModelo(e.target.value as any)}
-              className="text-xs border rounded px-2 py-1 bg-background"
-            >
-              <option value="padrao">Padrão (TV Brasília)</option>
-              <option value="simplificado">Simplificado (Estratégico DOOH)</option>
-            </select>
+        <DialogFooter className="flex flex-col sm:flex-row gap-3 items-center justify-between w-full">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Modelo:</span>
+              <select 
+                value={layoutModelo} 
+                onChange={(e) => setLayoutModelo(e.target.value as any)}
+                className="text-xs border rounded-md px-2 py-1 bg-background"
+              >
+                <option value="padrao">Padrão (TV Brasília)</option>
+                <option value="simplificado">Simplificado (Estratégico DOOH)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Formato:</span>
+              <select 
+                value={modoApresentacao} 
+                onChange={(e) => setModoApresentacao(e.target.value as any)}
+                className="text-xs border rounded-md px-2 py-1 bg-background font-medium"
+              >
+                <option value="detalhado">📋 Detalhado (Total Proposta)</option>
+                <option value="pacote_midia">📦 Pacote de Mídia (Valor Final)</option>
+              </select>
+            </div>
           </div>
+
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
             <Button 
@@ -239,10 +269,16 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                 if (!p) return;
                 const toastId = toast.loading("Gerando proposta...");
                 try {
+                  const pComModo: PropostaApresentacao = {
+                    ...p,
+                    modo_apresentacao: modoApresentacao,
+                    mostrar_endereco: mostrarEndereco,
+                    mostrar_fotos: mostrarFotos,
+                  };
                   if (layoutModelo === "simplificado") {
-                    await gerarPdfPropostaSimplificada(p, "");
+                    await gerarPdfPropostaSimplificada(pComModo, "");
                   } else {
-                    await gerarPdfProposta(p, "");
+                    await gerarPdfProposta(pComModo, "");
                   }
                   toast.success("Proposta gerada com sucesso!", { id: toastId });
                 } catch (e) {

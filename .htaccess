@@ -1,0 +1,12 @@
+PassengerAppRoot /home/u233352823/domains/midiaos.online/hbuilds/current/nodejs
+PassengerAppType node
+PassengerNodejs /opt/alt/alt-nodejs22/root/bin/node
+PassengerStartupFile server/index.mjs
+PassengerBaseURI /
+PassengerRestartDir /home/u233352823/domains/midiaos.online/hbuilds/current/nodejs/tmp
+SetEnv NODE_OPTIONS "--require /home/u233352823/domains/midiaos.online/hbuilds/config/preload-timestamp.js"
+SetEnv LSNODE_CONSOLE_LOG console.log
+SetEnv SUPABASE_URL "https://odgowgvhjhvpeazglsly.supabase.co"
+SetEnv SUPABASE_PUBLISHABLE_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ293Z3Zoamh2cGVhemdsc2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwODYwOTQsImV4cCI6MjA5NDY2MjA5NH0.X0-jxfLmUFTpxUm6O0-802xVK1iNt41He6Gho-oDb0E"
+SetEnv VITE_SUPABASE_URL "https://odgowgvhjhvpeazglsly.supabase.co"
+SetEnv VITE_SUPABASE_PUBLISHABLE_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ293Z3Zoamh2cGVhemdsc2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwODYwOTQsImV4cCI6MjA5NDY2MjA5NH0.X0-jxfLmUFTpxUm6O0-802xVK1iNt41He6Gho-oDb0E"

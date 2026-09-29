@@ -5,9 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2, ArrowRightCircle, Presentation, Eye, Settings, Copy, ThumbsDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowRightCircle, Presentation, Eye, Settings, Copy, ThumbsDown, FileUp, Paperclip, Sliders } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PropostaFormDialog } from "@/components/PropostaFormDialog";
+import { ImportarPropostaDialog } from "@/components/ImportarPropostaDialog";
+import { ImportarModeloPropostaDialog } from "@/components/ImportarModeloPropostaDialog";
 import { ConverterPropostaDialog } from "@/components/ConverterPropostaDialog";
 import { GerarApresentacaoDialog } from "@/components/GerarApresentacaoDialog";
 import { VisualizarPropostaDialog } from "@/components/VisualizarPropostaDialog";
@@ -28,6 +30,8 @@ function Propostas() {
   const { propostas, isLoading, search, setSearch, deleteProposta } = usePropostas();
   
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [modeloEmpresaOpen, setModeloEmpresaOpen] = useState(false);
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [editing, setEditing] = useState<Proposta | null>(null);
   const [converting, setConverting] = useState<Proposta | null>(null);
@@ -45,12 +49,27 @@ function Propostas() {
           <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">Propostas Comerciais</h1>
           <p className="text-muted-foreground text-sm mt-1">Crie, envie e converta em PI com um clique.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button 
+            variant="outline" 
+            className="border-primary/40 text-primary hover:bg-primary/10" 
+            onClick={() => setModeloEmpresaOpen(true)}
+            title="Importe a apresentação institucional em PDF/slides e mapeie a tabela de produtos e valores"
+          >
+            <Sliders className="size-4 mr-2" /> Modelo da Empresa
+          </Button>
           {isAdmin && (
             <Button variant="outline" onClick={() => setLayoutOpen(true)}>
               <Settings className="size-4 mr-2" /> Layouts
             </Button>
           )}
+          <Button 
+            variant="outline" 
+            className="border-primary/40 text-primary hover:bg-primary/10" 
+            onClick={() => setImportOpen(true)}
+          >
+            <FileUp className="size-4 mr-2" /> Importar PDF / PPTX
+          </Button>
           <Button onClick={() => { 
             setEditing(null);
             setFormOpen(true); 
@@ -198,8 +217,17 @@ function Propostas() {
             validade: editing.validade, 
             observacao: editing.observacao,
           } : undefined}
+          onOpenImport={() => setImportOpen(true)}
         />
       )}
+
+      <ImportarPropostaDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onSuccess={(id) => {
+          setVisualizando({ id } as any);
+        }}
+      />
       
       <GerarApresentacaoDialog
         open={!!apresentando}
@@ -230,6 +258,11 @@ function Propostas() {
       <LayoutManagerDialog
         open={layoutOpen}
         onOpenChange={setLayoutOpen}
+      />
+
+      <ImportarModeloPropostaDialog
+        open={modeloEmpresaOpen}
+        onOpenChange={setModeloEmpresaOpen}
       />
     </AppShell>
   );

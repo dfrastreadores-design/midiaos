@@ -1,61 +1,58 @@
-# 🚀 Automação de Deploy na Hostinger
+# 🚀 Automação de Deploy na Hostinger (mídia.OS)
 
-Criamos 3 formas automáticas para você publicar o seu projeto na Hostinger sem esforço manual:
-
----
-
-## ⚡ OPÇÃO 1: Deploy com 1 Comando pelo Terminal (FTP Automático)
-
-Você pode enviar as alterações diretamente do seu terminal para a Hostinger sem precisar abrir o painel.
-
-### Como usar:
-1. Adicione as credenciais de FTP da sua Hostinger no seu arquivo `.env`:
-   ```env
-   # Use o IP do FTP da Hostinger (ex: 147.93.38.246) ou o host dedicado
-   HOSTINGER_FTP_HOST=147.93.38.246
-   HOSTINGER_FTP_USER=seu-usuario-ftp
-   HOSTINGER_FTP_PASS=sua-senha-ftp
-   ```
-2. No terminal, execute:
-   ```bash
-   bun run deploy:hostinger
-   ```
-   *(ou `npm run deploy:hostinger`)*
-
-O script vai:
-- Compilar o projeto automaticamente para produção (`bun run build`).
-- Conectar no servidor da Hostinger.
-- Fazer o upload de todos os arquivos diretamente para a pasta `/public_html`.
+O sistema de deploy automático foi totalmente otimizado e corrigido para funcionar de forma confiável e em poucos segundos.
 
 ---
 
-## 🗜️ OPÇÃO 2: Arquivo ZIP Pronto para Upload Imediato
+## ⚡ Como fazer o Deploy com 1 Comando
 
-Já geramos o arquivo compactado com tudo o que a Hostinger precisa:
-📁 `hostinger_deploy.zip` (na raiz do projeto).
+Para compilar e publicar tudo na Hostinger automaticamente:
 
-Sempre que quiser atualizar o pacote ZIP com um único comando, execute:
 ```bash
-bun run pack:hostinger
+npm run deploy:hostinger
 ```
-*(ou `npm run pack:hostinger`)*
+*(ou se você usar bun: `bun run deploy:hostinger`)*
 
-### Para enviar:
-1. Acesse o **Gerenciador de Arquivos** no hPanel da Hostinger.
-2. Entre na pasta `public_html`.
-3. Arraste o arquivo `hostinger_deploy.zip` e clique em **Extrair**.
+### O que esse comando faz:
+1. **Compilação**: Compila a aplicação para produção com o preset correto (`node-server`) para o LiteSpeed/Passenger Node.js 22 da Hostinger.
+2. **Compactação Instantânea**: Empacota o servidor SSR, assets estáticos, schema do banco e `.env` em um único arquivo `.zip` otimizado (`hostinger_deploy.zip`).
+3. **Upload Contínuo via FTP**: Envia o pacote completo em poucos segundos diretamente para o servidor.
+4. **Extração Atômica e Reinício**: O servidor descompacta os arquivos nos diretórios corretos (`public_html` e `/hbuilds/current/nodejs/`) e reinicia o processo Passenger Node.js automaticamente.
+5. **Verificação no Ar**: Testa a rota pública e confirma o status `HTTP 200 OK`.
 
 ---
 
-## 🔄 OPÇÃO 3: Deploy 100% Automático a cada `git push` (GitHub Actions)
+## ⚡ Deploy Rápido (Se o build já estiver feito)
 
-O arquivo de automação do GitHub já está configurado em:
-📁 `.github/workflows/deploy-hostinger.yml`
+Se você já rodou o build e quer apenas enviar para a Hostinger sem recompilar:
+
+```bash
+node scripts/deploy-hostinger.mjs --skip-build
+```
+*(Leva menos de 25 segundos!)*
+
+---
+
+## 🗜️ Gerar Apenas o Arquivo ZIP para Envio Manual
+
+Caso prefira fazer o upload manualmente pelo Gerenciador de Arquivos do hPanel:
+
+```bash
+npm run pack:hostinger
+```
+
+Isso gera o arquivo `hostinger_deploy.zip` na raiz do projeto. Basta arrastar para a pasta `public_html` no Gerenciador de Arquivos da Hostinger e clicar em **Extrair**.
+
+---
+
+## 🔄 Deploy 100% Automático via GitHub (CI/CD)
+
+O fluxo do GitHub Actions está configurado em `.github/workflows/deploy-hostinger.yml`.
 
 ### Como ativar:
-1. No seu repositório do GitHub, vá em **Settings** > **Secrets and variables** > **Actions**.
-2. Adicione os seguintes segredos (Secrets):
-   - `HOSTINGER_FTP_HOST`: Endereço FTP fornecido pela Hostinger.
-   - `HOSTINGER_FTP_USER`: Usuário FTP.
-   - `HOSTINGER_FTP_PASSWORD`: Senha do FTP.
-3. Pronto! A cada `git push` na branch `main`, o GitHub fará a compilação e o upload automático para a Hostinger sem você precisar fazer nada.
+1. No seu repositório no GitHub, vá em **Settings** > **Secrets and variables** > **Actions**.
+2. Adicione os Secrets:
+   - `HOSTINGER_FTP_HOST`: IP do FTP (ex: `147.93.38.246`)
+   - `HOSTINGER_FTP_USER`: Usuário do FTP (ex: `u233352823.diretoria`)
+   - `HOSTINGER_FTP_PASSWORD`: Senha do FTP
+3. Toda vez que fizer `git push` na branch `main`, o GitHub compilará e publicará automaticamente na Hostinger.

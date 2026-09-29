@@ -29,12 +29,19 @@ import {
   Percent,
   Activity,
   Radio,
-  Trash2,
+  Handshake,
+  Share2,
+  Download,
+  Smartphone,
+  Tablet,
 } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { InstallAppDialog } from "@/components/InstallAppDialog";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { NotificacoesBell } from "@/components/NotificacoesBell";
 import { TarefasVencendoPopup } from "@/components/TarefasVencendoPopup";
+import { CampanhasRenovacaoPopup } from "@/components/CampanhasRenovacaoPopup";
 import { SystemUpdatePopup } from "@/components/SystemUpdatePopup";
 import { TenantAlertBanner } from "@/components/TenantAlertBanner";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -66,6 +73,7 @@ const nav = [
   { to: "/clientes", label: "Clientes", icon: Users, modulo: null },
   { to: "/agencias", label: "Agências", icon: Building2, modulo: null },
   { to: "/produtos", label: "Produtos", icon: Package, modulo: null },
+  { to: "/parceiros", label: "Parceiros de Mídia", icon: Handshake, modulo: null },
   { to: "/pi", label: "Pedidos de Inserção", icon: FileText, modulo: "pi" },
   { to: "/historico-veiculacao", label: "Histórico de Veiculação", icon: Radio, modulo: "pi" },
   { to: "/propostas", label: "Propostas", icon: FileSignature, modulo: "propostas" },
@@ -77,6 +85,7 @@ const nav = [
   { to: "/materiais-apoio", label: "Material de Apoio", icon: FolderOpen, modulo: null },
   { to: "/landing-pages", label: "Landing Pages", icon: FileSignature, modulo: "landing_pages" },
   { to: "/influenciadores", label: "Influenciadores", icon: Sparkles, modulo: "influenciadores" },
+  { to: "/social-media", label: "Redes Sociais & Tráfego", icon: Share2, modulo: null },
   { to: "/usuarios", label: "Usuários", icon: ShieldCheck, modulo: null },
   { to: "/relatorio-sincronizacao", label: "Sincronização CNPJ", icon: RefreshCw, modulo: null },
   { to: "/layouts", label: "Layouts (PI/Propostas)", icon: Settings, modulo: null },
@@ -121,6 +130,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     (matchedNavItem ? (!can(matchedNavItem.to) || (matchedNavItem.modulo != null && !hasModulo(matchedNavItem.modulo))) : false)
   );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [installDialogOpen, setInstallDialogOpen] = useState(false);
   const { logoSrc: tenantLogo, nome: tenantNome } = useTenantBranding();
   const brandLogo = tenantLogo ?? logoMidiaOS;
   const brandAlt = tenantNome ?? "mídia.OS";
@@ -129,6 +139,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/20">
       <TarefasVencendoPopup />
+      <CampanhasRenovacaoPopup />
       <SystemUpdatePopup />
       {/* Sidebar */}
       <aside className="hidden lg:flex w-72 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border/50 shadow-premium z-40">
@@ -168,6 +179,26 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        {/* Promo card: Celular e Tablet */}
+        <div className="mx-4 mb-4 p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-600">
+            <Smartphone className="size-4 text-amber-500" />
+            <span>Celular & Tablet</span>
+          </div>
+          <p className="text-[11px] text-sidebar-foreground/70 leading-tight">
+            Use o Mídia.OS como app na tela inicial do celular ou tablet.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setInstallDialogOpen(true)}
+            className="w-full h-7 text-[11px] font-bold rounded-lg border-amber-500/30 bg-white/70 hover:bg-amber-500/15 text-amber-700 shadow-sm"
+          >
+            <Download className="size-3 mr-1.5" /> Baixar no Dispositivo
+          </Button>
+        </div>
 
         <div className="p-6 border-t border-sidebar-border/30 bg-sidebar/30 backdrop-blur-sm">
           <DropdownMenu>
@@ -278,7 +309,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                       <div className="text-[10px] text-sidebar-foreground/40 truncate font-medium">{user?.email}</div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 mb-3">
                     <Button asChild variant="secondary" size="sm" className="rounded-xl h-9" onClick={() => setMobileNavOpen(false)}>
                       <Link to="/minha-conta">Perfil</Link>
                     </Button>
@@ -286,6 +317,16 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                       Sair
                     </Button>
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setMobileNavOpen(false); setInstallDialogOpen(true); }}
+                    className="w-full h-9 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-700 font-bold text-xs flex items-center justify-center gap-2"
+                  >
+                    <Download className="size-4 text-amber-600 animate-bounce" />
+                    Baixar App no Celular / Tablet
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
@@ -319,9 +360,23 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           </div>
 
           
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-5 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 shrink-0">
             <div className="hidden sm:block flex-1"><GlobalSearch /></div>
             <div className="h-6 w-px bg-border/40 mx-1 hidden sm:block" />
+
+            {/* Botão Baixar App / Instalar */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setInstallDialogOpen(true)}
+              className="h-9 px-2.5 sm:px-3 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+              title="Baixar Mídia.OS no celular, tablet ou computador"
+            >
+              <Download className="size-3.5 text-amber-500" />
+              <span className="hidden sm:inline">Baixar App</span>
+              <span className="sm:hidden text-[11px]">App</span>
+            </Button>
 
             <NotificacoesBell />
             <div className="h-6 w-px bg-border/40 mx-1 hidden sm:block" />
@@ -371,7 +426,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <ImpersonateDialog open={impersonateOpen} onOpenChange={setImpersonateOpen} />
 
 
-        <main className="flex-1 px-3 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-12 max-w-[1600px] w-full mx-auto animate-fade-up min-w-0">
+        <main className="flex-1 px-3 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-12 pb-24 lg:pb-12 max-w-[1600px] w-full mx-auto animate-fade-up min-w-0">
           {blocked ? (
             <div className="max-w-md mx-auto mt-32 text-center space-y-6">
               <div className="size-20 bg-destructive/5 rounded-3xl flex items-center justify-center mx-auto ring-8 ring-destructive/1">
@@ -392,6 +447,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             children
           )}
         </main>
+
+        {/* Barra de Navegação Inferior para Celular */}
+        <MobileBottomNav
+          onOpenMobileMenu={() => setMobileNavOpen(true)}
+          onOpenInstallDialog={() => setInstallDialogOpen(true)}
+        />
+
+        {/* Modal de Instalação e Download do App */}
+        <InstallAppDialog open={installDialogOpen} onOpenChange={setInstallDialogOpen} />
       </div>
     </div>
   );

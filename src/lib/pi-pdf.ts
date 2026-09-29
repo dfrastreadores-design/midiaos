@@ -131,6 +131,16 @@ export function gerarPdfPi(
     assinaturaDiretoriaDataUrl?: string | null;
     nomeDiretoria?: string | null;
     tenantLogoDataUrl?: string | null;
+    tenantInfo?: {
+      nome?: string;
+      razao_social?: string;
+      cnpj?: string;
+      endereco?: string;
+      cidade?: string;
+      uf?: string;
+      cep?: string;
+      telefone?: string;
+    } | null;
     layout?: Partial<PiLayoutConfig> | null;
   },
 ): string | void {
@@ -163,17 +173,17 @@ export function gerarPdfPi(
     }
   } catch { /* opcional */ }
 
-
-
   const em = pi.emissora;
-  const emNome = (em?.nome_fantasia || em?.nome || em?.razao_social || "T V   B R A S Í L I A").toUpperCase();
-  const emRazao = em?.razao_social || (em ? "" : "RÁDIO E TELEVISÃO CV LTDA");
+  const tenant = opts?.tenantInfo;
+  
+  const emNome = (em?.nome_fantasia || em?.nome || em?.razao_social || tenant?.nome || "INQUILINO").toUpperCase();
+  const emRazao = em?.razao_social || tenant?.razao_social || "";
   const emEnd = em
     ? [em.endereco, em.cep && `CEP: ${em.cep}`, [em.cidade, em.uf].filter(Boolean).join("/")].filter(Boolean).join(" — ")
-    : "SIG Qd.02 Nº 340 — CEP: 70.610-901 — BRASÍLIA/DF";
+    : tenant ? [tenant.endereco, tenant.cep && `CEP: ${tenant.cep}`, [tenant.cidade, tenant.uf].filter(Boolean).join("/")].filter(Boolean).join(" — ") : "";
   const emCnpjTel = em
     ? [em.cnpj && `CNPJ: ${em.cnpj}`, em.telefone && `FONE: ${em.telefone}`].filter(Boolean).join("  ·  ")
-    : "FONE: (61) 3314.1414  ·  FAX: (61) 3314.1457";
+    : tenant ? [tenant.cnpj && `CNPJ: ${tenant.cnpj}`, tenant.telefone && `FONE: ${tenant.telefone}`].filter(Boolean).join("  ·  ") : "";
 
   const headerMaxW = LEFT_END - (M + 28);
   const truncate = (s: string, max: number) => {

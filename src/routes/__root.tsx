@@ -86,7 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "mídia.OS — Sistema comercial para veículos de comunicação" },
       { name: "description", content: "Aumente suas vendas de mídia: CRM, propostas, PI digital e financeiro em uma plataforma feita para TVs, rádios, portais e OOH/DOOH. Agende uma demonstração gratuita." },
       { name: "keywords", content: "sistema para emissora de tv, software para rádio, CRM mídia, PI digital, propostas comerciais, gestão de mídia, software para veículos de comunicação" },
@@ -104,10 +104,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Do briefing à PI assinada: tudo em uma plataforma feita para quem vende mídia." },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9bdbc7cd-7703-4e9b-8dec-61e20fa07162" },
       { name: "theme-color", content: "#0d0d24" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Mídia.OS" },
+      { name: "application-name", content: "Mídia.OS" },
     ],
     links: [
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
-      { rel: "apple-touch-icon", href: "/favicon.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -190,6 +196,18 @@ function RootComponent() {
         const msg = String((e?.reason as Error)?.message ?? e?.reason ?? "");
         if (isChunkErr(msg)) tryReload();
       });
+
+      // Registra o Service Worker para suporte a PWA (instalação no celular, tablet e computador)
+      if ("serviceWorker" in navigator && window.location.protocol === "https:" || window.location.hostname === "localhost") {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            console.log("Mídia.OS PWA Service Worker registrado:", reg.scope);
+          })
+          .catch((err) => {
+            console.warn("Falha ao registrar Service Worker PWA:", err);
+          });
+      }
     }
   }
 

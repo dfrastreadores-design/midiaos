@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Sparkles, FileText, Presentation, Upload, X, Search, Eye, MessageCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Sparkles, FileText, Presentation, Upload, X, Search, Eye, MessageCircle, Sliders, MapPin, Image as ImageIcon, Package } from "lucide-react";
 import { uploadPdfSigned } from "@/lib/whatsapp-share";
 import { WhatsappQrDialog } from "@/components/WhatsappQrDialog";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ import type { PropostaApresentacao } from "@/lib/proposta-presentation";
 import { listProposalLayouts } from "@/lib/layouts.functions";
 import { getLogoSignedUrl } from "@/lib/logo-url";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ImportarModeloPropostaDialog } from "@/components/ImportarModeloPropostaDialog";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; propostaId: string | null };
 
@@ -28,6 +30,10 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
   const [logoResultados, setLogoResultados] = useState<LogoResultado[]>([]);
   const [logoQuery, setLogoQuery] = useState("");
   const [selectedLayoutId, setSelectedLayoutId] = useState<string>("default");
+  const [importarModeloOpen, setImportarModeloOpen] = useState(false);
+  const [modoApresentacao, setModoApresentacao] = useState<"detalhado" | "pacote_midia">("detalhado");
+  const [mostrarEndereco, setMostrarEndereco] = useState(true);
+  const [mostrarFotos, setMostrarFotos] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -54,6 +60,21 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
         setProposta(p as unknown as PropostaApresentacao);
         const nome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.agencia?.nome_fantasia || p.agencia?.razao_social || "";
         setClienteNome(nome);
+        if (p.modo_apresentacao) {
+          setModoApresentacao(p.modo_apresentacao);
+        } else {
+          setModoApresentacao("detalhado");
+        }
+        if (typeof p.mostrar_endereco === "boolean") {
+          setMostrarEndereco(p.mostrar_endereco);
+        } else {
+          setMostrarEndereco(true);
+        }
+        if (typeof p.mostrar_fotos === "boolean") {
+          setMostrarFotos(p.mostrar_fotos);
+        } else {
+          setMostrarFotos(true);
+        }
         // Prefer logo salva na proposta; fallback para logo do cliente/agencia (bucket privado)
         if (p.logo_data_url) {
           setLogoDataUrl(p.logo_data_url);
@@ -137,6 +158,9 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     if (!proposta) return null;
     return {
       ...proposta,
+      modo_apresentacao: modoApresentacao,
+      mostrar_endereco: mostrarEndereco,
+      mostrar_fotos: mostrarFotos,
       cliente: {
         ...(proposta.cliente ?? {}),
         nome_fantasia: clienteNome || proposta.cliente?.nome_fantasia || null,
@@ -146,12 +170,22 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     };
   };
 
+  const getLayoutPayload = () => {
+    if (!selectedLayout) return undefined;
+    return {
+      ...selectedLayout.config,
+      slides: selectedLayout.slides,
+      mapeamento: selectedLayout.mapeamento,
+      name: selectedLayout.name,
+    };
+  };
+
   const exportarPptx = async () => {
     const p = propostaParaExport(); if (!p) return;
     try {
       console.log("Iniciando exportação PPTX para proposta:", p.numero, p);
       const { gerarPptxProposta } = await import("@/lib/proposta-presentation");
-      await gerarPptxProposta(p, resumo, selectedLayout?.config); 
+      await gerarPptxProposta(p, resumo, getLayoutPayload()); 
       toast.success("PPTX gerado com sucesso");
     } catch (e) { 
       console.error("Erro exportarPptx:", e);
@@ -162,7 +196,7 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     const p = propostaParaExport(); if (!p) return;
     try {
       const { gerarPdfProposta } = await import("@/lib/proposta-presentation");
-      await gerarPdfProposta(p, resumo, selectedLayout?.config); 
+      await gerarPdfProposta(p, resumo, getLayoutPayload()); 
       toast.success("PDF gerado com sucesso");
     } catch (e) { 
       console.error("Erro exportarPdf:", e);
@@ -174,7 +208,7 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     setPreviewLoading(true);
     try {
       const { gerarPdfProposta } = await import("@/lib/proposta-presentation");
-      const blob = (await gerarPdfProposta(p, resumo, selectedLayout?.config, { returnBlob: true })) as Blob;
+      const blob = (await gerarPdfProposta(p, resumo, getLayoutPayload(), { returnBlob: true })) as Blob;
       const buf = await blob.arrayBuffer();
 
       const pdfjs: any = await import("pdfjs-dist");
@@ -232,7 +266,7 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     setSharing(true);
     try {
       const { gerarPdfProposta } = await import("@/lib/proposta-presentation");
-      const blob = (await gerarPdfProposta(p, resumo, selectedLayout?.config, { returnBlob: true })) as Blob;
+      const blob = (await gerarPdfProposta(p, resumo, getLayoutPayload(), { returnBlob: true })) as Blob;
       const fileName = `Proposta-${p.numero || propostaId}.pdf`;
       const url = await uploadPdfSigned("proposta-anexos", propostaId, fileName, blob);
       const msgPadrao = `Olá! Segue a proposta comercial ${p.numero ? `nº ${p.numero}` : ""}${p.campanha ? ` — ${p.campanha}` : ""}.\n\nPDF: ${url}`;
@@ -274,7 +308,17 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
               )}
 
               <div className="space-y-2">
-                <Label>Modelo de Layout</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Modelo de Layout</Label>
+                  <button
+                    type="button"
+                    onClick={() => setImportarModeloOpen(true)}
+                    className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                  >
+                    <Sliders className="size-3.5" />
+                    {selectedLayout?.slides?.length ? "Editar Modelo da Empresa" : "Importar Modelo Próprio"}
+                  </button>
+                </div>
                 <Select value={selectedLayoutId} onValueChange={setSelectedLayoutId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um layout" />
@@ -282,10 +326,109 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
                   <SelectContent>
                     <SelectItem value="default">Layout Padrão TVB</SelectItem>
                     {layouts.map((l: any) => (
-                      <SelectItem key={l.id} value={l.id}>{l.name} {l.is_default ? "(Padrão)" : ""}</SelectItem>
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.slides?.length ? "🖼️ " : ""}{l.name} {l.is_default ? "(Padrão)" : ""}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Formato de Apresentação e Valores da Proposta */}
+            <div className="rounded-xl border p-4 bg-muted/20 space-y-3">
+              <div>
+                <Label className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
+                  <Package className="size-4 text-primary" />
+                  Formato de Valores e Exibição
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Defina se a proposta detalha cada item ou consolida como pacote de mídia, além de exibir endereço, mapa e fotos.
+                </p>
+              </div>
+
+              {/* Seletor Segmentado */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setModoApresentacao("detalhado")}
+                  className={`p-3 rounded-lg border text-left transition relative flex flex-col gap-1.5 ${
+                    modoApresentacao === "detalhado"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs"
+                      : "border-border hover:border-primary/40 bg-card"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                      <FileText className="size-3.5" />
+                      Valor Total da Proposta
+                    </span>
+                    {modoApresentacao === "detalhado" && (
+                      <span className="text-[10px] bg-primary text-primary-foreground font-semibold px-2 py-0.5 rounded-full">
+                        Ativo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-snug">
+                    Tabela detalhada com valores unitários, totais por item, descontos aplicados e destaque do{" "}
+                    <strong className="text-foreground">VALOR TOTAL DA PROPOSTA</strong>.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setModoApresentacao("pacote_midia")}
+                  className={`p-3 rounded-lg border text-left transition relative flex flex-col gap-1.5 ${
+                    modoApresentacao === "pacote_midia"
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs"
+                      : "border-border hover:border-primary/40 bg-card"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                      <Package className="size-3.5" />
+                      Pacote de Mídia
+                    </span>
+                    {modoApresentacao === "pacote_midia" && (
+                      <span className="text-[10px] bg-primary text-primary-foreground font-semibold px-2 py-0.5 rounded-full">
+                        Ativo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-snug">
+                    Oculta valores individuais por produto e apresenta o investimento global consolidado como{" "}
+                    <strong className="text-foreground">PACOTE DE MÍDIA</strong>.
+                  </p>
+                </button>
+              </div>
+
+              {/* Switches para Endereço/GPS e Fotos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border/60">
+                <div className="flex items-center justify-between rounded-lg border bg-background/80 p-2.5">
+                  <div className="space-y-0.5 pr-2">
+                    <div className="text-xs font-medium flex items-center gap-1.5">
+                      <MapPin className="size-3.5 text-blue-600" />
+                      Endereço e Geolocalização
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-tight">
+                      Inclui endereço do ponto e link do mapa para produtos cadastrados.
+                    </p>
+                  </div>
+                  <Switch checked={mostrarEndereco} onCheckedChange={setMostrarEndereco} />
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border bg-background/80 p-2.5">
+                  <div className="space-y-0.5 pr-2">
+                    <div className="text-xs font-medium flex items-center gap-1.5">
+                      <ImageIcon className="size-3.5 text-amber-600" />
+                      Link das Fotos dos Produtos
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-tight">
+                      Inclui link clicável direto para fotos cadastradas no produto.
+                    </p>
+                  </div>
+                  <Switch checked={mostrarFotos} onCheckedChange={setMostrarFotos} />
+                </div>
               </div>
             </div>
 
@@ -435,6 +578,14 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
       phone={whatsQr?.phone ?? ""}
       message={whatsQr?.message ?? ""}
       title={whatsQr?.title}
+    />
+    <ImportarModeloPropostaDialog
+      open={importarModeloOpen}
+      onOpenChange={setImportarModeloOpen}
+      initial={selectedLayout?.slides?.length ? selectedLayout : null}
+      onSaved={(res) => {
+        if (res?.id) setSelectedLayoutId(res.id);
+      }}
     />
     </>
   );

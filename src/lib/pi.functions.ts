@@ -5,7 +5,19 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchCnpj, onlyDigits } from "@/lib/cnpj";
 import { assertAnyRole } from "@/lib/roles.server";
 
-type SupabaseLike = { from: (t: string) => { select: (s: string) => { eq: (c: string, v: string) => { maybeSingle: () => Promise<{ data: Record<string, unknown> | null }> } }; update: (p: Record<string, unknown>) => { eq: (c: string, v: string) => Promise<{ error: { message: string } | null }> } } };
+type SupabaseLike = {
+  from: (t: string) => {
+    select: (s: string) => {
+      eq: (
+        c: string,
+        v: string,
+      ) => { maybeSingle: () => Promise<{ data: Record<string, unknown> | null }> };
+    };
+    update: (p: Record<string, unknown>) => {
+      eq: (c: string, v: string) => Promise<{ error: { message: string } | null }>;
+    };
+  };
+};
 
 /** Atualiza cadastro de cliente/agência a partir do CNPJ. Silencioso em caso de falha. */
 async function refreshEntidadeFromCnpj(
@@ -56,7 +68,6 @@ export async function refreshPartesPi(
   ]);
 }
 
-
 const ItemSchema = z.object({
   tipo: z.string(),
   programa: z.string().nullable().optional(),
@@ -86,7 +97,22 @@ const PiSchema = z.object({
   periodo_inicio: z.string().nullable().optional(),
   periodo_fim: z.string().nullable().optional(),
   observacao: z.string().nullable().optional(),
-  status: z.enum(["rascunho", "enviado", "aguardando_aprovacao", "aprovado", "reprovado", "faturado", "veiculado", "encerrado", "finalizado", "cancelado", "substituido", "aguardando_assinatura", "assinado", "enviar_opec"]),
+  status: z.enum([
+    "rascunho",
+    "enviado",
+    "aguardando_aprovacao",
+    "aprovado",
+    "reprovado",
+    "faturado",
+    "veiculado",
+    "encerrado",
+    "finalizado",
+    "cancelado",
+    "substituido",
+    "aguardando_assinatura",
+    "assinado",
+    "enviar_opec",
+  ]),
   valor_tabela: z.number(),
   valor_desconto: z.number(),
   valor_negociado: z.number(),
@@ -123,7 +149,10 @@ const PiSchema = z.object({
 type PiItemInput = z.infer<typeof ItemSchema>;
 
 const normalizeItemString = (value: unknown) =>
-  String(value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("pt-BR");
+  String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("pt-BR");
 
 const normalizeItemNumber = (value: unknown) => {
   const n = Number(value ?? 0);
@@ -159,19 +188,27 @@ export const listPis = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    
+
     // Buscar roles do usuário
     const { data: roleRows } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
     const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
-    const isProducaoOnly = roles.includes("producao") && !roles.includes("admin") && !roles.includes("executivo") && !roles.includes("opec");
+    const isProducaoOnly =
+      roles.includes("producao") &&
+      !roles.includes("admin") &&
+      !roles.includes("executivo") &&
+      !roles.includes("opec");
 
     // Verificar se o usuário possui acesso amplo ou se é executivo restrito aos seus próprios PIs
     const { data: userAuth } = await supabase.auth.getUser();
     const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
-    const hasBroadRole = isSuper || roles.some((r: string) => ["admin", "diretoria", "opec", "financeiro", "super_admin"].includes(r));
+    const hasBroadRole =
+      isSuper ||
+      roles.some((r: string) =>
+        ["admin", "diretoria", "opec", "financeiro", "super_admin"].includes(r),
+      );
 
     let canViewAll = hasBroadRole;
     if (!canViewAll && roles.length > 0) {
@@ -185,7 +222,9 @@ export const listPis = createServerFn({ method: "GET" })
 
     let query = supabase
       .from("pis")
-      .select("*, cliente:clientes(id,razao_social,nome_fantasia), agencia:agencias(id,razao_social,nome_fantasia)");
+      .select(
+        "*, cliente:clientes(id,razao_social,nome_fantasia), agencia:agencias(id,razao_social,nome_fantasia)",
+      );
 
     // Se for perfil produção exclusivo, só vê PIs que têm produção interna agendada
     if (isProducaoOnly) {
@@ -207,7 +246,9 @@ export const getPi = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: pi, error } = await supabase
       .from("pis")
-      .select("*, cliente:clientes(*), agencia:agencias(*), emissora:emissoras(*), itens:pi_itens(*), historico:pi_historico(*)")
+      .select(
+        "*, cliente:clientes(*), agencia:agencias(*), emissora:emissoras(*), itens:pi_itens(*), historico:pi_historico(*)",
+      )
       .eq("id", data.id)
       .single();
     if (error) throw new Error(error.message);
@@ -221,14 +262,27 @@ export const getPi = createServerFn({ method: "POST" })
       if (prof) atendimento = { nome: prof.nome, email: prof.email };
     }
 
-    let criador: { nome: string; email: string; cargo: string | null; telefone: string | null; whatsapp: string | null } | null = null;
+    let criador: {
+      nome: string;
+      email: string;
+      cargo: string | null;
+      telefone: string | null;
+      whatsapp: string | null;
+    } | null = null;
     if (pi?.created_by) {
       const { data: prof } = await supabase
         .from("profiles")
         .select("nome,email,cargo,telefone,whatsapp")
         .eq("id", pi.created_by)
         .maybeSingle();
-      if (prof) criador = { nome: prof.nome, email: prof.email, cargo: prof.cargo, telefone: prof.telefone, whatsapp: prof.whatsapp };
+      if (prof)
+        criador = {
+          nome: prof.nome,
+          email: prof.email,
+          cargo: prof.cargo,
+          telefone: prof.telefone,
+          whatsapp: prof.whatsapp,
+        };
     }
 
     // Enriquece cliente/agência com campos esperados pelo PDF
@@ -267,40 +321,63 @@ export const upsertPi = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => PiSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await assertAnyRole(supabase as never, userId, ["admin", "executivo", "opec"]);
-    const { itens, id, executivo_id: requestedExec, responsavel_negociacao_id, executivo_execucao_id, ...piData } = data;
+    await assertAnyRole(supabase as never, userId, ["admin", "executivo", "opec", "diretoria"]);
+    const {
+      itens,
+      id,
+      executivo_id: requestedExec,
+      responsavel_negociacao_id,
+      executivo_execucao_id,
+      ...piData
+    } = data;
     const itensSemDuplicidade = dedupePiItens(itens);
     let piId = id;
 
     // Atualiza cadastro de cliente/agência ANTES de salvar o PI,
     // para que o snapshot/join reflita os dados mais recentes da Receita.
-    await refreshPartesPi(supabase as unknown as SupabaseLike, piData.cliente_id, piData.agencia_id);
+    await refreshPartesPi(
+      supabase as unknown as SupabaseLike,
+      piData.cliente_id,
+      piData.agencia_id,
+    );
 
-    // Check if current user is admin (only admins can reassign executivo)
-    const { data: adminCheck } = await supabase
+    // Permite que Admin e Diretoria definam ou reatribuam o executivo responsável
+    const { data: privCheck } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-    const isAdmin = !!adminCheck;
+      .in("role", ["admin", "super_admin", "diretoria"]);
+    const isPrivileged = (privCheck ?? []).length > 0;
 
     if (piId) {
-      const updatePayload: Record<string, unknown> = { ...piData, responsavel_negociacao_id, executivo_execucao_id };
-      // Preserva o executivo original ao editar: só atualiza quando o admin
+      const updatePayload: Record<string, unknown> = {
+        ...piData,
+        responsavel_negociacao_id,
+        executivo_execucao_id,
+      };
+      // Preserva o executivo original ao editar: só atualiza quando admin ou diretoria
       // selecionar explicitamente um novo executivo (valor truthy).
-      if (isAdmin && requestedExec) {
+      if (isPrivileged && requestedExec) {
         updatePayload.executivo_id = requestedExec;
       }
-      const { error } = await supabase.from("pis").update(updatePayload as never).eq("id", piId);
+      const { error } = await supabase
+        .from("pis")
+        .update(updatePayload as never)
+        .eq("id", piId);
       if (error) throw new Error(error.message);
       await supabase.from("pi_itens").delete().eq("pi_id", piId);
     } else {
-      const execId = isAdmin && requestedExec ? requestedExec : userId;
+      const execId = isPrivileged && requestedExec ? requestedExec : userId;
       const { data: created, error } = await supabase
         .from("pis")
         // numero é gerado por trigger
-        .insert({ ...piData, executivo_id: execId, created_by: userId, responsavel_negociacao_id, executivo_execucao_id } as never)
+        .insert({
+          ...piData,
+          executivo_id: execId,
+          created_by: userId,
+          responsavel_negociacao_id,
+          executivo_execucao_id,
+        } as never)
         .select("id")
         .single();
       if (error) throw new Error(error.message);
@@ -325,8 +402,16 @@ export const upsertPi = createServerFn({ method: "POST" })
 
     // Notifica executivo e produção sobre a necessidade de produção
     try {
-      const { producao_tipo, producao_contato, producao_email, producao_data, producao_material_tipo, producao_localizacao, producao_observacoes } = piData;
-      
+      const {
+        producao_tipo,
+        producao_contato,
+        producao_email,
+        producao_data,
+        producao_material_tipo,
+        producao_localizacao,
+        producao_observacoes,
+      } = piData;
+
       if (producao_tipo === "interna") {
         const { data: piInfo } = await supabase
           .from("pis")
@@ -399,10 +484,13 @@ export const upsertPi = createServerFn({ method: "POST" })
           .select("numero, campanha, periodo_inicio, cliente:clientes(razao_social,nome_fantasia)")
           .eq("id", piId!)
           .single();
-        const cliente = (piInfo2 as any)?.cliente?.razao_social ?? (piInfo2 as any)?.cliente?.nome_fantasia ?? "";
+        const cliente =
+          (piInfo2 as any)?.cliente?.razao_social ?? (piInfo2 as any)?.cliente?.nome_fantasia ?? "";
         const entregas = socialItens.map(labelSocialItem).join(" | ");
         const datas = datasPublicacaoSocial(socialItens as never, piInfo2?.periodo_inicio as never);
-        const datasTxt = datas.length ? datas.map((d) => d.split("-").reverse().join("/")).join(", ") : "";
+        const datasTxt = datas.length
+          ? datas.map((d) => d.split("-").reverse().join("/")).join(", ")
+          : "";
         for (const p of profs ?? []) {
           await supabase.from("notificacoes").insert({
             user_id: (p as any).id,
@@ -421,7 +509,6 @@ export const upsertPi = createServerFn({ method: "POST" })
     return { id: piId };
   });
 
-
 const SubstituirSchema = PiSchema.extend({ original_id: z.string().uuid() });
 
 export const substituirPi = createServerFn({ method: "POST" })
@@ -433,7 +520,11 @@ export const substituirPi = createServerFn({ method: "POST" })
     const itensSemDuplicidade = dedupePiItens(itens);
 
     // Refresh dos cadastros antes de criar o CS
-    await refreshPartesPi(supabase as unknown as SupabaseLike, piData.cliente_id, piData.agencia_id);
+    await refreshPartesPi(
+      supabase as unknown as SupabaseLike,
+      piData.cliente_id,
+      piData.agencia_id,
+    );
 
     const { data: original, error: oErr } = await supabase
       .from("pis")
@@ -495,7 +586,13 @@ export const substituirPi = createServerFn({ method: "POST" })
 export const cancelarPi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ id: z.string().uuid(), motivo: z.string().min(1).max(500), substituir: z.boolean() }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        motivo: z.string().min(1).max(500),
+        substituir: z.boolean(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -561,8 +658,15 @@ export const cancelarPi = createServerFn({ method: "POST" })
       if (itens.length > 0) {
         await supabase.from("pi_itens").insert(
           itens.map((it) => {
-            const { id: _id, pi_id: _piId, created_at: _ca, ...rest } = it as {
-              id?: string; pi_id?: string; created_at?: string;
+            const {
+              id: _id,
+              pi_id: _piId,
+              created_at: _ca,
+              ...rest
+            } = it as {
+              id?: string;
+              pi_id?: string;
+              created_at?: string;
             } & Record<string, unknown>;
             return { ...rest, pi_id: novo.id } as never;
           }) as never,
@@ -603,7 +707,9 @@ export const enviarPiParaAprovacao = createServerFn({ method: "POST" })
       } as never)
 
       .eq("id", data.id)
-      .select("id, numero, campanha, executivo_id, cliente_id, agencia_id, cliente:clientes(razao_social), agencia:agencias(razao_social)")
+      .select(
+        "id, numero, campanha, executivo_id, cliente_id, agencia_id, cliente:clientes(razao_social), agencia:agencias(razao_social)",
+      )
       .single();
     if (error) throw new Error(error.message);
 
@@ -617,9 +723,14 @@ export const enviarPiParaAprovacao = createServerFn({ method: "POST" })
     });
 
     // Notifica diretoria (admins) in-app e email
-    const { data: admins } = await supabase.from("user_roles").select("user_id, profiles(nome, email)").eq("role", "admin");
-    const { data: executivo } = pi.executivo_id ? await supabase.from("profiles").select("nome").eq("id", pi.executivo_id).maybeSingle() : { data: null };
-    
+    const { data: admins } = await supabase
+      .from("user_roles")
+      .select("user_id, profiles(nome, email)")
+      .eq("role", "admin");
+    const { data: executivo } = pi.executivo_id
+      ? await supabase.from("profiles").select("nome").eq("id", pi.executivo_id).maybeSingle()
+      : { data: null };
+
     const rows = (admins ?? [])
       .map((a) => a.user_id as string)
       .filter(Boolean)
@@ -634,14 +745,14 @@ export const enviarPiParaAprovacao = createServerFn({ method: "POST" })
     if (rows.length > 0) await supabase.from("notificacoes").insert(rows as never);
 
     // Envio de email para diretoria
-    for (const admin of (admins ?? [])) {
+    for (const admin of admins ?? []) {
       const email = (admin.profiles as any)?.email;
       if (email && request) {
         await fetch(`${new URL(request.url).origin}/lovable/email/transactional/send`, {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${(context as any).token}`
+            Authorization: `Bearer ${(context as any).token}`,
           },
           body: JSON.stringify({
             templateName: "pi-pendente-aprovacao",
@@ -649,12 +760,13 @@ export const enviarPiParaAprovacao = createServerFn({ method: "POST" })
             templateData: {
               numeroPi: pi.numero,
               campanha: pi.campanha,
-              cliente: (pi.cliente as any)?.razao_social || (pi.agencia as any)?.razao_social || "N/A",
+              cliente:
+                (pi.cliente as any)?.razao_social || (pi.agencia as any)?.razao_social || "N/A",
               executivo: (executivo as any)?.nome || "Não informado",
-              linkPi: `${new URL(request.url).origin}/pi?id=${pi.id}`
-            }
-          })
-        }).catch(err => console.error("Erro ao enviar email para admin:", err));
+              linkPi: `${new URL(request.url).origin}/pi?id=${pi.id}`,
+            },
+          }),
+        }).catch((err) => console.error("Erro ao enviar email para admin:", err));
       }
     }
 
@@ -669,7 +781,11 @@ export const aprovarPi = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const request = getRequest();
     const { data: isAdmin } = await supabase
-      .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
     if (!isAdmin) throw new Error("Apenas a Diretoria pode aprovar PIs");
 
     const { data: pi, error } = await supabase
@@ -681,7 +797,9 @@ export const aprovarPi = createServerFn({ method: "POST" })
         motivo_reprovacao: null,
       } as never)
       .eq("id", data.id)
-      .select("id, numero, campanha, executivo_id, cliente_id, agencia_id, cliente:clientes(razao_social), agencia:agencias(razao_social)")
+      .select(
+        "id, numero, campanha, executivo_id, cliente_id, agencia_id, cliente:clientes(razao_social), agencia:agencias(razao_social)",
+      )
       .single();
     if (error) throw new Error(error.message);
 
@@ -705,10 +823,8 @@ export const aprovarPi = createServerFn({ method: "POST" })
       } as never);
     }
 
-
     // TODO: envio automático para OPEC (opectv@tvbrasilia.com.br) será habilitado
     // assim que o domínio de e-mail estiver configurado.
-
 
     return { ok: true };
   });
@@ -722,7 +838,11 @@ export const reprovarPi = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: isAdmin } = await supabase
-      .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
     if (!isAdmin) throw new Error("Apenas a Diretoria pode reprovar PIs");
 
     const { data: pi, error } = await supabase
@@ -769,7 +889,9 @@ export const getPiPorNumero = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: pi, error } = await supabase
       .from("pis")
-      .select("*, cliente:clientes(razao_social,nome_fantasia), agencia:agencias(razao_social,nome_fantasia), itens:pi_itens(*)")
+      .select(
+        "*, cliente:clientes(razao_social,nome_fantasia), agencia:agencias(razao_social,nome_fantasia), itens:pi_itens(*)",
+      )
       .eq("numero", data.numero)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -796,13 +918,23 @@ export const compararPis = createServerFn({ method: "POST" })
 
     type Pi = Record<string, unknown> & {
       itens?: Array<Record<string, unknown>>;
-      campanha?: string; mes_veiculacao?: number; ano_veiculacao?: number;
-      valor_negociado?: number; valor_tabela?: number; valor_desconto?: number;
-      total_insercoes?: number; faturamento_contra?: string; faturamento_tipo?: string;
-      data_faturamento?: string | null; data_envio_nota?: string | null;
-      data_vencimento_nota?: string | null; observacao?: string | null; status?: string;
+      campanha?: string;
+      mes_veiculacao?: number;
+      ano_veiculacao?: number;
+      valor_negociado?: number;
+      valor_tabela?: number;
+      valor_desconto?: number;
+      total_insercoes?: number;
+      faturamento_contra?: string;
+      faturamento_tipo?: string;
+      data_faturamento?: string | null;
+      data_envio_nota?: string | null;
+      data_vencimento_nota?: string | null;
+      observacao?: string | null;
+      status?: string;
     };
-    const A = a as Pi; const B = b as Pi;
+    const A = a as Pi;
+    const B = b as Pi;
     const campos: Array<{ key: keyof Pi; label: string }> = [
       { key: "campanha", label: "Campanha" },
       { key: "mes_veiculacao", label: "Mês veiculação" },
@@ -841,7 +973,11 @@ export const deletarPi = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: isAdmin } = await supabase
-      .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
     if (!isAdmin) throw new Error("Apenas administradores podem excluir PIs");
 
     const { error: errItens } = await supabase.from("pi_itens").delete().eq("pi_id", data.id);
