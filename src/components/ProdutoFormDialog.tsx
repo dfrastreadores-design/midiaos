@@ -57,9 +57,9 @@ export type Produto = {
   nome: string;
   midia: Midia;
   tipo: string | null;
-  Programa / Seção / Espaço: string | null;
+  programa: string | null;
   formato: string | null;
-  Faixa / Período: string | null;
+  faixa: string | null;
   duracao_segundos: number;
   insercoes_padrao: number;
   valor_unit: number;
@@ -97,9 +97,9 @@ type Props = {
   initial?: Partial<Produto> | null;
   sugestoes?: {
     tipos: string[];
-    Programa / Seção / Espaços: string[];
+    programas: string[];
     formatos: string[];
-    Faixa / Períodos?: string[];
+    faixas?: string[];
   };
   getTiposParaMidia?: (midia: Midia) => string[];
 };
@@ -108,7 +108,7 @@ export function ProdutoFormDialog({
   open,
   onOpenChange,
   initial,
-  sugestoes = { tipos: [], Programa / Seção / Espaços: [], formatos: [], Faixa / Períodos: [] },
+  sugestoes = { tipos: [], programas: [], formatos: [], faixas: [] },
   getTiposParaMidia,
 }: Props) {
   const qc = useQueryClient();
@@ -684,11 +684,11 @@ export function ProdutoFormDialog({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Programa / Seção / Espaço</Label>
+                <Label>programa</Label>
                 <CreatableCombobox
-                  value={form.Programa / Seção / Espaço ?? ""}
-                  onChange={(v) => set({ Programa / Seção / Espaço: v })}
-                  options={sugestoes.Programa / Seção / Espaços}
+                  value={form.programa ?? ""}
+                  onChange={(v) => set({ programa: v })}
+                  options={sugestoes.programas}
                   placeholder="Selecione ou crie"
                 />
               </div>
@@ -704,11 +704,11 @@ export function ProdutoFormDialog({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Faixa / Período horÃ¡ria</Label>
+                <Label>faixa horÃ¡ria</Label>
                 <CreatableCombobox
-                  value={form.Faixa / Período ?? ""}
-                  onChange={(v) => set({ Faixa / Período: v })}
-                  options={sugestoes.Faixa / Períodos ?? []}
+                  value={form.faixa ?? ""}
+                  onChange={(v) => set({ faixa: v })}
+                  options={sugestoes.faixas ?? []}
                   placeholder="Selecione ou crie (ManhÃ£, Tarde...)"
                 />
               </div>
@@ -1273,7 +1273,7 @@ export function ProdutoFormDialog({
                     })}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Marque os dias da semana em que o Programa / Seção / Espaço vai ao ar.
+                    Marque os dias da semana em que o programa vai ao ar.
                   </p>
                 </div>
               )}

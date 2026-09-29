@@ -400,6 +400,39 @@ export const upsertPi = createServerFn({ method: "POST" })
       detalhes: { status: piData.status },
     });
 
+    // INTEGRAÇÃO FINANCEIRA AUTOMÁTICA
+    // Se o PI tiver valor negociado e uma data de vencimento/faturamento definida, lança no financeiro
+    if ((piData.data_vencimento_nota || piData.data_faturamento) && piData.valor_negociado > 0) {
+      const dataVenc = piData.data_vencimento_nota || piData.data_faturamento;
+      const { data: transExistente } = await supabase
+        .from("financeiro_transacoes")
+        .select("id")
+        .eq("pi_id", piId)
+        .eq("tipo", "entrada")
+        .maybeSingle();
+
+      if (transExistente) {
+        await supabase.from("financeiro_transacoes").update({
+          valor: piData.valor_negociado,
+          data_vencimento: dataVenc,
+          descricao: `Receita PI ${piData.campanha}`,
+          cliente_id: piData.cliente_id,
+        }).eq("id", transExistente.id);
+      } else {
+        await supabase.from("financeiro_transacoes").insert({
+          tipo: "entrada",
+          descricao: `Receita PI ${piData.campanha}`,
+          categoria: "Receitas de PIs / Mídia",
+          valor: piData.valor_negociado,
+          data_competencia: dataVenc,
+          data_vencimento: dataVenc,
+          status: "pendente",
+          cliente_id: piData.cliente_id,
+          pi_id: piId,
+        } as never);
+      }
+    }
+
     // Notifica executivo e produção sobre a necessidade de produção
     try {
       const {
