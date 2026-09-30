@@ -34,6 +34,7 @@ import {
   Download,
   Smartphone,
   Tablet,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
