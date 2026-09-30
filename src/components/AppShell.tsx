@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  Compass,
   KanbanSquare,
   Users,
   Building2,
@@ -73,6 +74,7 @@ import { Badge } from "@/components/ui/badge";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, modulo: null },
+  { to: "/centralizadores", label: "Centralizadores & Planejadores", icon: Compass, modulo: null },
   { to: "/owner", label: "Painel do Proprietário", icon: ShieldCheck, modulo: null },
   { to: "/monitoramento", label: "Monitoramento", icon: Activity, modulo: null },
   { to: "/crm", label: "Funil CRM", icon: KanbanSquare, modulo: "crm" },
@@ -85,6 +87,7 @@ const nav = [
   { to: "/historico-veiculacao", label: "Histórico de Veiculação", icon: Radio, modulo: "pi" },
   { to: "/propostas", label: "Propostas", icon: FileText, modulo: "propostas" },
   { to: "/contratos", label: "Contratos", icon: FileSignature, modulo: null },
+  { to: "/assinaturas", label: "Central de Assinaturas", icon: FileSignature, modulo: null },
   // { to: "/briefings", label: "Briefing de Proposta", icon: FileText, modulo: "briefings" },
 
   { to: "/financeiro", label: "Financeiro", icon: Wallet, modulo: "financeiro" },

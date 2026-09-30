@@ -1,17 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRef, useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   getPiPublicoPorToken,
   registrarAssinaturaCliente,
   getAssinaturaExecutivoPorToken,
 } from "@/lib/assinaturas.functions";
+import {
+  getDocumentoPublicoPorToken,
+  registrarAssinaturaDigitalPublica,
+  recusarAssinaturaPublica,
+  uploadDocumentoManualAssinado,
+} from "@/lib/assinaturas-universal.functions";
+import { LABELS_DOCUMENTO_TIPO } from "@/types/assinaturas.types";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -22,31 +30,541 @@ import {
   Info,
   Loader2,
   PenLine,
+  Printer,
+  Upload,
+  XCircle,
+  AlertTriangle,
+  Building2,
+  FileSignature,
 } from "lucide-react";
 import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
+import { gerarHtmlDocumentoImpressao } from "@/lib/signatures/print-template";
 
 export const Route = createFileRoute("/assinar/$token")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Assinar Pedido de Inserção — Mídia.OS" }] }),
-  component: AssinarPi,
+  head: () => ({ meta: [{ title: "Portal de Assinatura — Mídia.OS" }] }),
+  component: AssinarPublicoPage,
 });
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
-function AssinarPi() {
+function AssinarPublicoPage() {
   const { token } = Route.useParams();
-  const { data, isLoading, error, refetch } = useQuery({
+
+  // Consulta 1: Tenta PI legado
+  const {
+    data: dataPi,
+    isLoading: loadingPi,
+    error: errorPi,
+    refetch: refetchPi,
+  } = useQuery({
     queryKey: ["pi-publico", token],
     queryFn: () => getPiPublicoPorToken({ data: { token } }),
     retry: false,
   });
 
+  // Consulta 2: Tenta Documento Universal se o PI não existir
+  const {
+    data: dataDoc,
+    isLoading: loadingDoc,
+    error: errorDoc,
+    refetch: refetchDoc,
+  } = useQuery({
+    queryKey: ["doc-universal-publico", token],
+    queryFn: () => getDocumentoPublicoPorToken({ data: { token } }),
+    retry: false,
+    enabled: !!errorPi || (!loadingPi && !dataPi),
+  });
+
+  if (loadingPi || (errorPi && loadingDoc)) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+        <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
+        <p className="text-sm text-muted-foreground">Carregando dados do documento...</p>
+      </div>
+    );
+  }
+
+  // Se encontrou documento universal
+  if (dataDoc?.documento && dataDoc?.signatario) {
+    return (
+      <AssinaturaUniversalView
+        token={token}
+        data={dataDoc}
+        refetch={refetchDoc}
+      />
+    );
+  }
+
+  // Se encontrou PI legado
+  if (dataPi?.pi) {
+    return <AssinarPiView token={token} data={dataPi} refetch={refetchPi} />;
+  }
+
+  // Link inválido em ambas as bases
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+      <Card className="max-w-md w-full text-center p-6 space-y-4">
+        <div className="mx-auto p-3 rounded-full bg-rose-100 text-rose-600 w-fit">
+          <AlertTriangle className="h-8 w-8" />
+        </div>
+        <CardTitle className="text-lg font-bold">Link Inválido ou Expirado</CardTitle>
+        <CardDescription>
+          Este link de assinatura não foi localizado no sistema, já foi finalizado ou expirou. Por favor, entre em contato com o responsável pela emissão.
+        </CardDescription>
+      </Card>
+    </div>
+  );
+}
+
+/**
+ * VIEW DO MÓDULO UNIVERSAL DE ASSINATURAS
+ */
+function AssinaturaUniversalView({
+  token,
+  data,
+  refetch,
+}: {
+  token: string;
+  data: {
+    documento: any;
+    signatario: any;
+  };
+  refetch: () => void;
+}) {
+  const { documento, signatario } = data;
+  const [nome, setNome] = useState(signatario.nome || "");
+  const [cpf, setCpf] = useState(signatario.cpf_cnpj || "");
+  const [email, setEmail] = useState(signatario.email || "");
+  const [aceito, setAceito] = useState(false);
+  const [recusando, setRecusando] = useState(false);
+  const [motivoRecusa, setMotivoRecusa] = useState("");
+  const [opcaoManual, setOpcaoManual] = useState(signatario.metodo === "manual");
+  const [uploadFile, setUploadFile] = useState<{ nome: string; dataUrl: string } | null>(null);
+
+  const padRef = useRef<SignaturePadHandle>(null);
+
+  // Mutation para registrar assinatura digital
+  const assinarMutation = useMutation({
+    mutationFn: async () => {
+      if (!padRef.current || padRef.current.isEmpty()) {
+        throw new Error("Desenhe sua assinatura no quadro abaixo");
+      }
+      const dataUrl = padRef.current.toDataURL();
+      if (!dataUrl) throw new Error("Não foi possível capturar a assinatura");
+
+      return registrarAssinaturaDigitalPublica({
+        data: {
+          token,
+          nome,
+          cpf_cnpj: cpf || undefined,
+          email: email || undefined,
+          assinatura_data_url: dataUrl,
+          user_agent: navigator.userAgent.slice(0, 500),
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Assinatura formalizada com sucesso!");
+      refetch();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Mutation para recusa formal
+  const recusarMutation = useMutation({
+    mutationFn: () =>
+      recusarAssinaturaPublica({
+        data: { token, motivo: motivoRecusa },
+      }),
+    onSuccess: () => {
+      toast.warning("Recusa registrada no histórico do documento.");
+      refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Mutation para upload manual pelo próprio signatário (Portal do Parceiro / Cliente)
+  const uploadManualMutation = useMutation({
+    mutationFn: () => {
+      if (!uploadFile) throw new Error("Selecione o arquivo digitalizado");
+      return uploadDocumentoManualAssinado({
+        data: {
+          documento_id: documento.id,
+          nomeArquivo: uploadFile.nome,
+          dataUrl: uploadFile.dataUrl,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Documento assinado enviado com sucesso para validação!");
+      refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setUploadFile({ nome: file.name, dataUrl: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const jaAssinado = signatario.status === "assinado";
+  const jaRecusado = signatario.status === "recusado";
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Cabeçalho */}
+        <div className="text-center space-y-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-2">
+            <ShieldCheck className="h-4 w-4" />
+            Portal Seguro de Assinatura Eletrônica — Mídia OS
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            {documento.titulo}
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Documento {documento.numero || "S/N"} • Versão v{documento.versao} • Tipo:{" "}
+            {LABELS_DOCUMENTO_TIPO[documento.documento_tipo as keyof typeof LABELS_DOCUMENTO_TIPO] ||
+              documento.documento_tipo}
+          </p>
+        </div>
+
+        {/* Status: Já assinado */}
+        {jaAssinado && (
+          <Card className="border-emerald-500/40 bg-emerald-500/5">
+            <CardContent className="p-6 text-center space-y-3">
+              <CheckCircle2 className="h-12 w-12 text-emerald-600 mx-auto" />
+              <div className="font-bold text-lg text-emerald-800 dark:text-emerald-300">
+                Você já assinou este documento!
+              </div>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Assinatura confirmada em{" "}
+                {signatario.assinado_em
+                  ? new Date(signatario.assinado_em).toLocaleString("pt-BR")
+                  : "data recente"}
+                . O registro encontra-se arquivado com trilha de auditoria e carimbo temporal.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Status: Já recusado */}
+        {jaRecusado && (
+          <Card className="border-rose-500/40 bg-rose-500/5">
+            <CardContent className="p-6 text-center space-y-2">
+              <XCircle className="h-12 w-12 text-rose-600 mx-auto" />
+              <div className="font-bold text-lg text-rose-800 dark:text-rose-300">
+                Assinatura Recusada Formalmente
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Motivo registrado: "{signatario.recusado_motivo || "Não especificado"}"
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Dados do Documento */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center justify-between">
+              <span>Detalhes do Documento</span>
+              <Badge variant="outline" className="text-xs">
+                {documento.status}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-xs">
+            {documento.descricao && (
+              <div className="p-3 rounded bg-muted/40 text-muted-foreground leading-relaxed">
+                {documento.descricao}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t pt-3">
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Seu Papel</span>
+                <span className="font-semibold uppercase">{signatario.tipo_participante}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Seu Nome</span>
+                <span className="font-semibold">{signatario.nome}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Empresa</span>
+                <span className="font-semibold">{signatario.empresa || "—"}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Método Previsto</span>
+                <span className="font-semibold capitalize">{signatario.metodo}</span>
+              </div>
+            </div>
+
+            {/* Demais Signatários */}
+            {documento.signatarios && documento.signatarios.length > 1 && (
+              <div className="border-t pt-3">
+                <div className="font-semibold mb-2 text-muted-foreground text-[11px] uppercase tracking-wider">
+                  Todas as Partes Envolvidas:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {documento.signatarios.map((s: any) => (
+                    <Badge
+                      key={s.id}
+                      variant="outline"
+                      className={`text-xs py-1 px-2.5 ${
+                        s.status === "assinado"
+                          ? "border-emerald-400 bg-emerald-500/10 text-emerald-700"
+                          : "border-slate-300 text-muted-foreground"
+                      }`}
+                    >
+                      {s.nome} ({s.tipo_participante.toUpperCase()}) —{" "}
+                      {s.status === "assinado" ? "Assinado ✓" : "Pendente ⏳"}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Área de Ação de Assinatura */}
+        {!jaAssinado && !jaRecusado && (
+          <Card className="border-primary/30 shadow-md">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <PenLine className="h-5 w-5 text-primary" />
+                    Formalizar Assinatura
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Escolha entre assinar digitalmente na tela ou optar pela assinatura física (manual).
+                  </CardDescription>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant={!opcaoManual ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setOpcaoManual(false)}
+                    className="h-8 text-xs"
+                  >
+                    Digital (Na Tela)
+                  </Button>
+                  <Button
+                    variant={opcaoManual ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setOpcaoManual(true)}
+                    className="h-8 text-xs"
+                  >
+                    Manual (Física)
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {!opcaoManual ? (
+                // ASSINATURA DIGITAL NA TELA
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <Label className="text-xs">Confirmar Nome Completo *</Label>
+                      <Input
+                        value={nome}
+                        onChange={(e) => setNome(e.target.value)}
+                        className="h-9 text-xs"
+                        placeholder="Nome como no documento de identidade"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">CPF / CNPJ</Label>
+                      <Input
+                        value={cpf}
+                        onChange={(e) => setCpf(e.target.value)}
+                        className="h-9 text-xs"
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <PenLine className="h-4 w-4 text-primary" />
+                      Desenhe sua Rubrica / Assinatura no Quadro Abaixo:
+                    </Label>
+                    <SignaturePad ref={padRef} height={180} />
+                    <p className="text-[11px] text-muted-foreground">
+                      Utilize o mouse, caneta touch ou o próprio dedo na tela para desenhar sua assinatura.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-muted/40 rounded border text-xs">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <Checkbox
+                        checked={aceito}
+                        onCheckedChange={(v) => setAceito(!!v)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-muted-foreground leading-relaxed">
+                        Declaro que li e concordo integralmente com os termos deste documento e o assino
+                        eletronicamente com fé pública e validade nos termos da legislação brasileira (MP 2.200-2/2001).
+                        Compreendo que meu endereço IP e dados de conexão serão registrados para fins de auditoria.
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <Button
+                      className="flex-1 h-11 text-sm font-semibold"
+                      disabled={!nome.trim() || !aceito || assinarMutation.isPending}
+                      onClick={() => assinarMutation.mutate()}
+                    >
+                      {assinarMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Processando Assinatura...
+                        </>
+                      ) : (
+                        "Confirmar e Assinar Eletronicamente"
+                      )}
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRecusando(!recusando)}
+                      className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                    >
+                      Recusar Documento
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // ASSINATURA MANUAL (IMPRESSÃO & UPLOAD)
+                <div className="space-y-4">
+                  <div className="p-4 bg-amber-500/10 border border-amber-200 dark:border-amber-900 rounded-lg text-xs space-y-2 text-amber-900 dark:text-amber-200">
+                    <div className="font-semibold flex items-center gap-1.5">
+                      <Printer className="h-4 w-4" />
+                      Fluxo de Coleta Física de Assinatura
+                    </div>
+                    <p>
+                      1. Clique abaixo para abrir a folha oficial de impressão.<br />
+                      2. Colete a rubrica e assinatura física no campo reservado.<br />
+                      3. Fotografe ou digitalize o documento e anexe o arquivo (PDF, JPG, PNG) abaixo.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const html = gerarHtmlDocumentoImpressao(documento, documento.signatarios || [], {
+                          nome: "Mídia OS — Gestão de Mídia",
+                        });
+                        const win = window.open("", "_blank");
+                        if (win) {
+                          win.document.write(html);
+                          win.document.close();
+                        }
+                      }}
+                      className="text-xs bg-background gap-1 mt-1"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      Abrir Folha para Impressão
+                    </Button>
+                  </div>
+
+                  <div className="p-4 border-2 border-dashed rounded-lg text-center bg-muted/20">
+                    <input
+                      type="file"
+                      id="upload-doc-manual-public"
+                      className="hidden"
+                      accept=".pdf,image/png,image/jpeg,image/jpg"
+                      onChange={handleFileChange}
+                    />
+                    <label
+                      htmlFor="upload-doc-manual-public"
+                      className="cursor-pointer flex flex-col items-center justify-center gap-2"
+                    >
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-xs font-semibold">
+                        {uploadFile ? uploadFile.nome : "Anexar Documento Digitalizado Assinado"}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        PDF, JPG ou PNG (máx. 15MB)
+                      </span>
+                    </label>
+                  </div>
+
+                  <Button
+                    className="w-full h-11 text-sm bg-amber-600 hover:bg-amber-700 text-white"
+                    disabled={!uploadFile || uploadManualMutation.isPending}
+                    onClick={() => uploadManualMutation.mutate()}
+                  >
+                    {uploadManualMutation.isPending ? "Enviando arquivo..." : "Enviar Documento Físico Assinado"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Bloco de Recusa Formal */}
+              {recusando && (
+                <div className="border-t pt-3 mt-3 space-y-2">
+                  <Label className="text-xs text-rose-600 font-semibold">
+                    Motivo da Recusa Formal *
+                  </Label>
+                  <Textarea
+                    placeholder="Descreva claramente o motivo pelo qual você está recusando a assinatura deste documento..."
+                    rows={2}
+                    className="text-xs"
+                    value={motivoRecusa}
+                    onChange={(e) => setMotivoRecusa(e.target.value)}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setRecusando(false)} className="text-xs">
+                      Cancelar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={!motivoRecusa.trim() || recusarMutation.isPending}
+                      onClick={() => recusarMutation.mutate()}
+                      className="text-xs"
+                    >
+                      {recusarMutation.isPending ? "Registrando..." : "Confirmar Recusa"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * VIEW DO PI LEGADO (Para manter 100% de retrocompatibilidade com links antigos)
+ */
+function AssinarPiView({
+  token,
+  data,
+  refetch,
+}: {
+  token: string;
+  data: any;
+  refetch: () => void;
+}) {
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [aceito, setAceito] = useState(false);
-  const [consultandoCpf, setConsultandoCpf] = useState(false);
   const padRef = useRef<SignaturePadHandle>(null);
 
   const formatarCpf = (v: string) => {
@@ -56,27 +574,6 @@ function AssinarPi() {
     if (v.length > 6) return v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
     if (v.length > 3) return v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
     return v;
-  };
-
-  const consultarCpf = async (cpfPuro: string) => {
-    if (cpfPuro.length !== 11) return;
-    setConsultandoCpf(true);
-    try {
-      // Usando uma API pública/gratuita para teste (BrasilAPI ou similar)
-      // Nota: Muitas APIs de CPF exigem token ou data de nascimento por segurança.
-      // Aqui simulamos a busca ou usamos um serviço que permita consulta básica se disponível.
-      const res = await fetch(`https://brasilapi.com.br/api/cpf/v1/${cpfPuro}`).then((r) =>
-        r.json(),
-      );
-      if (res.nome) {
-        setNome(res.nome);
-        toast.success("Dados preenchidos via CPF");
-      }
-    } catch (e) {
-      console.error("Erro ao consultar CPF:", e);
-    } finally {
-      setConsultandoCpf(false);
-    }
   };
 
   const assinar = useMutation({
@@ -97,7 +594,6 @@ function AssinarPi() {
         },
       });
     },
-
     onSuccess: () => {
       toast.success("PI assinado com sucesso!");
       refetch();
@@ -109,7 +605,6 @@ function AssinarPi() {
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const visualizarPdf = async () => {
     if (!data?.pi || gerandoPdf) return;
-    // Abrir a janela SINCRONAMENTE no clique para evitar bloqueio de pop-up (especialmente no mobile)
     const win = window.open("", "_blank");
     setGerandoPdf(true);
     try {
@@ -124,16 +619,6 @@ function AssinarPi() {
 
       if (win && !win.closed) {
         win.location.href = url;
-      } else {
-        // Fallback: força download/abertura inline na mesma aba
-        const a = document.createElement("a");
-        a.href = url;
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.download = `PI-${data.pi.numero}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
       }
     } catch (e: any) {
       if (win && !win.closed) win.close();
@@ -143,172 +628,101 @@ function AssinarPi() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-        Carregando…
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <Card className="max-w-md w-full">
-          <CardContent className="py-10 text-center space-y-2">
-            <h1 className="text-lg font-semibold">Link inválido</h1>
-            <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const pi = data!.pi as any;
-  const assinatura = data!.assinatura as any;
-  const jaAssinado = assinatura.status === "assinado";
-  const cli = pi.cliente?.nome_fantasia || pi.cliente?.razao_social || "—";
-  const ag = pi.agencia?.nome_fantasia || pi.agencia?.razao_social || "Direto";
+  const jaAssinado = data.assinatura?.status === "assinado";
+  const pi = data.pi;
 
   return (
-    <div className="min-h-screen bg-muted/30 py-8 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-2 text-primary">
-            <ShieldCheck className="size-5" />
-            <span className="font-semibold">Mídia.OS · TV Brasília</span>
-          </div>
-          <h1 className="text-2xl font-semibold">Assinatura do Pedido de Inserção</h1>
-          <p className="text-sm text-muted-foreground">
-            Confira os dados e assine eletronicamente.
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-8 px-4 sm:px-6">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-background shadow-xs">
+            <ShieldCheck className="size-3.5 text-primary" />
+            Portal Seguro de Assinatura Eletrônica — Mídia.OS
+          </Badge>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Pedido de Inserção nº {pi.numero}
+          </h1>
+          <p className="text-sm text-muted-foreground">{pi.campanha}</p>
         </div>
 
-        <Card className="overflow-hidden border-primary/20">
-          <CardHeader className="bg-primary/5 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="size-5 text-primary" />
-                  PI {pi.numero}
-                </CardTitle>
-                <div className="text-xs text-muted-foreground">Campanha: {pi.campanha}</div>
+        {jaAssinado && (
+          <Card className="border-emerald-500/40 bg-emerald-500/5">
+            <CardContent className="p-6 text-center space-y-3">
+              <CheckCircle2 className="size-12 text-emerald-600 mx-auto" />
+              <div className="font-semibold text-lg text-emerald-950 dark:text-emerald-100">
+                PI assinado com sucesso!
               </div>
-              <Badge variant="outline" className="capitalize">
-                {pi.status}
-              </Badge>
-            </div>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Assinado por <strong>{data.assinatura.nome_assinante}</strong> em{" "}
+                {new Date(data.assinatura.assinado_em).toLocaleString("pt-BR")}.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="size-4 text-primary" />
+              Resumo da Veiculação
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={visualizarPdf}
+              disabled={gerandoPdf}
+              className="gap-1.5"
+            >
+              {gerandoPdf ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Download className="size-3.5" />
+              )}
+              Visualizar PI Completo (PDF)
+            </Button>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="p-4 grid sm:grid-cols-2 gap-4 text-sm border-b border-dashed">
-              <Linha l="Cliente" v={cli} />
-              <Linha l="Agência" v={ag} />
-              <Linha
-                l="Veiculação"
-                v={`${String(pi.mes_veiculacao).padStart(2, "0")}/${pi.ano_veiculacao}`}
-              />
-              <Linha l="Valor Total" v={fmtBRL(Number(pi.valor_negociado))} forte />
-            </div>
-            <div className="p-4 bg-primary/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm text-primary font-medium">
-                <Info className="size-4" />
-                <span>Visualize o documento completo antes de assinar</span>
-              </div>
-              <Button
-                onClick={visualizarPdf}
-                disabled={gerandoPdf}
-                variant="default"
-                className="w-full sm:w-auto shadow-sm"
-              >
-                {gerandoPdf ? (
-                  <Loader2 className="size-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="size-4 mr-2" />
-                )}
-                {gerandoPdf ? "Gerando PDF..." : "Visualizar PI (PDF)"}
-              </Button>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <Linha l="Cliente" v={pi.cliente?.nome_fantasia || pi.cliente?.razao_social || "—"} />
+              <Linha l="Agência" v={pi.agencia?.nome_fantasia || pi.agencia?.razao_social || "Direto"} />
+              <Linha l="Período" v={`${pi.periodo_inicio || "—"} até ${pi.periodo_fim || "—"}`} />
+              <Linha l="Valor Líquido" v={fmtBRL(pi.valor_liquido || 0)} forte />
             </div>
           </CardContent>
         </Card>
 
-        {jaAssinado ? (
-          <Card className="border-success/20 bg-success/5">
-            <CardContent className="py-10 text-center space-y-3">
-              <div className="size-16 bg-success/10 text-success rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle2 className="size-10" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-xl font-bold text-success">Documento Assinado</h3>
-                <p className="text-sm text-muted-foreground">
-                  Este Pedido de Inserção foi assinado eletronicamente.
-                </p>
-              </div>
-              {assinatura.assinatura_signed_url && (
-                <div className="mx-auto max-w-xs bg-white rounded-md border p-2">
-                  <img
-                    src={assinatura.assinatura_signed_url}
-                    alt="Assinatura do cliente"
-                    className="w-full h-auto"
-                  />
-                </div>
-              )}
-              <div className="pt-4 mt-4 border-t border-success/10 text-sm">
-                <div className="font-medium">{assinatura.nome_assinante}</div>
-                <div className="text-xs text-muted-foreground">
-                  CPF: {formatarCpf(assinatura.cpf)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Assinado em {new Date(assinatura.assinado_em).toLocaleString("pt-BR")}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-primary/20">
-            <CardHeader className="pb-3 border-b">
+        {!jaAssinado && (
+          <Card className="border-primary/30 shadow-lg shadow-primary/5">
+            <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <User className="size-4 text-primary" />
-                Dados do Assinante
+                Dados do Signatário
               </CardTitle>
+              <CardDescription>
+                Informe seus dados para validade jurídica desta assinatura digital.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="cpf">Seu CPF *</Label>
-                  <div className="relative">
-                    <Input
-                      id="cpf"
-                      value={cpf}
-                      onChange={(e) => {
-                        const v = formatarCpf(e.target.value);
-                        setCpf(v);
-                        if (v.replace(/\D/g, "").length === 11) {
-                          consultarCpf(v.replace(/\D/g, ""));
-                        }
-                      }}
-                      placeholder="000.000.000-00"
-                      maxLength={14}
-                    />
-                    {consultandoCpf && (
-                      <Loader2 className="size-4 absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
-                    )}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground italic">
-                    Seus dados serão preenchidos automaticamente após o CPF
-                  </p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="nome">Nome completo *</Label>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <div>
+                  <Label>CPF *</Label>
                   <Input
-                    id="nome"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    placeholder="Nome como consta no documento"
+                    value={cpf}
+                    onChange={(e) => setCpf(formatarCpf(e.target.value))}
+                    placeholder="000.000.000-00"
                   />
                 </div>
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="email">E-mail para confirmação</Label>
+                <div>
+                  <Label>Nome completo *</Label>
                   <Input
-                    id="email"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Nome como no CPF"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>E-mail para confirmação</Label>
+                  <Input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -323,45 +737,24 @@ function AssinarPi() {
                   Assinatura *
                 </Label>
                 <SignaturePad ref={padRef} height={180} />
-                <p className="text-[11px] text-muted-foreground">
-                  Desenhe sua assinatura no quadro acima usando o mouse, caneta ou dedo (em
-                  dispositivos touch).
-                </p>
               </div>
 
-              <div className="rounded-lg bg-muted/50 p-4 border border-dashed">
-                <label className="flex items-start gap-3 text-sm cursor-pointer group">
-                  <Checkbox
-                    id="termos"
-                    checked={aceito}
-                    onCheckedChange={(v) => setAceito(!!v)}
-                    className="mt-1"
-                  />
-                  <span className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors">
-                    Declaro que li e concordo integralmente com o conteúdo deste Pedido de Inserção
-                    e o assino eletronicamente, com validade jurídica nos termos da MP 2.200-2/2001.
-                    Serão registrados meu nome, CPF, endereço IP e data/hora desta assinatura para
-                    fins de auditoria.
+              <div className="rounded-lg bg-muted/50 p-4 border border-dashed text-xs">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox checked={aceito} onCheckedChange={(v) => setAceito(!!v)} className="mt-0.5" />
+                  <span className="text-muted-foreground leading-relaxed">
+                    Declaro que li e concordo integralmente com o conteúdo deste Pedido de Inserção e o assino
+                    eletronicamente, com validade jurídica nos termos da MP 2.200-2/2001.
                   </span>
                 </label>
               </div>
 
               <Button
-                className="w-full h-12 text-lg shadow-lg shadow-primary/20"
-                size="lg"
-                disabled={
-                  !nome.trim() || cpf.replace(/\D/g, "").length < 11 || !aceito || assinar.isPending
-                }
+                className="w-full h-12 text-base font-semibold"
+                disabled={!nome.trim() || cpf.replace(/\D/g, "").length < 11 || !aceito || assinar.isPending}
                 onClick={() => assinar.mutate()}
               >
-                {assinar.isPending ? (
-                  <>
-                    <Loader2 className="size-5 mr-2 animate-spin" />
-                    Processando assinatura...
-                  </>
-                ) : (
-                  "Confirmar e Assinar Eletronicamente"
-                )}
+                {assinar.isPending ? "Processando assinatura..." : "Confirmar e Assinar Eletronicamente"}
               </Button>
             </CardContent>
           </Card>
@@ -375,7 +768,7 @@ function Linha({ l, v, forte }: { l: string; v: string; forte?: boolean }) {
   return (
     <div>
       <div className="text-xs text-muted-foreground">{l}</div>
-      <div className={forte ? "font-semibold" : ""}>{v}</div>
+      <div className={forte ? "font-semibold text-primary" : ""}>{v}</div>
     </div>
   );
 }

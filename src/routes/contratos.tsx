@@ -68,8 +68,11 @@ import { gerarPdfContrato } from "@/lib/contratos-pdf";
 import { useTenantBranding } from "@/hooks/use-tenant-branding";
 import { listClientes } from "@/lib/clientes.functions";
 import { listAgencias } from "@/lib/agencias.functions";
-import { listParceiros } from "@/lib/parceiros.functions";
 import { listPis } from "@/lib/pi.functions";
+import {
+  UniversalAssinaturaModal,
+  DocumentoAssinaturaBadge,
+} from "@/components/UniversalAssinaturaModal";
 
 export const Route = createFileRoute("/contratos")({
   head: () => ({ meta: [{ title: "Contratos & Modelos — Mídia.OS" }] }),
@@ -102,6 +105,7 @@ export function ContratosPage() {
   // Modais de Contrato
   const [modalContratoOpen, setModalContratoOpen] = useState(false);
   const [viewContrato, setViewContrato] = useState<Contrato | null>(null);
+  const [assinaturaContrato, setAssinaturaContrato] = useState<Contrato | null>(null);
 
   // Form State Contrato
   const [formData, setFormData] = useState<{
@@ -432,6 +436,16 @@ export function ContratosPage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right space-x-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setAssinaturaContrato(c)}
+                                title="Gerenciar Assinaturas (Universal)"
+                                className="h-8 px-2 text-xs text-primary border-primary/20 hover:bg-primary/10 gap-1"
+                              >
+                                <FileSignature className="size-3.5" />
+                                Assinatura
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -794,6 +808,21 @@ export function ContratosPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        )}
+
+        {/* MODAL UNIVERSAL DE ASSINATURAS */}
+        {assinaturaContrato && (
+          <UniversalAssinaturaModal
+            open={!!assinaturaContrato}
+            onOpenChange={(op) => {
+              if (!op) setAssinaturaContrato(null);
+            }}
+            referenciaTipo="contratos"
+            referenciaId={assinaturaContrato.id}
+            documentoTipo="contrato"
+            tituloPadrao={`Contrato: ${assinaturaContrato.titulo}`}
+            numeroPadrao={assinaturaContrato.numero}
+          />
         )}
       </div>
     </AppShell>
