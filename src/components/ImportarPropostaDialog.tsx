@@ -81,19 +81,23 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
   const [executivoId, setExecutivoId] = useState<string>("");
   const [tipoCliente, setTipoCliente] = useState<"cadastrado" | "avulso">("cadastrado");
 
+  const fetchClientesFn = useServerFn(listClientes);
+  const fetchAgenciasFn = useServerFn(listAgencias);
+  const fetchUsuariosFn = useServerFn(listUsuarios);
+
   const { data: clientes = [] } = useQuery({
     queryKey: ["clientes"],
-    queryFn: () => listClientes(),
+    queryFn: () => fetchClientesFn(),
     enabled: open,
   });
   const { data: agencias = [] } = useQuery({
     queryKey: ["agencias"],
-    queryFn: () => listAgencias(),
+    queryFn: () => fetchAgenciasFn(),
     enabled: open,
   });
   const { data: usuarios = [] } = useQuery({
     queryKey: ["usuarios"],
-    queryFn: () => listUsuarios(),
+    queryFn: () => fetchUsuariosFn(),
     enabled: open && isAdmin,
   });
 

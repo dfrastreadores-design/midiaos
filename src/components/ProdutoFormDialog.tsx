@@ -118,6 +118,8 @@ export function ProdutoFormDialog({
   const reverseGeocodeFn = useServerFn(reverseGeocodeCoords);
   const lookupCepFn = useServerFn(lookupCep);
   const upsertConfigFn = useServerFn(upsertMidiaConfig);
+  const fetchConfigsFn = useServerFn(listMidiaConfig);
+  const fetchEmissorasFn = useServerFn(listEmissoras);
 
   const [creatingMidia, setCreatingMidia] = useState(false);
   const [creatingTipo, setCreatingTipo] = useState(false);
@@ -165,7 +167,7 @@ export function ProdutoFormDialog({
 
   const { data: configs = [] } = useQuery({
     queryKey: ["midia_config"],
-    queryFn: () => listMidiaConfig(),
+    queryFn: () => fetchConfigsFn(),
   });
   const todasMidias = Array.from(
     new Set(["TV", "Radio", "DOOH", ...(configs as any[]).map((c) => c.midia).filter(Boolean)]),
@@ -174,7 +176,7 @@ export function ProdutoFormDialog({
   const listParceirosFn = useServerFn(listParceiros);
   const { data: emissoras = [] } = useQuery({
     queryKey: ["emissoras"],
-    queryFn: () => listEmissoras(),
+    queryFn: () => fetchEmissorasFn(),
   });
   const { data: parceirosCadastrados = [] } = useQuery<Parceiro[]>({
     queryKey: ["parceiros"],
