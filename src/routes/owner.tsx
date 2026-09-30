@@ -58,6 +58,7 @@ import {
   LogOut,
   ShieldAlert,
   FileSignature,
+  Sparkles,
 } from "lucide-react";
 import { LogoImg } from "@/components/LogoImg";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,6 +84,7 @@ import {
   desvincularUsuarioTenant,
   type TenantInput,
 } from "@/lib/tenants.functions";
+import { provisionarTenantDemo } from "@/lib/demo-tenant.functions";
 
 import {
   listPlanos,
@@ -213,6 +215,16 @@ function OwnerDashboard() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const provisionarDemo = useServerFn(provisionarTenantDemo);
+  const demoMut = useMutation({
+    mutationFn: () => provisionarDemo({}),
+    onSuccess: (res: any) => {
+      toast.success(res?.mensagem || "Ambiente DEMO provisionado com sucesso!");
+      qc.invalidateQueries({ queryKey: ["owner"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const s = statsQuery.data;
   const o = overviewQuery.data;
   const tenants = (tenantsQuery.data ?? []) as any[];
@@ -229,6 +241,24 @@ function OwnerDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 font-medium"
+            disabled={demoMut.isPending}
+            onClick={() => {
+              if (
+                confirm(
+                  "Deseja provisionar/atualizar o Tenant DEMO com 1 Cliente, 1 Agência, 5 Parceiros, 10 Produtos, 1 Campanha de R$ 100k, PIs, Contratos e Comprovantes?",
+                )
+              ) {
+                demoMut.mutate();
+              }
+            }}
+            title="Provisionar ambiente de demonstração completo para vendas"
+          >
+            <Sparkles className="size-4 mr-2 text-indigo-600" />
+            {demoMut.isPending ? "Provisionando Demo…" : "Gerar Tenant Demo"}
+          </Button>
           <Button asChild variant="outline" size="sm" title="Gerenciar usuários da plataforma">
             <Link to="/usuarios">
               <Users className="size-4 mr-2" /> Gerenciar Usuários

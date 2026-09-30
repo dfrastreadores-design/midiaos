@@ -83,7 +83,8 @@ const nav = [
   { to: "/parceiros", label: "Parceiros de Mídia", icon: Handshake, modulo: null },
   { to: "/pi", label: "Pedidos de Inserção", icon: FileText, modulo: "pi" },
   { to: "/historico-veiculacao", label: "Histórico de Veiculação", icon: Radio, modulo: "pi" },
-  { to: "/propostas", label: "Propostas", icon: FileSignature, modulo: "propostas" },
+  { to: "/propostas", label: "Propostas", icon: FileText, modulo: "propostas" },
+  { to: "/contratos", label: "Contratos", icon: FileSignature, modulo: null },
   // { to: "/briefings", label: "Briefing de Proposta", icon: FileText, modulo: "briefings" },
 
   { to: "/financeiro", label: "Financeiro", icon: Wallet, modulo: "financeiro" },

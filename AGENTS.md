@@ -5,6 +5,7 @@
 O sistema está operando em **ambiente de produção** com dados sensíveis e críticos de clientes, propostas comerciais, pedidos de inserção (PIs), veiculações, faturamento, produtos e parceiros.
 
 ### Princípios Invioláveis:
+
 1. **Nenhum Dado Pode Ser Excluído ou Sobrescrito Indevidamente**:
    - É estritamente proibido rodar scripts destrutivos (`DROP TABLE`, `DROP COLUMN`, `TRUNCATE`, ou `DELETE` sem filtro restritivo de chave primária e tenant).
    - Qualquer comando que possa gerar perda irreversível deve ser cancelado imediatamente e requisitar aprovação explícita do usuário (`accidental-data-loss-prevention`).

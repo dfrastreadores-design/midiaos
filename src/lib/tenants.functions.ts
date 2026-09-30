@@ -607,7 +607,7 @@ export const getMeuTenantPerfil = createServerFn({ method: "GET" })
     const { data: t, error } = await context.supabase
       .from("tenants")
       .select(
-        "id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email, contato_whatsapp, logo_url, cor_primaria, produto_marca, status, plano, proximo_vencimento, created_at",
+        "id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email, contato_whatsapp, logo_url, favicon_url, cor_primaria, cor_secundaria, produto_marca, status, plano, proximo_vencimento, subdominio, dominio_proprio, prefixo_pi, prefixo_proposta, comissao_padrao_pct, created_at",
       )
       .eq("id", prof.tenant_id)
       .maybeSingle();
@@ -615,7 +615,7 @@ export const getMeuTenantPerfil = createServerFn({ method: "GET" })
     return t;
   });
 
-/** Permite que administradores da empresa atualizem os dados cadastrais da sua própria empresa */
+/** Permite que administradores da empresa atualizem os dados cadastrais e white-label da sua própria empresa */
 export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -627,7 +627,14 @@ export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
       contato_email?: string | null;
       contato_whatsapp?: string | null;
       logo_url?: string | null;
+      favicon_url?: string | null;
       cor_primaria?: string | null;
+      cor_secundaria?: string | null;
+      subdominio?: string | null;
+      dominio_proprio?: string | null;
+      prefixo_pi?: string | null;
+      prefixo_proposta?: string | null;
+      comissao_padrao_pct?: number | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -652,18 +659,27 @@ export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
       .single();
     if (!prof?.tenant_id) throw new Error("Usuário não está vinculado a nenhuma empresa");
 
+    const updatePayload: Record<string, any> = {
+      razao_social: data.razao_social.trim(),
+      nome_fantasia: data.nome_fantasia?.trim() || null,
+      cnpj: data.cnpj?.trim() || null,
+      contato_nome: data.contato_nome?.trim() || null,
+      contato_email: data.contato_email?.trim() || null,
+      contato_whatsapp: data.contato_whatsapp?.trim() || null,
+      logo_url: data.logo_url || null,
+      favicon_url: data.favicon_url || null,
+      cor_primaria: data.cor_primaria || null,
+      cor_secundaria: data.cor_secundaria || null,
+      subdominio: data.subdominio?.trim().toLowerCase() || null,
+      dominio_proprio: data.dominio_proprio?.trim().toLowerCase() || null,
+      prefixo_pi: data.prefixo_pi?.trim().toUpperCase() || "PI",
+      prefixo_proposta: data.prefixo_proposta?.trim().toUpperCase() || "PROP",
+      comissao_padrao_pct: data.comissao_padrao_pct !== undefined ? Number(data.comissao_padrao_pct) : 20,
+    };
+
     const { error } = await supabase
       .from("tenants")
-      .update({
-        razao_social: data.razao_social.trim(),
-        nome_fantasia: data.nome_fantasia?.trim() || null,
-        cnpj: data.cnpj?.trim() || null,
-        contato_nome: data.contato_nome?.trim() || null,
-        contato_email: data.contato_email?.trim() || null,
-        contato_whatsapp: data.contato_whatsapp?.trim() || null,
-        logo_url: data.logo_url || null,
-        cor_primaria: data.cor_primaria || null,
-      })
+      .update(updatePayload)
       .eq("id", prof.tenant_id);
 
     if (error) throw new Error(error.message);

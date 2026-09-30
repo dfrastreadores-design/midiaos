@@ -5,7 +5,9 @@
 ---
 
 ## 1. Proibição Absoluta de Comandos Destrutivos
+
 Em nenhuma circunstância qualquer agente ou script deve executar:
+
 - `DROP TABLE`, `DROP SCHEMA`, `DROP DATABASE`.
 - `DROP COLUMN` em colunas existentes em tabelas com dados.
 - `TRUNCATE TABLE`.
@@ -15,7 +17,9 @@ Em nenhuma circunstância qualquer agente ou script deve executar:
 ---
 
 ## 2. Regra de Ouro para Migrações de Banco de Dados: Exclusivamente Aditiva
+
 Toda evolução de esquema de banco de dados deve ser **100% retrocompatível**:
+
 - **Novas colunas**: Utilizar sempre `ADD COLUMN IF NOT EXISTS` com valor `DEFAULT` seguro ou `NULL`.
 - **Campos descontinuados**: NUNCA apagar a coluna existente. Marcar como `@deprecated` no código TypeScript e manter o dado histórico íntegro no banco.
 - **Novas tabelas**: `CREATE TABLE IF NOT EXISTS`, com RLS habilitado e triggers de auditoria e lixeira vinculados imediatamente.
@@ -24,6 +28,7 @@ Toda evolução de esquema de banco de dados deve ser **100% retrocompatível**:
 ---
 
 ## 3. Filosofia de Soft Delete (Exclusão Lógica)
+
 - Priorizar sempre a inativação de registros (`ativo = false`, `status = 'inativo'`, `deleted_at = now()`) em vez de deleção física.
 - Caso ocorra qualquer exclusão física legítima na aplicação, ela deve:
   1. Passar pelo trigger `trash_before_delete`, que salva o payload JSONB completo em `public.trash_items` antes da exclusão.
@@ -33,5 +38,6 @@ Toda evolução de esquema de banco de dados deve ser **100% retrocompatível**:
 ---
 
 ## 4. Prevenção de Perda Acidental (Skill accidental-data-loss-prevention)
+
 - Sempre que houver qualquer necessidade excepcional de intervenção manual em dados, **PARAR E CONFIRMAR COM O USUÁRIO**.
 - Explicar exatamente o impacto, o motivo, e aguardar consentimento expresso.

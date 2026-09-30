@@ -11,9 +11,11 @@ Para compilar e publicar tudo na Hostinger automaticamente:
 ```bash
 npm run deploy:hostinger
 ```
-*(ou se você usar bun: `bun run deploy:hostinger`)*
+
+_(ou se você usar bun: `bun run deploy:hostinger`)_
 
 ### O que esse comando faz:
+
 1. **Compilação**: Compila a aplicação para produção com o preset correto (`node-server`) para o LiteSpeed/Passenger Node.js 22 da Hostinger.
 2. **Compactação Instantânea**: Empacota o servidor SSR, assets estáticos, schema do banco e `.env` em um único arquivo `.zip` otimizado (`hostinger_deploy.zip`).
 3. **Upload Contínuo via FTP**: Envia o pacote completo em poucos segundos diretamente para o servidor.
@@ -29,7 +31,8 @@ Se você já rodou o build e quer apenas enviar para a Hostinger sem recompilar:
 ```bash
 node scripts/deploy-hostinger.mjs --skip-build
 ```
-*(Leva menos de 25 segundos!)*
+
+_(Leva menos de 25 segundos!)_
 
 ---
 
@@ -50,6 +53,7 @@ Isso gera o arquivo `hostinger_deploy.zip` na raiz do projeto. Basta arrastar pa
 O fluxo do GitHub Actions está configurado em `.github/workflows/deploy-hostinger.yml`.
 
 ### Como ativar:
+
 1. No seu repositório no GitHub, vá em **Settings** > **Secrets and variables** > **Actions**.
 2. Adicione os Secrets:
    - `HOSTINGER_FTP_HOST`: IP do FTP (ex: `147.93.38.246`)

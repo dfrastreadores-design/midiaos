@@ -1135,7 +1135,14 @@ function PerfilEmpresaCard() {
     contato_email: "",
     contato_whatsapp: "",
     logo_url: "",
+    favicon_url: "",
     cor_primaria: "#3B82F6",
+    cor_secundaria: "#10B981",
+    subdominio: "",
+    dominio_proprio: "",
+    prefixo_pi: "PI",
+    prefixo_proposta: "PROP",
+    comissao_padrao_pct: 20,
   });
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -1151,7 +1158,14 @@ function PerfilEmpresaCard() {
         contato_email: tenant.contato_email ?? "",
         contato_whatsapp: tenant.contato_whatsapp ?? "",
         logo_url: tenant.logo_url ?? "",
+        favicon_url: tenant.favicon_url ?? "",
         cor_primaria: tenant.cor_primaria ?? "#3B82F6",
+        cor_secundaria: tenant.cor_secundaria ?? "#10B981",
+        subdominio: tenant.subdominio ?? "",
+        dominio_proprio: tenant.dominio_proprio ?? "",
+        prefixo_pi: tenant.prefixo_pi ?? "PI",
+        prefixo_proposta: tenant.prefixo_proposta ?? "PROP",
+        comissao_padrao_pct: tenant.comissao_padrao_pct ?? 20,
       });
     }
   }, [tenant]);
@@ -1177,7 +1191,7 @@ function PerfilEmpresaCard() {
   const saveMut = useMutation({
     mutationFn: async () => saveTenant({ data: form }),
     onSuccess: () => {
-      toast.success("Perfil da empresa atualizado com sucesso!");
+      toast.success("Perfil e configurações White-Label atualizados com sucesso!");
       qc.invalidateQueries({ queryKey: ["meu-tenant-perfil"] });
       qc.invalidateQueries({ queryKey: ["my-tenant-branding"] });
     },
@@ -1235,11 +1249,10 @@ function PerfilEmpresaCard() {
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Building2 className="h-5 w-5 text-primary" /> Perfil da Empresa Vinculada
+              <Building2 className="h-5 w-5 text-primary" /> Perfil da Empresa & White-Label
             </CardTitle>
             <CardDescription>
-              Dados cadastrais da sua empresa. Apenas os colaboradores desta organização têm acesso
-              a essas informações.
+              Personalize a identidade da sua empresa, cores corporativas, regras operacionais e prefixos de documentos.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -1252,7 +1265,7 @@ function PerfilEmpresaCard() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <Label className="text-xs font-semibold">Razão Social *</Label>
@@ -1327,45 +1340,153 @@ function PerfilEmpresaCard() {
               placeholder="(61) 99999-9999"
             />
           </div>
-          <div className="sm:col-span-2">
-            <Label className="text-xs font-semibold">
-              Logotipo da Empresa (exibido na interface e PDFs)
-            </Label>
-            <div className="flex items-center gap-4 mt-1.5 flex-wrap">
-              {logoPreview ? (
-                <img
-                  src={logoPreview}
-                  alt="Logo da Empresa"
-                  className="h-14 w-auto max-w-[180px] object-contain border rounded-xl bg-white p-2 shadow-sm"
-                />
-              ) : (
-                <div className="h-14 w-28 border border-dashed rounded-xl flex items-center justify-center text-xs text-muted-foreground bg-muted/20">
-                  sem logo
-                </div>
-              )}
-              <div className="flex flex-col gap-1.5">
+        </div>
+
+        {/* Bloco White-Label & Customização de Marca */}
+        <div className="border-t pt-4 space-y-4">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Personalização White-Label & Domínio
+          </h4>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs font-semibold">Subdomínio SaaS (Exclusivo)</Label>
+              <div className="flex items-center mt-1">
                 <Input
-                  type="file"
-                  accept="image/png,image/jpeg,image/svg+xml"
-                  disabled={logoUploading}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleLogoUpload(f);
-                  }}
-                  className="max-w-xs text-xs"
+                  value={form.subdominio}
+                  onChange={(e) => setForm({ ...form, subdominio: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })}
+                  placeholder="suaempresa"
+                  className="rounded-r-none"
                 />
-                {form.logo_url && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs w-fit text-destructive hover:text-destructive"
-                    onClick={() => setForm((f) => ({ ...f, logo_url: "" }))}
-                  >
-                    Remover logotipo
-                  </Button>
-                )}
+                <span className="bg-muted px-3 py-2 text-xs border border-l-0 rounded-r-md text-muted-foreground font-mono">
+                  .midiaos.com.br
+                </span>
               </div>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Domínio Próprio / CNAME (Opcional)</Label>
+              <Input
+                value={form.dominio_proprio}
+                onChange={(e) => setForm({ ...form, dominio_proprio: e.target.value.toLowerCase().trim() })}
+                placeholder="sistema.suaempresa.com.br"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Cor Primária da Interface</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={form.cor_primaria || "#3B82F6"}
+                  onChange={(e) => setForm({ ...form, cor_primaria: e.target.value })}
+                  className="w-10 h-10 p-0.5 rounded cursor-pointer border"
+                />
+                <Input
+                  value={form.cor_primaria}
+                  onChange={(e) => setForm({ ...form, cor_primaria: e.target.value })}
+                  className="font-mono text-xs max-w-[120px]"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Cor Secundária da Interface</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  value={form.cor_secundaria || "#10B981"}
+                  onChange={(e) => setForm({ ...form, cor_secundaria: e.target.value })}
+                  className="w-10 h-10 p-0.5 rounded cursor-pointer border"
+                />
+                <Input
+                  value={form.cor_secundaria}
+                  onChange={(e) => setForm({ ...form, cor_secundaria: e.target.value })}
+                  className="font-mono text-xs max-w-[120px]"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bloco Operação Comercial & Documentos */}
+        <div className="border-t pt-4 space-y-4">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Numeração de Documentos & Regras Comerciais
+          </h4>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <Label className="text-xs font-semibold">Prefixo dos Pedidos de Inserção (PI)</Label>
+              <Input
+                value={form.prefixo_pi}
+                onChange={(e) => setForm({ ...form, prefixo_pi: e.target.value.toUpperCase().trim() })}
+                placeholder="Ex: PI, NEX, CEN"
+                className="mt-1"
+              />
+              <span className="text-[10px] text-muted-foreground">Ex: {form.prefixo_pi || "PI"}-2026-000001</span>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Prefixo das Propostas Comerciais</Label>
+              <Input
+                value={form.prefixo_proposta}
+                onChange={(e) => setForm({ ...form, prefixo_proposta: e.target.value.toUpperCase().trim() })}
+                placeholder="Ex: PROP, PRP"
+                className="mt-1"
+              />
+              <span className="text-[10px] text-muted-foreground">Ex: {form.prefixo_proposta || "PROP"}-0001</span>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Comissão Padrão de Representação (%)</Label>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={form.comissao_padrao_pct}
+                onChange={(e) => setForm({ ...form, comissao_padrao_pct: Number(e.target.value) })}
+                className="mt-1"
+              />
+              <span className="text-[10px] text-muted-foreground">Aplicada em novos rateios de mídia</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Logotipo */}
+        <div className="border-t pt-4">
+          <Label className="text-xs font-semibold">
+            Logotipo da Empresa (exibido na interface e PDFs de Propostas, PIs e Contratos)
+          </Label>
+          <div className="flex items-center gap-4 mt-2 flex-wrap">
+            {logoPreview ? (
+              <img
+                src={logoPreview}
+                alt="Logo da Empresa"
+                className="h-14 w-auto max-w-[180px] object-contain border rounded-xl bg-white p-2 shadow-sm"
+              />
+            ) : (
+              <div className="h-14 w-28 border border-dashed rounded-xl flex items-center justify-center text-xs text-muted-foreground bg-muted/20">
+                sem logo
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <Input
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml"
+                disabled={logoUploading}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleLogoUpload(f);
+                }}
+                className="max-w-xs text-xs"
+              />
+              {form.logo_url && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs w-fit text-destructive hover:text-destructive"
+                  onClick={() => setForm((f) => ({ ...f, logo_url: "" }))}
+                >
+                  Remover logotipo
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1376,7 +1497,7 @@ function PerfilEmpresaCard() {
             disabled={saveMut.isPending || !form.razao_social.trim()}
             className="rounded-xl px-6"
           >
-            {saveMut.isPending ? "Salvando…" : "Salvar Dados da Empresa"}
+            {saveMut.isPending ? "Salvando…" : "Salvar Configurações da Empresa"}
           </Button>
         </div>
       </CardContent>

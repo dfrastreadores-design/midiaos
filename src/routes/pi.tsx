@@ -29,6 +29,11 @@ import {
 } from "lucide-react";
 import { PosVendaDialog } from "@/components/PosVendaDialog";
 import { WhatsappQrDialog } from "@/components/WhatsappQrDialog";
+import { CampanhaRateioDialog } from "@/components/CampanhaRateioDialog";
+import { ComprovantesExecucaoDialog } from "@/components/ComprovantesExecucaoDialog";
+import { getPrestacaoContas } from "@/lib/prestacao-contas.functions";
+import { useTenantBranding } from "@/hooks/use-tenant-branding";
+import { Handshake, FileCheck2 } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -454,6 +459,21 @@ function PIPage() {
   const [cancelPi, setCancelPi] = useState<PiRow | null>(null);
   const [histPi, setHistPi] = useState<PiRow | null>(null);
   const [posVendaPi, setPosVendaPi] = useState<PiRow | null>(null);
+  const [rateioPi, setRateioPi] = useState<{ id: string; numero: string; campanha: string; valor_negociado: number } | null>(null);
+  const [comprovantesPi, setComprovantesPi] = useState<{ id: string; numero: string; campanha: string } | null>(null);
+  const { nome: empresaNome } = useTenantBranding();
+
+  const handleBaixarPrestacaoContas = async (p: PiRow) => {
+    try {
+      toast.info("Compilando dados de prestação de contas...");
+      const dados = await getPrestacaoContas({ data: { piId: p.id } });
+      const { gerarPdfPrestacaoContas } = await import("@/lib/prestacao-contas-pdf");
+      gerarPdfPrestacaoContas(dados, { nome: empresaNome });
+      toast.success("Prestação de contas gerada!");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar prestação de contas");
+    }
+  };
 
   const [pdfOpen, setPdfOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -1783,6 +1803,36 @@ function PIPage() {
                                       <FileText className="size-4 mr-2" /> Gerar proposta deste PI
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
+                                      onClick={() =>
+                                        setRateioPi({
+                                          id: p.id,
+                                          numero: p.numero,
+                                          campanha: p.campanha,
+                                          valor_negociado: p.valor_negociado,
+                                        })
+                                      }
+                                      className="text-primary font-medium"
+                                    >
+                                      <Handshake className="size-4 mr-2" /> Rateio de Parceiros
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        setComprovantesPi({
+                                          id: p.id,
+                                          numero: p.numero,
+                                          campanha: p.campanha,
+                                        })
+                                      }
+                                    >
+                                      <FileCheck2 className="size-4 mr-2 text-blue-600" /> Comprovantes de Execução
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleBaixarPrestacaoContas(p)}
+                                      className="text-emerald-700"
+                                    >
+                                      <FileText className="size-4 mr-2" /> Prestação de Contas (PDF)
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
                                       onClick={() => setPosVendaPi(p)}
                                       className="text-emerald-700 focus:text-emerald-700"
                                     >
@@ -2141,6 +2191,14 @@ function PIPage() {
       />
 
       <PosVendaDialog pi={posVendaPi as any} onClose={() => setPosVendaPi(null)} />
+
+      {rateioPi && (
+        <CampanhaRateioDialog pi={rateioPi} onClose={() => setRateioPi(null)} />
+      )}
+
+      {comprovantesPi && (
+        <ComprovantesExecucaoDialog pi={comprovantesPi} onClose={() => setComprovantesPi(null)} />
+      )}
 
       <ReprovarPiDialog
         pi={reprovaPi}
