@@ -6,7 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Download, FileText, Paperclip, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/use-roles";
@@ -39,14 +46,19 @@ type Row = {
 
 function formatBRL(v: number | null) {
   if (v === null || v === undefined) return "—";
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v) || 0);
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    Number(v) || 0,
+  );
 }
 function formatBytes(n: number | null) {
   if (!n) return "—";
   const u = ["B", "KB", "MB", "GB"];
   let i = 0;
   let v = n;
-  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
   return `${v.toFixed(1)} ${u[i]}`;
 }
 
@@ -62,13 +74,17 @@ function PiAnexosPage() {
     queryKey: ["pi-anexos-todos"],
     enabled: !!user && autorizado,
     queryFn: async () => {
-      const { data: roleRows } = await supabase.from("user_roles").select("role").eq("user_id", user?.id || "");
-      const userRoles = (roleRows ?? []).map(r => r.role);
-      const isProducaoOnly = userRoles.includes("producao") && !userRoles.includes("admin") && !userRoles.includes("executivo");
+      const { data: roleRows } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user?.id || "");
+      const userRoles = (roleRows ?? []).map((r) => r.role);
+      const isProducaoOnly =
+        userRoles.includes("producao") &&
+        !userRoles.includes("admin") &&
+        !userRoles.includes("executivo");
 
-      let query = supabase
-        .from("pi_anexos")
-        .select(`
+      let query = supabase.from("pi_anexos").select(`
           id, titulo, periodo_referencia, arquivo_path, arquivo_nome, arquivo_tamanho,
           cliente_id, agencia_id, pi_id, created_by, created_at, valor_bruto, valor_liquido,
           cliente:clientes(razao_social, nome_fantasia),
@@ -78,13 +94,13 @@ function PiAnexosPage() {
 
       const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
-      
+
       let resRows = (data ?? []) as unknown as Row[];
-      
+
       if (isProducaoOnly) {
-        resRows = resRows.filter(r => (r as any).pi?.producao_tipo === "interna");
+        resRows = resRows.filter((r) => (r as any).pi?.producao_tipo === "interna");
       }
-      
+
       return resRows;
     },
   });
@@ -97,10 +113,16 @@ function PiAnexosPage() {
         r.titulo,
         r.arquivo_nome,
         r.periodo_referencia,
-        r.cliente?.razao_social, r.cliente?.nome_fantasia,
-        r.agencia?.razao_social, r.agencia?.nome_fantasia,
-        r.pi?.numero, r.pi?.campanha,
-      ].filter(Boolean).join(" ").toLowerCase();
+        r.cliente?.razao_social,
+        r.cliente?.nome_fantasia,
+        r.agencia?.razao_social,
+        r.agencia?.nome_fantasia,
+        r.pi?.numero,
+        r.pi?.campanha,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
       return haystack.includes(q);
     });
   }, [rows, busca]);
@@ -112,7 +134,7 @@ function PiAnexosPage() {
         acc.liquido += Number(r.valor_liquido || 0);
         return acc;
       },
-      { bruto: 0, liquido: 0 }
+      { bruto: 0, liquido: 0 },
     );
   }, [filtered]);
 
@@ -120,7 +142,10 @@ function PiAnexosPage() {
     const { data, error } = await supabase.storage
       .from("pi-anexos")
       .createSignedUrl(row.arquivo_path, 60, { download: row.arquivo_nome });
-    if (error || !data?.signedUrl) { toast.error("Erro ao gerar link"); return; }
+    if (error || !data?.signedUrl) {
+      toast.error("Erro ao gerar link");
+      return;
+    }
     window.open(data.signedUrl, "_blank");
   }
 
@@ -133,16 +158,21 @@ function PiAnexosPage() {
           </div>
           <div>
             <h1 className="text-2xl font-display font-semibold leading-tight">PIs Anexados</h1>
-            <p className="text-sm text-muted-foreground">Todos os PIs anexados, incluindo os vinculados a clientes, agências ou PIs específicos.</p>
+            <p className="text-sm text-muted-foreground">
+              Todos os PIs anexados, incluindo os vinculados a clientes, agências ou PIs
+              específicos.
+            </p>
           </div>
         </div>
 
-        {(authLoading || rolesLoading) ? (
+        {authLoading || rolesLoading ? (
           <p className="text-sm text-muted-foreground">Carregando...</p>
         ) : !autorizado ? (
-          <Card><CardContent className="p-6 text-sm text-muted-foreground">
-            Acesso restrito a administradores, executivos e equipe de produção.
-          </CardContent></Card>
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Acesso restrito a administradores, executivos e equipe de produção.
+            </CardContent>
+          </Card>
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-3">
@@ -192,13 +222,21 @@ function PiAnexosPage() {
                             r.agencia?.razao_social ||
                             r.agencia?.nome_fantasia ||
                             "—";
-                          const tipo = r.cliente_id ? "Cliente" : r.agencia_id ? "Agência" : r.pi_id ? "PI" : "—";
+                          const tipo = r.cliente_id
+                            ? "Cliente"
+                            : r.agencia_id
+                              ? "Agência"
+                              : r.pi_id
+                                ? "PI"
+                                : "—";
                           return (
                             <TableRow key={r.id}>
                               <TableCell className="font-medium">
                                 <div className="flex items-center gap-2">
                                   <FileText className="size-4 text-primary shrink-0" />
-                                  <span className="truncate max-w-[240px]" title={r.titulo}>{r.titulo}</span>
+                                  <span className="truncate max-w-[240px]" title={r.titulo}>
+                                    {r.titulo}
+                                  </span>
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -209,16 +247,32 @@ function PiAnexosPage() {
                                 {r.pi?.numero ? (
                                   <div>
                                     <div className="font-medium">{r.pi.numero}</div>
-                                    {r.pi.campanha && <div className="text-[11px] text-muted-foreground truncate max-w-[180px]">{r.pi.campanha}</div>}
+                                    {r.pi.campanha && (
+                                      <div className="text-[11px] text-muted-foreground truncate max-w-[180px]">
+                                        {r.pi.campanha}
+                                      </div>
+                                    )}
                                   </div>
-                                ) : <span className="text-muted-foreground">—</span>}
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
                               </TableCell>
-                              <TableCell className="text-sm">{r.periodo_referencia || "—"}</TableCell>
-                              <TableCell className="text-right text-sm">{formatBRL(r.valor_bruto)}</TableCell>
-                              <TableCell className="text-right text-sm">{formatBRL(r.valor_liquido)}</TableCell>
                               <TableCell className="text-sm">
-                                <div className="truncate max-w-[180px]" title={r.arquivo_nome}>{r.arquivo_nome}</div>
-                                <div className="text-[11px] text-muted-foreground">{formatBytes(r.arquivo_tamanho)}</div>
+                                {r.periodo_referencia || "—"}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                {formatBRL(r.valor_bruto)}
+                              </TableCell>
+                              <TableCell className="text-right text-sm">
+                                {formatBRL(r.valor_liquido)}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                <div className="truncate max-w-[180px]" title={r.arquivo_nome}>
+                                  {r.arquivo_nome}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  {formatBytes(r.arquivo_tamanho)}
+                                </div>
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground">
                                 {new Date(r.created_at).toLocaleDateString("pt-BR")}

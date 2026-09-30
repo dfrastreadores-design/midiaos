@@ -10,8 +10,7 @@
 
 export const SOCIAL_MEDIA_EMAILS = ["rodriigocarvalhonunes@gmail.com"];
 
-const SOCIAL_REGEX =
-  /(instagram|\bfeed\b|\bstories?\b|\breels?\b|redes\s*sociais)/i;
+const SOCIAL_REGEX = /(instagram|\bfeed\b|\bstories?\b|\breels?\b|redes\s*sociais)/i;
 
 export type PiItemLike = {
   tipo?: string | null;
@@ -33,7 +32,10 @@ export function labelSocialItem(it: PiItemLike): string {
 }
 
 /** Retorna as datas (YYYY-MM-DD) previstas a partir dos itens sociais. */
-export function datasPublicacaoSocial(itens: PiItemLike[], fallbackInicio?: string | null): string[] {
+export function datasPublicacaoSocial(
+  itens: PiItemLike[],
+  fallbackInicio?: string | null,
+): string[] {
   const out = new Set<string>();
   for (const it of itens) {
     if (!isSocialItem(it)) continue;

@@ -88,13 +88,13 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
 
   const toggleSolucao = (id: string) => {
     setSolucoesSelecionadas((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
   const toggleMidia = (m: "TV" | "Radio" | "DOOH") => {
     setMidias((prev) =>
-      prev.includes(m) ? (prev.length > 1 ? prev.filter((x) => x !== m) : prev) : [...prev, m]
+      prev.includes(m) ? (prev.length > 1 ? prev.filter((x) => x !== m) : prev) : [...prev, m],
     );
   };
 
@@ -110,7 +110,7 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
     try {
       setLoading(true);
       const orcNum = orcamento ? Number(orcamento.replace(/\D/g, "")) / 100 : null;
-      
+
       const res = await sugerirFn({
         data: {
           // Bloco 1
@@ -193,15 +193,22 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
               <span className="font-semibold text-sm text-foreground">
                 Assistente IA & Briefing de Proposta Comercial
               </span>
-              <Badge variant="outline" className="border-purple-300 text-purple-700 dark:text-purple-300 bg-purple-100/60 dark:bg-purple-950/60 text-[10px] py-0 font-medium">
+              <Badge
+                variant="outline"
+                className="border-purple-300 text-purple-700 dark:text-purple-300 bg-purple-100/60 dark:bg-purple-950/60 text-[10px] py-0 font-medium"
+              >
                 Nexo Mídia e Representação
               </Badge>
-              <Badge variant="secondary" className="text-[10px] py-0 bg-emerald-100/70 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+              <Badge
+                variant="secondary"
+                className="text-[10px] py-0 bg-emerald-100/70 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+              >
                 Preenchimento Opcional
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-              Preencha os blocos que desejar para a IA gerar uma proposta personalizada com estratégia, produtos do catálogo e escopo.
+              Preencha os blocos que desejar para a IA gerar uma proposta personalizada com
+              estratégia, produtos do catálogo e escopo.
             </p>
           </div>
         </div>
@@ -224,7 +231,9 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
               <div className="rounded-xl border border-purple-100 dark:border-purple-900/40 p-3.5 bg-background/60 space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">1</span>
+                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">
+                      1
+                    </span>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-purple-950 dark:text-purple-200">
                       Dados do Cliente e Alinhamento Inicial
                     </h4>
@@ -282,7 +291,9 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
 
                   {/* Momento ou Dor Principal */}
                   <div className="md:col-span-2 space-y-1.5">
-                    <Label className="text-xs font-medium">Momento ou Dor Principal do Cliente</Label>
+                    <Label className="text-xs font-medium">
+                      Momento ou Dor Principal do Cliente
+                    </Label>
                     <div className="flex flex-wrap gap-1">
                       {MOMENTOS_DOR_PRESETS.map((dor) => (
                         <button
@@ -314,13 +325,16 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
               <div className="rounded-xl border border-purple-100 dark:border-purple-900/40 p-3.5 bg-background/60 space-y-3">
                 <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">2</span>
+                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">
+                      2
+                    </span>
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-purple-950 dark:text-purple-200">
                         Seleção de Soluções — O Portfólio Nexo
                       </h4>
                       <p className="text-[11px] text-muted-foreground">
-                        Marque as soluções que entram nesta proposta ({solucoesSelecionadas.length} selecionada(s))
+                        Marque as soluções que entram nesta proposta ({solucoesSelecionadas.length}{" "}
+                        selecionada(s))
                       </p>
                     </div>
                   </div>
@@ -331,7 +345,9 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                     className="h-6 text-[11px] px-2 text-purple-700 dark:text-purple-300"
                     onClick={selecionarTodasSolucoes}
                   >
-                    {solucoesSelecionadas.length === SOLUCOES_PORTFOLIO_NEXO.length ? "Desmarcar todas" : "Selecionar todas"}
+                    {solucoesSelecionadas.length === SOLUCOES_PORTFOLIO_NEXO.length
+                      ? "Desmarcar todas"
+                      : "Selecionar todas"}
                   </Button>
                 </div>
 
@@ -370,7 +386,9 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                 <div className="pt-2 border-t mt-3 flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-1.5">
                     <Layers className="size-3.5 text-purple-600" />
-                    <span className="text-xs font-semibold text-foreground">Mídias do Catálogo para Vinculação:</span>
+                    <span className="text-xs font-semibold text-foreground">
+                      Mídias do Catálogo para Vinculação:
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -420,17 +438,23 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
               <div className="rounded-xl border border-purple-100 dark:border-purple-900/40 p-3.5 bg-background/60 space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">3</span>
+                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">
+                      3
+                    </span>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-purple-950 dark:text-purple-200">
                       Especificações Técnicas e Escopo
                     </h4>
                   </div>
-                  <span className="text-[11px] text-muted-foreground">Preencha o que se aplica</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Preencha o que se aplica
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <Label className="text-xs font-medium">Volumes, Veiculação ou Entregáveis</Label>
+                    <Label className="text-xs font-medium">
+                      Volumes, Veiculação ou Entregáveis
+                    </Label>
                     <Textarea
                       rows={2}
                       placeholder="Ex: 15 telas de DOOH em shoppings, 3 meses de gestão de tráfego, 12 posts/mês, 1 comercial de 30s..."
@@ -449,7 +473,9 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                           type="button"
                           onClick={() => {
                             setPeriodoDias(d);
-                            setPrazosCronograma(`Campanha de ${d === 30 ? "1 mês" : d === 90 ? "3 meses" : `${d} dias`}`);
+                            setPrazosCronograma(
+                              `Campanha de ${d === 30 ? "1 mês" : d === 90 ? "3 meses" : `${d} dias`}`,
+                            );
                           }}
                           className={`text-[11px] flex-1 py-0.5 rounded border transition-all ${
                             periodoDias === d
@@ -475,7 +501,9 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
               <div className="rounded-xl border border-purple-100 dark:border-purple-900/40 p-3.5 bg-background/60 space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">4</span>
+                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">
+                      4
+                    </span>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-purple-950 dark:text-purple-200">
                       Condições Comerciais e Investimento
                     </h4>
@@ -518,20 +546,22 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                       Valor do Investimento / Budget Estimado
                     </Label>
                     <div className="flex flex-wrap gap-1">
-                      {["R$ 5.000", "R$ 15.000", "R$ 30.000", "R$ 50.000", "R$ 100.000"].map((b) => (
-                        <button
-                          key={b}
-                          type="button"
-                          onClick={() => setOrcamento(b + ",00")}
-                          className={`text-[11px] px-2 py-0.5 rounded-md border transition-all ${
-                            orcamento.includes(b)
-                              ? "bg-emerald-600 text-white border-emerald-600 font-medium"
-                              : "bg-background text-muted-foreground hover:border-emerald-300"
-                          }`}
-                        >
-                          {b}
-                        </button>
-                      ))}
+                      {["R$ 5.000", "R$ 15.000", "R$ 30.000", "R$ 50.000", "R$ 100.000"].map(
+                        (b) => (
+                          <button
+                            key={b}
+                            type="button"
+                            onClick={() => setOrcamento(b + ",00")}
+                            className={`text-[11px] px-2 py-0.5 rounded-md border transition-all ${
+                              orcamento.includes(b)
+                                ? "bg-emerald-600 text-white border-emerald-600 font-medium"
+                                : "bg-background text-muted-foreground hover:border-emerald-300"
+                            }`}
+                          >
+                            {b}
+                          </button>
+                        ),
+                      )}
                     </div>
                     <Input
                       placeholder="Ex: R$ 25.000,00 (deixe em branco se for flexível)"
@@ -670,7 +700,10 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                 </Label>
                 <div className="border rounded-lg overflow-hidden bg-background divide-y">
                   {sugestao.itens.map((it, idx) => (
-                    <div key={idx} className="p-2.5 flex items-center justify-between text-xs gap-3">
+                    <div
+                      key={idx}
+                      className="p-2.5 flex items-center justify-between text-xs gap-3"
+                    >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <Badge variant="secondary" className="text-[10px] py-0">
@@ -679,17 +712,27 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                           <span className="font-semibold truncate">{it.programa}</span>
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {[it.horario, it.formato, `${it.dias_veiculacao} dias de veiculação`].filter(Boolean).join(" • ")}
+                          {[it.horario, it.formato, `${it.dias_veiculacao} dias de veiculação`]
+                            .filter(Boolean)
+                            .join(" • ")}
                         </p>
                       </div>
 
                       <div className="text-right shrink-0">
                         <span className="font-bold text-sm text-foreground">
-                          {it.valor_negociado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          {it.valor_negociado.toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })}
                         </span>
                         {it.desconto > 0 && (
                           <span className="block text-[10px] text-emerald-600 font-medium">
-                            {it.desconto}% desc. (de {it.valor_tabela.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
+                            {it.desconto}% desc. (de{" "}
+                            {it.valor_tabela.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                            )
                           </span>
                         )}
                       </div>
@@ -700,7 +743,9 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
 
               {/* Justificativa & Condições Comerciais */}
               <div className="p-3 rounded-lg bg-muted/40 border text-xs text-muted-foreground space-y-1">
-                <span className="font-semibold text-foreground">Condições Comerciais & Investimento:</span>
+                <span className="font-semibold text-foreground">
+                  Condições Comerciais & Investimento:
+                </span>
                 <p>{sugestao.justificativa_comercial}</p>
               </div>
 
@@ -710,11 +755,17 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                   <span className="text-xs opacity-90 block">Investimento Total Proposto</span>
                   <div className="flex items-baseline gap-2">
                     <span className="text-xl font-bold">
-                      {sugestao.totais.valor_negociado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {sugestao.totais.valor_negociado.toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
                     </span>
                     {sugestao.totais.desconto_pct > 0 && (
                       <span className="text-xs line-through opacity-75">
-                        {sugestao.totais.valor_tabela.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        {sugestao.totais.valor_tabela.toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}
                       </span>
                     )}
                   </div>

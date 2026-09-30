@@ -77,10 +77,10 @@ export function exportRelatorioXlsx(rel: Relatorio) {
       c.type === "currency"
         ? '"R$" #,##0.00;[Red]-"R$" #,##0.00'
         : c.type === "number"
-        ? "#,##0"
-        : c.type === "date"
-        ? "dd/mm/yyyy"
-        : "";
+          ? "#,##0"
+          : c.type === "date"
+            ? "dd/mm/yyyy"
+            : "";
     if (!fmt) return;
     for (let r = headerRowIdx; r < headerRowIdx + body.length; r++) {
       const ref = XLSX.utils.encode_cell({ r, c: colIdx });
@@ -106,7 +106,8 @@ export function exportRelatorioPdf(rel: Relatorio) {
   doc.text(`Gerado em ${new Date(rel.geradoEm).toLocaleString("pt-BR")}`, 40, 56);
   const filtroStr = Object.entries(rel.filtros)
     .filter(([, v]) => v !== undefined && v !== null && v !== "")
-    .map(([k, v]) => `${k}: ${v}`).join("  •  ");
+    .map(([k, v]) => `${k}: ${v}`)
+    .join("  •  ");
   if (filtroStr) doc.text(filtroStr, 40, 70);
 
   autoTable(doc, {
@@ -134,13 +135,19 @@ export function exportRelatorioPdf(rel: Relatorio) {
 }
 
 function slug(s: string) {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
+  a.href = url;
+  a.download = filename;
+  a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

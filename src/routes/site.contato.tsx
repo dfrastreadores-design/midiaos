@@ -6,27 +6,38 @@ export const Route = createFileRoute("/site/contato")({
   head: () => ({
     meta: [
       { title: "Agendar demonstração — mídia.OS" },
-      { name: "description", content: "Agende uma demonstração gratuita do mídia.OS e veja como aumentar as vendas do seu veículo de comunicação. Resposta em até 1 dia útil." },
+      {
+        name: "description",
+        content:
+          "Agende uma demonstração gratuita do mídia.OS e veja como aumentar as vendas do seu veículo de comunicação. Resposta em até 1 dia útil.",
+      },
       { property: "og:title", content: "Agendar demonstração gratuita — mídia.OS" },
-      { property: "og:description", content: "Fale com o time comercial e veja o mídia.OS em ação no seu cenário." },
+      {
+        property: "og:description",
+        content: "Fale com o time comercial e veja o mídia.OS em ação no seu cenário.",
+      },
       { property: "og:url", content: "https://midiaos.online/site/contato" },
     ],
-    links: [
-      { rel: "canonical", href: "https://midiaos.online/site/contato" },
-    ],
+    links: [{ rel: "canonical", href: "https://midiaos.online/site/contato" }],
   }),
   component: Contato,
 });
 
 function Contato() {
   const [sent, setSent] = useState(false);
-  const [form, setForm] = useState({ nome: "", veiculo: "", email: "", telefone: "", mensagem: "" });
+  const [form, setForm] = useState({
+    nome: "",
+    veiculo: "",
+    email: "",
+    telefone: "",
+    mensagem: "",
+  });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const subject = encodeURIComponent(`[mídia.OS] Contato de ${form.nome} — ${form.veiculo}`);
     const body = encodeURIComponent(
-      `Nome: ${form.nome}\nVeículo: ${form.veiculo}\nE-mail: ${form.email}\nTelefone: ${form.telefone}\n\n${form.mensagem}`
+      `Nome: ${form.nome}\nVeículo: ${form.veiculo}\nE-mail: ${form.email}\nTelefone: ${form.telefone}\n\n${form.mensagem}`,
     );
     window.location.href = `mailto:comercial@midiaos.online?subject=${subject}&body=${body}`;
     setSent(true);
@@ -38,18 +49,25 @@ function Contato() {
       <div className="relative mx-auto max-w-7xl px-6 py-20">
         <div className="grid lg:grid-cols-2 gap-12">
           <div>
-            <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">Contato</span>
+            <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
+              Contato
+            </span>
             <h1 className="mt-3 text-5xl lg:text-6xl font-bold leading-[1.05]">
               Vamos <span className="midia-grad-text">conversar</span>
             </h1>
             <p className="mt-6 text-lg text-[var(--m-muted)] max-w-lg">
-              Conte um pouco sobre o seu veículo e marcamos uma demonstração ao vivo de 30 minutos
-              — sob medida para a sua operação.
+              Conte um pouco sobre o seu veículo e marcamos uma demonstração ao vivo de 30 minutos —
+              sob medida para a sua operação.
             </p>
 
             <div className="mt-10 space-y-5">
               <ContactItem icon={Mail} label="E-mail" value="comercial@midiaos.online" />
-              <a href="https://wa.me/5561984746857" target="_blank" rel="noopener noreferrer" className="block hover:opacity-80 transition-opacity">
+              <a
+                href="https://wa.me/5561984746857"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block hover:opacity-80 transition-opacity"
+              >
                 <ContactItem icon={Phone} label="WhatsApp" value="(61) 9 8474-6857" />
               </a>
               <ContactItem icon={MapPin} label="Endereço" value="Brasília — DF, Brasil" />
@@ -82,14 +100,36 @@ function Contato() {
               </div>
             ) : (
               <form onSubmit={submit} className="space-y-4">
-                <Field label="Nome completo" required value={form.nome} onChange={(v) => setForm({ ...form, nome: v })} />
-                <Field label="Veículo / empresa" required value={form.veiculo} onChange={(v) => setForm({ ...form, veiculo: v })} />
+                <Field
+                  label="Nome completo"
+                  required
+                  value={form.nome}
+                  onChange={(v) => setForm({ ...form, nome: v })}
+                />
+                <Field
+                  label="Veículo / empresa"
+                  required
+                  value={form.veiculo}
+                  onChange={(v) => setForm({ ...form, veiculo: v })}
+                />
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <Field type="email" label="E-mail" required value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
-                  <Field label="Telefone" value={form.telefone} onChange={(v) => setForm({ ...form, telefone: v })} />
+                  <Field
+                    type="email"
+                    label="E-mail"
+                    required
+                    value={form.email}
+                    onChange={(v) => setForm({ ...form, email: v })}
+                  />
+                  <Field
+                    label="Telefone"
+                    value={form.telefone}
+                    onChange={(v) => setForm({ ...form, telefone: v })}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm text-[var(--m-muted)] mb-1.5">Como podemos ajudar?</label>
+                  <label className="block text-sm text-[var(--m-muted)] mb-1.5">
+                    Como podemos ajudar?
+                  </label>
                   <textarea
                     rows={5}
                     value={form.mensagem}
@@ -131,8 +171,18 @@ function ContactItem({ icon: Icon, label, value }: { icon: any; label: string; v
 }
 
 function Field({
-  label, value, onChange, required, type = "text",
-}: { label: string; value: string; onChange: (v: string) => void; required?: boolean; type?: string }) {
+  label,
+  value,
+  onChange,
+  required,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  type?: string;
+}) {
   return (
     <div>
       <label className="block text-sm text-[var(--m-muted)] mb-1.5">

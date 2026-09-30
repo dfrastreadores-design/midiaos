@@ -3,9 +3,24 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getPosVendaPublica } from "@/lib/pos-venda.functions";
-import { CheckCircle2, ShieldCheck, FileText, Download, ExternalLink, Sparkles, MessageCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ShieldCheck,
+  FileText,
+  Download,
+  ExternalLink,
+  Sparkles,
+  MessageCircle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/pos-venda/$token")({
   ssr: false,
@@ -25,7 +40,11 @@ function PosVendaPublica() {
   });
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Carregando…
+      </div>
+    );
   }
   if (error || !data) {
     return (
@@ -33,7 +52,9 @@ function PosVendaPublica() {
         <Card className="max-w-md w-full">
           <CardContent className="py-10 text-center space-y-2">
             <h1 className="text-lg font-semibold">Link inválido</h1>
-            <p className="text-sm text-muted-foreground">{(error as Error)?.message ?? "Não foi possível abrir esta comprovação."}</p>
+            <p className="text-sm text-muted-foreground">
+              {(error as Error)?.message ?? "Não foi possível abrir esta comprovação."}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -45,9 +66,10 @@ function PosVendaPublica() {
   const anexos = (data.anexos ?? []) as any[];
   const cli = pi?.cliente?.nome_fantasia || pi?.cliente?.razao_social || "—";
   const ag = pi?.agencia?.nome_fantasia || pi?.agencia?.razao_social || "Direto";
-  const periodo = pi?.periodo_inicio && pi?.periodo_fim
-    ? `${new Date(pi.periodo_inicio).toLocaleDateString("pt-BR")} a ${new Date(pi.periodo_fim).toLocaleDateString("pt-BR")}`
-    : `${String(pi?.mes_veiculacao ?? "").padStart(2, "0")}/${pi?.ano_veiculacao ?? ""}`;
+  const periodo =
+    pi?.periodo_inicio && pi?.periodo_fim
+      ? `${new Date(pi.periodo_inicio).toLocaleDateString("pt-BR")} a ${new Date(pi.periodo_fim).toLocaleDateString("pt-BR")}`
+      : `${String(pi?.mes_veiculacao ?? "").padStart(2, "0")}/${pi?.ano_veiculacao ?? ""}`;
 
   const wppExec = data.executivo?.whatsapp?.replace(/\D+/g, "");
   const wppLink = wppExec
@@ -60,9 +82,14 @@ function PosVendaPublica() {
     <div className="min-h-screen bg-muted/30 py-8 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-2 text-primary"><ShieldCheck className="size-5" /><span className="font-semibold">Mídia.OS</span></div>
+          <div className="inline-flex items-center gap-2 text-primary">
+            <ShieldCheck className="size-5" />
+            <span className="font-semibold">Mídia.OS</span>
+          </div>
           <h1 className="text-2xl font-semibold">Comprovação de Veiculação</h1>
-          <p className="text-sm text-muted-foreground">Pós-venda do Pedido de Inserção {pi?.numero}</p>
+          <p className="text-sm text-muted-foreground">
+            Pós-venda do Pedido de Inserção {pi?.numero}
+          </p>
         </div>
 
         <Card className="border-primary/20">
@@ -73,7 +100,13 @@ function PosVendaPublica() {
                 PI {pi?.numero}
               </CardTitle>
               <Badge variant="outline" className="capitalize">
-                {pv.status === "visualizada" ? <><CheckCircle2 className="size-3 mr-1" /> Visualizada</> : pv.status}
+                {pv.status === "visualizada" ? (
+                  <>
+                    <CheckCircle2 className="size-3 mr-1" /> Visualizada
+                  </>
+                ) : (
+                  pv.status
+                )}
               </Badge>
             </div>
           </CardHeader>
@@ -115,7 +148,11 @@ function PosVendaPublica() {
                   </TableRow>
                 ))}
                 {(!pi?.itens || pi.itens.length === 0) && (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-4">Sem itens cadastrados.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                      Sem itens cadastrados.
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -129,14 +166,23 @@ function PosVendaPublica() {
             </CardHeader>
             <CardContent className="space-y-2 p-4">
               {pv.link_provas && (
-                <a href={pv.link_provas} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 text-sm text-primary hover:underline">
+                <a
+                  href={pv.link_provas}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
+                >
                   <ExternalLink className="size-4" /> Abrir provas externas
                 </a>
               )}
               {anexos.map((a) => (
-                <a key={a.id} href={a.signed_url ?? "#"} target="_blank" rel="noreferrer"
-                  className="flex items-center justify-between text-sm border rounded-md px-3 py-2 hover:bg-muted">
+                <a
+                  key={a.id}
+                  href={a.signed_url ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between text-sm border rounded-md px-3 py-2 hover:bg-muted"
+                >
                   <span className="truncate">{a.nome}</span>
                   <Download className="size-4 text-muted-foreground" />
                 </a>
@@ -149,10 +195,15 @@ function PosVendaPublica() {
           <CardContent className="p-6 text-center space-y-3">
             <Sparkles className="size-6 mx-auto text-emerald-600" />
             <h3 className="text-lg font-semibold">Vamos renovar sua campanha?</h3>
-            <p className="text-sm text-muted-foreground">Fale com {data.executivo?.nome ?? "seu executivo"} para aproveitar o melhor da audiência no próximo ciclo.</p>
+            <p className="text-sm text-muted-foreground">
+              Fale com {data.executivo?.nome ?? "seu executivo"} para aproveitar o melhor da
+              audiência no próximo ciclo.
+            </p>
             {wppLink && (
               <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                <a href={wppLink} target="_blank" rel="noreferrer"><MessageCircle className="size-4 mr-2" /> Falar no WhatsApp</a>
+                <a href={wppLink} target="_blank" rel="noreferrer">
+                  <MessageCircle className="size-4 mr-2" /> Falar no WhatsApp
+                </a>
               </Button>
             )}
           </CardContent>

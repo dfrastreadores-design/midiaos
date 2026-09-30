@@ -1,4 +1,10 @@
-export type PropostaStatus = "rascunho" | "enviada" | "aprovada" | "recusada" | "convertida" | "finalizada";
+export type PropostaStatus =
+  | "rascunho"
+  | "enviada"
+  | "aprovada"
+  | "recusada"
+  | "convertida"
+  | "finalizada";
 
 export type PropostaItem = {
   tipo: string;

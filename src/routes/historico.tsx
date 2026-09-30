@@ -4,10 +4,23 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ShieldAlert, History, Eye } from "lucide-react";
 import { listAuditoriaAlteracoes } from "@/lib/auditoria.functions";
@@ -88,15 +101,24 @@ function HistoricoPage() {
     );
   }, [rows, search]);
 
-  if (loading) return <AppShell><p className="text-muted-foreground">Carregando…</p></AppShell>;
+  if (loading)
+    return (
+      <AppShell>
+        <p className="text-muted-foreground">Carregando…</p>
+      </AppShell>
+    );
   if (!isAdmin) {
     return (
       <AppShell>
-        <Card><CardContent className="p-10 text-center">
-          <ShieldAlert className="size-10 mx-auto mb-3 text-muted-foreground" />
-          <h2 className="text-lg font-semibold">Acesso restrito</h2>
-          <p className="text-sm text-muted-foreground">Apenas administradores podem visualizar o histórico de alterações.</p>
-        </CardContent></Card>
+        <Card>
+          <CardContent className="p-10 text-center">
+            <ShieldAlert className="size-10 mx-auto mb-3 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Acesso restrito</h2>
+            <p className="text-sm text-muted-foreground">
+              Apenas administradores podem visualizar o histórico de alterações.
+            </p>
+          </CardContent>
+        </Card>
       </AppShell>
     );
   }
@@ -106,7 +128,9 @@ function HistoricoPage() {
       <div className="mb-6">
         <div className="flex items-center gap-2">
           <History className="size-6" />
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">Histórico de Alterações</h1>
+          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+            Histórico de Alterações
+          </h1>
         </div>
         <p className="text-muted-foreground text-sm mt-1">
           Registro completo de criações, edições e exclusões feitas por qualquer usuário.
@@ -117,17 +141,28 @@ function HistoricoPage() {
         <CardContent className="p-4 grid sm:grid-cols-3 gap-3">
           <div>
             <label className="text-xs text-muted-foreground">Tabela</label>
-            <Select value={tabela || "__all"} onValueChange={(v) => setTabela(v === "__all" ? "" : v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={tabela || "__all"}
+              onValueChange={(v) => setTabela(v === "__all" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {TABELAS.map((t) => <SelectItem key={t.key || "__all"} value={t.key || "__all"}>{t.label}</SelectItem>)}
+                {TABELAS.map((t) => (
+                  <SelectItem key={t.key || "__all"} value={t.key || "__all"}>
+                    {t.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Operação</label>
             <Select value={op || "__all"} onValueChange={(v) => setOp(v === "__all" ? "" : v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all">Todas</SelectItem>
                 <SelectItem value="INSERT">Criação</SelectItem>
@@ -138,7 +173,11 @@ function HistoricoPage() {
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Buscar (autor, tabela, id)</label>
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filtrar…" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filtrar…"
+            />
           </div>
         </CardContent>
       </Card>
@@ -158,31 +197,56 @@ function HistoricoPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando…</TableCell></TableRow>}
+              {isLoading && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    Carregando…
+                  </TableCell>
+                </TableRow>
+              )}
               {!isLoading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    Nenhum registro encontrado.
+                  </TableCell>
+                </TableRow>
               )}
               {filtered.map((r) => {
                 const campos = r.alteracoes ? Object.keys(r.alteracoes) : [];
                 return (
                   <TableRow key={r.id}>
-                    <TableCell className="text-xs whitespace-nowrap">{new Date(r.created_at).toLocaleString("pt-BR")}</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">
+                      {new Date(r.created_at).toLocaleString("pt-BR")}
+                    </TableCell>
                     <TableCell className="text-sm">
                       {r.autor ? (
                         <div>
                           <div className="font-medium">{r.autor.nome}</div>
                           <div className="text-xs text-muted-foreground">{r.autor.email}</div>
                         </div>
-                      ) : <span className="text-muted-foreground text-xs">Sistema</span>}
+                      ) : (
+                        <span className="text-muted-foreground text-xs">Sistema</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">{r.tabela}</TableCell>
-                    <TableCell><Badge variant={opVariant[r.operacao]}>{r.operacao}</Badge></TableCell>
-                    <TableCell className="text-xs font-mono text-muted-foreground">{r.registro_id?.slice(0, 8) ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={opVariant[r.operacao]}>{r.operacao}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs font-mono text-muted-foreground">
+                      {r.registro_id?.slice(0, 8) ?? "—"}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground max-w-[280px] truncate">
-                      {r.operacao === "INSERT" ? "(novo registro)" : r.operacao === "DELETE" ? "(registro removido)" : campos.join(", ") || "—"}
+                      {r.operacao === "INSERT"
+                        ? "(novo registro)"
+                        : r.operacao === "DELETE"
+                          ? "(registro removido)"
+                          : campos.join(", ") || "—"}
                     </TableCell>
                     <TableCell>
-                      <button className="text-primary hover:underline text-xs flex items-center gap-1" onClick={() => setDetalhe(r)}>
+                      <button
+                        className="text-primary hover:underline text-xs flex items-center gap-1"
+                        onClick={() => setDetalhe(r)}
+                      >
                         <Eye className="size-3" /> ver
                       </button>
                     </TableCell>
@@ -202,11 +266,24 @@ function HistoricoPage() {
           {detalhe && (
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-muted-foreground">Quando:</span> {new Date(detalhe.created_at).toLocaleString("pt-BR")}</div>
-                <div><span className="text-muted-foreground">Autor:</span> {detalhe.autor?.nome ?? "Sistema"}</div>
-                <div><span className="text-muted-foreground">Tabela:</span> {detalhe.tabela}</div>
-                <div><span className="text-muted-foreground">Operação:</span> {detalhe.operacao}</div>
-                <div className="col-span-2"><span className="text-muted-foreground">ID do registro:</span> <span className="font-mono">{detalhe.registro_id}</span></div>
+                <div>
+                  <span className="text-muted-foreground">Quando:</span>{" "}
+                  {new Date(detalhe.created_at).toLocaleString("pt-BR")}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Autor:</span>{" "}
+                  {detalhe.autor?.nome ?? "Sistema"}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Tabela:</span> {detalhe.tabela}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Operação:</span> {detalhe.operacao}
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">ID do registro:</span>{" "}
+                  <span className="font-mono">{detalhe.registro_id}</span>
+                </div>
               </div>
 
               {detalhe.operacao === "UPDATE" && detalhe.alteracoes && (
@@ -219,11 +296,15 @@ function HistoricoPage() {
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <div className="text-muted-foreground">Antes</div>
-                            <pre className="whitespace-pre-wrap break-all bg-destructive/5 p-1.5 rounded">{JSON.stringify(diff.old, null, 2)}</pre>
+                            <pre className="whitespace-pre-wrap break-all bg-destructive/5 p-1.5 rounded">
+                              {JSON.stringify(diff.old, null, 2)}
+                            </pre>
                           </div>
                           <div>
                             <div className="text-muted-foreground">Depois</div>
-                            <pre className="whitespace-pre-wrap break-all bg-primary/5 p-1.5 rounded">{JSON.stringify(diff.new, null, 2)}</pre>
+                            <pre className="whitespace-pre-wrap break-all bg-primary/5 p-1.5 rounded">
+                              {JSON.stringify(diff.new, null, 2)}
+                            </pre>
                           </div>
                         </div>
                       </div>
@@ -235,13 +316,17 @@ function HistoricoPage() {
               {detalhe.operacao === "INSERT" && detalhe.valor_novo && (
                 <div>
                   <div className="font-medium mb-2">Registro criado</div>
-                  <pre className="text-xs whitespace-pre-wrap break-all bg-muted p-2 rounded">{JSON.stringify(detalhe.valor_novo, null, 2)}</pre>
+                  <pre className="text-xs whitespace-pre-wrap break-all bg-muted p-2 rounded">
+                    {JSON.stringify(detalhe.valor_novo, null, 2)}
+                  </pre>
                 </div>
               )}
               {detalhe.operacao === "DELETE" && detalhe.valor_anterior && (
                 <div>
                   <div className="font-medium mb-2">Registro removido</div>
-                  <pre className="text-xs whitespace-pre-wrap break-all bg-muted p-2 rounded">{JSON.stringify(detalhe.valor_anterior, null, 2)}</pre>
+                  <pre className="text-xs whitespace-pre-wrap break-all bg-muted p-2 rounded">
+                    {JSON.stringify(detalhe.valor_anterior, null, 2)}
+                  </pre>
                 </div>
               )}
             </div>

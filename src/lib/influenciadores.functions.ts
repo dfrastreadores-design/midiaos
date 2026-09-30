@@ -41,10 +41,7 @@ const InfluenciadorSchema = z.object({
 });
 
 async function assertAccess(supabase: any, userId: string) {
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId);
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   const roles = (data ?? []).map((r: any) => r.role);
   if (!roles.includes("admin") && !roles.includes("producao")) {
     throw new Error("Acesso restrito ao módulo de Influenciadores.");
@@ -71,12 +68,7 @@ export const upsertInfluenciador = createServerFn({ method: "POST" })
     const payload: any = { ...data };
     if (!payload.id) payload.created_by = context.userId;
     const q = data.id
-      ? context.supabase
-          .from("influenciadores")
-          .update(payload)
-          .eq("id", data.id)
-          .select()
-          .single()
+      ? context.supabase.from("influenciadores").update(payload).eq("id", data.id).select().single()
       : context.supabase.from("influenciadores").insert(payload).select().single();
     const { data: row, error } = await q;
     if (error) throw new Error(error.message);
@@ -88,10 +80,7 @@ export const deleteInfluenciador = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAccess(context.supabase, context.userId);
-    const { error } = await context.supabase
-      .from("influenciadores")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("influenciadores").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

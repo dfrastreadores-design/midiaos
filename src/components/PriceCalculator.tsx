@@ -4,10 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calculator, Plus, Trash2, CalendarRange, PlusCircle, Minus, ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import {
+  Calculator,
+  Plus,
+  Trash2,
+  CalendarRange,
+  PlusCircle,
+  Minus,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+} from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -22,8 +38,18 @@ import { formatBRL } from "@/lib/mock-data";
 import { NovoProdutoButton } from "@/components/QuickCadastroButtons";
 
 const MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 const EMPTY_DB_PRODUTOS: any[] = [];
 
@@ -86,7 +112,6 @@ type Item = {
   linkModelo?: string | null;
 };
 
-
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
 const newItem = (mes: number | null, ano: number | null): Item => ({
@@ -138,32 +163,37 @@ function calcItemsSignature(items?: CalcItemOut[]) {
   );
 }
 
-import { calculateUnitPrice, getItemTotals, findDatabaseProduct } from "@/lib/services/pricing-service";
+import {
+  calculateUnitPrice,
+  getItemTotals,
+  findDatabaseProduct,
+} from "@/lib/services/pricing-service";
 
 function findDbUnit(it: Pick<Item, "tipo" | "programa" | "formato">, dbProdutos: any[]): number {
   return calculateUnitPrice(it, dbProdutos);
 }
 
 function itemTotals(it: Item, dbProdutos: any[] = []) {
-  const tableRow = it.programa && it.formato ? findPrice(it.tipo as any, it.programa, it.formato) : undefined;
-  
+  const tableRow =
+    it.programa && it.formato ? findPrice(it.tipo as any, it.programa, it.formato) : undefined;
+
   const unitPrice = calculateUnitPrice(
     { tipo: it.tipo, programa: it.programa, formato: it.formato },
     dbProdutos,
-    it.valorUnitOverride
+    it.valorUnitOverride,
   );
 
   const totalInsercoes = totalInsercoesItem(it);
   const totals = getItemTotals(totalInsercoes, unitPrice, it.desconto, it.negociadoOverride);
 
-  return { 
+  return {
     row: tableRow,
-    valorUnit: unitPrice, 
-    totalInsercoes, 
-    valorTabela: totals.valorTabela, 
-    descontoVal: totals.descontoVal, 
-    valorNegociado: totals.valorNegociado, 
-    descontoPct: totals.descontoPct 
+    valorUnit: unitPrice,
+    totalInsercoes,
+    valorTabela: totals.valorTabela,
+    descontoVal: totals.descontoVal,
+    valorNegociado: totals.valorNegociado,
+    descontoPct: totals.descontoPct,
   };
 }
 
@@ -190,7 +220,7 @@ export function PriceCalculator({
       const counts: Record<string, number> = {};
       const itemMes = it.mes ?? mesRef;
       const itemAno = it.ano ?? anoRef;
-      
+
       if (it.dias_mes && itemMes != null && itemAno != null) {
         for (const d of it.dias_mes) {
           const key = `${itemAno}-${String(itemMes).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -200,18 +230,25 @@ export function PriceCalculator({
       const diasCount = Object.values(counts).reduce((a, b) => a + b, 0);
       const progNormalizado = it.programa || "";
       const formatoNormalizado = it.formato || "";
-      const tabelaRow = progNormalizado && formatoNormalizado ? findPrice(it.tipo as never, progNormalizado, formatoNormalizado) : undefined;
-      const dbUnit = findDbUnit({ tipo: it.tipo || "VT", programa: progNormalizado, formato: formatoNormalizado }, allDbProdutos);
-      const unitTabela = dbUnit > 0 ? dbUnit : tabelaRow?.valorUnit ?? 0;
+      const tabelaRow =
+        progNormalizado && formatoNormalizado
+          ? findPrice(it.tipo as never, progNormalizado, formatoNormalizado)
+          : undefined;
+      const dbUnit = findDbUnit(
+        { tipo: it.tipo || "VT", programa: progNormalizado, formato: formatoNormalizado },
+        allDbProdutos,
+      );
+      const unitTabela = dbUnit > 0 ? dbUnit : (tabelaRow?.valorUnit ?? 0);
       const unitSalvo = round2(it.valor_unit || 0);
-      const valorUnitOverride = unitSalvo > 0 && Math.abs(unitSalvo - unitTabela) > 0.01 ? unitSalvo : null;
+      const valorUnitOverride =
+        unitSalvo > 0 && Math.abs(unitSalvo - unitTabela) > 0.01 ? unitSalvo : null;
       const unitEfetivo = valorUnitOverride ?? unitTabela;
       const tabela = round2(unitEfetivo * diasCount);
       const calcPorPct = round2(tabela * (1 - (it.desconto || 0) / 100));
       const negociadoSalvo = round2(it.valor_negociado || 0);
       const override = Math.abs(calcPorPct - negociadoSalvo) > 0.01 ? negociadoSalvo : null;
-      const totalInsercoes = (it.total_insercoes || 0);
-      const insercoesManual = (diasCount === 0 && totalInsercoes > 0) ? totalInsercoes : null;
+      const totalInsercoes = it.total_insercoes || 0;
+      const insercoesManual = diasCount === 0 && totalInsercoes > 0 ? totalInsercoes : null;
       return {
         id: crypto.randomUUID(),
         tipo: it.tipo || "VT",
@@ -219,7 +256,11 @@ export function PriceCalculator({
         horario:
           itemMes == null || itemAno == null
             ? it.horario || ""
-            : it.horario || (it.programa && it.formato ? findPrice(it.tipo as any, it.programa, it.formato)?.horario : "") || "",
+            : it.horario ||
+              (it.programa && it.formato
+                ? findPrice(it.tipo as any, it.programa, it.formato)?.horario
+                : "") ||
+              "",
         formato: it.formato || "",
         mes: itemMes,
         ano: itemAno,
@@ -267,27 +308,40 @@ export function PriceCalculator({
 
         // Se tipo / programa / formato mudaram, tenta preencher dados completos
         // primeiramente do cadastro de Produtos (DB) e, em fallback, da tabela estática.
-        if (patch.programa !== undefined || patch.formato !== undefined || patch.tipo !== undefined) {
+        if (
+          patch.programa !== undefined ||
+          patch.formato !== undefined ||
+          patch.tipo !== undefined
+        ) {
           const normalize = (s: string) => (s || "").trim().toLowerCase();
           const dbMatch = allDbProdutos.find((p: any) => {
             if (p?.ativo === false) return false;
             const pTipo = normalize(p.tipo);
             const pProg = normalize(p.programa);
             const pForm = normalize(p.formato);
-            
+
             const matchTipo = pTipo === normalize(next.tipo);
             const matchProg = pProg === normalize(next.programa);
             const matchForm = !pForm || pForm === normalize(next.formato);
-            
+
             return matchTipo && matchProg && matchForm;
           });
           if (dbMatch) {
-            if (it.mes != null && it.ano != null && dbMatch.faixa && (!next.horario || patch.programa || patch.tipo)) {
+            if (
+              it.mes != null &&
+              it.ano != null &&
+              dbMatch.faixa &&
+              (!next.horario || patch.programa || patch.tipo)
+            ) {
               next.horario = dbMatch.faixa;
             }
             // Valor de tabela vem automaticamente do cadastro via itemTotals().
             // Limpamos override só quando o produto muda, para refletir o preço cadastrado.
-            if (patch.programa !== undefined || patch.formato !== undefined || patch.tipo !== undefined) {
+            if (
+              patch.programa !== undefined ||
+              patch.formato !== undefined ||
+              patch.tipo !== undefined
+            ) {
               next.valorUnitOverride = null;
               next.negociadoOverride = null;
             }
@@ -296,8 +350,16 @@ export function PriceCalculator({
             }
             next.linkModelo = dbMatch.link_modelo ?? null;
           } else {
-            const row = next.programa && next.formato ? findPrice(next.tipo as any, next.programa, next.formato) : undefined;
-            if (it.mes != null && it.ano != null && row?.horario && (!next.horario || patch.programa || patch.tipo)) {
+            const row =
+              next.programa && next.formato
+                ? findPrice(next.tipo as any, next.programa, next.formato)
+                : undefined;
+            if (
+              it.mes != null &&
+              it.ano != null &&
+              row?.horario &&
+              (!next.horario || patch.programa || patch.tipo)
+            ) {
               next.horario = row.horario;
             }
           }
@@ -323,7 +385,7 @@ export function PriceCalculator({
         });
         return {
           ...src,
-          id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`),
+          id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
           mes,
           ano,
           insercoesPorDia: nextPorDia,
@@ -356,7 +418,8 @@ export function PriceCalculator({
             for (let d = 1; d <= diasNoMes; d++) {
               const dow = new Date(ano, mes - 1, d).getDay();
               if (businessOnly && (dow === 0 || dow === 6)) continue;
-              nextPorDia[`${ano}-${String(mes).padStart(2, "0")}-${String(d).padStart(2, "0")}`] = base;
+              nextPorDia[`${ano}-${String(mes).padStart(2, "0")}-${String(d).padStart(2, "0")}`] =
+                base;
             }
           } else {
             Object.entries(src.insercoesPorDia).forEach(([k, v]) => {
@@ -364,12 +427,15 @@ export function PriceCalculator({
               if (day < 1 || day > diasNoMes) return;
               const dow = new Date(ano, mes - 1, day).getDay();
               if (businessOnly && (dow === 0 || dow === 6)) return;
-              nextPorDia[`${ano}-${String(mes).padStart(2, "0")}-${String(day).padStart(2, "0")}`] = v;
+              nextPorDia[`${ano}-${String(mes).padStart(2, "0")}-${String(day).padStart(2, "0")}`] =
+                v;
             });
           }
           clones.push({
             ...src,
-            id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}-${clones.length}`),
+            id:
+              globalThis.crypto?.randomUUID?.() ??
+              `${Date.now()}-${Math.random()}-${clones.length}`,
             mes,
             ano,
             insercoesPorDia: nextPorDia,
@@ -429,9 +495,6 @@ export function PriceCalculator({
     return ids;
   }, [items]);
 
-
-
-
   const totals = useMemo(() => {
     const acc = items.reduce(
       (a, it) => {
@@ -444,7 +507,12 @@ export function PriceCalculator({
       },
       { tabela: 0, desconto: 0, negociado: 0, insercoes: 0 },
     );
-    return { ...acc, tabela: round2(acc.tabela), desconto: round2(acc.desconto), negociado: round2(acc.negociado) };
+    return {
+      ...acc,
+      tabela: round2(acc.tabela),
+      desconto: round2(acc.desconto),
+      negociado: round2(acc.negociado),
+    };
   }, [items, allDbProdutos]);
 
   const out = useMemo<CalcItemOut[]>(
@@ -471,9 +539,11 @@ export function PriceCalculator({
                 .map(([k, arr]) => {
                   const [yy, mm] = k.split("-").map(Number);
                   const dias_mes: number[] = [];
-                  arr.sort((a, b) => a[0] - b[0]).forEach(([d, n]) => {
-                    for (let i = 0; i < (n || 0); i++) dias_mes.push(d);
-                  });
+                  arr
+                    .sort((a, b) => a[0] - b[0])
+                    .forEach(([d, n]) => {
+                      for (let i = 0; i < (n || 0); i++) dias_mes.push(d);
+                    });
                   return { mes: mm, ano: yy, dias_mes };
                 });
 
@@ -485,10 +555,36 @@ export function PriceCalculator({
           const isLast = idx === grupos.length - 1;
           // Para evitar perda por arredondamento, último grupo absorve o resto.
           const valTabela = isLast
-            ? round2(t.valorTabela - grupos.slice(0, -1).reduce((s, gg) => s + round2(t.valorTabela * (totalIns > 0 ? gg.dias_mes.length / totalIns : 1 / grupos.length)), 0))
+            ? round2(
+                t.valorTabela -
+                  grupos
+                    .slice(0, -1)
+                    .reduce(
+                      (s, gg) =>
+                        s +
+                        round2(
+                          t.valorTabela *
+                            (totalIns > 0 ? gg.dias_mes.length / totalIns : 1 / grupos.length),
+                        ),
+                      0,
+                    ),
+              )
             : round2(t.valorTabela * share);
           const valNegociado = isLast
-            ? round2(t.valorNegociado - grupos.slice(0, -1).reduce((s, gg) => s + round2(t.valorNegociado * (totalIns > 0 ? gg.dias_mes.length / totalIns : 1 / grupos.length)), 0))
+            ? round2(
+                t.valorNegociado -
+                  grupos
+                    .slice(0, -1)
+                    .reduce(
+                      (s, gg) =>
+                        s +
+                        round2(
+                          t.valorNegociado *
+                            (totalIns > 0 ? gg.dias_mes.length / totalIns : 1 / grupos.length),
+                        ),
+                      0,
+                    ),
+              )
             : round2(t.valorNegociado * share);
           return {
             tipo: it.tipo,
@@ -514,7 +610,9 @@ export function PriceCalculator({
   );
 
   const onChangeRef = useRef(onChange);
-  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   // Sync only real external initial data changes. The calculator also emits its
   // value to the parent; syncing that same emitted value back caused a render loop.
@@ -573,7 +671,9 @@ export function PriceCalculator({
               setItems((prev) =>
                 prev.map((it) => {
                   const nextPorDia: Record<string, number> = {};
-                  Object.keys(it.insercoesPorDia).forEach((k) => { nextPorDia[k] = n; });
+                  Object.keys(it.insercoesPorDia).forEach((k) => {
+                    nextPorDia[k] = n;
+                  });
                   return { ...it, insercoesDia: n, insercoesPorDia: nextPorDia };
                 }),
               )
@@ -597,7 +697,10 @@ export function PriceCalculator({
               new Map(
                 items
                   .filter((it) => it.mes != null && it.ano != null)
-                  .map((it) => [`${it.ano}-${it.mes}`, { mes: it.mes as number, ano: it.ano as number }]),
+                  .map((it) => [
+                    `${it.ano}-${it.mes}`,
+                    { mes: it.mes as number, ano: it.ano as number },
+                  ]),
               ).values(),
             ).sort((a, b) => a.ano - b.ano || a.mes - b.mes)}
             onRemoveMonths={(targets) => removeMonths(targets)}
@@ -606,11 +709,12 @@ export function PriceCalculator({
           />
         )}
 
-
         {items.map((it, idx) => (
           <div
             key={it.id}
-            ref={(el) => { itemRefs.current[it.id] = el; }}
+            ref={(el) => {
+              itemRefs.current[it.id] = el;
+            }}
           >
             <ItemRow
               index={idx}
@@ -637,14 +741,14 @@ export function PriceCalculator({
         <div className="grid sm:grid-cols-4 gap-3">
           <SummaryItem label="Inserções totais" value={String(totals.insercoes)} />
           <SummaryItem label="Valor Tabela" value={formatBRL(totals.tabela)} />
-          <SummaryItem 
-            label="Desconto" 
+          <SummaryItem
+            label="Desconto"
             value={
-              totals.tabela > 0 
+              totals.tabela > 0
                 ? `- ${formatBRL(totals.desconto)} (${((totals.desconto / totals.tabela) * 100).toFixed(0)}%)`
                 : `- ${formatBRL(totals.desconto)}`
-            } 
-            muted 
+            }
+            muted
           />
           <SummaryItem label="Total Negociado" value={formatBRL(totals.negociado)} highlight />
         </div>
@@ -652,7 +756,6 @@ export function PriceCalculator({
     </Card>
   );
 }
-
 
 function BulkActions({
   onApplyPeriodo,
@@ -694,12 +797,14 @@ function BulkActions({
     let a = hoje.getFullYear();
     for (let i = 0; i < 12; i++) {
       m += 1;
-      if (m > 12) { m = 1; a += 1; }
+      if (m > 12) {
+        m = 1;
+        a += 1;
+      }
       arr.push({ mes: m, ano: a, key: `${a}-${m}`, label: `${MESES[m - 1]}/${a}` });
     }
     return arr;
   }, []);
-
 
   const parseDias = (s: string): number[] => {
     const out = new Set<number>();
@@ -727,7 +832,12 @@ function BulkActions({
           <CalendarRange className="size-4" />
           Aplicar a TODOS os produtos
         </div>
-        <Button size="sm" variant="ghost" onClick={() => setOpen((v) => !v)} className="h-7 text-xs">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => setOpen((v) => !v)}
+          className="h-7 text-xs"
+        >
           {open ? "Ocultar" : "Mostrar"}
         </Button>
       </div>
@@ -740,23 +850,36 @@ function BulkActions({
                 <Label className="text-[11px]">Período (mês/ano)</Label>
                 <div className="flex gap-1">
                   <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {MESES.map((m, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                        <SelectItem key={i + 1} value={String(i + 1)}>
+                          {m}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
-                    <SelectTrigger className="h-8 w-[80px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 w-[80px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {Array.from({ length: 4 }, (_, i) => hoje.getFullYear() - 1 + i).map((y) => (
-                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                        <SelectItem key={y} value={String(y)}>
+                          {y}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <Button size="sm" variant="secondary" className="h-7 w-full text-xs" onClick={() => onApplyPeriodo(mes, ano)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 w-full text-xs"
+                  onClick={() => onApplyPeriodo(mes, ano)}
+                >
                   Aplicar período
                 </Button>
               </div>
@@ -771,7 +894,12 @@ function BulkActions({
                   value={desconto}
                   onChange={(e) => setDesconto(Number(e.target.value) || 0)}
                 />
-                <Button size="sm" variant="secondary" className="h-7 w-full text-xs" onClick={() => onApplyDesconto(desconto)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 w-full text-xs"
+                  onClick={() => onApplyDesconto(desconto)}
+                >
                   Aplicar desconto
                 </Button>
               </div>
@@ -785,7 +913,12 @@ function BulkActions({
                   value={insercoes}
                   onChange={(e) => setInsercoes(Math.max(1, Number(e.target.value) || 1))}
                 />
-                <Button size="sm" variant="secondary" className="h-7 w-full text-xs" onClick={() => onApplyInsercoesDia(insercoes)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 w-full text-xs"
+                  onClick={() => onApplyInsercoesDia(insercoes)}
+                >
                   Aplicar inserções
                 </Button>
               </div>
@@ -818,7 +951,9 @@ function BulkActions({
           {onDuplicateAll && (
             <div className="rounded-md border bg-background/60 p-2.5 space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-[11px] font-semibold">Duplicar TODOS os produtos para outros meses</Label>
+                <Label className="text-[11px] font-semibold">
+                  Duplicar TODOS os produtos para outros meses
+                </Label>
                 <label className="flex items-center gap-1.5 text-[11px] cursor-pointer">
                   <Checkbox
                     checked={dupBusinessOnly}
@@ -829,7 +964,10 @@ function BulkActions({
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-40 overflow-auto">
                 {dupOptions.map((o) => (
-                  <label key={o.key} className="flex items-center gap-1.5 text-[11px] cursor-pointer">
+                  <label
+                    key={o.key}
+                    className="flex items-center gap-1.5 text-[11px] cursor-pointer"
+                  >
                     <Checkbox
                       checked={!!dupSelected[o.key]}
                       onCheckedChange={(v) => setDupSelected((s) => ({ ...s, [o.key]: !!v }))}
@@ -864,7 +1002,8 @@ function BulkActions({
                     setDupSelected({});
                   }}
                 >
-                  <Copy className="size-3.5 mr-1" /> Duplicar em {Object.values(dupSelected).filter(Boolean).length || 0} mês(es)
+                  <Copy className="size-3.5 mr-1" /> Duplicar em{" "}
+                  {Object.values(dupSelected).filter(Boolean).length || 0} mês(es)
                 </Button>
               </div>
             </div>
@@ -882,12 +1021,17 @@ function BulkActions({
                 {existingMonths.map((o) => {
                   const key = `${o.ano}-${o.mes}`;
                   return (
-                    <label key={key} className="flex items-center gap-1.5 text-[11px] cursor-pointer">
+                    <label
+                      key={key}
+                      className="flex items-center gap-1.5 text-[11px] cursor-pointer"
+                    >
                       <Checkbox
                         checked={!!rmSelected[key]}
                         onCheckedChange={(v) => setRmSelected((s) => ({ ...s, [key]: !!v }))}
                       />
-                      <span>{MESES[o.mes - 1]}/{o.ano}</span>
+                      <span>
+                        {MESES[o.mes - 1]}/{o.ano}
+                      </span>
                     </label>
                   );
                 })}
@@ -906,7 +1050,8 @@ function BulkActions({
                   setRmSelected({});
                 }}
               >
-                <Trash2 className="size-3.5 mr-1" /> Excluir {Object.values(rmSelected).filter(Boolean).length || 0} mês(es)
+                <Trash2 className="size-3.5 mr-1" /> Excluir{" "}
+                {Object.values(rmSelected).filter(Boolean).length || 0} mês(es)
               </Button>
             </div>
           )}
@@ -917,7 +1062,8 @@ function BulkActions({
                 Produtos duplicados no mesmo mês
               </Label>
               <p className="text-[10px] text-muted-foreground">
-                Remove produtos repetidos (mesmo tipo, programa, formato e horário) dentro de um mesmo mês, mantendo apenas o primeiro.
+                Remove produtos repetidos (mesmo tipo, programa, formato e horário) dentro de um
+                mesmo mês, mantendo apenas o primeiro.
               </p>
               <Button
                 size="sm"
@@ -926,29 +1072,36 @@ function BulkActions({
                 disabled={duplicatesCount === 0}
                 onClick={() => {
                   if (duplicatesCount === 0) return;
-                  if (!window.confirm(`Excluir ${duplicatesCount} produto(s) duplicado(s)?`)) return;
+                  if (!window.confirm(`Excluir ${duplicatesCount} produto(s) duplicado(s)?`))
+                    return;
                   onRemoveDuplicates();
                 }}
               >
                 <Trash2 className="size-3.5 mr-1" />
-                {duplicatesCount === 0 ? "Nenhum duplicado encontrado" : `Excluir ${duplicatesCount} duplicado(s)`}
+                {duplicatesCount === 0
+                  ? "Nenhum duplicado encontrado"
+                  : `Excluir ${duplicatesCount} duplicado(s)`}
               </Button>
             </div>
           )}
         </div>
       )}
-
     </div>
   );
 }
 
-
-
-
 const CUSTOM = "__custom__";
 
 function FieldWithCustom({
-  label, value, options, onChange, disabled, placeholder, showAddButton, initialData, isLoading
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+  placeholder,
+  showAddButton,
+  initialData,
+  isLoading,
 }: {
   label: string;
   value: string;
@@ -978,17 +1131,21 @@ function FieldWithCustom({
         {!custom && (
           <div className="flex items-center gap-1">
             {showAddButton && (
-              <NovoProdutoButton 
-                variant="ghost" 
-                size="icon" 
-                className="size-5 text-primary hover:text-primary/80" 
+              <NovoProdutoButton
+                variant="ghost"
+                size="icon"
+                className="size-5 text-primary hover:text-primary/80"
                 initialData={initialData}
               />
             )}
             <button
               type="button"
               className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5"
-              onClick={() => { setCustom(true); setDraft(""); onChange(""); }}
+              onClick={() => {
+                setCustom(true);
+                setDraft("");
+                onChange("");
+              }}
             >
               <PlusCircle className="size-3" /> novo
             </button>
@@ -998,7 +1155,11 @@ function FieldWithCustom({
           <button
             type="button"
             className="text-[10px] text-muted-foreground hover:underline"
-            onClick={() => { setCustom(false); setDraft(""); onChange(""); }}
+            onClick={() => {
+              setCustom(false);
+              setDraft("");
+              onChange("");
+            }}
           >
             usar lista
           </button>
@@ -1009,14 +1170,20 @@ function FieldWithCustom({
           autoFocus
           placeholder={`Digite ${label.toLowerCase()}`}
           value={draft}
-          onChange={(e) => { setDraft(e.target.value); onChange(e.target.value); }}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            onChange(e.target.value);
+          }}
         />
       ) : (
         <Select
           value={value || CUSTOM}
           onValueChange={(v) => {
-            if (v === CUSTOM) { setCustom(true); setDraft(""); onChange(""); }
-            else onChange(v);
+            if (v === CUSTOM) {
+              setCustom(true);
+              setDraft("");
+              onChange("");
+            } else onChange(v);
           }}
           disabled={disabled || isLoading}
         >
@@ -1025,7 +1192,9 @@ function FieldWithCustom({
           </SelectTrigger>
           <SelectContent>
             {options.map((o) => (
-              <SelectItem key={o} value={o}>{o}</SelectItem>
+              <SelectItem key={o} value={o}>
+                {o}
+              </SelectItem>
             ))}
             <SelectItem value={CUSTOM}>+ Cadastrar novo…</SelectItem>
           </SelectContent>
@@ -1036,7 +1205,15 @@ function FieldWithCustom({
 }
 
 function ItemRow({
-  index, item, onChange, onRemove, onDuplicate, canRemove, dbProdutos = [], isLoading, isDuplicate = false,
+  index,
+  item,
+  onChange,
+  onRemove,
+  onDuplicate,
+  canRemove,
+  dbProdutos = [],
+  isLoading,
+  isDuplicate = false,
 }: {
   index: number;
   item: Item;
@@ -1048,13 +1225,16 @@ function ItemRow({
   isLoading?: boolean;
   isDuplicate?: boolean;
 }) {
-
   const [displayMes, setDisplayMes] = useState(item.mes);
   const [displayAno, setDisplayAno] = useState(item.ano);
-  useEffect(() => { if (item.mes != null) setDisplayMes(item.mes); }, [item.mes]);
-  useEffect(() => { if (item.ano != null) setDisplayAno(item.ano); }, [item.ano]);
+  useEffect(() => {
+    if (item.mes != null) setDisplayMes(item.mes);
+  }, [item.mes]);
+  useEffect(() => {
+    if (item.ano != null) setDisplayAno(item.ano);
+  }, [item.ano]);
   const productTypes = useMemo(() => {
-    const dbTypes = dbProdutos.map(p => p.tipo).filter(Boolean);
+    const dbTypes = dbProdutos.map((p) => p.tipo).filter(Boolean);
     return Array.from(new Set([...staticProductTypes, ...dbTypes])).sort();
   }, [dbProdutos]);
 
@@ -1063,8 +1243,8 @@ function ItemRow({
     const normalize = (s: string) => (s || "").trim().toLowerCase();
     const itemTipoNorm = normalize(item.tipo);
     const dbProgs = dbProdutos
-      .filter(p => normalize(p.tipo) === itemTipoNorm)
-      .map(p => p.programa)
+      .filter((p) => normalize(p.tipo) === itemTipoNorm)
+      .map((p) => p.programa)
       .filter(Boolean);
     return Array.from(new Set([...staticProgs, ...dbProgs])).sort();
   }, [item.tipo, dbProdutos]);
@@ -1076,21 +1256,26 @@ function ItemRow({
     const itemTipoNorm = normalize(item.tipo);
     const itemProgNorm = normalize(item.programa);
     const dbForms = dbProdutos
-      .filter(p => normalize(p.tipo) === itemTipoNorm && normalize(p.programa) === itemProgNorm)
-      .map(p => p.formato)
+      .filter((p) => normalize(p.tipo) === itemTipoNorm && normalize(p.programa) === itemProgNorm)
+      .map((p) => p.formato)
       .filter(Boolean);
     return Array.from(new Set([...staticForms, ...dbForms])).sort();
   }, [item.tipo, item.programa, dbProdutos]);
   const t = itemTotals(item, dbProdutos);
 
   const matchedProduto = useMemo(
-    () => findDatabaseProduct({ tipo: item.tipo, programa: item.programa, formato: item.formato }, dbProdutos as any),
+    () =>
+      findDatabaseProduct(
+        { tipo: item.tipo, programa: item.programa, formato: item.formato },
+        dbProdutos as any,
+      ),
     [item.tipo, item.programa, item.formato, dbProdutos],
   );
   const veicTipo: "livre" | "dias_uteis" | "seg_sab" | "dias_fixos" | "dias_semana" =
     ((matchedProduto as any)?.veiculacao_tipo as any) ?? "livre";
   const diasFixos: number[] = ((matchedProduto as any)?.dias_fixos as number[] | null) ?? [];
-  const diasSemanaFixos: number[] = ((matchedProduto as any)?.dias_semana_fixos as number[] | null) ?? [];
+  const diasSemanaFixos: number[] =
+    ((matchedProduto as any)?.dias_semana_fixos as number[] | null) ?? [];
   const DOW_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
   const isDayAllowed = (y: number, m: number, d: number) => {
     if (veicTipo === "dias_uteis") {
@@ -1134,47 +1319,61 @@ function ItemRow({
   );
 
   return (
-    <div className={`rounded-lg border p-4 space-y-3 ${isDuplicate ? "bg-amber-500/10 border-amber-500/60 ring-1 ring-amber-500/40" : "bg-muted/20"}`}>
+    <div
+      className={`rounded-lg border p-4 space-y-3 ${isDuplicate ? "bg-amber-500/10 border-amber-500/60 ring-1 ring-amber-500/40" : "bg-muted/20"}`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
             Produto #{index + 1}
           </div>
           {isDuplicate && (
-            <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400 text-[10px] h-5">
+            <Badge
+              variant="outline"
+              className="border-amber-500 text-amber-700 dark:text-amber-400 text-[10px] h-5"
+            >
               Duplicado neste mês
             </Badge>
           )}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Período:</span>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Período:
+            </span>
             <Select
               value={item.mes != null ? String(item.mes) : ""}
-              onValueChange={(v) => onChange({ mes: Number(v), ano: item.ano ?? new Date().getFullYear() })}
+              onValueChange={(v) =>
+                onChange({ mes: Number(v), ano: item.ano ?? new Date().getFullYear() })
+              }
             >
               <SelectTrigger className="h-6 w-[110px] text-[11px]">
                 <SelectValue placeholder="Mês" />
               </SelectTrigger>
               <SelectContent>
                 {MESES.map((m, i) => (
-                  <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                  <SelectItem key={i + 1} value={String(i + 1)}>
+                    {m}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select
               value={item.ano != null ? String(item.ano) : ""}
-              onValueChange={(v) => onChange({ ano: Number(v), mes: item.mes ?? (new Date().getMonth() + 1) })}
+              onValueChange={(v) =>
+                onChange({ ano: Number(v), mes: item.mes ?? new Date().getMonth() + 1 })
+              }
             >
               <SelectTrigger className="h-6 w-[80px] text-[11px]">
                 <SelectValue placeholder="Ano" />
               </SelectTrigger>
               <SelectContent>
                 {Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - 1 + i).map((y) => (
-                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
         </div>
         <div className="flex items-center gap-1">
           {onDuplicate && item.mes != null && item.ano != null && (
@@ -1191,7 +1390,6 @@ function ItemRow({
           )}
         </div>
       </div>
-
 
       <div className="grid sm:grid-cols-4 gap-3">
         <FieldWithCustom
@@ -1210,10 +1408,10 @@ function ItemRow({
         />
         <div className="space-y-1.5">
           <Label className="text-xs">Horário</Label>
-          <Input 
-            placeholder="Ex: 08:00" 
-            value={item.horario} 
-            onChange={(e) => onChange({ horario: e.target.value })} 
+          <Input
+            placeholder="Ex: 08:00"
+            value={item.horario}
+            onChange={(e) => onChange({ horario: e.target.value })}
           />
         </div>
         <FieldWithCustom
@@ -1228,7 +1426,7 @@ function ItemRow({
             tipo: item.tipo,
             programa: item.programa,
             formato: item.formato,
-            valor_unit: t.valorUnit
+            valor_unit: t.valorUnit,
           }}
         />
       </div>
@@ -1254,24 +1452,31 @@ function ItemRow({
             value={t.valorUnit}
             onChange={(e) =>
               onChange({
-                valorUnitOverride: e.target.value === "" ? null : Math.max(0, parseFloat(e.target.value) || 0),
+                valorUnitOverride:
+                  e.target.value === "" ? null : Math.max(0, parseFloat(e.target.value) || 0),
                 negociadoOverride: null,
               })
             }
             className="font-mono"
           />
           <p className="text-[10px] text-muted-foreground">
-            {item.valorUnitOverride != null ? "Valor personalizado" : "Do cadastro de produtos — edite para personalizar"}
+            {item.valorUnitOverride != null
+              ? "Valor personalizado"
+              : "Do cadastro de produtos — edite para personalizar"}
           </p>
         </div>
 
         <div className="space-y-1.5">
           <Label className="text-xs">Inserções / dia (padrão)</Label>
           <Input
-            type="number" min={1} value={item.insercoesDia}
+            type="number"
+            min={1}
+            value={item.insercoesDia}
             onChange={(e) => onChange({ insercoesDia: Math.max(1, parseInt(e.target.value) || 1) })}
           />
-          <p className="text-[10px] text-muted-foreground">Aplicado em novos dias marcados. Edite por dia abaixo.</p>
+          <p className="text-[10px] text-muted-foreground">
+            Aplicado em novos dias marcados. Edite por dia abaixo.
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Quantidade de inserções</Label>
@@ -1295,8 +1500,14 @@ function ItemRow({
         <div className="space-y-1.5">
           <Label className="text-xs">Desconto (%)</Label>
           <Input
-            type="number" min={0} max={100} step="0.01" value={t.descontoPct}
-            onChange={(e) => onChange({ desconto: parseFloat(e.target.value) || 0, negociadoOverride: null })}
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            value={t.descontoPct}
+            onChange={(e) =>
+              onChange({ desconto: parseFloat(e.target.value) || 0, negociadoOverride: null })
+            }
           />
         </div>
         <div className="space-y-1.5">
@@ -1306,17 +1517,28 @@ function ItemRow({
             min={0}
             value={item.diasVeiculacao ?? ""}
             placeholder="Ex: 30"
-            onChange={(e) => onChange({ diasVeiculacao: e.target.value === "" ? null : parseInt(e.target.value) || 0 })}
+            onChange={(e) =>
+              onChange({
+                diasVeiculacao: e.target.value === "" ? null : parseInt(e.target.value) || 0,
+              })
+            }
           />
-          <p className="text-[10px] text-muted-foreground">Opcional. Informe a duração da campanha.</p>
+          <p className="text-[10px] text-muted-foreground">
+            Opcional. Informe a duração da campanha.
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Valor negociado (R$)</Label>
           <Input
-            type="number" min={0} step="0.01" value={t.valorNegociado}
+            type="number"
+            min={0}
+            step="0.01"
+            value={t.valorNegociado}
             onChange={(e) => onChange({ negociadoOverride: parseFloat(e.target.value) || 0 })}
           />
-          <p className="text-[10px] text-muted-foreground">Trava o líquido fechado da negociação.</p>
+          <p className="text-[10px] text-muted-foreground">
+            Trava o líquido fechado da negociação.
+          </p>
         </div>
       </div>
 
@@ -1337,7 +1559,10 @@ function ItemRow({
             </div>
             <div className="flex items-center gap-2">
               <Button
-                type="button" variant="ghost" size="icon" className="h-6 w-6"
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
                 onClick={() => {
                   const newMes = displayMes! === 1 ? 12 : displayMes! - 1;
                   const newAno = displayMes! === 1 ? displayAno! - 1 : displayAno!;
@@ -1351,7 +1576,10 @@ function ItemRow({
                 {MESES[displayMes! - 1]} / {displayAno!}
               </span>
               <Button
-                type="button" variant="ghost" size="icon" className="h-6 w-6"
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
                 onClick={() => {
                   const newMes = displayMes! === 12 ? 1 : displayMes! + 1;
                   const newAno = displayMes! === 12 ? displayAno! + 1 : displayAno!;
@@ -1367,7 +1595,10 @@ function ItemRow({
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
             <span className="text-muted-foreground">Preencher mês:</span>
             <Button
-              type="button" variant="outline" size="sm" className="h-6 px-2 text-[11px]"
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-[11px]"
               onClick={() => {
                 const diasNoMes = new Date(displayAno!, displayMes!, 0).getDate();
                 const next = { ...item.insercoesPorDia };
@@ -1387,12 +1618,19 @@ function ItemRow({
                 onChange({ insercoesPorDia: next });
               }}
               disabled={veicTipo === "dias_fixos" || veicTipo === "dias_semana"}
-              title={veicTipo === "dias_fixos" || veicTipo === "dias_semana" ? "Produto restrito pelo cadastro" : ""}
+              title={
+                veicTipo === "dias_fixos" || veicTipo === "dias_semana"
+                  ? "Produto restrito pelo cadastro"
+                  : ""
+              }
             >
               Dias úteis (Seg–Sex)
             </Button>
             <Button
-              type="button" variant="outline" size="sm" className="h-6 px-2 text-[11px]"
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-[11px]"
               onClick={() => {
                 const diasNoMes = new Date(displayAno!, displayMes!, 0).getDate();
                 const next = { ...item.insercoesPorDia };
@@ -1409,10 +1647,21 @@ function ItemRow({
                 onChange({ insercoesPorDia: next });
               }}
             >
-              {veicTipo === "dias_fixos" ? "Preencher dias fixos" : veicTipo === "dias_semana" ? `Preencher ${diasSemanaFixos.map((d) => DOW_LABELS[d]).join("/") || "dias da semana"}` : veicTipo === "dias_uteis" ? "Dias úteis (Seg–Sex)" : veicTipo === "seg_sab" ? "Segunda a sábado (Seg–Sáb)" : "Dias seguidos (todos)"}
+              {veicTipo === "dias_fixos"
+                ? "Preencher dias fixos"
+                : veicTipo === "dias_semana"
+                  ? `Preencher ${diasSemanaFixos.map((d) => DOW_LABELS[d]).join("/") || "dias da semana"}`
+                  : veicTipo === "dias_uteis"
+                    ? "Dias úteis (Seg–Sex)"
+                    : veicTipo === "seg_sab"
+                      ? "Segunda a sábado (Seg–Sáb)"
+                      : "Dias seguidos (todos)"}
             </Button>
             <Button
-              type="button" variant="ghost" size="sm" className="h-6 px-2 text-[11px]"
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-[11px]"
               onClick={() => {
                 const next = { ...item.insercoesPorDia };
                 for (const k of Object.keys(next)) {
@@ -1426,15 +1675,14 @@ function ItemRow({
             </Button>
             {veicTipo !== "livre" && (
               <span className="text-[10px] text-muted-foreground ml-1">
-                Produto restrito a {
-                  veicTipo === "dias_uteis"
-                    ? "dias úteis"
-                    : veicTipo === "seg_sab"
+                Produto restrito a{" "}
+                {veicTipo === "dias_uteis"
+                  ? "dias úteis"
+                  : veicTipo === "seg_sab"
                     ? "segunda a sábado"
                     : veicTipo === "dias_semana"
-                    ? `${diasSemanaFixos.map((d) => DOW_LABELS[d]).join(", ") || "—"}`
-                    : `dias fixos (${diasFixos.join(", ") || "—"})`
-                }
+                      ? `${diasSemanaFixos.map((d) => DOW_LABELS[d]).join(", ") || "—"}`
+                      : `dias fixos (${diasFixos.join(", ") || "—"})`}
               </span>
             )}
           </div>
@@ -1459,7 +1707,11 @@ function ItemRow({
                     const nm = ((displayMes! - 1 + i) % 12) + 1;
                     const na = displayAno! + Math.floor((displayMes! - 1 + i) / 12);
                     const diasNoMes = new Date(na, nm, 0).getDate();
-                    if (veicTipo === "dias_semana" || veicTipo === "dias_uteis" || veicTipo === "seg_sab") {
+                    if (
+                      veicTipo === "dias_semana" ||
+                      veicTipo === "dias_uteis" ||
+                      veicTipo === "seg_sab"
+                    ) {
                       // Replica por dia da semana (ex.: toda quarta) — evita cair em outro DOW ao mudar de mês.
                       const dowQtd = new Map<number, number>();
                       for (const [k, qtd] of base) {
@@ -1494,7 +1746,6 @@ function ItemRow({
             <span className="text-muted-foreground">(replica os dias do mês exibido)</span>
           </div>
 
-
           <CalendarioDias
             mes={displayMes!}
             ano={displayAno!}
@@ -1513,23 +1764,39 @@ function ItemRow({
                   const n = item.insercoesPorDia[dateKey] || 1;
                   const [y, m, d] = dateKey.split("-").map(Number);
                   return (
-                    <div key={dateKey} className="inline-flex items-center gap-1 rounded border bg-muted/40 px-1.5 py-0.5">
+                    <div
+                      key={dateKey}
+                      className="inline-flex items-center gap-1 rounded border bg-muted/40 px-1.5 py-0.5"
+                    >
                       <span className="text-[10px] font-semibold tabular-nums">
-                        {String(d).padStart(2, "0")}/{String(m).padStart(2, "0")}/{String(y).slice(2)}
+                        {String(d).padStart(2, "0")}/{String(m).padStart(2, "0")}/
+                        {String(y).slice(2)}
                       </span>
-                      <Button type="button" size="icon" variant="ghost" className="h-5 w-5"
-                        onClick={() => setDiaCount(dateKey, n - 1)}>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        onClick={() => setDiaCount(dateKey, n - 1)}
+                      >
                         <Minus className="size-3" />
                       </Button>
                       <Input
                         type="number"
                         min={1}
                         value={n}
-                        onChange={(e) => setDiaCount(dateKey, Math.max(0, parseInt(e.target.value) || 0))}
+                        onChange={(e) =>
+                          setDiaCount(dateKey, Math.max(0, parseInt(e.target.value) || 0))
+                        }
                         className="h-6 w-10 px-1 text-center text-[10px]"
                       />
-                      <Button type="button" size="icon" variant="ghost" className="h-5 w-5"
-                        onClick={() => setDiaCount(dateKey, n + 1)}>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-5 w-5"
+                        onClick={() => setDiaCount(dateKey, n + 1)}
+                      >
                         <Plus className="size-3" />
                       </Button>
                     </div>
@@ -1543,13 +1810,15 @@ function ItemRow({
             {selecionados.length > 0
               ? `${selecionados.length} dia(s) marcado(s) · `
               : `Selecione as datas no calendário · `}
-            <strong>{t.totalInsercoes}</strong> inserções · <strong>{t.valorNegociado > 0 ? formatBRL(t.valorNegociado) : "Bonificação"}</strong>
+            <strong>{t.totalInsercoes}</strong> inserções ·{" "}
+            <strong>{t.valorNegociado > 0 ? formatBRL(t.valorNegociado) : "Bonificação"}</strong>
           </p>
         </div>
       ) : (
         <div className="space-y-2">
           <p className="text-[11px] text-muted-foreground">
-            <strong>{t.totalInsercoes}</strong> inserções · <strong>{t.valorNegociado > 0 ? formatBRL(t.valorNegociado) : "Bonificação"}</strong>
+            <strong>{t.totalInsercoes}</strong> inserções ·{" "}
+            <strong>{t.valorNegociado > 0 ? formatBRL(t.valorNegociado) : "Bonificação"}</strong>
           </p>
         </div>
       )}
@@ -1560,8 +1829,18 @@ function ItemRow({
 const DOW_LABEL = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function CalendarioDias({
-  mes, ano, contagem, onToggle, isDayAllowed,
-}: { mes: number; ano: number; contagem: Record<string, number>; onToggle: (d: number) => void; isDayAllowed?: (d: number) => boolean }) {
+  mes,
+  ano,
+  contagem,
+  onToggle,
+  isDayAllowed,
+}: {
+  mes: number;
+  ano: number;
+  contagem: Record<string, number>;
+  onToggle: (d: number) => void;
+  isDayAllowed?: (d: number) => boolean;
+}) {
   const diasNoMes = new Date(ano, mes, 0).getDate();
   const primeiroDow = new Date(ano, mes - 1, 1).getDay();
   const hoje = new Date();
@@ -1572,7 +1851,10 @@ function CalendarioDias({
     <div className="rounded-lg border bg-background p-2">
       <div className="grid grid-cols-7 gap-1 mb-1">
         {DOW_LABEL.map((d) => (
-          <div key={d} className="text-[10px] uppercase tracking-wide text-muted-foreground text-center font-medium py-1">
+          <div
+            key={d}
+            className="text-[10px] uppercase tracking-wide text-muted-foreground text-center font-medium py-1"
+          >
             {d}
           </div>
         ))}
@@ -1596,17 +1878,21 @@ function CalendarioDias({
               disabled={!allowed && !active}
               title={!allowed ? "Dia não permitido pela configuração do produto" : undefined}
               className={`h-12 rounded border text-xs font-medium transition-colors flex flex-col items-center justify-center gap-0.5 relative
-                ${active
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : !allowed
-                  ? "bg-muted/20 border-dashed text-muted-foreground/50 cursor-not-allowed opacity-50"
-                  : fimDeSemana
-                  ? "bg-muted/40 hover:bg-muted border-border text-muted-foreground"
-                  : "bg-background hover:bg-muted border-border"}
+                ${
+                  active
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : !allowed
+                      ? "bg-muted/20 border-dashed text-muted-foreground/50 cursor-not-allowed opacity-50"
+                      : fimDeSemana
+                        ? "bg-muted/40 hover:bg-muted border-border text-muted-foreground"
+                        : "bg-background hover:bg-muted border-border"
+                }
                 ${eHoje(d) && !active ? "ring-1 ring-primary/60" : ""}`}
             >
               <span className="text-sm font-semibold leading-none">{d}</span>
-              <span className={`text-[9px] uppercase leading-none ${active ? "opacity-90" : "opacity-60"}`}>
+              <span
+                className={`text-[9px] uppercase leading-none ${active ? "opacity-90" : "opacity-60"}`}
+              >
                 {DOW_LABEL[dow]}
               </span>
               {active && n > 1 && (
@@ -1623,12 +1909,24 @@ function CalendarioDias({
 }
 
 function SummaryItem({
-  label, value, highlight, muted,
-}: { label: string; value: string; highlight?: boolean; muted?: boolean }) {
+  label,
+  value,
+  highlight,
+  muted,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+  muted?: boolean;
+}) {
   return (
-    <div className={`rounded-lg border p-3 ${highlight ? "bg-primary/10 border-primary/30" : "bg-muted/30"}`}>
+    <div
+      className={`rounded-lg border p-3 ${highlight ? "bg-primary/10 border-primary/30" : "bg-muted/30"}`}
+    >
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-display font-semibold ${highlight ? "text-primary text-xl" : muted ? "text-muted-foreground text-lg" : "text-lg"}`}>
+      <div
+        className={`mt-1 font-display font-semibold ${highlight ? "text-primary text-xl" : muted ? "text-muted-foreground text-lg" : "text-lg"}`}
+      >
         {value}
       </div>
     </div>
@@ -1654,7 +1952,10 @@ function DuplicateMonthsPopover({
     let a = baseAno;
     for (let i = 0; i < 12; i++) {
       m += 1;
-      if (m > 12) { m = 1; a += 1; }
+      if (m > 12) {
+        m = 1;
+        a += 1;
+      }
       arr.push({ mes: m, ano: a, key: `${a}-${m}`, label: `${MESES[m - 1]}/${a}` });
     }
     return arr;
@@ -1687,7 +1988,9 @@ function DuplicateMonthsPopover({
           <button
             type="button"
             className="text-[11px] text-primary hover:underline"
-            onClick={() => toggleAll(Object.values(selected).filter(Boolean).length !== options.length)}
+            onClick={() =>
+              toggleAll(Object.values(selected).filter(Boolean).length !== options.length)
+            }
           >
             {Object.values(selected).filter(Boolean).length === options.length ? "Limpar" : "Todos"}
           </button>
@@ -1710,4 +2013,3 @@ function DuplicateMonthsPopover({
     </Popover>
   );
 }
-

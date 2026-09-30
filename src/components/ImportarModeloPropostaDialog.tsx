@@ -42,7 +42,11 @@ import {
   type SlideTemplateItem,
   type MapeamentoTemplateConfig,
 } from "@/lib/layouts.functions";
-import { uploadSlideImage, extrairSlidesDePdf, blobToDataUrl } from "@/lib/proposta-template-import";
+import {
+  uploadSlideImage,
+  extrairSlidesDePdf,
+  blobToDataUrl,
+} from "@/lib/proposta-template-import";
 
 type Props = {
   open: boolean;
@@ -197,7 +201,9 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
   };
 
   const removerSlide = (index: number) => {
-    const filtrados = slides.filter((_, idx) => idx !== index).map((s, idx) => ({ ...s, index: idx }));
+    const filtrados = slides
+      .filter((_, idx) => idx !== index)
+      .map((s, idx) => ({ ...s, index: idx }));
     setSlides(filtrados);
   };
 
@@ -205,13 +211,15 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
     const atualizados = slides.map((s, idx) => {
       if (idx === index) return { ...s, tipo };
       if (tipo === "capa" && s.tipo === "capa") return { ...s, tipo: "conteudo" as const };
-      if (tipo === "tabela_produtos" && s.tipo === "tabela_produtos") return { ...s, tipo: "conteudo" as const };
+      if (tipo === "tabela_produtos" && s.tipo === "tabela_produtos")
+        return { ...s, tipo: "conteudo" as const };
       return s;
     });
     setSlides(atualizados);
 
     if (tipo === "capa") setMapeamento((prev) => ({ ...prev, slideCapaIndex: index }));
-    if (tipo === "tabela_produtos") setMapeamento((prev) => ({ ...prev, slideProdutosIndex: index }));
+    if (tipo === "tabela_produtos")
+      setMapeamento((prev) => ({ ...prev, slideProdutosIndex: index }));
   };
 
   // Mutação para salvar layout no banco
@@ -268,8 +276,8 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
             <DialogTitle className="text-xl">Modelo Próprio de Proposta da Empresa</DialogTitle>
           </div>
           <DialogDescription>
-            Importe o PDF ou imagens dos slides da sua empresa e aponte onde serão inseridos a Capa, os Produtos e os
-            Valores.
+            Importe o PDF ou imagens dos slides da sua empresa e aponte onde serão inseridos a Capa,
+            os Produtos e os Valores.
           </DialogDescription>
         </DialogHeader>
 
@@ -287,7 +295,9 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
             <div className="flex items-center justify-between p-2 rounded-lg border bg-background">
               <div className="space-y-0.5">
                 <Label className="text-xs font-semibold">Modelo Padrão</Label>
-                <p className="text-[10px] text-muted-foreground">Usar automaticamente em novas propostas</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Usar automaticamente em novas propostas
+                </p>
               </div>
               <Switch checked={isDefault} onCheckedChange={setIsDefault} />
             </div>
@@ -299,11 +309,19 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                 <Layers className="size-3.5" />
                 1. Slides Importados ({slides.length})
               </TabsTrigger>
-              <TabsTrigger value="mapeamento" disabled={slides.length === 0} className="gap-1.5 text-xs">
+              <TabsTrigger
+                value="mapeamento"
+                disabled={slides.length === 0}
+                className="gap-1.5 text-xs"
+              >
                 <TableIcon className="size-3.5" />
                 2. Onde Entram os Produtos
               </TabsTrigger>
-              <TabsTrigger value="estilo" disabled={slides.length === 0} className="gap-1.5 text-xs">
+              <TabsTrigger
+                value="estilo"
+                disabled={slides.length === 0}
+                className="gap-1.5 text-xs"
+              >
                 <Palette className="size-3.5" />
                 3. Capa & Estilo Visual
               </TabsTrigger>
@@ -337,18 +355,22 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                     Clique para selecionar sua Apresentação em PDF ou Imagens dos Slides
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Formatos aceitos: <strong>PDF com múltiplas páginas</strong> ou imagens <strong>PNG, JPG, WEBP</strong> (16:9 widescreen recomendado).
+                    Formatos aceitos: <strong>PDF com múltiplas páginas</strong> ou imagens{" "}
+                    <strong>PNG, JPG, WEBP</strong> (16:9 widescreen recomendado).
                   </p>
                 </div>
                 {statusProgresso && (
-                  <p className="text-xs font-medium text-primary animate-pulse">{statusProgresso}</p>
+                  <p className="text-xs font-medium text-primary animate-pulse">
+                    {statusProgresso}
+                  </p>
                 )}
               </div>
 
               {/* Lista dos Slides Carregados */}
               {slides.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-xs">
-                  Nenhum slide importado ainda. Selecione um PDF de apresentação ou as imagens dos slides acima.
+                  Nenhum slide importado ainda. Selecione um PDF de apresentação ou as imagens dos
+                  slides acima.
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -369,23 +391,34 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                             isProdutos
                               ? "border-primary shadow-md bg-primary/5"
                               : isCapa
-                              ? "border-amber-500 shadow-md bg-amber-50/20"
-                              : "border-muted hover:border-muted-foreground/30"
+                                ? "border-amber-500 shadow-md bg-amber-50/20"
+                                : "border-muted hover:border-muted-foreground/30"
                           }`}
                         >
                           <div className="relative aspect-video bg-slate-900 overflow-hidden group">
-                            <img src={s.imageUrl} alt={s.titulo} className="w-full h-full object-cover" />
+                            <img
+                              src={s.imageUrl}
+                              alt={s.titulo}
+                              className="w-full h-full object-cover"
+                            />
                             <div className="absolute top-1.5 left-1.5">
-                              <Badge variant="secondary" className="bg-black/70 text-white text-[10px] backdrop-blur-xs">
+                              <Badge
+                                variant="secondary"
+                                className="bg-black/70 text-white text-[10px] backdrop-blur-xs"
+                              >
                                 Slide #{idx + 1}
                               </Badge>
                             </div>
                             <div className="absolute top-1.5 right-1.5 flex gap-1">
                               {isCapa && (
-                                <Badge className="bg-amber-500 text-white text-[10px]">📌 Capa</Badge>
+                                <Badge className="bg-amber-500 text-white text-[10px]">
+                                  📌 Capa
+                                </Badge>
                               )}
                               {isProdutos && (
-                                <Badge className="bg-primary text-white text-[10px]">📊 Produtos & Valores</Badge>
+                                <Badge className="bg-primary text-white text-[10px]">
+                                  📊 Produtos & Valores
+                                </Badge>
                               )}
                             </div>
                           </div>
@@ -461,7 +494,9 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                 {/* Painel de Controles */}
                 <div className="md:col-span-2 space-y-4">
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold">Qual slide receberá os Produtos e Valores?</Label>
+                    <Label className="text-xs font-semibold">
+                      Qual slide receberá os Produtos e Valores?
+                    </Label>
                     <select
                       className="w-full h-9 rounded-md border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                       value={mapeamento.slideProdutosIndex}
@@ -479,7 +514,8 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                       ))}
                     </select>
                     <p className="text-[11px] text-muted-foreground">
-                      Neste slide, o sistema desenhará a tabela comercial com os programas, inserções, descontos e valores.
+                      Neste slide, o sistema desenhará a tabela comercial com os programas,
+                      inserções, descontos e valores.
                     </p>
                   </div>
 
@@ -493,7 +529,9 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-xs">
                         <span>Início da Tabela (Topo):</span>
-                        <span className="font-semibold">{mapeamento.tabela.margemSuperiorPct}% do topo</span>
+                        <span className="font-semibold">
+                          {mapeamento.tabela.margemSuperiorPct}% do topo
+                        </span>
                       </div>
                       <Slider
                         value={[mapeamento.tabela.margemSuperiorPct]}
@@ -515,7 +553,9 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-xs">
                         <span>Margens Laterais (Esquerda/Direita):</span>
-                        <span className="font-semibold">{mapeamento.tabela.margemEsquerdaPct}%</span>
+                        <span className="font-semibold">
+                          {mapeamento.tabela.margemEsquerdaPct}%
+                        </span>
                       </div>
                       <Slider
                         value={[mapeamento.tabela.margemEsquerdaPct]}
@@ -538,7 +578,9 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-xs">
                         <span>Itens Máximos por Slide:</span>
-                        <span className="font-semibold">{mapeamento.tabela.itensPorSlide} linhas</span>
+                        <span className="font-semibold">
+                          {mapeamento.tabela.itensPorSlide} linhas
+                        </span>
                       </div>
                       <Slider
                         value={[mapeamento.tabela.itensPorSlide]}
@@ -553,7 +595,8 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                         }
                       />
                       <p className="text-[10px] text-muted-foreground">
-                        Se a proposta tiver mais itens, o sistema gerará automaticamente slides de continuação.
+                        Se a proposta tiver mais itens, o sistema gerará automaticamente slides de
+                        continuação.
                       </p>
                     </div>
                   </div>
@@ -597,7 +640,9 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                             }
                             className="size-7 rounded cursor-pointer border"
                           />
-                          <span className="text-xs font-mono">{mapeamento.tabela.corLinhaDestaque}</span>
+                          <span className="text-xs font-mono">
+                            {mapeamento.tabela.corLinhaDestaque}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -669,7 +714,8 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
                     </div>
                   </div>
                   <p className="text-[11px] text-muted-foreground text-center">
-                    A área delimitada acima representa o espaço exato onde o Mídia.OS renderizará os produtos da proposta.
+                    A área delimitada acima representa o espaço exato onde o Mídia.OS renderizará os
+                    produtos da proposta.
                   </p>
                 </div>
               </div>
@@ -796,7 +842,11 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
             onClick={() => saveMut.mutate()}
             className="gap-1.5 shadow-sm"
           >
-            {saveMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+            {saveMut.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
             Salvar Modelo da Empresa
           </Button>
         </DialogFooter>

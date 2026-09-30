@@ -34,7 +34,15 @@ function norm(v: unknown): string {
 
 type Hit = {
   id: string;
-  group: "Clientes" | "Agências" | "Pedidos de Inserção" | "Propostas" | "Produtos" | "Projetos" | "Tarefas" | "Briefings";
+  group:
+    | "Clientes"
+    | "Agências"
+    | "Pedidos de Inserção"
+    | "Propostas"
+    | "Produtos"
+    | "Projetos"
+    | "Tarefas"
+    | "Briefings";
   icon: React.ReactNode;
   title: string;
   subtitle?: string | null;
@@ -59,14 +67,46 @@ export function GlobalSearch() {
   const fetchBriefings = useServerFn(listBriefings);
 
   const qOpts = { staleTime: 60_000, enabled: open || q.length > 0 } as const;
-  const { data: clientes = [] } = useQuery({ queryKey: ["gs-clientes"], queryFn: () => fetchClientes(), ...qOpts });
-  const { data: agencias = [] } = useQuery({ queryKey: ["gs-agencias"], queryFn: () => fetchAgencias(), ...qOpts });
-  const { data: pis = [] } = useQuery({ queryKey: ["gs-pis"], queryFn: () => fetchPis(), ...qOpts });
-  const { data: propostas = [] } = useQuery({ queryKey: ["gs-propostas"], queryFn: () => fetchPropostas(), ...qOpts });
-  const { data: produtos = [] } = useQuery({ queryKey: ["gs-produtos"], queryFn: () => fetchProdutos(), ...qOpts });
-  const { data: projetos = [] } = useQuery({ queryKey: ["gs-projetos"], queryFn: () => fetchProjetos(), ...qOpts });
-  const { data: tarefas = [] } = useQuery({ queryKey: ["gs-tarefas"], queryFn: () => fetchTarefas(), ...qOpts });
-  const { data: briefings = [] } = useQuery({ queryKey: ["gs-briefings"], queryFn: () => fetchBriefings(), ...qOpts });
+  const { data: clientes = [] } = useQuery({
+    queryKey: ["gs-clientes"],
+    queryFn: () => fetchClientes(),
+    ...qOpts,
+  });
+  const { data: agencias = [] } = useQuery({
+    queryKey: ["gs-agencias"],
+    queryFn: () => fetchAgencias(),
+    ...qOpts,
+  });
+  const { data: pis = [] } = useQuery({
+    queryKey: ["gs-pis"],
+    queryFn: () => fetchPis(),
+    ...qOpts,
+  });
+  const { data: propostas = [] } = useQuery({
+    queryKey: ["gs-propostas"],
+    queryFn: () => fetchPropostas(),
+    ...qOpts,
+  });
+  const { data: produtos = [] } = useQuery({
+    queryKey: ["gs-produtos"],
+    queryFn: () => fetchProdutos(),
+    ...qOpts,
+  });
+  const { data: projetos = [] } = useQuery({
+    queryKey: ["gs-projetos"],
+    queryFn: () => fetchProjetos(),
+    ...qOpts,
+  });
+  const { data: tarefas = [] } = useQuery({
+    queryKey: ["gs-tarefas"],
+    queryFn: () => fetchTarefas(),
+    ...qOpts,
+  });
+  const { data: briefings = [] } = useQuery({
+    queryKey: ["gs-briefings"],
+    queryFn: () => fetchBriefings(),
+    ...qOpts,
+  });
 
   // Close on outside click
   useEffect(() => {
@@ -100,7 +140,7 @@ export function GlobalSearch() {
     };
 
     const out: Hit[] = [];
-    for (const c of (clientes as any[])) {
+    for (const c of clientes as any[]) {
       if (matchAll(c.razao_social, c.nome_fantasia, c.apelido, c.cnpj, c.cidade, c.uf)) {
         out.push({
           id: `cli-${c.id}`,
@@ -112,7 +152,7 @@ export function GlobalSearch() {
         });
       }
     }
-    for (const a of (agencias as any[])) {
+    for (const a of agencias as any[]) {
       if (matchAll(a.razao_social, a.nome_fantasia, a.apelido, a.cnpj, a.cidade, a.uf)) {
         out.push({
           id: `ag-${a.id}`,
@@ -124,7 +164,7 @@ export function GlobalSearch() {
         });
       }
     }
-    for (const p of (pis as any[])) {
+    for (const p of pis as any[]) {
       if (
         matchAll(
           p.numero,
@@ -140,12 +180,13 @@ export function GlobalSearch() {
           group: "Pedidos de Inserção",
           icon: <FileText className="size-4" />,
           title: `PI ${p.numero ?? "—"}${p.campanha ? ` — ${p.campanha}` : ""}`,
-          subtitle: p.cliente?.razao_social ?? p.cliente?.nome_fantasia ?? p.agencia?.razao_social ?? null,
+          subtitle:
+            p.cliente?.razao_social ?? p.cliente?.nome_fantasia ?? p.agencia?.razao_social ?? null,
           to: "/pi",
         });
       }
     }
-    for (const pr of (propostas as any[])) {
+    for (const pr of propostas as any[]) {
       if (
         matchAll(
           pr.numero,
@@ -161,13 +202,17 @@ export function GlobalSearch() {
           id: `pr-${pr.id}`,
           group: "Propostas",
           icon: <FileSignature className="size-4" />,
-          title: `Proposta ${pr.numero ?? "—"}${pr.campanha ?? pr.titulo ? ` — ${pr.campanha ?? pr.titulo}` : ""}`,
-          subtitle: pr.cliente?.razao_social ?? pr.cliente?.nome_fantasia ?? pr.agencia?.razao_social ?? null,
+          title: `Proposta ${pr.numero ?? "—"}${(pr.campanha ?? pr.titulo) ? ` — ${pr.campanha ?? pr.titulo}` : ""}`,
+          subtitle:
+            pr.cliente?.razao_social ??
+            pr.cliente?.nome_fantasia ??
+            pr.agencia?.razao_social ??
+            null,
           to: "/propostas",
         });
       }
     }
-    for (const p of (produtos as any[])) {
+    for (const p of produtos as any[]) {
       if (matchAll(p.nome, p.tipo, p.programa, p.formato, p.faixa)) {
         out.push({
           id: `prod-${p.id}`,
@@ -179,7 +224,7 @@ export function GlobalSearch() {
         });
       }
     }
-    for (const p of (projetos as any[])) {
+    for (const p of projetos as any[]) {
       if (matchAll(p.nome, p.descricao, p.status)) {
         out.push({
           id: `prj-${p.id}`,
@@ -191,7 +236,7 @@ export function GlobalSearch() {
         });
       }
     }
-    for (const t of (tarefas as any[])) {
+    for (const t of tarefas as any[]) {
       if (matchAll(t.titulo, t.descricao, t.status, t.prioridade)) {
         out.push({
           id: `tf-${t.id}`,
@@ -203,7 +248,7 @@ export function GlobalSearch() {
         });
       }
     }
-    for (const b of (briefings as any[])) {
+    for (const b of briefings as any[]) {
       if (matchAll(b.razao_social, b.nome_fantasia, b.campanha, b.cnpj, b.email, b.responsavel)) {
         out.push({
           id: `bf-${b.id}`,
@@ -274,7 +319,9 @@ export function GlobalSearch() {
       {open && q.trim() && (
         <div className="absolute left-0 right-0 top-full mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-[60vh] overflow-auto">
           {flat.length === 0 ? (
-            <div className="px-3 py-4 text-sm text-muted-foreground">Nenhum resultado para “{q}”.</div>
+            <div className="px-3 py-4 text-sm text-muted-foreground">
+              Nenhum resultado para “{q}”.
+            </div>
           ) : (
             <div className="py-1">
               {Object.entries(grouped).map(([group, items]) => (
@@ -306,7 +353,9 @@ export function GlobalSearch() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">{title}</div>
+      <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+        {title}
+      </div>
       {children}
     </div>
   );
@@ -340,7 +389,9 @@ function Row({
       <span className="text-muted-foreground">{icon}</span>
       <span className="flex-1 min-w-0">
         <span className="block text-sm truncate">{title}</span>
-        {subtitle && <span className="block text-xs text-muted-foreground truncate">{subtitle}</span>}
+        {subtitle && (
+          <span className="block text-xs text-muted-foreground truncate">{subtitle}</span>
+        )}
       </span>
     </button>
   );

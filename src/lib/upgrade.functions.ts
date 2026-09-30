@@ -74,7 +74,11 @@ export const ativarPlanoUpgrade = createServerFn({ method: "POST" })
     if (eUpd) throw new Error(eUpd.message);
 
     // 5) Promove: remove role 'teste' e garante 'admin'
-    await supabaseAdmin.from("user_roles").delete().eq("user_id", context.userId).eq("role", "teste");
+    await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", context.userId)
+      .eq("role", "teste");
     await supabaseAdmin
       .from("user_roles")
       .upsert({ user_id: context.userId, role: "admin" }, { onConflict: "user_id,role" });

@@ -2,8 +2,14 @@
 type SupabaseClient = {
   from: (t: string) => {
     select: (s: string) => {
-      eq: (c: string, v: string) => {
-        in: (c: string, v: string[]) => Promise<{ data: { role: string }[] | null; error: { message: string } | null }>;
+      eq: (
+        c: string,
+        v: string,
+      ) => {
+        in: (
+          c: string,
+          v: string[],
+        ) => Promise<{ data: { role: string }[] | null; error: { message: string } | null }>;
       };
     };
   };
@@ -14,7 +20,7 @@ export async function assertAnyRole(
   userId: string,
   allowed: string[],
 ): Promise<void> {
-  const { data: userAuth } = await supabase.auth?.getUser?.() ?? { data: null };
+  const { data: userAuth } = (await supabase.auth?.getUser?.()) ?? { data: null };
   if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
     return;
   }

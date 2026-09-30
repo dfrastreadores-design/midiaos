@@ -27,9 +27,15 @@ export async function getMyTenantLogoDataUrl(): Promise<string | null> {
   try {
     const b = await getMyTenantBranding();
     const path = b?.logo_url;
-    if (!path) { cache = { value: null, at: Date.now() }; return null; }
+    if (!path) {
+      cache = { value: null, at: Date.now() };
+      return null;
+    }
     const signed = await getLogoSignedUrl(path);
-    if (!signed) { cache = { value: null, at: Date.now() }; return null; }
+    if (!signed) {
+      cache = { value: null, at: Date.now() };
+      return null;
+    }
     const data = await urlToDataUrl(signed);
     cache = { value: data, at: Date.now() };
     return data;

@@ -17,22 +17,23 @@ export const listMetas = createServerFn({ method: "GET" })
     z.object({ ano: z.number().int(), mes: z.number().int().min(1).max(12) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const [{ data: metas, error: mErr }, { data: execs, error: eErr }, { data: roles, error: rErr }] =
-      await Promise.all([
-        context.supabase
-          .from("metas_executivo")
-          .select("*")
-          .eq("ano", data.ano)
-          .eq("mes", data.mes),
-        context.supabase.from("profiles").select("id, nome, email, ativo"),
-        context.supabase.from("user_roles").select("user_id, role"),
-      ]);
+    const [
+      { data: metas, error: mErr },
+      { data: execs, error: eErr },
+      { data: roles, error: rErr },
+    ] = await Promise.all([
+      context.supabase.from("metas_executivo").select("*").eq("ano", data.ano).eq("mes", data.mes),
+      context.supabase.from("profiles").select("id, nome, email, ativo"),
+      context.supabase.from("user_roles").select("user_id, role"),
+    ]);
     if (mErr) throw new Error(mErr.message);
     if (eErr) throw new Error(eErr.message);
     if (rErr) throw new Error(rErr.message);
 
     const execIds = new Set(
-      (roles ?? []).filter((r) => r.role === "executivo" || r.role === "admin").map((r) => r.user_id),
+      (roles ?? [])
+        .filter((r) => r.role === "executivo" || r.role === "admin")
+        .map((r) => r.user_id),
     );
     const executivos = (execs ?? []).filter((p) => execIds.has(p.id) && p.ativo);
     const metaByUser = new Map((metas ?? []).map((m) => [m.executivo_id, m]));

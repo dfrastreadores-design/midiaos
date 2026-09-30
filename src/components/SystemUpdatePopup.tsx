@@ -2,10 +2,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { listAnnouncementsAtivos, type SystemAnnouncement } from "@/lib/system-announcements.functions";
+import {
+  listAnnouncementsAtivos,
+  type SystemAnnouncement,
+} from "@/lib/system-announcements.functions";
 import { useAuth } from "@/hooks/use-auth";
 
 const STORAGE_PREFIX = "system-announcements-vistos-v2:";
@@ -61,7 +71,10 @@ export function SystemUpdatePopup() {
     if (naoVistos.length === 0) return;
     shownRef.current = true;
     // Persist immediately so remounts / other tabs won't reopen the same items.
-    marcarVistos(user.id, naoVistos.map((a) => a.id));
+    marcarVistos(
+      user.id,
+      naoVistos.map((a) => a.id),
+    );
     setVistosVersion((v) => v + 1);
     setAgrupados(naoVistos);
     setOpen(true);
@@ -69,7 +82,10 @@ export function SystemUpdatePopup() {
 
   const fechar = () => {
     if (agrupados.length > 0) {
-      marcarVistos(user?.id, agrupados.map((a) => a.id));
+      marcarVistos(
+        user?.id,
+        agrupados.map((a) => a.id),
+      );
       setVistosVersion((version) => version + 1);
     }
     setOpen(false);
@@ -96,19 +112,29 @@ export function SystemUpdatePopup() {
   const versoes = Array.from(new Set(agrupados.map((a) => a.versao).filter(Boolean))) as string[];
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) fechar(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) fechar();
+      }}
+    >
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-3xl" aria-hidden>{principal.emoji || "✨"}</span>
+            <span className="text-3xl" aria-hidden>
+              {principal.emoji || "✨"}
+            </span>
             {multiplas ? (
               <Badge variant="secondary">{agrupados.length} novidades</Badge>
             ) : (
               principal.versao && <Badge variant="secondary">v{principal.versao}</Badge>
             )}
-            {multiplas && versoes.slice(0, 3).map((v) => (
-              <Badge key={v} variant="outline">v{v}</Badge>
-            ))}
+            {multiplas &&
+              versoes.slice(0, 3).map((v) => (
+                <Badge key={v} variant="outline">
+                  v{v}
+                </Badge>
+              ))}
           </div>
           <DialogTitle className="text-xl">
             {multiplas ? "Você tem novidades no sistema" : principal.titulo}
@@ -121,9 +147,15 @@ export function SystemUpdatePopup() {
                   {agrupados.map((a) => (
                     <div key={a.id} className="border-l-2 border-primary/40 pl-3">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg" aria-hidden>{a.emoji || "✨"}</span>
+                        <span className="text-lg" aria-hidden>
+                          {a.emoji || "✨"}
+                        </span>
                         <span className="font-medium text-foreground">{a.titulo}</span>
-                        {a.versao && <Badge variant="outline" className="text-xs">v{a.versao}</Badge>}
+                        {a.versao && (
+                          <Badge variant="outline" className="text-xs">
+                            v{a.versao}
+                          </Badge>
+                        )}
                       </div>
                       <div className="whitespace-pre-wrap">{a.mensagem}</div>
                     </div>
@@ -143,7 +175,9 @@ export function SystemUpdatePopup() {
             <Sparkles className="h-3.5 w-3.5 mr-1" />
             {multiplas ? "Novidades do sistema" : "Novidade do sistema"}
           </div>
-          <Button variant="ghost" onClick={naoMostrarNovamente}>Não mostrar novamente</Button>
+          <Button variant="ghost" onClick={naoMostrarNovamente}>
+            Não mostrar novamente
+          </Button>
           <Button onClick={fechar}>Entendi, obrigado!</Button>
         </DialogFooter>
       </DialogContent>

@@ -33,7 +33,10 @@ export function PropostaAnexosSection({ propostaId }: { propostaId?: string | nu
   const remove = useMutation({
     mutationFn: async (row: any) => {
       await supabase.storage.from("proposta-anexos").remove([row.arquivo_path]);
-      const { error } = await supabase.from("proposta_anexos" as any).delete().eq("id", row.id);
+      const { error } = await supabase
+        .from("proposta_anexos" as any)
+        .delete()
+        .eq("id", row.id);
       if (error) throw error;
     },
     onSuccess: () => {

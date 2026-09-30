@@ -1,22 +1,46 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  ArrowRight, BarChart3, FileSignature, Users, Briefcase, DollarSign,
-  Calendar, Shield, Zap, CheckCircle2, Radio, Tv, Globe, Newspaper,
-  TrendingUp, FileText, Bell, Star,
+  ArrowRight,
+  BarChart3,
+  FileSignature,
+  Users,
+  Briefcase,
+  DollarSign,
+  Calendar,
+  Shield,
+  Zap,
+  CheckCircle2,
+  Radio,
+  Tv,
+  Globe,
+  Newspaper,
+  TrendingUp,
+  FileText,
+  Bell,
+  Star,
 } from "lucide-react";
 
 export const Route = createFileRoute("/site/")({
   head: () => ({
     meta: [
       { title: "Mídia.OS — Aumente o Faturamento do seu Veículo de Comunicação" },
-      { name: "description", content: "Sistema comercial completo para TVs, rádios, portais e OOH. CRM, Proposta Automática e PI Digital. Teste grátis por 48h e profissionalize sua venda de mídia." },
-      { property: "og:title", content: "mídia.OS — Sistema comercial para veículos de comunicação" },
-      { property: "og:description", content: "Do primeiro contato à PI assinada — tudo em uma só plataforma feita para veículos de mídia. Demonstração gratuita." },
+      {
+        name: "description",
+        content:
+          "Sistema comercial completo para TVs, rádios, portais e OOH. CRM, Proposta Automática e PI Digital. Teste grátis por 48h e profissionalize sua venda de mídia.",
+      },
+      {
+        property: "og:title",
+        content: "mídia.OS — Sistema comercial para veículos de comunicação",
+      },
+      {
+        property: "og:description",
+        content:
+          "Do primeiro contato à PI assinada — tudo em uma só plataforma feita para veículos de mídia. Demonstração gratuita.",
+      },
       { property: "og:url", content: "https://midiaos.online/site" },
     ],
-    links: [
-      { rel: "canonical", href: "https://midiaos.online/site" },
-    ],
+    links: [{ rel: "canonical", href: "https://midiaos.online/site" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -26,7 +50,8 @@ export const Route = createFileRoute("/site/")({
           name: "mídia.OS",
           applicationCategory: "BusinessApplication",
           operatingSystem: "Web",
-          description: "Plataforma SaaS de gestão comercial para veículos de comunicação: CRM, propostas, PI digital, briefings e financeiro.",
+          description:
+            "Plataforma SaaS de gestão comercial para veículos de comunicação: CRM, propostas, PI digital, briefings e financeiro.",
           url: "https://midiaos.online/site",
           offers: {
             "@type": "AggregateOffer",
@@ -60,12 +85,30 @@ export const Route = createFileRoute("/site/")({
 });
 
 const faqData = [
-  { q: "O mídia.OS atende emissoras de TV, rádios e portais?", a: "Sim. A plataforma foi desenhada para qualquer veículo de comunicação — TVs, rádios, portais web e mídia OOH/DOOH — com configuração por tipo de produto, grade e veículo." },
-  { q: "Quanto tempo leva para começar a usar?", a: "A implantação padrão acontece em até 7 dias úteis e inclui configuração inicial, importação de dados básicos e treinamento da equipe." },
-  { q: "Posso migrar PIs antigas em PDF?", a: "Sim. Basta arrastar o PDF para o módulo de PI — a inteligência artificial extrai cliente, produtos, períodos e valores automaticamente." },
-  { q: "A assinatura eletrônica das propostas tem validade jurídica?", a: "Sim. Toda proposta enviada gera link de assinatura eletrônica com timestamp, IP e log de acesso, válido conforme a MP 2.200-2/2001." },
-  { q: "Quanto custa o mídia.OS?", a: "Os planos começam em R$ 250/mês (até 2 usuários) e vão até planos Enterprise sob consulta para grupos de mídia multi-veículo. Veja todos os planos na página de Preços." },
-  { q: "Funciona para grupos com vários veículos?", a: "Sim. O sistema é multi-veículo e multi-tenant — você roda TV, rádio e portal na mesma conta, com identidade visual e relatórios separados ou consolidados." },
+  {
+    q: "O mídia.OS atende emissoras de TV, rádios e portais?",
+    a: "Sim. A plataforma foi desenhada para qualquer veículo de comunicação — TVs, rádios, portais web e mídia OOH/DOOH — com configuração por tipo de produto, grade e veículo.",
+  },
+  {
+    q: "Quanto tempo leva para começar a usar?",
+    a: "A implantação padrão acontece em até 7 dias úteis e inclui configuração inicial, importação de dados básicos e treinamento da equipe.",
+  },
+  {
+    q: "Posso migrar PIs antigas em PDF?",
+    a: "Sim. Basta arrastar o PDF para o módulo de PI — a inteligência artificial extrai cliente, produtos, períodos e valores automaticamente.",
+  },
+  {
+    q: "A assinatura eletrônica das propostas tem validade jurídica?",
+    a: "Sim. Toda proposta enviada gera link de assinatura eletrônica com timestamp, IP e log de acesso, válido conforme a MP 2.200-2/2001.",
+  },
+  {
+    q: "Quanto custa o mídia.OS?",
+    a: "Os planos começam em R$ 250/mês (até 2 usuários) e vão até planos Enterprise sob consulta para grupos de mídia multi-veículo. Veja todos os planos na página de Preços.",
+  },
+  {
+    q: "Funciona para grupos com vários veículos?",
+    a: "Sim. O sistema é multi-veículo e multi-tenant — você roda TV, rádio e portal na mesma conta, com identidade visual e relatórios separados ou consolidados.",
+  },
 ];
 
 function Home() {
@@ -87,7 +130,9 @@ function Home() {
                 <span className="midia-grad-text">em menos tempo.</span>
               </h1>
               <p className="mt-6 text-lg lg:text-xl text-[var(--m-muted)] max-w-2xl leading-relaxed">
-                A plataforma tudo-em-um para veículos de comunicação que querem escalar o faturamento. CRM, propostas automáticas, PI digital e dashboards financeiros feitos sob medida.
+                A plataforma tudo-em-um para veículos de comunicação que querem escalar o
+                faturamento. CRM, propostas automáticas, PI digital e dashboards financeiros feitos
+                sob medida.
               </p>
               <div className="mt-10 flex flex-wrap gap-3">
                 <a
@@ -106,9 +151,15 @@ function Home() {
                 </Link>
               </div>
               <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-sm text-[var(--m-muted)]">
-                <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Implantação em até 7 dias</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Treinamento incluso</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-indigo-400" /> Suporte em português</div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-indigo-400" /> Implantação em até 7 dias
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-indigo-400" /> Treinamento incluso
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-indigo-400" /> Suporte em português
+                </div>
               </div>
             </div>
             <div className="lg:col-span-5">
@@ -145,7 +196,8 @@ function Home() {
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-4xl lg:text-5xl font-bold">Aumente sua produtividade comercial</h2>
           <p className="mt-4 text-lg text-[var(--m-muted)]">
-            Elimine processos manuais e foque no que importa: fechar negócios. O Mídia.OS organiza toda sua jornada de venda.
+            Elimine processos manuais e foque no que importa: fechar negócios. O Mídia.OS organiza
+            toda sua jornada de venda.
           </p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -165,7 +217,9 @@ function Home() {
       <section className="bg-gradient-to-b from-transparent via-[#0d0d24] to-transparent py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">Demonstração</span>
+            <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
+              Demonstração
+            </span>
             <h2 className="text-4xl lg:text-5xl font-bold mt-3">Veja a plataforma em ação</h2>
           </div>
           <div className="grid lg:grid-cols-3 gap-5">
@@ -192,12 +246,15 @@ function Home() {
       <section className="mx-auto max-w-7xl px-6 py-24">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">Integrações</span>
+            <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
+              Integrações
+            </span>
             <h2 className="text-4xl lg:text-5xl font-bold mt-3">
               Conectado ao seu <span className="midia-grad-text">ecossistema</span>
             </h2>
             <p className="mt-4 text-lg text-[var(--m-muted)]">
-              O mídia.OS se conecta às ferramentas que sua emissora já usa — sem fricção, sem retrabalho.
+              O mídia.OS se conecta às ferramentas que sua emissora já usa — sem fricção, sem
+              retrabalho.
             </p>
             <ul className="mt-6 space-y-3">
               {[
@@ -215,8 +272,21 @@ function Home() {
             </ul>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {["Receita Federal", "Google", "Stripe", "OpenAI", "Resend", "WhatsApp", "PowerPoint", "Excel", "PDF"].map((n) => (
-              <div key={n} className="midia-card aspect-square flex items-center justify-center p-4 text-center text-sm text-[var(--m-muted)]">
+            {[
+              "Receita Federal",
+              "Google",
+              "Stripe",
+              "OpenAI",
+              "Resend",
+              "WhatsApp",
+              "PowerPoint",
+              "Excel",
+              "PDF",
+            ].map((n) => (
+              <div
+                key={n}
+                className="midia-card aspect-square flex items-center justify-center p-4 text-center text-sm text-[var(--m-muted)]"
+              >
                 {n}
               </div>
             ))}
@@ -228,7 +298,9 @@ function Home() {
       <section className="bg-[#0d0d24]/50 border-y border-[var(--m-border)] py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">Depoimentos</span>
+            <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
+              Depoimentos
+            </span>
             <h2 className="text-4xl lg:text-5xl font-bold mt-3">Quem usa, recomenda</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
@@ -271,7 +343,9 @@ function Home() {
       {/* FAQ */}
       <section className="mx-auto max-w-3xl px-6 py-24">
         <div className="text-center mb-12">
-          <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">FAQ</span>
+          <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
+            FAQ
+          </span>
           <h2 className="mt-3 text-4xl lg:text-5xl font-bold">Perguntas frequentes</h2>
           <p className="mt-4 text-[var(--m-muted)]">As dúvidas que ouvimos antes de toda demo.</p>
         </div>
@@ -323,33 +397,84 @@ function Home() {
 }
 
 const features = [
-  { icon: Users, title: "CRM com pipeline visual", desc: "Acompanhe oportunidades por estágio, executivo e cliente, com automações de follow-up." },
-  { icon: FileText, title: "Propostas em minutos", desc: "Tabela de preços por produto, descontos automáticos e exportação em PDF/PPTX da sua marca." },
-  { icon: FileSignature, title: "PI digital com assinatura", desc: "Gere pedidos de inserção, envie por e-mail e colete assinatura eletrônica em um clique." },
-  { icon: Briefcase, title: "Briefings & Projetos", desc: "Captura de briefing comercial estruturado e gestão de projetos especiais por veículo." },
-  { icon: Calendar, title: "Programação & Permuta", desc: "Controle de grade, permutas comerciais e calendário compartilhado da equipe." },
-  { icon: DollarSign, title: "Financeiro & Comissões", desc: "Faturamento, comissionamento de executivos, metas e relatórios mensais consolidados." },
-  { icon: BarChart3, title: "Dashboards e Relatórios", desc: "Receita por veículo, cliente, agência e produto — com filtros e exportação." },
-  { icon: TrendingUp, title: "Metas & Gamificação", desc: "Metas individuais e por equipe, ranking e acompanhamento em tempo real." },
-  { icon: Shield, title: "Permissões por perfil", desc: "Adm, comercial, produção, financeiro — cada perfil vê só o que precisa." },
-  { icon: Bell, title: "Notificações inteligentes", desc: "Alertas de tarefas, propostas vencendo e novas PIs aprovadas." },
-  { icon: Zap, title: "Importação por IA", desc: "Recebeu uma PI em PDF? A plataforma extrai os dados automaticamente." },
-  { icon: Globe, title: "100% nuvem", desc: "Acesse de qualquer lugar, em qualquer dispositivo, com segurança corporativa." },
+  {
+    icon: Users,
+    title: "CRM com pipeline visual",
+    desc: "Acompanhe oportunidades por estágio, executivo e cliente, com automações de follow-up.",
+  },
+  {
+    icon: FileText,
+    title: "Propostas em minutos",
+    desc: "Tabela de preços por produto, descontos automáticos e exportação em PDF/PPTX da sua marca.",
+  },
+  {
+    icon: FileSignature,
+    title: "PI digital com assinatura",
+    desc: "Gere pedidos de inserção, envie por e-mail e colete assinatura eletrônica em um clique.",
+  },
+  {
+    icon: Briefcase,
+    title: "Briefings & Projetos",
+    desc: "Captura de briefing comercial estruturado e gestão de projetos especiais por veículo.",
+  },
+  {
+    icon: Calendar,
+    title: "Programação & Permuta",
+    desc: "Controle de grade, permutas comerciais e calendário compartilhado da equipe.",
+  },
+  {
+    icon: DollarSign,
+    title: "Financeiro & Comissões",
+    desc: "Faturamento, comissionamento de executivos, metas e relatórios mensais consolidados.",
+  },
+  {
+    icon: BarChart3,
+    title: "Dashboards e Relatórios",
+    desc: "Receita por veículo, cliente, agência e produto — com filtros e exportação.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Metas & Gamificação",
+    desc: "Metas individuais e por equipe, ranking e acompanhamento em tempo real.",
+  },
+  {
+    icon: Shield,
+    title: "Permissões por perfil",
+    desc: "Adm, comercial, produção, financeiro — cada perfil vê só o que precisa.",
+  },
+  {
+    icon: Bell,
+    title: "Notificações inteligentes",
+    desc: "Alertas de tarefas, propostas vencendo e novas PIs aprovadas.",
+  },
+  {
+    icon: Zap,
+    title: "Importação por IA",
+    desc: "Recebeu uma PI em PDF? A plataforma extrai os dados automaticamente.",
+  },
+  {
+    icon: Globe,
+    title: "100% nuvem",
+    desc: "Acesse de qualquer lugar, em qualquer dispositivo, com segurança corporativa.",
+  },
 ];
 
 const testimonials = [
   {
-    quote: "O Mídia.OS revolucionou nossa OPEC. O que levava horas para conferir e emitir agora é feito em minutos com total segurança.",
+    quote:
+      "O Mídia.OS revolucionou nossa OPEC. O que levava horas para conferir e emitir agora é feito em minutos com total segurança.",
     author: "Diretoria Comercial",
     role: "Rede de Emissoras Afiliadas",
   },
   {
-    quote: "Pela primeira vez consigo ver o pipeline inteiro em um único lugar. Os dashboards mudaram a forma como decidimos.",
+    quote:
+      "Pela primeira vez consigo ver o pipeline inteiro em um único lugar. Os dashboards mudaram a forma como decidimos.",
     author: "Diretor de Vendas",
     role: "Grupo de Mídia Regional",
   },
   {
-    quote: "Implantação rápida e suporte que entende o negócio de mídia. Não é mais um CRM genérico — é feito pra gente.",
+    quote:
+      "Implantação rápida e suporte que entende o negócio de mídia. Não é mais um CRM genérico — é feito pra gente.",
     author: "Coordenadora Comercial",
     role: "Emissora Afiliada",
   },
@@ -368,7 +493,9 @@ function HeroMockup() {
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs text-[var(--m-muted)]">
             <span className="font-medium text-white">Dashboard — Junho 2026</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">+18%</span>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
+              +18%
+            </span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -377,7 +504,9 @@ function HeroMockup() {
               { l: "PIs Ativas", v: "23" },
             ].map((k) => (
               <div key={k.l} className="rounded-lg bg-white/5 border border-[var(--m-border)] p-3">
-                <div className="text-[10px] uppercase tracking-wider text-[var(--m-muted)]">{k.l}</div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--m-muted)]">
+                  {k.l}
+                </div>
                 <div className="mt-1 text-base font-semibold">{k.v}</div>
               </div>
             ))}
@@ -397,7 +526,10 @@ function HeroMockup() {
               { c: "Caixa Econômica", v: "R$ 92k", s: "Proposta enviada" },
               { c: "Sebrae DF", v: "R$ 68k", s: "PI assinada" },
             ].map((r) => (
-              <div key={r.c} className="flex items-center justify-between text-xs p-2 rounded-md bg-white/5">
+              <div
+                key={r.c}
+                className="flex items-center justify-between text-xs p-2 rounded-md bg-white/5"
+              >
                 <span className="font-medium">{r.c}</span>
                 <span className="text-[var(--m-muted)]">{r.s}</span>
                 <span className="font-semibold text-indigo-300">{r.v}</span>
@@ -410,7 +542,15 @@ function HeroMockup() {
   );
 }
 
-function ScreenshotCard({ title, desc, variant }: { title: string; desc: string; variant: "dashboard" | "proposta" | "pi" }) {
+function ScreenshotCard({
+  title,
+  desc,
+  variant,
+}: {
+  title: string;
+  desc: string;
+  variant: "dashboard" | "proposta" | "pi";
+}) {
   return (
     <div className="midia-card overflow-hidden">
       <div className="h-48 bg-gradient-to-br from-[#1e1e5a] to-[#0a0a1a] relative overflow-hidden">

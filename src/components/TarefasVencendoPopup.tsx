@@ -3,7 +3,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CalendarClock } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listTarefasVencendo } from "@/lib/tarefas.functions";
@@ -13,7 +20,11 @@ const STORAGE_KEY = "tarefas-vencendo-popup-shown";
 
 function isToday(d: Date) {
   const n = new Date();
-  return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  return (
+    d.getFullYear() === n.getFullYear() &&
+    d.getMonth() === n.getMonth() &&
+    d.getDate() === n.getDate()
+  );
 }
 
 export function TarefasVencendoPopup() {
@@ -55,7 +66,10 @@ export function TarefasVencendoPopup() {
             const prazo = t.prazo ? new Date(t.prazo) : null;
             const vencida = prazo ? prazo < new Date() && !isToday(prazo) : false;
             return (
-              <li key={t.id} className="flex items-center justify-between gap-2 rounded-lg border p-2 text-sm">
+              <li
+                key={t.id}
+                className="flex items-center justify-between gap-2 rounded-lg border p-2 text-sm"
+              >
                 <div className="flex items-center gap-2 min-w-0">
                   <CalendarClock className="size-4 text-muted-foreground shrink-0" />
                   <span className="truncate">{t.titulo}</span>
@@ -68,7 +82,9 @@ export function TarefasVencendoPopup() {
           })}
         </ul>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Fechar</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Fechar
+          </Button>
           <Button asChild onClick={() => setOpen(false)}>
             <Link to="/tarefas">Ver tarefas</Link>
           </Button>

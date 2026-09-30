@@ -27,7 +27,10 @@ export function sanitizeMessage(message: string | null | undefined): string {
   // Remove caracteres de controle exceto quebras de linha e tab
   let m = message.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
   // Colapsa >2 quebras de linha e espaços redundantes
-  m = m.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  m = m
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
   if (m.length > WHATSAPP_MAX_MESSAGE) m = m.slice(0, WHATSAPP_MAX_MESSAGE - 1) + "…";
   return m;
 }
@@ -38,7 +41,9 @@ export function buildWhatsappUrl(phone: string, message: string): string {
   const msg = sanitizeMessage(message);
   const text = encodeURIComponent(msg);
   if (p && !isValidWhatsappPhone(p)) {
-    throw new Error("Telefone inválido para WhatsApp. Informe com DDD (10 ou 11 dígitos) ou no formato internacional.");
+    throw new Error(
+      "Telefone inválido para WhatsApp. Informe com DDD (10 ou 11 dígitos) ou no formato internacional.",
+    );
   }
   return p ? `https://wa.me/${p}?text=${text}` : `https://wa.me/?text=${text}`;
 }
@@ -65,7 +70,9 @@ export async function uploadPdfSigned(
     cacheControl: "3600",
   });
   if (upErr) throw upErr;
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresInSeconds);
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, expiresInSeconds);
   if (error || !data?.signedUrl) throw error ?? new Error("Falha ao gerar URL assinada");
   return data.signedUrl;
 }

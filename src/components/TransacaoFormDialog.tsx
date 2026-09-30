@@ -1,12 +1,24 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -31,17 +43,18 @@ type Props = {
   tipoPadrao?: TipoTransacao;
 };
 
-export function TransacaoFormDialog({
-  open,
-  onOpenChange,
-  initial,
-  tipoPadrao = "saida",
-}: Props) {
+export function TransacaoFormDialog({ open, onOpenChange, initial, tipoPadrao = "saida" }: Props) {
   const qc = useQueryClient();
   const upsertFn = useServerFn(upsertTransacaoFinanceira);
 
-  const { data: clientes = [] } = useQuery({ queryKey: ["clientes"], queryFn: () => listClientes() });
-  const { data: parceiros = [] } = useQuery({ queryKey: ["parceiros"], queryFn: () => listParceiros() });
+  const { data: clientes = [] } = useQuery({
+    queryKey: ["clientes"],
+    queryFn: () => listClientes(),
+  });
+  const { data: parceiros = [] } = useQuery({
+    queryKey: ["parceiros"],
+    queryFn: () => listParceiros(),
+  });
   const { data: pis = [] } = useQuery({ queryKey: ["pis-select"], queryFn: () => listPis() });
 
   const [form, setForm] = useState<Partial<TransacaoFinanceira>>({
@@ -133,8 +146,8 @@ export function TransacaoFormDialog({
                 {form.id
                   ? "Editar Lançamento Financeiro"
                   : form.tipo === "entrada"
-                  ? "Nova Entrada (Receita)"
-                  : "Nova Saída (Despesa)"}
+                    ? "Nova Entrada (Receita)"
+                    : "Nova Saída (Despesa)"}
               </DialogTitle>
             </div>
           </div>
@@ -144,7 +157,8 @@ export function TransacaoFormDialog({
           onSubmit={(e) => {
             e.preventDefault();
             if (!form.descricao?.trim()) return toast.error("Informe a descrição");
-            if (!form.valor || form.valor <= 0) return toast.error("Informe um valor maior que zero");
+            if (!form.valor || form.valor <= 0)
+              return toast.error("Informe um valor maior que zero");
             saveMut.mutate(form);
           }}
           className="space-y-4 pt-1"
@@ -303,10 +317,26 @@ export function TransacaoFormDialog({
             <Label>Status do Pagamento</Label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { s: "pendente", label: "Pendente", color: "border-amber-500/40 text-amber-700 bg-amber-50/50" },
-                { s: "pago", label: "Pago / Liquidado", color: "border-emerald-500/40 text-emerald-700 bg-emerald-50/50" },
-                { s: "agendado", label: "Agendado", color: "border-blue-500/40 text-blue-700 bg-blue-50/50" },
-                { s: "cancelado", label: "Cancelado", color: "border-slate-300 text-slate-500 bg-slate-50" },
+                {
+                  s: "pendente",
+                  label: "Pendente",
+                  color: "border-amber-500/40 text-amber-700 bg-amber-50/50",
+                },
+                {
+                  s: "pago",
+                  label: "Pago / Liquidado",
+                  color: "border-emerald-500/40 text-emerald-700 bg-emerald-50/50",
+                },
+                {
+                  s: "agendado",
+                  label: "Agendado",
+                  color: "border-blue-500/40 text-blue-700 bg-blue-50/50",
+                },
+                {
+                  s: "cancelado",
+                  label: "Cancelado",
+                  color: "border-slate-300 text-slate-500 bg-slate-50",
+                },
               ].map(({ s, label, color }) => (
                 <button
                   key={s}
@@ -314,6 +344,7 @@ export function TransacaoFormDialog({
                   onClick={() => {
                     const st = s as StatusTransacao;
                     const patch: Partial<TransacaoFinanceira> = { status: st };
+
                     if (st === "pago" && !form.data_pagamento) {
                       patch.data_pagamento = new Date().toISOString().split("T")[0];
                     }
@@ -377,6 +408,23 @@ export function TransacaoFormDialog({
                 </Select>
               </div>
             </div>
+
+            <div className="pt-2 mt-2 border-t border-muted">
+              <Label className="text-xs flex items-center gap-2">
+                Nota Fiscal / Documento Comprobatório (URL)
+              </Label>
+              <Input
+                placeholder="Ex.: https://link-para-a-nota-fiscal.pdf"
+                value={form.comprovante_url ?? ""}
+                onChange={(e) => {
+                  set({ comprovante_url: e.target.value });
+                }}
+                className="text-xs mt-1"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1 leading-tight">
+                Cole o link da Nota Fiscal ou do documento comprobatório emitido pelo Parceiro.
+              </p>
+            </div>
           </div>
 
           {/* Observações */}
@@ -398,7 +446,11 @@ export function TransacaoFormDialog({
             <Button
               type="submit"
               disabled={saveMut.isPending}
-              className={form.tipo === "entrada" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"}
+              className={
+                form.tipo === "entrada"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : "bg-rose-600 hover:bg-rose-700"
+              }
             >
               {saveMut.isPending ? (
                 <>

@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -48,7 +55,9 @@ export function RecusarPropostaDialog({ propostaId, numero, open, onOpenChange }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Cliente não tem interesse{numero ? ` — Proposta ${numero}` : ""}</DialogTitle>
+          <DialogTitle>
+            Cliente não tem interesse{numero ? ` — Proposta ${numero}` : ""}
+          </DialogTitle>
           <DialogDescription>
             Registre o motivo para acompanhamento comercial. A proposta será marcada como Recusada.
           </DialogDescription>
@@ -88,7 +97,9 @@ export function RecusarPropostaDialog({ propostaId, numero, open, onOpenChange }
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button
             variant="destructive"
             disabled={mutation.isPending}

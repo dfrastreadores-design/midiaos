@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,7 +54,13 @@ const DEFAULT_CONFIG: LayoutConfig = {
   },
 };
 
-export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function LayoutManagerDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const qc = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("Novo Layout");
@@ -61,9 +74,10 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
   });
 
   const save = useMutation({
-    mutationFn: () => upsertProposalLayout({
-      data: { id: editingId || undefined, name, config, is_default: isDefault }
-    }),
+    mutationFn: () =>
+      upsertProposalLayout({
+        data: { id: editingId || undefined, name, config, is_default: isDefault },
+      }),
     onSuccess: () => {
       toast.success("Layout salvo com sucesso!");
       qc.invalidateQueries({ queryKey: ["proposal_layouts"] });
@@ -95,13 +109,23 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
           <div className="space-y-4 border-r pr-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold">Modelos Salvos</h3>
-              <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setConfig(DEFAULT_CONFIG); setName("Novo Layout"); }}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditingId(null);
+                  setConfig(DEFAULT_CONFIG);
+                  setName("Novo Layout");
+                }}
+              >
                 Novo
               </Button>
             </div>
             <div className="space-y-2">
               {isLoading ? (
-                <div className="flex justify-center p-4"><Loader2 className="size-4 animate-spin" /></div>
+                <div className="flex justify-center p-4">
+                  <Loader2 className="size-4 animate-spin" />
+                </div>
               ) : layouts.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">Nenhum modelo salvo.</p>
               ) : (
@@ -109,10 +133,12 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
                   <button
                     key={l.id}
                     onClick={() => startEdit(l)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${editingId === l.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${editingId === l.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                   >
                     <div className="font-medium truncate">{l.name}</div>
-                    {l.is_default && <span className="text-[10px] opacity-70">Padrão do Sistema</span>}
+                    {l.is_default && (
+                      <span className="text-[10px] opacity-70">Padrão do Sistema</span>
+                    )}
                   </button>
                 ))
               )}
@@ -123,11 +149,13 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome do Modelo</Label>
-                <Input value={name} onChange={e => setName(e.target.value)} />
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div className="flex items-end pb-2 gap-2">
                 <Switch checked={isDefault} onCheckedChange={setIsDefault} />
-                <Label className="cursor-pointer" onClick={() => setIsDefault(!isDefault)}>Definir como padrão</Label>
+                <Label className="cursor-pointer" onClick={() => setIsDefault(!isDefault)}>
+                  Definir como padrão
+                </Label>
               </div>
             </div>
 
@@ -146,15 +174,51 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
                     <div className="space-y-2">
                       <Label>Cor Primária</Label>
                       <div className="flex gap-2">
-                        <Input type="color" className="w-12 p-1 h-10" value={config.colors.primary} onChange={e => setConfig({...config, colors: {...config.colors, primary: e.target.value}})} />
-                        <Input value={config.colors.primary} onChange={e => setConfig({...config, colors: {...config.colors, primary: e.target.value}})} />
+                        <Input
+                          type="color"
+                          className="w-12 p-1 h-10"
+                          value={config.colors.primary}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              colors: { ...config.colors, primary: e.target.value },
+                            })
+                          }
+                        />
+                        <Input
+                          value={config.colors.primary}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              colors: { ...config.colors, primary: e.target.value },
+                            })
+                          }
+                        />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Cor Secundária</Label>
                       <div className="flex gap-2">
-                        <Input type="color" className="w-12 p-1 h-10" value={config.colors.secondary} onChange={e => setConfig({...config, colors: {...config.colors, secondary: e.target.value}})} />
-                        <Input value={config.colors.secondary} onChange={e => setConfig({...config, colors: {...config.colors, secondary: e.target.value}})} />
+                        <Input
+                          type="color"
+                          className="w-12 p-1 h-10"
+                          value={config.colors.secondary}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              colors: { ...config.colors, secondary: e.target.value },
+                            })
+                          }
+                        />
+                        <Input
+                          value={config.colors.secondary}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              colors: { ...config.colors, secondary: e.target.value },
+                            })
+                          }
+                        />
                       </div>
                     </div>
                   </div>
@@ -168,7 +232,15 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
                         <Label>Tamanho da Fonte (Base)</Label>
                         <span className="text-xs font-mono">{config.font.baseSize}pt</span>
                       </div>
-                      <Slider value={[config.font.baseSize]} min={8} max={14} step={0.5} onValueChange={([v]) => setConfig({...config, font: {...config.font, baseSize: v}})} />
+                      <Slider
+                        value={[config.font.baseSize]}
+                        min={8}
+                        max={14}
+                        step={0.5}
+                        onValueChange={([v]) =>
+                          setConfig({ ...config, font: { ...config.font, baseSize: v } })
+                        }
+                      />
                     </div>
                   </div>
                 </div>
@@ -177,11 +249,21 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
                   <h4 className="text-sm font-medium border-b pb-1">Opções de Exibição</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
-                      <Switch checked={config.options.showIaSummary} onCheckedChange={v => setConfig({...config, options: {...config.options, showIaSummary: v}})} />
+                      <Switch
+                        checked={config.options.showIaSummary}
+                        onCheckedChange={(v) =>
+                          setConfig({ ...config, options: { ...config.options, showIaSummary: v } })
+                        }
+                      />
                       <Label>Resumo da IA</Label>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Switch checked={config.options.compactTable} onCheckedChange={v => setConfig({...config, options: {...config.options, compactTable: v}})} />
+                      <Switch
+                        checked={config.options.compactTable}
+                        onCheckedChange={(v) =>
+                          setConfig({ ...config, options: { ...config.options, compactTable: v } })
+                        }
+                      />
                       <Label>Tabela Compacta</Label>
                     </div>
                   </div>
@@ -190,21 +272,30 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
 
               <TabsContent value="preview" className="pt-4">
                 <div className="border rounded-lg p-4 bg-slate-50 min-h-[300px] flex flex-col gap-4 overflow-hidden shadow-inner">
-                  <div className="h-10 rounded shadow-sm flex items-center px-4 text-white text-xs font-bold" style={{ backgroundColor: config.colors.primary }}>
+                  <div
+                    className="h-10 rounded shadow-sm flex items-center px-4 text-white text-xs font-bold"
+                    style={{ backgroundColor: config.colors.primary }}
+                  >
                     LOGO / HEADER
                   </div>
                   <div className="flex-1 bg-white rounded shadow-sm p-4 space-y-4">
-                    <div className="h-4 w-1/2 rounded" style={{ backgroundColor: config.colors.secondary, opacity: 0.2 }}></div>
+                    <div
+                      className="h-4 w-1/2 rounded"
+                      style={{ backgroundColor: config.colors.secondary, opacity: 0.2 }}
+                    ></div>
                     <div className="space-y-2">
                       <div className="h-2 w-full bg-slate-100 rounded"></div>
                       <div className="h-2 w-full bg-slate-100 rounded"></div>
                       <div className="h-2 w-3/4 bg-slate-100 rounded"></div>
                     </div>
                     <div className="mt-4 border rounded overflow-hidden">
-                       <div className="h-8 flex items-center px-2 text-[8px] text-white" style={{ backgroundColor: config.colors.primary }}>
-                         TABELA DE ITENS
-                       </div>
-                       <div className="h-20 bg-white"></div>
+                      <div
+                        className="h-8 flex items-center px-2 text-[8px] text-white"
+                        style={{ backgroundColor: config.colors.primary }}
+                      >
+                        TABELA DE ITENS
+                      </div>
+                      <div className="h-20 bg-white"></div>
                     </div>
                   </div>
                 </div>
@@ -214,9 +305,15 @@ export function LayoutManagerDialog({ open, onOpenChange }: { open: boolean; onO
         </div>
 
         <DialogFooter className="border-t pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
           <Button disabled={save.isPending} onClick={() => save.mutate()}>
-            {save.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
+            {save.isPending ? (
+              <Loader2 className="size-4 animate-spin mr-2" />
+            ) : (
+              <Save className="size-4 mr-2" />
+            )}
             {editingId ? "Atualizar Modelo" : "Salvar como Novo"}
           </Button>
         </DialogFooter>

@@ -9,7 +9,7 @@ const BUCKET = "proposta-templates";
 export async function uploadSlideImage(
   fileOrBlob: File | Blob,
   templateId: string,
-  index: number
+  index: number,
 ): Promise<string> {
   const ext = "jpg";
   const path = `templates/${templateId}/slide-${index + 1}-${Date.now()}.${ext}`;
@@ -49,7 +49,7 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
  */
 export async function extrairSlidesDePdf(
   pdfFile: File,
-  onProgress?: (atual: number, total: number) => void
+  onProgress?: (atual: number, total: number) => void,
 ): Promise<Array<{ index: number; dataUrl: string; blob: Blob }>> {
   const buf = await pdfFile.arrayBuffer();
 
@@ -77,7 +77,9 @@ export async function extrairSlidesDePdf(
     await page.render({ canvasContext: ctx, viewport, canvas }).promise;
 
     const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9));
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.9),
+    );
 
     slides.push({
       index: i - 1,

@@ -2,25 +2,68 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export type PlataformaSocial = 
-  | "instagram" 
-  | "facebook" 
-  | "tiktok" 
-  | "linkedin" 
-  | "youtube" 
-  | "meta_ads" 
-  | "google_ads" 
+export type PlataformaSocial =
+  | "instagram"
+  | "facebook"
+  | "tiktok"
+  | "linkedin"
+  | "youtube"
+  | "meta_ads"
+  | "google_ads"
   | "twitter";
 
-export const PLATAFORMAS_CONFIG: Record<PlataformaSocial, { nome: string; cor: string; bg: string; icon: string }> = {
-  instagram: { nome: "Instagram", cor: "#E1306C", bg: "bg-pink-500/10 text-pink-600 border-pink-200 dark:border-pink-900/50", icon: "Instagram" },
-  facebook: { nome: "Facebook", cor: "#1877F2", bg: "bg-blue-600/10 text-blue-600 border-blue-200 dark:border-blue-900/50", icon: "Facebook" },
-  tiktok: { nome: "TikTok", cor: "#000000", bg: "bg-slate-900/10 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-800", icon: "Video" },
-  linkedin: { nome: "LinkedIn", cor: "#0A66C2", bg: "bg-sky-600/10 text-sky-600 border-sky-200 dark:border-sky-900/50", icon: "Linkedin" },
-  youtube: { nome: "YouTube", cor: "#FF0000", bg: "bg-red-600/10 text-red-600 border-red-200 dark:border-red-900/50", icon: "Youtube" },
-  meta_ads: { nome: "Meta Ads (Tráfego)", cor: "#0081FB", bg: "bg-indigo-600/10 text-indigo-600 border-indigo-200 dark:border-indigo-900/50", icon: "Target" },
-  google_ads: { nome: "Google Ads (Tráfego)", cor: "#4285F4", bg: "bg-emerald-600/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50", icon: "TrendingUp" },
-  twitter: { nome: "X / Twitter", cor: "#1DA1F2", bg: "bg-neutral-800/10 text-neutral-800 dark:text-neutral-200 border-neutral-300", icon: "Twitter" },
+export const PLATAFORMAS_CONFIG: Record<
+  PlataformaSocial,
+  { nome: string; cor: string; bg: string; icon: string }
+> = {
+  instagram: {
+    nome: "Instagram",
+    cor: "#E1306C",
+    bg: "bg-pink-500/10 text-pink-600 border-pink-200 dark:border-pink-900/50",
+    icon: "Instagram",
+  },
+  facebook: {
+    nome: "Facebook",
+    cor: "#1877F2",
+    bg: "bg-blue-600/10 text-blue-600 border-blue-200 dark:border-blue-900/50",
+    icon: "Facebook",
+  },
+  tiktok: {
+    nome: "TikTok",
+    cor: "#000000",
+    bg: "bg-slate-900/10 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-800",
+    icon: "Video",
+  },
+  linkedin: {
+    nome: "LinkedIn",
+    cor: "#0A66C2",
+    bg: "bg-sky-600/10 text-sky-600 border-sky-200 dark:border-sky-900/50",
+    icon: "Linkedin",
+  },
+  youtube: {
+    nome: "YouTube",
+    cor: "#FF0000",
+    bg: "bg-red-600/10 text-red-600 border-red-200 dark:border-red-900/50",
+    icon: "Youtube",
+  },
+  meta_ads: {
+    nome: "Meta Ads (Tráfego)",
+    cor: "#0081FB",
+    bg: "bg-indigo-600/10 text-indigo-600 border-indigo-200 dark:border-indigo-900/50",
+    icon: "Target",
+  },
+  google_ads: {
+    nome: "Google Ads (Tráfego)",
+    cor: "#4285F4",
+    bg: "bg-emerald-600/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50",
+    icon: "TrendingUp",
+  },
+  twitter: {
+    nome: "X / Twitter",
+    cor: "#1DA1F2",
+    bg: "bg-neutral-800/10 text-neutral-800 dark:text-neutral-200 border-neutral-300",
+    icon: "Twitter",
+  },
 };
 
 export type SocialConta = {
@@ -83,7 +126,8 @@ const DEFAULT_CONTAS_DEMO: SocialConta[] = [
     plataforma: "instagram",
     nome_conta: "Nexo Mídia & Publicidade",
     username: "@nexomidia.oficial",
-    avatar_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
+    avatar_url:
+      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80",
     seguidores: 34500,
     taxa_engajamento: 4.8,
     status: "conectado",
@@ -94,7 +138,8 @@ const DEFAULT_CONTAS_DEMO: SocialConta[] = [
     plataforma: "meta_ads",
     nome_conta: "Meta Ads — Conta de Anúncios",
     username: "act_492049102",
-    avatar_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=150&auto=format&fit=crop&q=80",
+    avatar_url:
+      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=150&auto=format&fit=crop&q=80",
     seguidores: 0,
     taxa_engajamento: 0,
     status: "conectado",
@@ -105,7 +150,8 @@ const DEFAULT_CONTAS_DEMO: SocialConta[] = [
     plataforma: "linkedin",
     nome_conta: "Nexo Soluções em Mídia B2B",
     username: "company/nexo-midia",
-    avatar_url: "https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=150&auto=format&fit=crop&q=80",
+    avatar_url:
+      "https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=150&auto=format&fit=crop&q=80",
     seguidores: 12800,
     taxa_engajamento: 3.9,
     status: "conectado",
@@ -116,7 +162,8 @@ const DEFAULT_CONTAS_DEMO: SocialConta[] = [
     plataforma: "tiktok",
     nome_conta: "Nexo Mídia Criativa",
     username: "@nexomidia",
-    avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    avatar_url:
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
     seguidores: 58200,
     taxa_engajamento: 7.2,
     status: "conectado",
@@ -127,7 +174,8 @@ const DEFAULT_CONTAS_DEMO: SocialConta[] = [
     plataforma: "facebook",
     nome_conta: "Nexo Mídia Fanpage",
     username: "/nexomidiabr",
-    avatar_url: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=150&auto=format&fit=crop&q=80",
+    avatar_url:
+      "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=150&auto=format&fit=crop&q=80",
     seguidores: 19400,
     taxa_engajamento: 2.7,
     status: "conectado",
@@ -142,9 +190,13 @@ const DEFAULT_POSTS_DEMO: SocialPost[] = [
     plataformas: ["instagram", "facebook"],
     formato: "reels",
     titulo: "3 Erros que Destroem o ROI da Sua Empresa em Anúncios",
-    conteudo: "Você está investindo em tráfego pago mas as vendas não sobem? 🛑\n\nNeste vídeo rápido, mostramos os 3 principais erros na segmentação de público e como pequenos ajustes de criativo dobram seu retorno.\n\nComente 'ANÁLISE' para receber nosso checklist gratuito.",
-    hashtags: "#TrafegoPago #MarketingDigital #SocialMedia #GestorDeTrafego #ROI #VendasOnline #NexoMidia",
-    midia_urls: ["https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80"],
+    conteudo:
+      "Você está investindo em tráfego pago mas as vendas não sobem? 🛑\n\nNeste vídeo rápido, mostramos os 3 principais erros na segmentação de público e como pequenos ajustes de criativo dobram seu retorno.\n\nComente 'ANÁLISE' para receber nosso checklist gratuito.",
+    hashtags:
+      "#TrafegoPago #MarketingDigital #SocialMedia #GestorDeTrafego #ROI #VendasOnline #NexoMidia",
+    midia_urls: [
+      "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop&q=80",
+    ],
     status: "agendado",
     data_agendamento: new Date(Date.now() + 1000 * 60 * 60 * 6).toISOString(), // hoje daqui 6h
     tipo_anuncio: false,
@@ -163,9 +215,12 @@ const DEFAULT_POSTS_DEMO: SocialPost[] = [
     plataformas: ["meta_ads"],
     formato: "anuncio",
     titulo: "Campanha Black November — Captação de Leads Qualificados",
-    conteudo: "Maximize o alcance da sua marca com a estrutura integrada da Nexo Mídia. Conectamos sua empresa a milhares de clientes no digital e no DOOH.\n\nSolicite uma proposta personalizada agora mesmo!",
+    conteudo:
+      "Maximize o alcance da sua marca com a estrutura integrada da Nexo Mídia. Conectamos sua empresa a milhares de clientes no digital e no DOOH.\n\nSolicite uma proposta personalizada agora mesmo!",
     hashtags: "",
-    midia_urls: ["https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80"],
+    midia_urls: [
+      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80",
+    ],
     status: "publicado",
     data_publicacao: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
     tipo_anuncio: true,
@@ -192,7 +247,8 @@ const DEFAULT_POSTS_DEMO: SocialPost[] = [
     plataformas: ["linkedin"],
     formato: "carrossel",
     titulo: "O Futuro da Mídia Omnichannel: Como Unir DOOH e Tráfego Pago",
-    conteudo: "A jornada do consumidor contemporâneo não é puramente física nem exclusivamente online.\n\nQuando um cliente visualiza um painel digital na rua e é impactado por um anúncio sincronizado no celular, a taxa de conversão aumenta em até 380%.\n\nArraste para o lado para ver o estudo de caso completo ➡️",
+    conteudo:
+      "A jornada do consumidor contemporâneo não é puramente física nem exclusivamente online.\n\nQuando um cliente visualiza um painel digital na rua e é impactado por um anúncio sincronizado no celular, a taxa de conversão aumenta em até 380%.\n\nArraste para o lado para ver o estudo de caso completo ➡️",
     hashtags: "#Omnichannel #DOOH #MidiaOOH #EstrategiaComercial #MarketingB2B #Branding",
     midia_urls: [
       "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&auto=format&fit=crop&q=80",
@@ -216,9 +272,12 @@ const DEFAULT_POSTS_DEMO: SocialPost[] = [
     plataformas: ["tiktok"],
     formato: "reels",
     titulo: "Tour Bastidores: Como Subimos uma Campanha em 5 Minutos",
-    conteudo: "Acompanhe um dia na rotina de criação e veiculação na nossa agência. Do briefing do cliente até a tela na rua e no feed! 🚀⚡",
+    conteudo:
+      "Acompanhe um dia na rotina de criação e veiculação na nossa agência. Do briefing do cliente até a tela na rua e no feed! 🚀⚡",
     hashtags: "#Bastidores #Marketing #AgenciaDePublicidade #JobDoDia #Rotina",
-    midia_urls: ["https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop&q=80"],
+    midia_urls: [
+      "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop&q=80",
+    ],
     status: "rascunho",
     tipo_anuncio: false,
   },
@@ -235,29 +294,45 @@ export const listSocialContas = createServerFn({ method: "GET" })
       .maybeSingle();
     const tenantId = prof?.tenant_id;
 
-    let query = supabase.from("social_contas").select("*");
+    let query = supabase.from("social_contas" as any).select("*");
     if (tenantId) query = query.eq("tenant_id", tenantId);
 
     const { data, error } = await query.order("nome_conta");
     if (error || !data || data.length === 0) {
       return DEFAULT_CONTAS_DEMO;
     }
-    return data as SocialConta[];
+    return data as any as SocialConta[];
   });
 
 export const upsertSocialConta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      id: z.string().optional(),
-      plataforma: z.enum(["instagram", "facebook", "tiktok", "linkedin", "youtube", "meta_ads", "google_ads", "twitter"]),
-      nome_conta: z.string().min(1).max(150),
-      username: z.string().max(100).optional().nullable(),
-      avatar_url: z.string().url().optional().nullable().or(z.literal("").transform(() => null)),
-      seguidores: z.number().int().min(0).default(0),
-      taxa_engajamento: z.number().min(0).max(100).default(0.0),
-      status: z.enum(["conectado", "expirando", "desconectado"]).default("conectado"),
-    }).parse(d)
+    z
+      .object({
+        id: z.string().optional(),
+        plataforma: z.enum([
+          "instagram",
+          "facebook",
+          "tiktok",
+          "linkedin",
+          "youtube",
+          "meta_ads",
+          "google_ads",
+          "twitter",
+        ]),
+        nome_conta: z.string().min(1).max(150),
+        username: z.string().max(100).optional().nullable(),
+        avatar_url: z
+          .string()
+          .url()
+          .optional()
+          .nullable()
+          .or(z.literal("").transform(() => null)),
+        seguidores: z.number().int().min(0).default(0),
+        taxa_engajamento: z.number().min(0).max(100).default(0.0),
+        status: z.enum(["conectado", "expirando", "desconectado"]).default("conectado"),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -275,8 +350,8 @@ export const upsertSocialConta = createServerFn({ method: "POST" })
     };
 
     const q = data.id
-      ? supabase.from("social_contas").update(payload).eq("id", data.id).select().single()
-      : supabase.from("social_contas").insert(payload).select().single();
+      ? supabase.from("social_contas" as any).update(payload).eq("id", data.id).select().single()
+      : supabase.from("social_contas" as any).insert(payload).select().single();
 
     const { data: res, error } = await q;
     if (error) {
@@ -291,7 +366,7 @@ export const deleteSocialConta = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { error } = await supabase.from("social_contas").delete().eq("id", data.id);
+    const { error } = await supabase.from("social_contas" as any).delete().eq("id", data.id);
     if (error) console.warn("Aviso ao desconectar conta:", error.message);
     return { ok: true };
   });
@@ -307,35 +382,42 @@ export const listSocialPosts = createServerFn({ method: "GET" })
       .maybeSingle();
     const tenantId = prof?.tenant_id;
 
-    let query = supabase.from("social_posts").select("*");
+    let query = supabase.from("social_posts" as any).select("*");
     if (tenantId) query = query.eq("tenant_id", tenantId);
 
-    const { data, error } = await query.order("data_agendamento", { ascending: true, nullsFirst: false });
+    const { data, error } = await query.order("data_agendamento", {
+      ascending: true,
+      nullsFirst: false,
+    });
     if (error || !data || data.length === 0) {
       return DEFAULT_POSTS_DEMO;
     }
-    return data as SocialPost[];
+    return data as any as SocialPost[];
   });
 
 export const upsertSocialPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      id: z.string().optional(),
-      cliente_id: z.string().uuid().optional().nullable(),
-      cliente_nome: z.string().optional().nullable(),
-      conta_ids: z.array(z.string()).default([]),
-      plataformas: z.array(z.string()).min(1, "Selecione ao menos uma rede social"),
-      formato: z.enum(["feed", "story", "reels", "carrossel", "anuncio", "artigo"]).default("feed"),
-      titulo: z.string().max(200).optional().nullable(),
-      conteudo: z.string().min(1, "O conteúdo do post não pode ficar vazio"),
-      hashtags: z.string().optional().nullable(),
-      midia_urls: z.array(z.string()).default([]),
-      status: z.enum(["rascunho", "agendado", "publicado", "falhou"]).default("agendado"),
-      data_agendamento: z.string().optional().nullable(),
-      tipo_anuncio: z.boolean().default(false),
-      meta_ads_data: z.record(z.any()).optional().nullable(),
-    }).parse(d)
+    z
+      .object({
+        id: z.string().optional(),
+        cliente_id: z.string().uuid().optional().nullable(),
+        cliente_nome: z.string().optional().nullable(),
+        conta_ids: z.array(z.string()).default([]),
+        plataformas: z.array(z.string()).min(1, "Selecione ao menos uma rede social"),
+        formato: z
+          .enum(["feed", "story", "reels", "carrossel", "anuncio", "artigo"])
+          .default("feed"),
+        titulo: z.string().max(200).optional().nullable(),
+        conteudo: z.string().min(1, "O conteúdo do post não pode ficar vazio"),
+        hashtags: z.string().optional().nullable(),
+        midia_urls: z.array(z.string()).default([]),
+        status: z.enum(["rascunho", "agendado", "publicado", "falhou"]).default("agendado"),
+        data_agendamento: z.string().optional().nullable(),
+        tipo_anuncio: z.boolean().default(false),
+        meta_ads_data: z.record(z.any()).optional().nullable(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -354,8 +436,8 @@ export const upsertSocialPost = createServerFn({ method: "POST" })
     };
 
     const q = data.id
-      ? supabase.from("social_posts").update(payload).eq("id", data.id).select().single()
-      : supabase.from("social_posts").insert(payload).select().single();
+      ? supabase.from("social_posts" as any).update(payload).eq("id", data.id).select().single()
+      : supabase.from("social_posts" as any).insert(payload).select().single();
 
     const { data: res, error } = await q;
     if (error) {
@@ -370,7 +452,7 @@ export const deleteSocialPost = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { error } = await supabase.from("social_posts").delete().eq("id", data.id);
+    const { error } = await supabase.from("social_posts" as any).delete().eq("id", data.id);
     if (error) console.warn("Aviso ao remover post:", error.message);
     return { ok: true };
   });
@@ -387,8 +469,19 @@ export type SocialAnalyticsMetrics = {
   cpc_medio: number;
   cpm_medio: number;
   melhores_horarios: { dia: string; horario: string; engajamento_score: number }[];
-  historico_ultimos_dias: { data: string; alcance: number; engajamento: number; gasto: number; leads: number }[];
-  performance_por_rede: { plataforma: PlataformaSocial; alcance: number; engajamento_pct: number; gasto: number }[];
+  historico_ultimos_dias: {
+    data: string;
+    alcance: number;
+    engajamento: number;
+    gasto: number;
+    leads: number;
+  }[];
+  performance_por_rede: {
+    plataforma: PlataformaSocial;
+    alcance: number;
+    engajamento_pct: number;
+    gasto: number;
+  }[];
 };
 
 export const getSocialAnalytics = createServerFn({ method: "GET" })
@@ -397,13 +490,13 @@ export const getSocialAnalytics = createServerFn({ method: "GET" })
     // Gera dados agregados inteligentes e realistas de tráfego e redes sociais
     const dias = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
     const horarios = ["08:00", "12:00", "15:00", "18:30", "20:00", "21:30"];
-    
+
     const hoje = new Date();
     const historico = Array.from({ length: 14 }).map((_, i) => {
       const d = new Date(hoje);
       d.setDate(d.getDate() - (13 - i));
       const diaStr = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-      const base = 4000 + (i * 350) + Math.floor(Math.random() * 1200);
+      const base = 4000 + i * 350 + Math.floor(Math.random() * 1200);
       const gasto = 150 + Math.floor(Math.random() * 80);
       return {
         data: diaStr,
@@ -424,7 +517,7 @@ export const getSocialAnalytics = createServerFn({ method: "GET" })
       conversoes_leads: 348,
       roas_medio: 4.8,
       cpc_medio: 0.58,
-      cpm_medio: 9.80,
+      cpm_medio: 9.8,
       melhores_horarios: [
         { dia: "Quarta-feira", horario: "18:30 às 20:00", engajamento_score: 96 },
         { dia: "Quinta-feira", horario: "12:00 às 13:30", engajamento_score: 92 },
@@ -447,7 +540,9 @@ export const GerarCopyInputSchema = z.object({
   plataforma: z.enum(["instagram", "facebook", "tiktok", "linkedin", "meta_ads", "google_ads"]),
   formato: z.enum(["feed", "reels", "carrossel", "story", "anuncio_trafego"]).default("feed"),
   objetivo: z.enum(["vendas", "engajamento", "leads", "branding", "educativo"]).default("vendas"),
-  tom_de_voz: z.enum(["persuasivo", "descontraido", "corporativo", "storytelling", "urgencia"]).default("persuasivo"),
+  tom_de_voz: z
+    .enum(["persuasivo", "descontraido", "corporativo", "storytelling", "urgencia"])
+    .default("persuasivo"),
   publico_alvo: z.string().optional().nullable(),
   diferenciais: z.string().optional().nullable(),
 });
@@ -471,7 +566,8 @@ export const gerarCopySocialMediaIA = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => GerarCopyInputSchema.parse(d))
   .handler(async ({ data }): Promise<GerarCopyOutput> => {
-    const apiKey = process.env.LOVABLE_API_KEY || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+    const apiKey =
+      process.env.LOVABLE_API_KEY || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
 
     if (apiKey) {
       try {
@@ -503,7 +599,7 @@ GERE UM JSON COM A SEGUINTE ESTRUTURA:
 }`;
 
         const isLovable = !process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY;
-        const endpoint = isLovable 
+        const endpoint = isLovable
           ? "https://ai.gateway.lovable.dev/v1/chat/completions"
           : "https://api.openai.com/v1/chat/completions";
 
@@ -540,15 +636,20 @@ GERE UM JSON COM A SEGUINTE ESTRUTURA:
 
     // Gerador Heurístico Inteligente (Garante funcionamento mesmo sem chave de API externa)
     const tema = data.tema_ou_produto;
-    const isAds = data.formato === "anuncio_trafego" || data.plataforma === "meta_ads" || data.plataforma === "google_ads";
+    const isAds =
+      data.formato === "anuncio_trafego" ||
+      data.plataforma === "meta_ads" ||
+      data.plataforma === "google_ads";
 
     if (isAds) {
       return {
         titulo: `Descubra Como Multiplicar Seus Resultados com ${tema} 🚀`,
         copy_principal: `Você ainda está perdendo tempo com estratégias que não trazem retorno mensurável?\n\nCom a solução em ${tema}, você escala suas conversões com previsibilidade e controle absoluto sobre o custo por lead.\n\n✅ Estrutura comprovada e testada no mercado.\n✅ Otimização diária de CPA e ROAS.\n✅ Relatórios transparentes em tempo real.\n\nNão deixe para depois o crescimento que sua empresa pode ter hoje.`,
-        chamada_acao: "Clique no botão 'Saiba Mais' e solicite uma demonstração exclusiva com nossos especialistas.",
+        chamada_acao:
+          "Clique no botão 'Saiba Mais' e solicite uma demonstração exclusiva com nossos especialistas.",
         hashtags: "#TrafegoPago #MetaAds #GoogleAds #Performance #VendasB2B #EscalaComercial",
-        ideia_visual: "Criativo estático em formato 1:1 e 9:16 com contraste alto. Imagem de dashboard em crescimento e texto destacado: 'O Fim dos Anúncios Sem Retorno'.",
+        ideia_visual:
+          "Criativo estático em formato 1:1 e 9:16 com contraste alto. Imagem de dashboard em crescimento e texto destacado: 'O Fim dos Anúncios Sem Retorno'.",
         anuncio_variacoes: {
           headlines: [
             `Sua Empresa Precisa Disso: ${tema}`,
@@ -569,6 +670,7 @@ GERE UM JSON COM A SEGUINTE ESTRUTURA:
       copy_principal: `Se você quer se destacar no mercado, precisa entender este princípio fundamental sobre ${tema}.\n\nMuita gente acredita que para crescer basta fazer mais do mesmo. Mas a verdade é que quem tem consistência e estratégia colhe resultados 10x mais rápidos.\n\nSalva este post para consultar depois e compartilha com alguém que precisa ver isso hoje! 🔥`,
       chamada_acao: "Deixe nos comentários: qual é o seu maior desafio hoje em relação a isso?",
       hashtags: "#MarketingDeConteudo #SocialMedia #EstrategiaDigital #DicasDeNegocio #NexoMidia",
-      ideia_visual: "Carrossel educativo de 5 lâminas com design minimalista, tipografia marcante e cores contrastantes com o gancho na primeira lâmina.",
+      ideia_visual:
+        "Carrossel educativo de 5 lâminas com design minimalista, tipografia marcante e cores contrastantes com o gancho na primeira lâmina.",
     };
   });

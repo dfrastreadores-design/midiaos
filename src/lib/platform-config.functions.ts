@@ -33,23 +33,32 @@ export const getPlatformConfig = createServerFn({ method: "GET" })
 export const savePlatformConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      multi_empresa: z.boolean(),
-      cnpj_padrao: z.string().default(""),
-      razao_social_padrao: z.string().default(""),
-    }).parse(d),
+    z
+      .object({
+        multi_empresa: z.boolean(),
+        cnpj_padrao: z.string().default(""),
+        razao_social_padrao: z.string().default(""),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { data: userAuth } = await context.supabase.auth.getUser();
     const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
     if (!isSuper) {
-      const { data: sa, error: eSa } = await context.supabase.rpc("is_super_admin", { _user_id: context.userId });
+      const { data: sa, error: eSa } = await context.supabase.rpc("is_super_admin", {
+        _user_id: context.userId,
+      });
       if (eSa) throw new Error(eSa.message);
-      if (!sa) throw new Error("Apenas o proprietário da plataforma (rafaelrodrigo.as@gmail.com) pode alterar esta configuração.");
+      if (!sa)
+        throw new Error(
+          "Apenas o proprietário da plataforma (rafaelrodrigo.as@gmail.com) pode alterar esta configuração.",
+        );
     }
     const { error } = await context.supabase
       .from("system_settings")
-      .upsert({ key: KEY, value: data, updated_by: context.userId } as never, { onConflict: "key" });
+      .upsert({ key: KEY, value: data, updated_by: context.userId } as never, {
+        onConflict: "key",
+      });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

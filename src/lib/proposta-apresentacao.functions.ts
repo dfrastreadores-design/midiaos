@@ -20,14 +20,16 @@ export const getPropostaCompleta = createServerFn({ method: "POST" })
 export const gerarResumoIA = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      campanha: z.string().min(1).max(300),
-      cliente: z.string().max(300),
-      valor_negociado: z.number(),
-      total_insercoes: z.number().int(),
-      itens_resumo: z.string().max(4000),
-      observacao: z.string().max(2000).nullable().optional(),
-    }).parse(d),
+    z
+      .object({
+        campanha: z.string().min(1).max(300),
+        cliente: z.string().max(300),
+        valor_negociado: z.number(),
+        total_insercoes: z.number().int(),
+        itens_resumo: z.string().max(4000),
+        observacao: z.string().max(2000).nullable().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;

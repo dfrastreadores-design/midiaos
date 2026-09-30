@@ -1,20 +1,48 @@
 import { useState, useRef } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileUp, FileText, Presentation, Loader2, Sparkles, CheckCircle2, AlertCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  FileUp,
+  FileText,
+  Presentation,
+  Loader2,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listClientes } from "@/lib/clientes.functions";
 import { listAgencias } from "@/lib/agencias.functions";
 import { listUsuarios } from "@/lib/usuarios.functions";
 import { upsertProposta } from "@/lib/propostas.functions";
-import { extractDocumentText, parsePropostaDocument, type ParsedPropostaData } from "@/lib/proposta-import-utils";
+import {
+  extractDocumentText,
+  parsePropostaDocument,
+  type ParsedPropostaData,
+} from "@/lib/proposta-import-utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-roles";
@@ -53,11 +81,25 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
   const [executivoId, setExecutivoId] = useState<string>("");
   const [tipoCliente, setTipoCliente] = useState<"cadastrado" | "avulso">("cadastrado");
 
-  const { data: clientes = [] } = useQuery({ queryKey: ["clientes"], queryFn: () => listClientes(), enabled: open });
-  const { data: agencias = [] } = useQuery({ queryKey: ["agencias"], queryFn: () => listAgencias(), enabled: open });
-  const { data: usuarios = [] } = useQuery({ queryKey: ["usuarios"], queryFn: () => listUsuarios(), enabled: open && isAdmin });
+  const { data: clientes = [] } = useQuery({
+    queryKey: ["clientes"],
+    queryFn: () => listClientes(),
+    enabled: open,
+  });
+  const { data: agencias = [] } = useQuery({
+    queryKey: ["agencias"],
+    queryFn: () => listAgencias(),
+    enabled: open,
+  });
+  const { data: usuarios = [] } = useQuery({
+    queryKey: ["usuarios"],
+    queryFn: () => listUsuarios(),
+    enabled: open && isAdmin,
+  });
 
-  const executivos = usuarios.filter((u: any) => u.roles?.includes("executivo") || u.roles?.includes("admin"));
+  const executivos = usuarios.filter(
+    (u: any) => u.roles?.includes("executivo") || u.roles?.includes("admin"),
+  );
 
   // Resetar estado ao fechar
   const handleOpenChange = (newOpen: boolean) => {
@@ -94,10 +136,17 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
     try {
       const extractedText = await extractDocumentText(selectedFile);
       if (!extractedText || extractedText.length < 15) {
-        toast.warning("Pouco texto detectado no documento. Preencha os campos principais manualmente.");
+        toast.warning(
+          "Pouco texto detectado no documento. Preencha os campos principais manualmente.",
+        );
       }
 
-      const parsed = parsePropostaDocument(selectedFile.name, extractedText, clientes as any[], agencias as any[]);
+      const parsed = parsePropostaDocument(
+        selectedFile.name,
+        extractedText,
+        clientes as any[],
+        agencias as any[],
+      );
       setFormData(parsed);
 
       if (parsed.cliente_id) {
@@ -155,7 +204,10 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
         observacao: formData.observacao.trim() || null,
         status: "rascunho" as const,
         valor_tabela: Number(formData.valor_tabela || formData.valor_negociado || 0),
-        valor_desconto: Math.max(0, Number(formData.valor_tabela || 0) - Number(formData.valor_negociado || 0)),
+        valor_desconto: Math.max(
+          0,
+          Number(formData.valor_tabela || 0) - Number(formData.valor_negociado || 0),
+        ),
         valor_negociado: Number(formData.valor_negociado || formData.valor_tabela || 0),
         total_insercoes: 1,
         comissao_pct: 0,
@@ -190,10 +242,12 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
       const ext = file.name.split(".").pop();
       const storagePath = `${propostaId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-      const { error: upErr } = await supabase.storage.from("proposta-anexos").upload(storagePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      const { error: upErr } = await supabase.storage
+        .from("proposta-anexos")
+        .upload(storagePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
       if (upErr) {
         console.warn("Aviso ao fazer upload do anexo:", upErr);
@@ -204,7 +258,11 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
           created_by: user?.id || (result as any)?.created_by,
           arquivo_nome: file.name,
           arquivo_path: storagePath,
-          arquivo_tipo: file.type || (ext === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+          arquivo_tipo:
+            file.type ||
+            (ext === "pdf"
+              ? "application/pdf"
+              : "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
           arquivo_tamanho: file.size,
           descricao: `Proposta comercial importada pelo cliente (${ext?.toUpperCase()})`,
         } as any);
@@ -226,7 +284,8 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
   };
 
   const isPdf = file?.name.toLowerCase().endsWith(".pdf");
-  const isPptx = file?.name.toLowerCase().endsWith(".pptx") || file?.name.toLowerCase().endsWith(".ppt");
+  const isPptx =
+    file?.name.toLowerCase().endsWith(".pptx") || file?.name.toLowerCase().endsWith(".ppt");
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -236,7 +295,9 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
             <FileUp className="size-5 text-primary" /> Importar Proposta do Cliente
           </DialogTitle>
           <DialogDescription>
-            Envie a proposta comercial em formato <strong>PDF</strong> ou <strong>PowerPoint (PPTX)</strong>. Os dados serão lidos automaticamente e o arquivo ficará guardado nos anexos da proposta.
+            Envie a proposta comercial em formato <strong>PDF</strong> ou{" "}
+            <strong>PowerPoint (PPTX)</strong>. Os dados serão lidos automaticamente e o arquivo
+            ficará guardado nos anexos da proposta.
           </DialogDescription>
         </DialogHeader>
 
@@ -258,7 +319,8 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
               <div>
                 <p className="font-semibold text-slate-800">Clique para selecionar o arquivo</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Formatos aceitos: <strong>PDF</strong> (.pdf) ou <strong>PowerPoint</strong> (.pptx, .ppt)
+                  Formatos aceitos: <strong>PDF</strong> (.pdf) ou <strong>PowerPoint</strong>{" "}
+                  (.pptx, .ppt)
                 </p>
               </div>
               <input
@@ -291,7 +353,9 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {(file.size / 1024).toFixed(1)} KB
-                    {isParsing && <span className="ml-2 text-primary font-medium">· Lendo arquivo…</span>}
+                    {isParsing && (
+                      <span className="ml-2 text-primary font-medium">· Lendo arquivo…</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -331,7 +395,11 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
                   onClick={() => setShowRawText(!showRawText)}
                   className="text-xs text-muted-foreground"
                 >
-                  {showRawText ? <ChevronUp className="size-3.5 mr-1" /> : <ChevronDown className="size-3.5 mr-1" />}
+                  {showRawText ? (
+                    <ChevronUp className="size-3.5 mr-1" />
+                  ) : (
+                    <ChevronDown className="size-3.5 mr-1" />
+                  )}
                   {showRawText ? "Ocultar texto extraído" : "Ver texto extraído"}
                 </Button>
               </div>
@@ -351,7 +419,9 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
                       type="button"
                       onClick={() => setTipoCliente("cadastrado")}
                       className={`px-2 py-0.5 rounded ${
-                        tipoCliente === "cadastrado" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground"
+                        tipoCliente === "cadastrado"
+                          ? "bg-primary text-primary-foreground font-semibold"
+                          : "text-muted-foreground"
                       }`}
                     >
                       Cliente Cadastrado
@@ -360,7 +430,9 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
                       type="button"
                       onClick={() => setTipoCliente("avulso")}
                       className={`px-2 py-0.5 rounded ${
-                        tipoCliente === "avulso" ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground"
+                        tipoCliente === "avulso"
+                          ? "bg-primary text-primary-foreground font-semibold"
+                          : "text-muted-foreground"
                       }`}
                     >
                       Cliente Avulso
@@ -371,7 +443,9 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
                 {tipoCliente === "cadastrado" ? (
                   <Select
                     value={formData.cliente_id || "none"}
-                    onValueChange={(val) => setFormData((f) => ({ ...f, cliente_id: val === "none" ? null : val }))}
+                    onValueChange={(val) =>
+                      setFormData((f) => ({ ...f, cliente_id: val === "none" ? null : val }))
+                    }
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue placeholder="Selecione o cliente cadastrado" />
@@ -397,7 +471,9 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
 
               {/* Campanha */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-slate-500">Nome da Campanha *</Label>
+                <Label className="text-xs font-bold uppercase text-slate-500">
+                  Nome da Campanha *
+                </Label>
                 <Input
                   value={formData.campanha}
                   onChange={(e) => setFormData((f) => ({ ...f, campanha: e.target.value }))}
@@ -409,10 +485,14 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Agência */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-slate-500">Agência (opcional)</Label>
+                  <Label className="text-xs font-bold uppercase text-slate-500">
+                    Agência (opcional)
+                  </Label>
                   <Select
                     value={formData.agencia_id || "none"}
-                    onValueChange={(val) => setFormData((f) => ({ ...f, agencia_id: val === "none" ? null : val }))}
+                    onValueChange={(val) =>
+                      setFormData((f) => ({ ...f, agencia_id: val === "none" ? null : val }))
+                    }
                   >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue placeholder="Nenhuma" />
@@ -431,8 +511,13 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
                 {/* Executivo */}
                 {isAdmin && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase text-slate-500">Executivo Responsável</Label>
-                    <Select value={executivoId || "none"} onValueChange={(val) => setExecutivoId(val === "none" ? "" : val)}>
+                    <Label className="text-xs font-bold uppercase text-slate-500">
+                      Executivo Responsável
+                    </Label>
+                    <Select
+                      value={executivoId || "none"}
+                      onValueChange={(val) => setExecutivoId(val === "none" ? "" : val)}
+                    >
                       <SelectTrigger className="rounded-xl">
                         <SelectValue placeholder="Usar meu perfil" />
                       </SelectTrigger>
@@ -452,7 +537,9 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Valor Negociado */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-slate-500">Valor Negociado (R$)</Label>
+                  <Label className="text-xs font-bold uppercase text-slate-500">
+                    Valor Negociado (R$)
+                  </Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -470,7 +557,9 @@ export function ImportarPropostaDialog({ open, onOpenChange, onSuccess }: Props)
 
                 {/* Valor de Tabela */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase text-slate-500">Valor Tabela / Bruto (R$)</Label>
+                  <Label className="text-xs font-bold uppercase text-slate-500">
+                    Valor Tabela / Bruto (R$)
+                  </Label>
                   <Input
                     type="number"
                     step="0.01"

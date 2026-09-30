@@ -3,14 +3,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -26,7 +34,7 @@ import { Loader2 } from "lucide-react";
 type Props = {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  initial?: Partial<BriefingType> & { id?: string } | null;
+  initial?: (Partial<BriefingType> & { id?: string }) | null;
 };
 
 const empty: BriefingType = {
@@ -46,7 +54,9 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
   const upsertClienteFn = useServerFn(upsertCliente);
   const upsertAgenciaFn = useServerFn(upsertAgencia);
   const [form, setForm] = useState<BriefingType>(empty);
-  const [cnpjLookup, setCnpjLookup] = useState<"idle" | "searching" | "found" | "fetched" | "created" | "notfound">("idle");
+  const [cnpjLookup, setCnpjLookup] = useState<
+    "idle" | "searching" | "found" | "fetched" | "created" | "notfound"
+  >("idle");
   const [lastLookedCnpj, setLastLookedCnpj] = useState<string>("");
 
   // Carrega produtos de TV do banco
@@ -72,7 +82,10 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
   // Auto-busca CNPJ
   useEffect(() => {
     const digits = onlyDigits(form.cnpj ?? "");
-    if (digits.length !== 14) { setCnpjLookup("idle"); return; }
+    if (digits.length !== 14) {
+      setCnpjLookup("idle");
+      return;
+    }
     if (digits === lastLookedCnpj) return;
     let cancelled = false;
     const t = setTimeout(async () => {
@@ -138,7 +151,10 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
         toast.error("CNPJ não encontrado na Receita");
       }
     }, 500);
-    return () => { cancelled = true; clearTimeout(t); };
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [form.cnpj, form.tipo_entidade]);
 
   const save = useMutation({
@@ -153,7 +169,8 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
 
   const toggleProduto = (id: string) => {
     const cur = new Set(form.produtos ?? []);
-    if (cur.has(id)) cur.delete(id); else cur.add(id);
+    if (cur.has(id)) cur.delete(id);
+    else cur.add(id);
     set("produtos", Array.from(cur));
   };
 
@@ -163,9 +180,12 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>{form.id ? "Editar Solicitação de Proposta" : "Nova Solicitação de Proposta"}</DialogTitle>
+          <DialogTitle>
+            {form.id ? "Editar Solicitação de Proposta" : "Nova Solicitação de Proposta"}
+          </DialogTitle>
           <p className="text-xs text-muted-foreground">
-            Preencha os dados abaixo. A solicitação será enviada ao ADM, que ficará responsável por confeccionar a proposta.
+            Preencha os dados abaixo. A solicitação será enviada ao ADM, que ficará responsável por
+            confeccionar a proposta.
           </p>
         </DialogHeader>
 
@@ -173,7 +193,9 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
           <TabsList>
             <TabsTrigger value="dados">Dados</TabsTrigger>
             <TabsTrigger value="campanha">Campanha</TabsTrigger>
-            <TabsTrigger value="anexos" disabled={!form.id}>Anexos</TabsTrigger>
+            <TabsTrigger value="anexos" disabled={!form.id}>
+              Anexos
+            </TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 mt-2 pr-3">
@@ -185,7 +207,9 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
                     value={form.tipo_entidade}
                     onValueChange={(v) => set("tipo_entidade", v as any)}
                   >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cliente">Cliente direto</SelectItem>
                       <SelectItem value="agencia">Agência</SelectItem>
@@ -196,10 +220,18 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
                   <Label className="flex items-center gap-2">
                     CNPJ
                     {cnpjLookup === "searching" && <Loader2 className="size-3 animate-spin" />}
-                    {cnpjLookup === "found" && <span className="text-xs text-green-600">já cadastrado</span>}
-                    {cnpjLookup === "created" && <span className="text-xs text-green-600">cadastrado da Receita</span>}
-                    {cnpjLookup === "fetched" && <span className="text-xs text-amber-600">dados da Receita</span>}
-                    {cnpjLookup === "notfound" && <span className="text-xs text-destructive">não encontrado</span>}
+                    {cnpjLookup === "found" && (
+                      <span className="text-xs text-green-600">já cadastrado</span>
+                    )}
+                    {cnpjLookup === "created" && (
+                      <span className="text-xs text-green-600">cadastrado da Receita</span>
+                    )}
+                    {cnpjLookup === "fetched" && (
+                      <span className="text-xs text-amber-600">dados da Receita</span>
+                    )}
+                    {cnpjLookup === "notfound" && (
+                      <span className="text-xs text-destructive">não encontrado</span>
+                    )}
                   </Label>
                   <Input
                     value={form.cnpj ?? ""}
@@ -209,19 +241,32 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
                 </div>
                 <div className="col-span-2">
                   <Label>Razão Social *</Label>
-                  <Input value={form.razao_social} onChange={(e) => set("razao_social", e.target.value)} />
+                  <Input
+                    value={form.razao_social}
+                    onChange={(e) => set("razao_social", e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label>Contato</Label>
-                  <Input value={form.contato_nome ?? ""} onChange={(e) => set("contato_nome", e.target.value)} />
+                  <Input
+                    value={form.contato_nome ?? ""}
+                    onChange={(e) => set("contato_nome", e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label>Telefone</Label>
-                  <Input value={form.contato_telefone ?? ""} onChange={(e) => set("contato_telefone", e.target.value)} />
+                  <Input
+                    value={form.contato_telefone ?? ""}
+                    onChange={(e) => set("contato_telefone", e.target.value)}
+                  />
                 </div>
                 <div className="col-span-2">
                   <Label>E-mail</Label>
-                  <Input type="email" value={form.contato_email ?? ""} onChange={(e) => set("contato_email", e.target.value)} />
+                  <Input
+                    type="email"
+                    value={form.contato_email ?? ""}
+                    onChange={(e) => set("contato_email", e.target.value)}
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -229,7 +274,11 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
             <TabsContent value="campanha" className="space-y-4 m-0">
               <div>
                 <Label>Campanha *</Label>
-                <Input value={form.campanha} onChange={(e) => set("campanha", e.target.value)} placeholder="Nome da campanha" />
+                <Input
+                  value={form.campanha}
+                  onChange={(e) => set("campanha", e.target.value)}
+                  placeholder="Nome da campanha"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -247,13 +296,20 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
                     min={0}
                     step="0.01"
                     value={form.verba_estimada ?? ""}
-                    onChange={(e) => set("verba_estimada", e.target.value ? Number(e.target.value) : null)}
+                    onChange={(e) =>
+                      set("verba_estimada", e.target.value ? Number(e.target.value) : null)
+                    }
                   />
                 </div>
               </div>
               <div>
                 <Label>Objetivo da campanha</Label>
-                <Textarea rows={3} value={form.objetivo ?? ""} onChange={(e) => set("objetivo", e.target.value)} placeholder="O que se espera alcançar com esta campanha?" />
+                <Textarea
+                  rows={3}
+                  value={form.objetivo ?? ""}
+                  onChange={(e) => set("objetivo", e.target.value)}
+                  placeholder="O que se espera alcançar com esta campanha?"
+                />
               </div>
 
               <div className="space-y-2 pt-2">
@@ -283,7 +339,10 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
                             </div>
                           </div>
                           <div className="text-xs font-medium whitespace-nowrap">
-                            {Number(p.valor_unit).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            {Number(p.valor_unit).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
                           </div>
                         </label>
                       );
@@ -294,7 +353,12 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
 
               <div>
                 <Label>Observações</Label>
-                <Textarea rows={3} value={form.detalhes_adicionais ?? ""} onChange={(e) => set("detalhes_adicionais", e.target.value)} placeholder="Público-alvo, concorrentes, preferências, restrições..." />
+                <Textarea
+                  rows={3}
+                  value={form.detalhes_adicionais ?? ""}
+                  onChange={(e) => set("detalhes_adicionais", e.target.value)}
+                  placeholder="Público-alvo, concorrentes, preferências, restrições..."
+                />
               </div>
             </TabsContent>
 
@@ -308,7 +372,10 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancelar
           </Button>
-          <Button onClick={() => save.mutate(form)} disabled={isSaving || !form.razao_social || !form.campanha}>
+          <Button
+            onClick={() => save.mutate(form)}
+            disabled={isSaving || !form.razao_social || !form.campanha}
+          >
             {isSaving && <Loader2 className="size-4 animate-spin mr-2" />}
             Salvar
           </Button>

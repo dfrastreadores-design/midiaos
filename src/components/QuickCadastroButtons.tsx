@@ -10,7 +10,10 @@ import { listProdutos } from "@/lib/produtos.functions";
 
 export function NovoClienteButton() {
   const [open, setOpen] = useState(false);
-  const { data: agencias = [] } = useQuery({ queryKey: ["agencias"], queryFn: () => listAgencias() });
+  const { data: agencias = [] } = useQuery({
+    queryKey: ["agencias"],
+    queryFn: () => listAgencias(),
+  });
   return (
     <>
       <Button
@@ -26,7 +29,10 @@ export function NovoClienteButton() {
       <ClienteFormDialog
         open={open}
         onOpenChange={setOpen}
-        agencias={(agencias as any[]).map((a) => ({ id: a.id, nome: a.nome_fantasia || a.razao_social }))}
+        agencias={(agencias as any[]).map((a) => ({
+          id: a.id,
+          nome: a.nome_fantasia || a.razao_social,
+        }))}
       />
     </>
   );
@@ -51,25 +57,32 @@ export function NovaAgenciaButton() {
   );
 }
 
-export function NovoProdutoButton({ 
-  variant = "outline", 
-  size = "sm", 
+export function NovoProdutoButton({
+  variant = "outline",
+  size = "sm",
   className = "h-9 shrink-0",
-  initialData 
-}: { 
-  variant?: "outline" | "default" | "ghost", 
-  size?: "sm" | "default" | "icon", 
-  className?: string,
-  initialData?: Partial<Produto>
+  initialData,
+}: {
+  variant?: "outline" | "default" | "ghost";
+  size?: "sm" | "default" | "icon";
+  className?: string;
+  initialData?: Partial<Produto>;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: produtos = [] } = useQuery({ queryKey: ["produtos"], queryFn: () => listProdutos() });
-  
+  const { data: produtos = [] } = useQuery({
+    queryKey: ["produtos"],
+    queryFn: () => listProdutos(),
+  });
+
   const allProdutos = (produtos as any[]) ?? [];
   const sugestoes = {
-    tipos: Array.from(new Set(allProdutos.map(p => p.tipo).filter(Boolean))).sort() as string[],
-    programas: Array.from(new Set(allProdutos.map(p => p.programa).filter(Boolean))).sort() as string[],
-    formatos: Array.from(new Set(allProdutos.map(p => p.formato).filter(Boolean))).sort() as string[],
+    tipos: Array.from(new Set(allProdutos.map((p) => p.tipo).filter(Boolean))).sort() as string[],
+    programas: Array.from(
+      new Set(allProdutos.map((p) => p.programa).filter(Boolean)),
+    ).sort() as string[],
+    formatos: Array.from(
+      new Set(allProdutos.map((p) => p.formato).filter(Boolean)),
+    ).sort() as string[],
   };
 
   return (
@@ -99,4 +112,3 @@ export function NovoProdutoButton({
     </>
   );
 }
-

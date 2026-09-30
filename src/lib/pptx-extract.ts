@@ -25,7 +25,7 @@ export async function extractPptxText(file: File): Promise<string> {
     const matches = xml.match(/<a:t[^>]*>(.*?)<\/a:t>/gs);
     if (matches && matches.length > 0) {
       const slideLines = matches
-        .map((m) =>
+        .map((m: any) =>
           m
             .replace(/<[^>]+>/g, "")
             .replace(/&amp;/g, "&")

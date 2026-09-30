@@ -48,9 +48,13 @@ export const geocodeAddress = createServerFn({ method: "POST" })
           const first = json?.results?.[0];
           if (first) {
             const comps = first.address_components || [];
-            const getComp = (type: string) => comps.find((c: any) => c.types?.includes(type))?.long_name || "";
-            const postal = comps.find((c: any) => c.types?.includes("postal_code"))?.long_name || "";
-            const uf = comps.find((c: any) => c.types?.includes("administrative_area_level_1"))?.short_name || "";
+            const getComp = (type: string) =>
+              comps.find((c: any) => c.types?.includes(type))?.long_name || "";
+            const postal =
+              comps.find((c: any) => c.types?.includes("postal_code"))?.long_name || "";
+            const uf =
+              comps.find((c: any) => c.types?.includes("administrative_area_level_1"))
+                ?.short_name || "";
 
             return {
               ok: true as const,
@@ -133,9 +137,13 @@ export const reverseGeocodeCoords = createServerFn({ method: "POST" })
           const first = json?.results?.[0];
           if (first) {
             const comps = first.address_components || [];
-            const getComp = (type: string) => comps.find((c: any) => c.types?.includes(type))?.long_name || "";
-            const postal = comps.find((c: any) => c.types?.includes("postal_code"))?.long_name || "";
-            const uf = comps.find((c: any) => c.types?.includes("administrative_area_level_1"))?.short_name || "";
+            const getComp = (type: string) =>
+              comps.find((c: any) => c.types?.includes(type))?.long_name || "";
+            const postal =
+              comps.find((c: any) => c.types?.includes("postal_code"))?.long_name || "";
+            const uf =
+              comps.find((c: any) => c.types?.includes("administrative_area_level_1"))
+                ?.short_name || "";
             const route = getComp("route");
             const streetNumber = getComp("street_number");
             const neighborhood = getComp("sublocality_level_1") || getComp("neighborhood");
@@ -187,7 +195,7 @@ export const reverseGeocodeCoords = createServerFn({ method: "POST" })
         if (bairro && bairro !== road) parts.push(bairro);
         if (city) parts.push(city + (uf ? `/${uf}` : ""));
 
-        const endereco = parts.length > 0 ? parts.join(" — ") : (d.display_name || "");
+        const endereco = parts.length > 0 ? parts.join(" — ") : d.display_name || "";
 
         return {
           ok: true as const,
@@ -205,7 +213,10 @@ export const reverseGeocodeCoords = createServerFn({ method: "POST" })
       console.error("Erro no reverse geocoding via Nominatim:", err);
     }
 
-    return { ok: false as const, error: "Não foi possível obter o endereço para estas coordenadas" };
+    return {
+      ok: false as const,
+      error: "Não foi possível obter o endereço para estas coordenadas",
+    };
   });
 
 /**
@@ -273,7 +284,7 @@ export const lookupCep = createServerFn({ method: "POST" })
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&countrycodes=br&limit=1&addressdetails=1`,
-          { headers: { "User-Agent": "MidiaOS/1.0 (contato@midiaos.online)" } }
+          { headers: { "User-Agent": "MidiaOS/1.0 (contato@midiaos.online)" } },
         );
         if (res.ok) {
           const list = await res.json();

@@ -30,16 +30,18 @@ export const getNotificacaoConfig = createServerFn({ method: "GET" })
 export const updateNotificacaoConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      ativo_inicio: z.boolean(),
-      dias_antes_inicio: z.number().int().min(0).max(60),
-      ativo_fim: z.boolean(),
-      dias_antes_fim: z.number().int().min(0).max(60),
-      ativo_progresso: z.boolean(),
-      marcos_percentual: z.array(z.number().int().min(1).max(100)).max(10),
-      ativo_validade: z.boolean(),
-      dias_antes_validade: z.number().int().min(0).max(60),
-    }).parse(d),
+    z
+      .object({
+        ativo_inicio: z.boolean(),
+        dias_antes_inicio: z.number().int().min(0).max(60),
+        ativo_fim: z.boolean(),
+        dias_antes_fim: z.number().int().min(0).max(60),
+        ativo_progresso: z.boolean(),
+        marcos_percentual: z.array(z.number().int().min(1).max(100)).max(10),
+        ativo_validade: z.boolean(),
+        dias_antes_validade: z.number().int().min(0).max(60),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -66,7 +68,9 @@ export const listMinhasNotificacoes = createServerFn({ method: "GET" })
 
 export const marcarNotificacaoLida = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid().optional(), todas: z.boolean().optional() }).parse(d))
+  .inputValidator((d) =>
+    z.object({ id: z.string().uuid().optional(), todas: z.boolean().optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     let q = supabase.from("notificacoes").update({ lida: true }).eq("user_id", userId);
@@ -84,20 +88,29 @@ export async function executarAgendadorNotificacoes() {
   const isoHoje = hoje.toISOString().slice(0, 10);
 
   const { data: cfg, error: cfgErr } = await supabaseAdmin
-    .from("notificacao_config").select("*").eq("id", true).single();
+    .from("notificacao_config")
+    .select("*")
+    .eq("id", true)
+    .single();
   if (cfgErr || !cfg) throw new Error(cfgErr?.message || "config ausente");
 
   // Admins (destinatários sempre + executivo)
   const { data: admins } = await supabaseAdmin
-    .from("user_roles").select("user_id").eq("role", "admin");
+    .from("user_roles")
+    .select("user_id")
+    .eq("role", "admin");
   const adminIds = (admins ?? []).map((r) => r.user_id as string);
 
   const notifs: Array<{
-    user_id: string; tipo: string; titulo: string; mensagem: string;
-    link: string; metadata: Record<string, unknown>;
+    user_id: string;
+    tipo: string;
+    titulo: string;
+    mensagem: string;
+    link: string;
+    metadata: Record<string, unknown>;
   }> = [];
 
-  const pushFor = (recipients: string[], n: Omit<typeof notifs[number], "user_id">) => {
+  const pushFor = (recipients: string[], n: Omit<(typeof notifs)[number], "user_id">) => {
     const seen = new Set<string>();
     for (const uid of recipients) {
       if (!uid || seen.has(uid)) continue;
@@ -115,7 +128,9 @@ export async function executarAgendadorNotificacoes() {
       .not("status", "in", "(substituido,cancelado)");
 
     for (const pi of pis ?? []) {
-      const recipients = [pi.executivo_id as string | null, ...adminIds].filter(Boolean) as string[];
+      const recipients = [pi.executivo_id as string | null, ...adminIds].filter(
+        Boolean,
+      ) as string[];
       const link = `/pi?id=${pi.id}`;
 
       if (cfg.ativo_inicio && pi.periodo_inicio) {
@@ -171,7 +186,9 @@ export async function executarAgendadorNotificacoes() {
       if (!p.validade) continue;
       const diff = diasEntre(isoHoje, p.validade);
       if (diff >= 0 && diff <= cfg.dias_antes_validade) {
-        const recipients = [p.executivo_id as string | null, ...adminIds].filter(Boolean) as string[];
+        const recipients = [p.executivo_id as string | null, ...adminIds].filter(
+          Boolean,
+        ) as string[];
         pushFor(recipients, {
           tipo: "proposta_vencendo",
           titulo: `Proposta vence em ${diff} dia(s)`,
@@ -189,18 +206,23 @@ export async function executarAgendadorNotificacoes() {
       await import("@/lib/social-media-notify");
     if (SOCIAL_MEDIA_EMAILS.length > 0) {
       const { data: socialProfs } = await supabaseAdmin
-        .from("profiles").select("id,email").in("email", SOCIAL_MEDIA_EMAILS as never);
+        .from("profiles")
+        .select("id,email")
+        .in("email", SOCIAL_MEDIA_EMAILS as never);
       const socialUserIds = (socialProfs ?? []).map((p: any) => p.id as string);
       if (socialUserIds.length > 0) {
         const { data: pisSocial } = await supabaseAdmin
           .from("pis")
-          .select("id,numero,campanha,periodo_inicio,status,itens:pi_itens(*),cliente:clientes(razao_social,nome_fantasia)")
+          .select(
+            "id,numero,campanha,periodo_inicio,status,itens:pi_itens(*),cliente:clientes(razao_social,nome_fantasia)",
+          )
           .in("status", ["aprovado", "faturado", "enviado", "veiculado"]);
         for (const pi of pisSocial ?? []) {
           const itens = ((pi as any).itens ?? []).filter(isSocialItem);
           if (itens.length === 0) continue;
           const datas = datasPublicacaoSocial(itens as never, (pi as any).periodo_inicio);
-          const cliente = (pi as any).cliente?.razao_social ?? (pi as any).cliente?.nome_fantasia ?? "";
+          const cliente =
+            (pi as any).cliente?.razao_social ?? (pi as any).cliente?.nome_fantasia ?? "";
           const entregas = itens.map(labelSocialItem).join(" | ");
           for (const dISO of datas) {
             if (diasEntre(isoHoje, dISO) !== 2) continue;
@@ -230,13 +252,17 @@ export async function executarAgendadorNotificacoes() {
 
   if (notifs.length === 0) return { inserted: 0, trial: trialResult };
 
-
   // Insere uma a uma; o índice único parcial bloqueia duplicatas silenciosamente
   let inserted = 0;
   for (const n of notifs) {
     const row = {
       user_id: n.user_id,
-      tipo: n.tipo as "campanha_iniciando" | "campanha_progresso" | "campanha_finalizando" | "proposta_vencendo" | "outro",
+      tipo: n.tipo as
+        | "campanha_iniciando"
+        | "campanha_progresso"
+        | "campanha_finalizando"
+        | "proposta_vencendo"
+        | "outro",
       titulo: n.titulo,
       mensagem: n.mensagem,
       link: n.link,
@@ -278,17 +304,29 @@ export const rodarAgendadorAgora = createServerFn({ method: "POST" })
 export const notificarRenovacaoPi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      original_id: z.string().uuid(),
-      novo_id: z.string().uuid(),
-    }).parse(d),
+    z
+      .object({
+        original_id: z.string().uuid(),
+        novo_id: z.string().uuid(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
     const [{ data: original }, { data: novo }] = await Promise.all([
-      supabase.from("pis").select("numero, campanha, executivo_id").eq("id", data.original_id).single(),
-      supabase.from("pis").select("numero, campanha, executivo_id, periodo_inicio, periodo_fim, mes_veiculacao, ano_veiculacao").eq("id", data.novo_id).single(),
+      supabase
+        .from("pis")
+        .select("numero, campanha, executivo_id")
+        .eq("id", data.original_id)
+        .single(),
+      supabase
+        .from("pis")
+        .select(
+          "numero, campanha, executivo_id, periodo_inicio, periodo_fim, mes_veiculacao, ano_veiculacao",
+        )
+        .eq("id", data.novo_id)
+        .single(),
     ]);
     if (!novo) return { ok: false };
 
@@ -297,16 +335,23 @@ export const notificarRenovacaoPi = createServerFn({ method: "POST" })
       const [y, m, d] = iso.slice(0, 10).split("-");
       return `${d}/${m}/${y}`;
     };
-    const vigencia = novo.periodo_inicio && novo.periodo_fim
-      ? `${fmtBR(novo.periodo_inicio)} a ${fmtBR(novo.periodo_fim)}`
-      : `${String(novo.mes_veiculacao ?? "").padStart(2, "0")}/${novo.ano_veiculacao ?? ""}`;
+    const vigencia =
+      novo.periodo_inicio && novo.periodo_fim
+        ? `${fmtBR(novo.periodo_inicio)} a ${fmtBR(novo.periodo_fim)}`
+        : `${String(novo.mes_veiculacao ?? "").padStart(2, "0")}/${novo.ano_veiculacao ?? ""}`;
 
     const titulo = `Contrato renovado — novo PI ${novo.numero}`;
     const mensagem = `Renovação${original?.numero ? ` do PI ${original.numero}` : ""} para "${novo.campanha}". Vigência: ${vigencia}.`;
 
     const [{ data: admins }, { data: diretorias }] = await Promise.all([
-      supabase.from("user_roles").select("user_id").eq("role", "admin" as never),
-      supabase.from("user_roles").select("user_id").eq("role", "diretoria" as never),
+      supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin" as never),
+      supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "diretoria" as never),
     ]);
     const uids = new Set<string>();
     if (novo.executivo_id) uids.add(novo.executivo_id as string);
@@ -337,10 +382,12 @@ export const notificarRenovacaoPi = createServerFn({ method: "POST" })
 export const agendarFollowUpRenovacao = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      pi_id: z.string().uuid(),
-      dias_antes: z.number().int().min(0).max(60).optional(),
-    }).parse(d),
+    z
+      .object({
+        pi_id: z.string().uuid(),
+        dias_antes: z.number().int().min(0).max(60).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -348,7 +395,9 @@ export const agendarFollowUpRenovacao = createServerFn({ method: "POST" })
 
     const { data: pi } = await supabase
       .from("pis")
-      .select("id, numero, campanha, periodo_fim, executivo_id, cliente_id, agencia_id, status, tenant_id")
+      .select(
+        "id, numero, campanha, periodo_fim, executivo_id, cliente_id, agencia_id, status, tenant_id",
+      )
       .eq("id", data.pi_id)
       .single();
     if (!pi || !pi.periodo_fim) return { ok: false, reason: "sem_periodo_fim" };
@@ -393,9 +442,16 @@ export const agendarFollowUpRenovacao = createServerFn({ method: "POST" })
     };
 
     if (existente?.id) {
-      await supabase.from("eventos_calendario").update(payload as never).eq("id", existente.id);
+      await supabase
+        .from("eventos_calendario")
+        .update(payload as never)
+        .eq("id", existente.id);
       return { ok: true, updated: true, evento_id: existente.id };
     }
-    const { data: novo } = await supabase.from("eventos_calendario").insert(payload as never).select("id").single();
+    const { data: novo } = await supabase
+      .from("eventos_calendario")
+      .insert(payload as never)
+      .select("id")
+      .single();
     return { ok: true, created: true, evento_id: (novo as { id: string } | null)?.id };
   });

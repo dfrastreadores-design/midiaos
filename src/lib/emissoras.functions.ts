@@ -3,7 +3,16 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAnyRole } from "@/lib/roles.server";
 
-const TIPOS_MIDIA = ["tv","radio","portal","ooh","dooh","influencer","redes_sociais","outros"] as const;
+const TIPOS_MIDIA = [
+  "tv",
+  "radio",
+  "portal",
+  "ooh",
+  "dooh",
+  "influencer",
+  "redes_sociais",
+  "outros",
+] as const;
 
 const EmissoraSchema = z.object({
   id: z.string().uuid().optional(),
@@ -12,7 +21,7 @@ const EmissoraSchema = z.object({
   nome_fantasia: z.string().max(200).nullable().optional(),
   cnpj: z.string().max(20).nullable().optional(),
   cpf: z.string().max(20).nullable().optional(),
-  pessoa_tipo: z.enum(["pj","cpf"]).default("pj"),
+  pessoa_tipo: z.enum(["pj", "cpf"]).default("pj"),
   nome_artistico: z.string().max(200).nullable().optional(),
   tipo_midia: z.enum(TIPOS_MIDIA).nullable().optional(),
   comissao_padrao_pct: z.number().min(0).max(100).nullable().optional(),
@@ -53,15 +62,25 @@ export const saveEmissora = createServerFn({ method: "POST" })
     const { id, ...payload } = data;
     // Se marcar como padrão, desmarca as outras do mesmo tenant
     if (payload.padrao) {
-      await supabase.from("emissoras").update({ padrao: false } as never).neq("id", id ?? "00000000-0000-0000-0000-000000000000");
+      await supabase
+        .from("emissoras")
+        .update({ padrao: false } as never)
+        .neq("id", id ?? "00000000-0000-0000-0000-000000000000");
     }
     if (id) {
-      const { error } = await supabase.from("emissoras").update(payload as never).eq("id", id);
+      const { error } = await supabase
+        .from("emissoras")
+        .update(payload as never)
+        .eq("id", id);
       if (error) throw new Error(error.message);
       return { id };
     } else {
       // tenant_id é preenchido por trigger/default? Se não, busca do profile.
-      const { data: prof } = await supabase.from("profiles").select("tenant_id").eq("id", userId).maybeSingle();
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", userId)
+        .maybeSingle();
       const tenant_id = (prof as { tenant_id?: string } | null)?.tenant_id;
       if (!tenant_id) throw new Error("Tenant não identificado");
       const { data: created, error } = await supabase

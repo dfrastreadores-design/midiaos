@@ -20,10 +20,26 @@ export const SEGMENTOS_MIDIA = [
 ] as const;
 
 export const MODELOS_REMUNERACAO = [
-  { value: "comissao_percentual", label: "Comissão % sobre vendas (Remuneração do Inquilino)", desc: "Inquilino recebe % sobre o valor bruto ou líquido vendido" },
-  { value: "margem_sobre_custo", label: "Margem sobre tabela/custo do parceiro", desc: "Parceiro define custo base e o inquilino negocia com margem própria" },
-  { value: "repasse_liquido", label: "Faturamento direto com repasse ao parceiro", desc: "Inquilino emite o PI/fatura e repassa o valor líquido deduzida a sua remuneração" },
-  { value: "faturamento_parceiro", label: "Faturamento direto pelo parceiro com RT", desc: "Parceiro fatura direto ao cliente e paga comissão/RT ao inquilino" },
+  {
+    value: "comissao_percentual",
+    label: "Comissão % sobre vendas (Remuneração do Inquilino)",
+    desc: "Inquilino recebe % sobre o valor bruto ou líquido vendido",
+  },
+  {
+    value: "margem_sobre_custo",
+    label: "Margem sobre tabela/custo do parceiro",
+    desc: "Parceiro define custo base e o inquilino negocia com margem própria",
+  },
+  {
+    value: "repasse_liquido",
+    label: "Faturamento direto com repasse ao parceiro",
+    desc: "Inquilino emite o PI/fatura e repassa o valor líquido deduzida a sua remuneração",
+  },
+  {
+    value: "faturamento_parceiro",
+    label: "Faturamento direto pelo parceiro com RT",
+    desc: "Parceiro fatura direto ao cliente e paga comissão/RT ao inquilino",
+  },
 ] as const;
 
 export const ParceiroSchema = z.object({
@@ -37,7 +53,12 @@ export const ParceiroSchema = z.object({
   prazo_repasse: z.string().max(200).optional().nullable(),
   condicoes_comerciais: z.string().max(2000).optional().nullable(),
   contato_nome: z.string().max(150).optional().nullable(),
-  contato_email: z.string().email("E-mail inválido").optional().nullable().or(z.literal("").transform(() => null)),
+  contato_email: z
+    .string()
+    .email("E-mail inválido")
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)),
   contato_telefone: z.string().max(40).optional().nullable(),
   chave_pix: z.string().max(100).optional().nullable(),
   dados_bancarios: z.string().max(500).optional().nullable(),
@@ -82,18 +103,28 @@ export const listParceiros = createServerFn({ method: "GET" })
     }
 
     // Busca produtos para associar contagens e totais
-    let pQuery = supabase.from("produtos").select("id, parceiro_id, parceiro_cnpj, parceiro_nome, valor_unit, ativo");
+    let pQuery = supabase
+      .from("produtos")
+      .select("id, parceiro_id, parceiro_cnpj, parceiro_nome, valor_unit, ativo");
     if (tenantId) pQuery = pQuery.eq("tenant_id", tenantId);
     const { data: produtos = [] } = await pQuery;
 
     return (parceiros ?? []).map((parceiro: any) => {
-      const prods = (produtos ?? []).filter((p: any) => 
-        (p.parceiro_id && p.parceiro_id === parceiro.id) ||
-        (p.parceiro_cnpj && parceiro.cnpj && p.parceiro_cnpj.replace(/\D/g, "") === parceiro.cnpj.replace(/\D/g, "")) ||
-        (p.parceiro_nome && parceiro.razao_social && p.parceiro_nome.toLowerCase().trim() === parceiro.razao_social.toLowerCase().trim())
+      const prods = (produtos ?? []).filter(
+        (p: any) =>
+          (p.parceiro_id && p.parceiro_id === parceiro.id) ||
+          (p.parceiro_cnpj &&
+            parceiro.cnpj &&
+            p.parceiro_cnpj.replace(/\D/g, "") === parceiro.cnpj.replace(/\D/g, "")) ||
+          (p.parceiro_nome &&
+            parceiro.razao_social &&
+            p.parceiro_nome.toLowerCase().trim() === parceiro.razao_social.toLowerCase().trim()),
       );
 
-      const valorTotal = prods.reduce((acc: number, cur: any) => acc + (Number(cur.valor_unit) || 0), 0);
+      const valorTotal = prods.reduce(
+        (acc: number, cur: any) => acc + (Number(cur.valor_unit) || 0),
+        0,
+      );
 
       return {
         ...parceiro,
@@ -185,10 +216,7 @@ export const deleteParceiro = createServerFn({ method: "POST" })
 
     // Desvincula produtos deste parceiro antes de remover
     try {
-      await supabase
-        .from("produtos")
-        .update({ parceiro_id: null })
-        .eq("parceiro_id", data.id);
+      await supabase.from("produtos").update({ parceiro_id: null }).eq("parceiro_id", data.id);
     } catch {
       // ignora
     }

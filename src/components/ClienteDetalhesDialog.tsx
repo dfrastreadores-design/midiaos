@@ -96,26 +96,52 @@ export function ClienteDetalhesDialog({
             </div>
           </section>
 
-          {(cliente.website || cliente.instagram || cliente.linkedin || cliente.facebook || cliente.data_aniversario) && (
+          {(cliente.website ||
+            cliente.instagram ||
+            cliente.linkedin ||
+            cliente.facebook ||
+            cliente.data_aniversario) && (
             <>
               <Separator />
               <section>
                 <h3 className="text-sm font-semibold mb-2">Presença digital</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {cliente.website && (
-                    <div className="flex items-center gap-2 text-sm"><Globe className="size-4 text-muted-foreground" /><a href={cliente.website} target="_blank" rel="noreferrer" className="text-primary underline truncate">{cliente.website}</a></div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Globe className="size-4 text-muted-foreground" />
+                      <a
+                        href={cliente.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline truncate"
+                      >
+                        {cliente.website}
+                      </a>
+                    </div>
                   )}
                   {cliente.instagram && (
-                    <div className="flex items-center gap-2 text-sm"><Instagram className="size-4 text-muted-foreground" />{cliente.instagram}</div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Instagram className="size-4 text-muted-foreground" />
+                      {cliente.instagram}
+                    </div>
                   )}
                   {cliente.linkedin && (
-                    <div className="flex items-center gap-2 text-sm"><Linkedin className="size-4 text-muted-foreground" />{cliente.linkedin}</div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Linkedin className="size-4 text-muted-foreground" />
+                      {cliente.linkedin}
+                    </div>
                   )}
                   {cliente.facebook && (
-                    <div className="flex items-center gap-2 text-sm"><Facebook className="size-4 text-muted-foreground" />{cliente.facebook}</div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Facebook className="size-4 text-muted-foreground" />
+                      {cliente.facebook}
+                    </div>
                   )}
                   {cliente.data_aniversario && (
-                    <div className="flex items-center gap-2 text-sm"><Cake className="size-4 text-muted-foreground" />{cliente.data_aniversario}</div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Cake className="size-4 text-muted-foreground" />
+                      {cliente.data_aniversario}
+                    </div>
                   )}
                 </div>
               </section>
@@ -127,7 +153,9 @@ export function ClienteDetalhesDialog({
               <Separator />
               <section>
                 <h3 className="text-sm font-semibold mb-2">Agência</h3>
-                <Badge variant="outline">{cliente.agencia.nome_fantasia || cliente.agencia.razao_social}</Badge>
+                <Badge variant="outline">
+                  {cliente.agencia.nome_fantasia || cliente.agencia.razao_social}
+                </Badge>
               </section>
             </>
           )}
@@ -142,12 +170,29 @@ export function ClienteDetalhesDialog({
                     <div key={i} className="border rounded-md p-3 space-y-1">
                       <div className="font-medium text-sm">{c.nome}</div>
                       {(c.cargo || c.funcao) && (
-                        <div className="text-xs text-muted-foreground">{[c.cargo, c.funcao].filter(Boolean).join(" · ")}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {[c.cargo, c.funcao].filter(Boolean).join(" · ")}
+                        </div>
                       )}
                       <div className="flex flex-wrap gap-4 mt-1">
-                        {c.email && <span className="flex items-center gap-1 text-xs"><Mail className="size-3" />{c.email}</span>}
-                        {c.telefone && <span className="flex items-center gap-1 text-xs"><Phone className="size-3" />{c.telefone}</span>}
-                        {c.aniversario && <span className="flex items-center gap-1 text-xs"><Cake className="size-3" />{c.aniversario}</span>}
+                        {c.email && (
+                          <span className="flex items-center gap-1 text-xs">
+                            <Mail className="size-3" />
+                            {c.email}
+                          </span>
+                        )}
+                        {c.telefone && (
+                          <span className="flex items-center gap-1 text-xs">
+                            <Phone className="size-3" />
+                            {c.telefone}
+                          </span>
+                        )}
+                        {c.aniversario && (
+                          <span className="flex items-center gap-1 text-xs">
+                            <Cake className="size-3" />
+                            {c.aniversario}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

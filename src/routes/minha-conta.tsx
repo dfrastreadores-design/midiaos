@@ -7,13 +7,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getMeuPerfil, updateUsuarioPerfil, listUsuarios } from "@/lib/usuarios.functions";
-import { uploadAssinaturaExecutivo, removerAssinaturaExecutivo, getAssinaturaExecutivoDoPi } from "@/lib/assinaturas.functions";
+import {
+  uploadAssinaturaExecutivo,
+  removerAssinaturaExecutivo,
+  getAssinaturaExecutivoDoPi,
+} from "@/lib/assinaturas.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useRef } from "react";
-import { exportarMeusDados, solicitarExclusao, listarMinhasSolicitacoes } from "@/lib/lgpd.functions";
+import {
+  exportarMeusDados,
+  solicitarExclusao,
+  listarMinhasSolicitacoes,
+} from "@/lib/lgpd.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,11 +51,22 @@ type Form = {
   password: string;
 };
 
-const EMPTY: Form = { user_id: "", nome: "", cargo: "", telefone: "", whatsapp: "", email: "", password: "" };
+const EMPTY: Form = {
+  user_id: "",
+  nome: "",
+  cargo: "",
+  telefone: "",
+  whatsapp: "",
+  email: "",
+  password: "",
+};
 
 function MinhaConta() {
   const qc = useQueryClient();
-  const { data: me, isLoading } = useQuery({ queryKey: ["meu-perfil"], queryFn: () => getMeuPerfil() });
+  const { data: me, isLoading } = useQuery({
+    queryKey: ["meu-perfil"],
+    queryFn: () => getMeuPerfil(),
+  });
   const isAdmin = !!me?.isAdmin;
   const { data: usuarios = [] } = useQuery({
     queryKey: ["usuarios"],
@@ -103,15 +128,20 @@ function MinhaConta() {
   return (
     <AppShell>
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">Minha Conta</h1>
+        <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+          Minha Conta
+        </h1>
         <p className="text-muted-foreground text-sm mt-1">
           Atualize seus dados pessoais e de acesso.
-          {isAdmin && " Como administrador, você também pode editar as informações de outros usuários."}
+          {isAdmin &&
+            " Como administrador, você também pode editar as informações de outros usuários."}
         </p>
       </div>
 
       {isLoading ? (
-        <Card><CardContent className="py-8 text-center text-muted-foreground">Carregando…</CardContent></Card>
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">Carregando…</CardContent>
+        </Card>
       ) : (
         <div className="grid gap-6 max-w-3xl">
           {isAdmin && (
@@ -122,7 +152,9 @@ function MinhaConta() {
               </CardHeader>
               <CardContent>
                 <Select value={selectedId} onValueChange={setSelectedId}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um usuário" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um usuário" />
+                  </SelectTrigger>
                   <SelectContent>
                     {(usuarios as any[]).map((u) => (
                       <SelectItem key={u.id} value={u.id}>
@@ -146,23 +178,39 @@ function MinhaConta() {
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label>Nome completo</Label>
-                  <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+                  <Input
+                    value={form.nome}
+                    onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Cargo</Label>
-                  <Input value={form.cargo} onChange={(e) => setForm({ ...form, cargo: e.target.value })} />
+                  <Input
+                    value={form.cargo}
+                    onChange={(e) => setForm({ ...form, cargo: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Telefone</Label>
-                  <Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
+                  <Input
+                    value={form.telefone}
+                    onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>WhatsApp</Label>
-                  <Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
+                  <Input
+                    value={form.whatsapp}
+                    onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>E-mail de acesso</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label>Nova senha</Label>
@@ -177,7 +225,10 @@ function MinhaConta() {
               </div>
 
               <div className="flex justify-end">
-                <Button disabled={save.isPending || !form.nome.trim()} onClick={() => save.mutate()}>
+                <Button
+                  disabled={save.isPending || !form.nome.trim()}
+                  onClick={() => save.mutate()}
+                >
                   Salvar alterações
                 </Button>
               </div>
@@ -197,7 +248,10 @@ function MinhaConta() {
 
 function EmpresaVinculadaCard() {
   const fetchTenant = useServerFn(getMeuTenantPerfil);
-  const { data: tenant, isLoading } = useQuery({ queryKey: ["minha-conta-tenant"], queryFn: () => fetchTenant() });
+  const { data: tenant, isLoading } = useQuery({
+    queryKey: ["minha-conta-tenant"],
+    queryFn: () => fetchTenant(),
+  });
   const { roles, isSuperAdmin } = useUserRoles();
 
   return (
@@ -207,7 +261,8 @@ function EmpresaVinculadaCard() {
           <Building2 className="h-5 w-5 text-primary" /> Empresa Vinculada
         </CardTitle>
         <CardDescription>
-          Organização à qual seu perfil está vinculado. Seus acessos aos dados são restritos a este ambiente.
+          Organização à qual seu perfil está vinculado. Seus acessos aos dados são restritos a este
+          ambiente.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -221,18 +276,27 @@ function EmpresaVinculadaCard() {
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border">
               <div>
-                <div className="font-semibold text-sm">{tenant.nome_fantasia || tenant.razao_social}</div>
+                <div className="font-semibold text-sm">
+                  {tenant.nome_fantasia || tenant.razao_social}
+                </div>
                 <div className="text-xs text-muted-foreground">
-                  {[tenant.razao_social, tenant.cnpj && `CNPJ: ${tenant.cnpj}`].filter(Boolean).join(" • ")}
+                  {[tenant.razao_social, tenant.cnpj && `CNPJ: ${tenant.cnpj}`]
+                    .filter(Boolean)
+                    .join(" • ")}
                 </div>
               </div>
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+              <Badge
+                variant="outline"
+                className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+              >
                 {tenant.status?.toUpperCase() || "ATIVO"}
               </Badge>
             </div>
 
             <div>
-              <Label className="text-xs text-muted-foreground">Seus papéis e permissões concedidas:</Label>
+              <Label className="text-xs text-muted-foreground">
+                Seus papéis e permissões concedidas:
+              </Label>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {isSuperAdmin && (
                   <Badge className="bg-amber-500 text-white font-bold">👑 Super Admin Global</Badge>
@@ -244,7 +308,9 @@ function EmpresaVinculadaCard() {
                 ))}
               </div>
               <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
-                🛡️ Conforme as políticas de segurança da plataforma, você visualiza apenas os registros e configurações pertencentes à sua empresa e aos módulos atribuídos ao seu perfil.
+                🛡️ Conforme as políticas de segurança da plataforma, você visualiza apenas os
+                registros e configurações pertencentes à sua empresa e aos módulos atribuídos ao seu
+                perfil.
               </p>
             </div>
           </div>
@@ -261,27 +327,43 @@ function AssinaturaCard({ userId }: { userId: string }) {
     queryKey: ["assinatura-exec", userId],
     queryFn: async () => {
       // Busca via PI fictício? Simples: lê o profile direto.
-      const { data } = await supabase.from("profiles").select("assinatura_url").eq("id", userId).maybeSingle();
+      const { data } = await supabase
+        .from("profiles")
+        .select("assinatura_url")
+        .eq("id", userId)
+        .maybeSingle();
       if (!data?.assinatura_url) return { url: null as string | null };
-      const { data: signed } = await supabase.storage.from("assinaturas").createSignedUrl(data.assinatura_url, 3600);
+      const { data: signed } = await supabase.storage
+        .from("assinaturas")
+        .createSignedUrl(data.assinatura_url, 3600);
       return { url: signed?.signedUrl ?? null };
     },
     enabled: !!userId,
   });
 
   const upload = useMutation({
-    mutationFn: (dataUrl: string) => uploadAssinaturaExecutivo({ data: { user_id: userId, dataUrl } }),
-    onSuccess: () => { toast.success("Assinatura salva"); qc.invalidateQueries({ queryKey: ["assinatura-exec", userId] }); },
+    mutationFn: (dataUrl: string) =>
+      uploadAssinaturaExecutivo({ data: { user_id: userId, dataUrl } }),
+    onSuccess: () => {
+      toast.success("Assinatura salva");
+      qc.invalidateQueries({ queryKey: ["assinatura-exec", userId] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   const remover = useMutation({
     mutationFn: () => removerAssinaturaExecutivo({ data: { user_id: userId } }),
-    onSuccess: () => { toast.success("Assinatura removida"); qc.invalidateQueries({ queryKey: ["assinatura-exec", userId] }); },
+    onSuccess: () => {
+      toast.success("Assinatura removida");
+      qc.invalidateQueries({ queryKey: ["assinatura-exec", userId] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const onPick = (file: File) => {
-    if (file.size > 2 * 1024 * 1024) { toast.error("Imagem muito grande (máx 2MB)"); return; }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 2MB)");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => upload.mutate(reader.result as string);
     reader.readAsDataURL(file);
@@ -295,7 +377,8 @@ function AssinaturaCard({ userId }: { userId: string }) {
       <CardHeader>
         <CardTitle className="text-base">Assinatura para PIs</CardTitle>
         <CardDescription>
-          Envie sua assinatura em PNG transparente. Ela será inserida automaticamente no PDF dos PIs que você gerar.
+          Envie sua assinatura em PNG transparente. Ela será inserida automaticamente no PDF dos PIs
+          que você gerar.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -308,14 +391,29 @@ function AssinaturaCard({ userId }: { userId: string }) {
             <span className="text-xs text-muted-foreground">Nenhuma assinatura cadastrada</span>
           )}
         </div>
-        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.currentTarget.value = ""; }} />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onPick(f);
+            e.currentTarget.value = "";
+          }}
+        />
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={upload.isPending}>
+          <Button
+            variant="outline"
+            onClick={() => fileRef.current?.click()}
+            disabled={upload.isPending}
+          >
             {assin?.url ? "Trocar assinatura" : "Enviar assinatura"}
           </Button>
           {assin?.url && (
-            <Button variant="ghost" onClick={() => remover.mutate()} disabled={remover.isPending}>Remover</Button>
+            <Button variant="ghost" onClick={() => remover.mutate()} disabled={remover.isPending}>
+              Remover
+            </Button>
           )}
         </div>
       </CardContent>
@@ -354,7 +452,12 @@ function LgpdCard() {
   };
 
   const onExcluir = async () => {
-    if (!confirm("Confirma a solicitação de exclusão definitiva da sua conta e dados pessoais? Esta ação é irreversível após processamento.")) return;
+    if (
+      !confirm(
+        "Confirma a solicitação de exclusão definitiva da sua conta e dados pessoais? Esta ação é irreversível após processamento.",
+      )
+    )
+      return;
     setBusy(true);
     try {
       await excluir({ data: { observacoes: motivo.trim() || undefined } } as never);
@@ -374,14 +477,18 @@ function LgpdCard() {
         <CardTitle className="text-base">Privacidade &amp; LGPD</CardTitle>
         <CardDescription>
           Exerça seus direitos como titular de dados. Leia também nossa{" "}
-          <Link to="/site/privacidade" target="_blank" className="text-primary underline">Política de Privacidade</Link>.
+          <Link to="/site/privacidade" target="_blank" className="text-primary underline">
+            Política de Privacidade
+          </Link>
+          .
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="rounded-lg border p-4 space-y-2">
           <h4 className="font-medium text-sm">Acessar e exportar meus dados (portabilidade)</h4>
           <p className="text-xs text-muted-foreground">
-            Baixe uma cópia em JSON do seu perfil e dos registros que você criou (PIs, propostas, clientes, briefings, tarefas e auditoria).
+            Baixe uma cópia em JSON do seu perfil e dos registros que você criou (PIs, propostas,
+            clientes, briefings, tarefas e auditoria).
           </p>
           <Button variant="outline" size="sm" onClick={onExportar} disabled={busy}>
             Exportar meus dados
@@ -389,9 +496,12 @@ function LgpdCard() {
         </div>
 
         <div className="rounded-lg border border-destructive/40 p-4 space-y-2">
-          <h4 className="font-medium text-sm text-destructive">Solicitar exclusão definitiva (direito ao esquecimento)</h4>
+          <h4 className="font-medium text-sm text-destructive">
+            Solicitar exclusão definitiva (direito ao esquecimento)
+          </h4>
           <p className="text-xs text-muted-foreground">
-            Sua conta e dados pessoais serão excluídos em até 15 dias. Registros fiscais obrigatórios podem ser mantidos anonimizados.
+            Sua conta e dados pessoais serão excluídos em até 15 dias. Registros fiscais
+            obrigatórios podem ser mantidos anonimizados.
           </p>
           <Textarea
             value={motivo}
@@ -407,13 +517,16 @@ function LgpdCard() {
 
         {solicitacoes && solicitacoes.length > 0 && (
           <div className="space-y-1.5">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Minhas solicitações</h4>
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Minhas solicitações
+            </h4>
             <ul className="text-sm space-y-1">
               {solicitacoes.map((s: any) => (
                 <li key={s.id} className="flex justify-between border-b py-1.5">
                   <span className="capitalize">{s.tipo}</span>
                   <span className="text-muted-foreground">
-                    {new Date(s.created_at).toLocaleDateString("pt-BR")} · <Badge variant="secondary">{s.status}</Badge>
+                    {new Date(s.created_at).toLocaleDateString("pt-BR")} ·{" "}
+                    <Badge variant="secondary">{s.status}</Badge>
                   </span>
                 </li>
               ))}

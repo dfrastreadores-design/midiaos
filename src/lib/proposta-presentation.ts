@@ -18,11 +18,14 @@ import logoMidiaOS from "@/assets/logo-midiaos.png";
 
 // Em modo demo, força a logo mídia.OS no lugar da logo do cliente/agência.
 const isDemoMode = () => {
-  try { return typeof window !== "undefined" && localStorage.getItem("midiaos:is_demo") === "1"; }
-  catch { return false; }
+  try {
+    return typeof window !== "undefined" && localStorage.getItem("midiaos:is_demo") === "1";
+  } catch {
+    return false;
+  }
 };
 const pickLogoUrl = (clienteLogo?: string | null, agenciaLogo?: string | null) =>
-  isDemoMode() ? logoMidiaOS : (clienteLogo || agenciaLogo || null);
+  isDemoMode() ? logoMidiaOS : clienteLogo || agenciaLogo || null;
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
@@ -50,17 +53,43 @@ type Item = {
 };
 
 const MESES_BR = [
-  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+  "Jan",
+  "Fev",
+  "Mar",
+  "Abr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Set",
+  "Out",
+  "Nov",
+  "Dez",
 ];
 const DIA_SEMANA_ABBR: Record<string, string> = {
-  dom: "Dom", domingo: "Dom",
-  seg: "Seg", segunda: "Seg", "segunda-feira": "Seg",
-  ter: "Ter", terca: "Ter", "terça": "Ter", "terca-feira": "Ter", "terça-feira": "Ter",
-  qua: "Qua", quarta: "Qua", "quarta-feira": "Qua",
-  qui: "Qui", quinta: "Qui", "quinta-feira": "Qui",
-  sex: "Sex", sexta: "Sex", "sexta-feira": "Sex",
-  sab: "Sáb", "sáb": "Sáb", sabado: "Sáb", "sábado": "Sáb",
+  dom: "Dom",
+  domingo: "Dom",
+  seg: "Seg",
+  segunda: "Seg",
+  "segunda-feira": "Seg",
+  ter: "Ter",
+  terca: "Ter",
+  terça: "Ter",
+  "terca-feira": "Ter",
+  "terça-feira": "Ter",
+  qua: "Qua",
+  quarta: "Qua",
+  "quarta-feira": "Qua",
+  qui: "Qui",
+  quinta: "Qui",
+  "quinta-feira": "Qui",
+  sex: "Sex",
+  sexta: "Sex",
+  "sexta-feira": "Sex",
+  sab: "Sáb",
+  sáb: "Sáb",
+  sabado: "Sáb",
+  sábado: "Sáb",
 };
 
 function formatPeriodo(it: Item): string {
@@ -69,7 +98,9 @@ function formatPeriodo(it: Item): string {
   return "";
 }
 function formatDias(it: Item): string {
-  const ds = (it.dias_semana ?? []).map((d) => DIA_SEMANA_ABBR[d?.toLowerCase?.()] || d).filter(Boolean);
+  const ds = (it.dias_semana ?? [])
+    .map((d) => DIA_SEMANA_ABBR[d?.toLowerCase?.()] || d)
+    .filter(Boolean);
   if (ds.length > 0) return ds.join(", ");
   const dm = it.dias_mes ?? [];
   if (dm.length > 0) {
@@ -95,14 +126,17 @@ function detalhesProduto(it: Item, opts?: { mostrarEndereco?: boolean }): string
   return partes.join(" · ");
 }
 
-type Entidade = {
-  razao_social?: string | null;
-  nome_fantasia?: string | null;
-  cnpj?: string | null;
-  cidade?: string | null;
-  uf?: string | null;
-  logo_url?: string | null;
-} | null | undefined;
+type Entidade =
+  | {
+      razao_social?: string | null;
+      nome_fantasia?: string | null;
+      cnpj?: string | null;
+      cidade?: string | null;
+      uf?: string | null;
+      logo_url?: string | null;
+    }
+  | null
+  | undefined;
 
 export type PropostaApresentacao = {
   numero: string;
@@ -130,7 +164,9 @@ export type PropostaApresentacao = {
 };
 
 const fmtDataBR = (s?: string | null) =>
-  s ? new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
+  s
+    ? new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : "";
 
 // Soma N dias úteis (segunda a sexta) a uma data
 function addBusinessDays(base: Date, n: number): Date {
@@ -163,8 +199,12 @@ function aplicarPadroes(p: PropostaApresentacao): { p: PropostaApresentacao; dat
 }
 
 const slugify = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "cliente";
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "cliente";
 
 // Dispara o download de um Blob de forma robusta — funciona em iframes
 // sandbox (preview do Lovable) abrindo nova aba como fallback quando o
@@ -202,9 +242,12 @@ async function logoToDataUrl(url?: string | null): Promise<string | null> {
   if (!url) return null;
   // Se já for data:URL, retorna direto
   if (url.startsWith("data:")) return url;
-  try { return await assetToDataUrl(url); } catch { return null; }
+  try {
+    return await assetToDataUrl(url);
+  } catch {
+    return null;
+  }
 }
-
 
 // Quantos itens cabem por slide de proposta (área disponível após o cabeçalho)
 const ITENS_POR_SLIDE = 12;
@@ -214,7 +257,8 @@ const COR_HEADER = "0F5C7C"; // azul header
 const COR_AMARELO = "F7B500";
 const COR_TEXT_DARK = "1F2937";
 
-const TRANSPARENT_PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+const TRANSPARENT_PIXEL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
 async function safeAssetToDataUrl(url?: string | null): Promise<string> {
   if (!url) return TRANSPARENT_PIXEL;
@@ -261,7 +305,8 @@ async function gerarPptxPropostaCustomizada(
   const W = 13.33;
   const H = 7.5;
 
-  const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+  const clienteNome =
+    p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
   const agenciaNome = p.agencia?.nome_fantasia || p.agencia?.razao_social || null;
   const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
 
@@ -294,8 +339,17 @@ async function gerarPptxPropostaCustomizada(
     corTexto: "#FFFFFF",
   };
 
-  const slideCapaIdx = Math.max(0, Math.min(mapeamento?.slideCapaIndex ?? 0, sortedSlides.length - 1));
-  const slideProdIdx = Math.max(0, Math.min(mapeamento?.slideProdutosIndex ?? (sortedSlides.length > 1 ? 1 : 0), sortedSlides.length - 1));
+  const slideCapaIdx = Math.max(
+    0,
+    Math.min(mapeamento?.slideCapaIndex ?? 0, sortedSlides.length - 1),
+  );
+  const slideProdIdx = Math.max(
+    0,
+    Math.min(
+      mapeamento?.slideProdutosIndex ?? (sortedSlides.length > 1 ? 1 : 0),
+      sortedSlides.length - 1,
+    ),
+  );
 
   const corHeader = (tblConfig.corHeader || "#0F5C7C").replace("#", "");
   const corTextoHeader = (tblConfig.corTextoHeader || "#FFFFFF").replace("#", "");
@@ -309,9 +363,10 @@ async function gerarPptxPropostaCustomizada(
     }
   };
 
-  const itens = [...(p.itens ?? [])].sort((a, b) =>
-    (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
-    (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
+  const itens = [...(p.itens ?? [])].sort(
+    (a, b) =>
+      (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
+      (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
   );
   const itensPorSlide = Math.max(1, tblConfig.itensPorSlide || 10);
   const totalPaginas = Math.max(1, Math.ceil(itens.length / itensPorSlide));
@@ -340,10 +395,16 @@ async function gerarPptxPropostaCustomizada(
           { text: clienteNome, options: { color: corTexto, fontSize: 10 } },
         ];
         if (agenciaNome) {
-          headerTexts.push({ text: "   Agência: ", options: { bold: true, color: corHeader, fontSize: 10 } });
+          headerTexts.push({
+            text: "   Agência: ",
+            options: { bold: true, color: corHeader, fontSize: 10 },
+          });
           headerTexts.push({ text: agenciaNome, options: { color: corTexto, fontSize: 10 } });
         }
-        headerTexts.push({ text: "   Campanha: ", options: { bold: true, color: corHeader, fontSize: 10 } });
+        headerTexts.push({
+          text: "   Campanha: ",
+          options: { bold: true, color: corHeader, fontSize: 10 },
+        });
         headerTexts.push({ text: p.campanha, options: { color: corTexto, fontSize: 10 } });
         headerTexts.push({
           text: `   Nº ${p.numero}${totalPaginas > 1 ? ` (${pag + 1}/${totalPaginas})` : ""}`,
@@ -368,13 +429,73 @@ async function gerarPptxPropostaCustomizada(
 
         if (isPacoteMidia) {
           headerRow = [
-            { text: "Mídia / Tipo", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
-            { text: "Ponto / Produto / Endereço", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
-            { text: "Horário", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
-            { text: "Formato", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "center" } },
-            { text: "Ins/dia", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
-            { text: "Total Ins.", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
-            { text: "Fotos / Mapa", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "center" } },
+            {
+              text: "Mídia / Tipo",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+              },
+            },
+            {
+              text: "Ponto / Produto / Endereço",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+              },
+            },
+            {
+              text: "Horário",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+              },
+            },
+            {
+              text: "Formato",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "center",
+              },
+            },
+            {
+              text: "Ins/dia",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "right",
+              },
+            },
+            {
+              text: "Total Ins.",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "right",
+              },
+            },
+            {
+              text: "Fotos / Mapa",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "center",
+              },
+            },
           ];
           const colRatios = [0.14, 0.38, 0.12, 0.12, 0.08, 0.08, 0.08];
           colW = colRatios.map((r) => r * wTable);
@@ -384,28 +505,54 @@ async function gerarPptxPropostaCustomizada(
             const programaCell: PptxGenJS.TableCell = det
               ? {
                   text: [
-                    { text: it.programa || "—", options: { fontSize: 8.5, color: corTexto, bold: true } },
+                    {
+                      text: it.programa || "—",
+                      options: { fontSize: 8.5, color: corTexto, bold: true },
+                    },
                     { text: `\n${det}`, options: { fontSize: 7, italic: true, color: "4B5563" } },
                   ],
                   options: { fontSize: 8.5, color: corTexto },
                 }
-              : { text: it.programa || "—", options: { fontSize: 8.5, color: corTexto, bold: true } };
+              : {
+                  text: it.programa || "—",
+                  options: { fontSize: 8.5, color: corTexto, bold: true },
+                };
 
             let fotoCell: PptxGenJS.TableCell;
             if (showFotos && it.fotos && it.fotos.length > 0) {
               fotoCell = {
                 text: `📷 Ver Fotos (${it.fotos.length})`,
-                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: it.fotos[0] } },
+                options: {
+                  fontSize: 8,
+                  align: "center",
+                  color: corHeader,
+                  underline: { style: "sng" },
+                  hyperlink: { url: it.fotos[0] },
+                },
               };
             } else if (showEndereco && it.latitude && it.longitude) {
               fotoCell = {
                 text: "🌐 Mapa GPS",
-                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` } },
+                options: {
+                  fontSize: 8,
+                  align: "center",
+                  color: corHeader,
+                  underline: { style: "sng" },
+                  hyperlink: {
+                    url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}`,
+                  },
+                },
               };
             } else if (it.link_modelo) {
               fotoCell = {
                 text: "Ver Modelo",
-                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: it.link_modelo } },
+                options: {
+                  fontSize: 8,
+                  align: "center",
+                  color: corHeader,
+                  underline: { style: "sng" },
+                  hyperlink: { url: it.link_modelo },
+                },
               };
             } else {
               fotoCell = { text: "—", options: { fontSize: 8, align: "center", color: "9CA3AF" } };
@@ -415,27 +562,132 @@ async function gerarPptxPropostaCustomizada(
               { text: it.tipo, options: { fontSize: 8.5, color: corTexto } },
               programaCell,
               { text: it.horario || "—", options: { fontSize: 8.5, color: corTexto } },
-              { text: it.formato || "—", options: { fontSize: 8.5, align: "center", color: corTexto } },
-              { text: String(it.insercoes_dia), options: { fontSize: 8.5, align: "right", color: corTexto } },
-              { text: String(it.total_insercoes), options: { fontSize: 8.5, align: "right", color: corTexto } },
+              {
+                text: it.formato || "—",
+                options: { fontSize: 8.5, align: "center", color: corTexto },
+              },
+              {
+                text: String(it.insercoes_dia),
+                options: { fontSize: 8.5, align: "right", color: corTexto },
+              },
+              {
+                text: String(it.total_insercoes),
+                options: { fontSize: 8.5, align: "right", color: corTexto },
+              },
               fotoCell,
             ];
           });
         } else {
           headerRow = [
-            { text: "Tipo", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
-            { text: "Programa / Ponto / Endereço", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
-            { text: "Horário", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9 } },
-            { text: "Formato", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "center" } },
-            { text: "Fotos", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "center" } },
-            { text: "Ins/dia", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
-            { text: "Total Ins.", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
-            { text: "Vlr Unit.", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
-            { text: "Total Tabela", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
-            { text: "Desc.", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
-            { text: "Vlr Negociado", options: { bold: true, color: corTextoHeader, fill: { color: corHeader }, fontSize: 9, align: "right" } },
+            {
+              text: "Tipo",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+              },
+            },
+            {
+              text: "Programa / Ponto / Endereço",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+              },
+            },
+            {
+              text: "Horário",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+              },
+            },
+            {
+              text: "Formato",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "center",
+              },
+            },
+            {
+              text: "Fotos",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "center",
+              },
+            },
+            {
+              text: "Ins/dia",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "right",
+              },
+            },
+            {
+              text: "Total Ins.",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "right",
+              },
+            },
+            {
+              text: "Vlr Unit.",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "right",
+              },
+            },
+            {
+              text: "Total Tabela",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "right",
+              },
+            },
+            {
+              text: "Desc.",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "right",
+              },
+            },
+            {
+              text: "Vlr Negociado",
+              options: {
+                bold: true,
+                color: corTextoHeader,
+                fill: { color: corHeader },
+                fontSize: 9,
+                align: "right",
+              },
+            },
           ];
-          const colRatios = [0.08, 0.22, 0.08, 0.06, 0.06, 0.05, 0.07, 0.10, 0.10, 0.05, 0.13];
+          const colRatios = [0.08, 0.22, 0.08, 0.06, 0.06, 0.05, 0.07, 0.1, 0.1, 0.05, 0.13];
           colW = colRatios.map((r) => r * wTable);
 
           bodyRows = slice.map((it) => {
@@ -443,23 +695,41 @@ async function gerarPptxPropostaCustomizada(
             const programaCell: PptxGenJS.TableCell = det
               ? {
                   text: [
-                    { text: it.programa || "—", options: { fontSize: 8.5, color: corTexto, bold: true } },
+                    {
+                      text: it.programa || "—",
+                      options: { fontSize: 8.5, color: corTexto, bold: true },
+                    },
                     { text: `\n${det}`, options: { fontSize: 7, italic: true, color: "4B5563" } },
                   ],
                   options: { fontSize: 8.5, color: corTexto },
                 }
-              : { text: it.programa || "—", options: { fontSize: 8.5, color: corTexto, bold: true } };
+              : {
+                  text: it.programa || "—",
+                  options: { fontSize: 8.5, color: corTexto, bold: true },
+                };
 
             let fotoCell: PptxGenJS.TableCell;
             if (showFotos && it.fotos && it.fotos.length > 0) {
               fotoCell = {
                 text: "📷 Fotos",
-                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: it.fotos[0] } },
+                options: {
+                  fontSize: 8,
+                  align: "center",
+                  color: corHeader,
+                  underline: { style: "sng" },
+                  hyperlink: { url: it.fotos[0] },
+                },
               };
             } else if (it.link_modelo) {
               fotoCell = {
                 text: "Modelo",
-                options: { fontSize: 8, align: "center", color: corHeader, underline: { style: "sng" }, hyperlink: { url: it.link_modelo } },
+                options: {
+                  fontSize: 8,
+                  align: "center",
+                  color: corHeader,
+                  underline: { style: "sng" },
+                  hyperlink: { url: it.link_modelo },
+                },
               };
             } else {
               fotoCell = { text: "—", options: { fontSize: 8, align: "center", color: "9CA3AF" } };
@@ -469,16 +739,46 @@ async function gerarPptxPropostaCustomizada(
               { text: it.tipo, options: { fontSize: 8.5, color: corTexto } },
               programaCell,
               { text: it.horario || "—", options: { fontSize: 8.5, color: corTexto } },
-              { text: it.formato || "—", options: { fontSize: 8.5, align: "center", color: corTexto } },
+              {
+                text: it.formato || "—",
+                options: { fontSize: 8.5, align: "center", color: corTexto },
+              },
               fotoCell,
-              { text: String(it.insercoes_dia), options: { fontSize: 8.5, align: "right", color: corTexto } },
-              { text: String(it.total_insercoes), options: { fontSize: 8.5, align: "right", color: corTexto } },
-              { text: fmtBRL(it.valor_unit), options: { fontSize: 8.5, align: "right", color: corTexto } },
-              { text: fmtBRL(it.valor_tabela), options: { fontSize: 8.5, align: "right", color: corTexto } },
-              { text: `${(it.desconto || 0).toFixed(0)}%`, options: { fontSize: 8.5, align: "right", color: corTexto } },
+              {
+                text: String(it.insercoes_dia),
+                options: { fontSize: 8.5, align: "right", color: corTexto },
+              },
+              {
+                text: String(it.total_insercoes),
+                options: { fontSize: 8.5, align: "right", color: corTexto },
+              },
+              {
+                text: fmtBRL(it.valor_unit),
+                options: { fontSize: 8.5, align: "right", color: corTexto },
+              },
+              {
+                text: fmtBRL(it.valor_tabela),
+                options: { fontSize: 8.5, align: "right", color: corTexto },
+              },
+              {
+                text: `${(it.desconto || 0).toFixed(0)}%`,
+                options: { fontSize: 8.5, align: "right", color: corTexto },
+              },
               it.valor_negociado > 0
-                ? { text: fmtBRL(it.valor_negociado), options: { fontSize: 8.5, align: "right", bold: true, color: corHeader } }
-                : { text: "Bonificação", options: { fontSize: 8.5, align: "right", bold: true, color: corDestaque, fill: { color: "FFF7E0" } } },
+                ? {
+                    text: fmtBRL(it.valor_negociado),
+                    options: { fontSize: 8.5, align: "right", bold: true, color: corHeader },
+                  }
+                : {
+                    text: "Bonificação",
+                    options: {
+                      fontSize: 8.5,
+                      align: "right",
+                      bold: true,
+                      color: corDestaque,
+                      fill: { color: "FFF7E0" },
+                    },
+                  },
             ];
           });
         }
@@ -511,9 +811,10 @@ async function gerarPptxPropostaCustomizada(
                 { titulo: "Valor Tabela", valor: fmtBRL(p.valor_tabela) },
                 {
                   titulo: "Desconto",
-                  valor: p.valor_tabela > 0
-                    ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
-                    : fmtBRL(p.valor_desconto),
+                  valor:
+                    p.valor_tabela > 0
+                      ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
+                      : fmtBRL(p.valor_desconto),
                 },
                 {
                   titulo: "VALOR TOTAL DA PROPOSTA",
@@ -530,18 +831,34 @@ async function gerarPptxPropostaCustomizada(
             const txtC = c.destaque ? corHeader : corTextoHeader;
 
             s.addShape("roundRect", {
-              x: cx, y: cardY, w, h: cardH,
+              x: cx,
+              y: cardY,
+              w,
+              h: cardH,
               fill: { color: bgC },
               line: { color: bgC },
               rectRadius: 0.08,
             });
             s.addText(c.titulo, {
-              x: cx, y: cardY + 0.06, w, h: 0.28,
-              fontSize: 10, color: txtC, align: "center", bold: true,
+              x: cx,
+              y: cardY + 0.06,
+              w,
+              h: 0.28,
+              fontSize: 10,
+              color: txtC,
+              align: "center",
+              bold: true,
             });
             s.addText(c.valor, {
-              x: cx, y: cardY + 0.34, w, h: 0.55,
-              fontSize: 18, bold: true, color: txtC, align: "center", valign: "middle",
+              x: cx,
+              y: cardY + 0.34,
+              w,
+              h: 0.55,
+              fontSize: 18,
+              bold: true,
+              color: txtC,
+              align: "center",
+              valign: "middle",
             });
           });
         } else {
@@ -562,8 +879,14 @@ async function gerarPptxPropostaCustomizada(
           { text: dataStr, options: { color: corTexto, fontSize: 8 } },
         ];
         if (p.validade) {
-          footerTexts.push({ text: "    Validade: ", options: { bold: true, color: corHeader, fontSize: 8 } });
-          footerTexts.push({ text: `${fmtDataBR(p.validade)} (10 dias úteis)`, options: { color: corTexto, fontSize: 8 } });
+          footerTexts.push({
+            text: "    Validade: ",
+            options: { bold: true, color: corHeader, fontSize: 8 },
+          });
+          footerTexts.push({
+            text: `${fmtDataBR(p.validade)} (10 dias úteis)`,
+            options: { color: corTexto, fontSize: 8 },
+          });
         }
         s.addText(footerTexts, {
           x: xTable,
@@ -604,10 +927,16 @@ async function gerarPptxPropostaCustomizada(
 
         const coverMeta: any[] = [];
         if (capaConfig.mostrarCampanha && p.campanha) {
-          coverMeta.push({ text: p.campanha + "\n", options: { fontSize: 14, bold: true, color: corCapaTexto } });
+          coverMeta.push({
+            text: p.campanha + "\n",
+            options: { fontSize: 14, bold: true, color: corCapaTexto },
+          });
         }
         if (capaConfig.mostrarNumeroProposta && p.numero) {
-          coverMeta.push({ text: `Proposta Comercial nº ${p.numero}  ·  `, options: { fontSize: 10, color: corCapaTexto } });
+          coverMeta.push({
+            text: `Proposta Comercial nº ${p.numero}  ·  `,
+            options: { fontSize: 10, color: corCapaTexto },
+          });
         }
         if (capaConfig.mostrarData) {
           coverMeta.push({ text: `${dataStr}`, options: { fontSize: 10, color: corCapaTexto } });
@@ -664,7 +993,8 @@ async function gerarPdfPropostaCustomizada(
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
 
-  const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+  const clienteNome =
+    p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
   const agenciaNome = p.agencia?.nome_fantasia || p.agencia?.razao_social || null;
   const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
 
@@ -697,8 +1027,17 @@ async function gerarPdfPropostaCustomizada(
     corTexto: "#FFFFFF",
   };
 
-  const slideCapaIdx = Math.max(0, Math.min(mapeamento?.slideCapaIndex ?? 0, sortedSlides.length - 1));
-  const slideProdIdx = Math.max(0, Math.min(mapeamento?.slideProdutosIndex ?? (sortedSlides.length > 1 ? 1 : 0), sortedSlides.length - 1));
+  const slideCapaIdx = Math.max(
+    0,
+    Math.min(mapeamento?.slideCapaIndex ?? 0, sortedSlides.length - 1),
+  );
+  const slideProdIdx = Math.max(
+    0,
+    Math.min(
+      mapeamento?.slideProdutosIndex ?? (sortedSlides.length > 1 ? 1 : 0),
+      sortedSlides.length - 1,
+    ),
+  );
 
   const rgbHeader = hexToRgb(tblConfig.corHeader || "#0F5C7C");
   const rgbTextoHeader = hexToRgb(tblConfig.corTextoHeader || "#FFFFFF");
@@ -711,13 +1050,16 @@ async function gerarPdfPropostaCustomizada(
       try {
         const fmt = data.startsWith("data:image/png") ? "PNG" : "JPEG";
         doc.addImage(data, fmt, 0, 0, W, H, undefined, "FAST");
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   };
 
-  const itens = [...(p.itens ?? [])].sort((a, b) =>
-    (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
-    (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
+  const itens = [...(p.itens ?? [])].sort(
+    (a, b) =>
+      (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
+      (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
   );
   const itensPorSlide = Math.max(1, tblConfig.itensPorSlide || 10);
   const totalPaginas = Math.max(1, Math.ceil(itens.length / itensPorSlide));
@@ -774,7 +1116,12 @@ async function gerarPdfPropostaCustomizada(
 
         doc.setTextColor(rgbHeader[0], rgbHeader[1], rgbHeader[2]);
         doc.setFont("helvetica", "bold");
-        doc.text(`Nº ${p.numero}${totalPaginas > 1 ? ` (${pag + 1}/${totalPaginas})` : ""}`, W - mrTableMm, Math.max(10, yTableMm - 5), { align: "right" });
+        doc.text(
+          `Nº ${p.numero}${totalPaginas > 1 ? ` (${pag + 1}/${totalPaginas})` : ""}`,
+          W - mrTableMm,
+          Math.max(10, yTableMm - 5),
+          { align: "right" },
+        );
 
         const isPacoteMidia = p.modo_apresentacao === "pacote_midia";
         const showEndereco = p.mostrar_endereco !== false;
@@ -785,10 +1132,20 @@ async function gerarPdfPropostaCustomizada(
         let columnStyles: Record<number, any>;
 
         if (isPacoteMidia) {
-          tableHead = [["Tipo / Mídia", "Ponto / Produto / Endereço", "Horário", "Form.", "Ins/dia", "Total Ins.", "Fotos / Mapa"]];
+          tableHead = [
+            [
+              "Tipo / Mídia",
+              "Ponto / Produto / Endereço",
+              "Horário",
+              "Form.",
+              "Ins/dia",
+              "Total Ins.",
+              "Fotos / Mapa",
+            ],
+          ];
           tableBody = slice.map((it) => {
             const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
-            const programa = det ? `${it.programa || "—"}\n${det}` : (it.programa || "—");
+            const programa = det ? `${it.programa || "—"}\n${det}` : it.programa || "—";
             let fotoLabel = "—";
             if (showFotos && it.fotos && it.fotos.length > 0) {
               fotoLabel = `📷 Fotos (${it.fotos.length})`;
@@ -804,7 +1161,13 @@ async function gerarPdfPropostaCustomizada(
               it.formato || "—",
               String(it.insercoes_dia),
               String(it.total_insercoes),
-              { content: fotoLabel, styles: { textColor: (fotoLabel !== "—" ? rgbHeader : rgbTexto) as any, fontStyle: fotoLabel !== "—" ? "bold" : "normal" } },
+              {
+                content: fotoLabel,
+                styles: {
+                  textColor: (fotoLabel !== "—" ? rgbHeader : rgbTexto) as any,
+                  fontStyle: fotoLabel !== "—" ? "bold" : "normal",
+                },
+              },
             ];
           });
           columnStyles = {
@@ -814,10 +1177,24 @@ async function gerarPdfPropostaCustomizada(
             6: { halign: "center" },
           };
         } else {
-          tableHead = [["Tipo", "Programa / Ponto / Endereço", "Horário", "Form.", "Fotos", "Ins/dia", "Total Ins.", "Vlr Unit.", "Total Tabela", "Desc.", "Vlr Negociado"]];
+          tableHead = [
+            [
+              "Tipo",
+              "Programa / Ponto / Endereço",
+              "Horário",
+              "Form.",
+              "Fotos",
+              "Ins/dia",
+              "Total Ins.",
+              "Vlr Unit.",
+              "Total Tabela",
+              "Desc.",
+              "Vlr Negociado",
+            ],
+          ];
           tableBody = slice.map((it) => {
             const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
-            const programa = det ? `${it.programa || "—"}\n${det}` : (it.programa || "—");
+            const programa = det ? `${it.programa || "—"}\n${det}` : it.programa || "—";
             let fotoLabel = "—";
             if (showFotos && it.fotos && it.fotos.length > 0) {
               fotoLabel = "📷 Fotos";
@@ -829,7 +1206,10 @@ async function gerarPdfPropostaCustomizada(
               { content: programa, styles: { fontSize: 8 } },
               it.horario || "—",
               it.formato || "—",
-              { content: fotoLabel, styles: { textColor: (fotoLabel !== "—" ? rgbHeader : rgbTexto) as any } },
+              {
+                content: fotoLabel,
+                styles: { textColor: (fotoLabel !== "—" ? rgbHeader : rgbTexto) as any },
+              },
               String(it.insercoes_dia),
               String(it.total_insercoes),
               fmtBRL(it.valor_unit),
@@ -859,7 +1239,11 @@ async function gerarPdfPropostaCustomizada(
           headStyles: { fillColor: rgbHeader as any, textColor: rgbTextoHeader as any },
           columnStyles,
           didParseCell: (data) => {
-            if (data.section === "body" && typeof data.cell.raw === "string" && data.cell.raw === "Bonificação") {
+            if (
+              data.section === "body" &&
+              typeof data.cell.raw === "string" &&
+              data.cell.raw === "Bonificação"
+            ) {
               data.cell.styles.textColor = rgbDestaque as any;
               data.cell.styles.fillColor = [255, 247, 224];
               data.cell.styles.fontStyle = "bold";
@@ -871,11 +1255,17 @@ async function gerarPdfPropostaCustomizada(
               const linkCol = isPacoteMidia ? 6 : 4;
               if (data.column.index === linkCol && it) {
                 if (it.fotos?.[0]) {
-                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.fotos[0] });
+                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+                    url: it.fotos[0],
+                  });
                 } else if (it.latitude && it.longitude) {
-                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` });
+                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+                    url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}`,
+                  });
                 } else if (it.link_modelo) {
-                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.link_modelo });
+                  (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+                    url: it.link_modelo,
+                  });
                 }
               }
             }
@@ -901,9 +1291,10 @@ async function gerarPdfPropostaCustomizada(
                 { t: "Valor de tabela", v: fmtBRL(p.valor_tabela), accent: false },
                 {
                   t: "Desconto",
-                  v: p.valor_tabela > 0
-                    ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
-                    : fmtBRL(p.valor_desconto),
+                  v:
+                    p.valor_tabela > 0
+                      ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
+                      : fmtBRL(p.valor_desconto),
                   accent: false,
                 },
                 {
@@ -964,7 +1355,9 @@ async function gerarPdfPropostaCustomizada(
           try {
             const fmt = logoData.startsWith("data:image/png") ? "PNG" : "JPEG";
             doc.addImage(logoData, fmt, 20, H - 75, 70, 50, undefined, "FAST");
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         } else if (capaConfig.mostrarNomeCliente) {
           doc.setFont("helvetica", "bold");
           doc.setFontSize(22);
@@ -1018,7 +1411,11 @@ async function gerarPdfPropostaCustomizada(
 }
 
 // ====== PPTX ======
-export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: string, layoutConfig?: any) {
+export async function gerarPptxProposta(
+  p: PropostaApresentacao,
+  _resumoIA: string,
+  layoutConfig?: any,
+) {
   const { p: pAdj, dataStr } = aplicarPadroes(p);
   p = pAdj;
 
@@ -1028,22 +1425,29 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
     layoutConfig?.mapeamento || layoutConfig?.config?.mapeamento;
 
   if (customSlides && customSlides.length > 0) {
-    return await gerarPptxPropostaCustomizada(p, dataStr, customSlides, customMapeamento, layoutConfig);
+    return await gerarPptxPropostaCustomizada(
+      p,
+      dataStr,
+      customSlides,
+      customMapeamento,
+      layoutConfig,
+    );
   }
 
   const pptx = new PptxGenJS();
-  
+
   // Cores customizadas do layout
   const primaryColor = (layoutConfig?.colors?.primary || COR_HEADER).replace("#", "");
   const secondaryColor = (layoutConfig?.colors?.secondary || COR_AMARELO).replace("#", "");
   const baseFontSize = layoutConfig?.font?.baseSize || 10;
-  
+
   pptx.layout = "LAYOUT_WIDE"; // 13.33 x 7.5
   pptx.title = `Proposta ${p.numero}`;
   const W = 13.33;
   const H = 7.5;
 
-  const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+  const clienteNome =
+    p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
   const agenciaNome = p.agencia?.nome_fantasia || p.agencia?.razao_social || null;
 
   const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
@@ -1068,23 +1472,28 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
     if (logoData) {
       // Posição: 4cm (1.575 polegadas) acima do rodapé (fundo)
       // Logo com altura 2.604. Bottom em H - 1.575 -> y = H - 1.575 - 2.604 = H - 4.179
-      slide.addImage({ 
-        data: logoData, 
-        x: 0.4, 
-        y: H - 3.0, 
-        w: 3.125, 
-        h: 2.604, 
-        sizing: { type: "contain", w: 3.125, h: 2.604 } 
+      slide.addImage({
+        data: logoData,
+        x: 0.4,
+        y: H - 3.0,
+        w: 3.125,
+        h: 2.604,
+        sizing: { type: "contain", w: 3.125, h: 2.604 },
       });
     } else {
       slide.addText(clienteNome, {
-        x: 0.4, y: H - 3.0, w: 9.0, h: 2.604,
-        fontSize: 22, bold: true, color: "FFFFFF", align: "left", valign: "middle",
+        x: 0.4,
+        y: H - 3.0,
+        w: 9.0,
+        h: 2.604,
+        fontSize: 22,
+        bold: true,
+        color: "FFFFFF",
+        align: "left",
+        valign: "middle",
       });
-
     }
   };
-
 
   // Slides 1-4 do template como background (sem overlay)
   for (let i = 0; i < 4; i++) {
@@ -1097,9 +1506,10 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
   // Slide da Proposta (Resumo IA)
 
   // Slide 5 (e adicionais conforme overflow): proposta com valores
-  const itens = [...(p.itens ?? [])].sort((a, b) =>
-    (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
-    (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
+  const itens = [...(p.itens ?? [])].sort(
+    (a, b) =>
+      (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
+      (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
   );
   const totalPaginas = Math.max(1, Math.ceil(itens.length / ITENS_POR_SLIDE));
 
@@ -1120,15 +1530,23 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
     ];
 
     if (agenciaNome) {
-      headerTexts.push({ text: "    Agência: ", options: { bold: true, color: COR_HEADER, fontSize: 11 } });
+      headerTexts.push({
+        text: "    Agência: ",
+        options: { bold: true, color: COR_HEADER, fontSize: 11 },
+      });
       headerTexts.push({ text: agenciaNome, options: { color: COR_TEXT_DARK, fontSize: 11 } });
     }
 
-    headerTexts.push({ text: "    Campanha: ", options: { bold: true, color: COR_HEADER, fontSize: 11 } });
+    headerTexts.push({
+      text: "    Campanha: ",
+      options: { bold: true, color: COR_HEADER, fontSize: 11 },
+    });
     headerTexts.push({ text: p.campanha, options: { color: COR_TEXT_DARK, fontSize: 11 } });
-    
 
-    headerTexts.push({ text: `    Nº ${p.numero}`, options: { color: COR_TEXT_DARK, fontSize: 10, italic: true } });
+    headerTexts.push({
+      text: `    Nº ${p.numero}`,
+      options: { color: COR_TEXT_DARK, fontSize: 10, italic: true },
+    });
 
     s.addText(headerTexts, { x: 0.4, y: 1.5, w: W - 0.8, h: 0.35, valign: "middle" });
 
@@ -1138,10 +1556,23 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
       { text: dataStr, options: { color: COR_TEXT_DARK, fontSize: 9 } },
     ];
     if (p.validade) {
-      footerTexts.push({ text: "    Validade: ", options: { bold: true, color: COR_HEADER, fontSize: 9 } });
-      footerTexts.push({ text: `${fmtDataBR(p.validade)} (10 dias úteis)`, options: { color: COR_TEXT_DARK, fontSize: 9 } });
+      footerTexts.push({
+        text: "    Validade: ",
+        options: { bold: true, color: COR_HEADER, fontSize: 9 },
+      });
+      footerTexts.push({
+        text: `${fmtDataBR(p.validade)} (10 dias úteis)`,
+        options: { color: COR_TEXT_DARK, fontSize: 9 },
+      });
     }
-    s.addText(footerTexts, { x: 0.4, y: H - 0.32, w: W - 0.8, h: 0.25, valign: "middle", align: "center" });
+    s.addText(footerTexts, {
+      x: 0.4,
+      y: H - 0.32,
+      w: W - 0.8,
+      h: 0.25,
+      valign: "middle",
+      align: "center",
+    });
 
     // Linha do executivo responsável
     if (p.executivo?.nome) {
@@ -1150,7 +1581,10 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
         { text: p.executivo.nome, options: { color: "FFFFFF", fontSize: 10 } },
       ];
       if (p.executivo.cargo) {
-        execTexts.push({ text: ` (${p.executivo.cargo})`, options: { color: "FFFFFF", fontSize: 9, italic: true } });
+        execTexts.push({
+          text: ` (${p.executivo.cargo})`,
+          options: { color: "FFFFFF", fontSize: 9, italic: true },
+        });
       }
       if (p.executivo.email) {
         execTexts.push({ text: "    ✉ ", options: { color: "FFFFFF", fontSize: 10 } });
@@ -1173,13 +1607,58 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
 
     if (isPacoteMidia) {
       headerRow = [
-        { text: "Mídia / Tipo", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-        { text: "Ponto / Produto / Endereço", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-        { text: "Horário", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-        { text: "Formato", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
-        { text: "Ins/dia", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-        { text: "Total Ins.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-        { text: "Fotos / Mapa", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
+        {
+          text: "Mídia / Tipo",
+          options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 },
+        },
+        {
+          text: "Ponto / Produto / Endereço",
+          options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 },
+        },
+        {
+          text: "Horário",
+          options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 },
+        },
+        {
+          text: "Formato",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "center",
+          },
+        },
+        {
+          text: "Ins/dia",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "right",
+          },
+        },
+        {
+          text: "Total Ins.",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "right",
+          },
+        },
+        {
+          text: "Fotos / Mapa",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "center",
+          },
+        },
       ];
       colW = [1.5, 4.5, 1.6, 1.4, 1.1, 1.2, 1.23];
 
@@ -1188,28 +1667,52 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
         const programaCell: PptxGenJS.TableCell = det
           ? {
               text: [
-                { text: it.programa || "—", options: { fontSize: 9, bold: true, color: COR_TEXT_DARK } },
+                {
+                  text: it.programa || "—",
+                  options: { fontSize: 9, bold: true, color: COR_TEXT_DARK },
+                },
                 { text: `\n${det}`, options: { fontSize: 7.5, italic: true, color: "4B5563" } },
               ],
               options: { fontSize: 9, color: COR_TEXT_DARK },
             }
-          : { text: it.programa || "—", options: { fontSize: 9, bold: true, color: COR_TEXT_DARK } };
+          : {
+              text: it.programa || "—",
+              options: { fontSize: 9, bold: true, color: COR_TEXT_DARK },
+            };
 
         let fotoCell: PptxGenJS.TableCell;
         if (showFotos && it.fotos && it.fotos.length > 0) {
           fotoCell = {
             text: `📷 Fotos (${it.fotos.length})`,
-            options: { fontSize: 8.5, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.fotos[0] } },
+            options: {
+              fontSize: 8.5,
+              align: "center",
+              color: "0F5C7C",
+              underline: { style: "sng" },
+              hyperlink: { url: it.fotos[0] },
+            },
           };
         } else if (showEndereco && it.latitude && it.longitude) {
           fotoCell = {
             text: "🌐 Mapa GPS",
-            options: { fontSize: 8.5, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` } },
+            options: {
+              fontSize: 8.5,
+              align: "center",
+              color: "0F5C7C",
+              underline: { style: "sng" },
+              hyperlink: { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` },
+            },
           };
         } else if (it.link_modelo) {
           fotoCell = {
             text: "Modelo",
-            options: { fontSize: 8.5, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.link_modelo } },
+            options: {
+              fontSize: 8.5,
+              align: "center",
+              color: "0F5C7C",
+              underline: { style: "sng" },
+              hyperlink: { url: it.link_modelo },
+            },
           };
         } else {
           fotoCell = { text: "—", options: { fontSize: 8.5, align: "center", color: "9CA3AF" } };
@@ -1219,25 +1722,115 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
           { text: it.tipo, options: { fontSize: 9, color: COR_TEXT_DARK } },
           programaCell,
           { text: it.horario || "—", options: { fontSize: 9, color: COR_TEXT_DARK } },
-          { text: it.formato || "—", options: { fontSize: 9, align: "center", color: COR_TEXT_DARK } },
-          { text: String(it.insercoes_dia), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-          { text: String(it.total_insercoes), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          {
+            text: it.formato || "—",
+            options: { fontSize: 9, align: "center", color: COR_TEXT_DARK },
+          },
+          {
+            text: String(it.insercoes_dia),
+            options: { fontSize: 9, align: "right", color: COR_TEXT_DARK },
+          },
+          {
+            text: String(it.total_insercoes),
+            options: { fontSize: 9, align: "right", color: COR_TEXT_DARK },
+          },
           fotoCell,
         ];
       });
     } else {
       headerRow = [
-        { text: "Tipo", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-        { text: "Programa / Ponto / Endereço", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-        { text: "Horário", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 } },
-        { text: "Form.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
-        { text: "Fotos", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "center" } },
-        { text: "Ins/dia", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-        { text: "Total Ins.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-        { text: "Vlr Unit.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-        { text: "Total Tabela", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-        { text: "Desc.", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
-        { text: "Vlr Negociado", options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10, align: "right" } },
+        {
+          text: "Tipo",
+          options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 },
+        },
+        {
+          text: "Programa / Ponto / Endereço",
+          options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 },
+        },
+        {
+          text: "Horário",
+          options: { bold: true, color: "FFFFFF", fill: { color: COR_HEADER }, fontSize: 10 },
+        },
+        {
+          text: "Form.",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "center",
+          },
+        },
+        {
+          text: "Fotos",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "center",
+          },
+        },
+        {
+          text: "Ins/dia",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "right",
+          },
+        },
+        {
+          text: "Total Ins.",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "right",
+          },
+        },
+        {
+          text: "Vlr Unit.",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "right",
+          },
+        },
+        {
+          text: "Total Tabela",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "right",
+          },
+        },
+        {
+          text: "Desc.",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "right",
+          },
+        },
+        {
+          text: "Vlr Negociado",
+          options: {
+            bold: true,
+            color: "FFFFFF",
+            fill: { color: COR_HEADER },
+            fontSize: 10,
+            align: "right",
+          },
+        },
       ];
       colW = [1.0, 2.5, 0.9, 0.6, 0.7, 0.6, 0.75, 1.0, 1.2, 0.65, 1.53];
 
@@ -1257,12 +1850,24 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
         if (showFotos && it.fotos && it.fotos.length > 0) {
           fotoCell = {
             text: "📷 Fotos",
-            options: { fontSize: 9, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.fotos[0] } },
+            options: {
+              fontSize: 9,
+              align: "center",
+              color: "0F5C7C",
+              underline: { style: "sng" },
+              hyperlink: { url: it.fotos[0] },
+            },
           };
         } else if (it.link_modelo) {
           fotoCell = {
             text: "modelo",
-            options: { fontSize: 9, align: "center", color: "0F5C7C", underline: { style: "sng" }, hyperlink: { url: it.link_modelo } },
+            options: {
+              fontSize: 9,
+              align: "center",
+              color: "0F5C7C",
+              underline: { style: "sng" },
+              hyperlink: { url: it.link_modelo },
+            },
           };
         } else {
           fotoCell = { text: "—", options: { fontSize: 9, align: "center", color: COR_TEXT_DARK } };
@@ -1272,22 +1877,54 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
           { text: it.tipo, options: { fontSize: 9, color: COR_TEXT_DARK } },
           programaCell,
           { text: it.horario || "—", options: { fontSize: 9, color: COR_TEXT_DARK } },
-          { text: it.formato || "—", options: { fontSize: 9, align: "center", color: COR_TEXT_DARK } },
+          {
+            text: it.formato || "—",
+            options: { fontSize: 9, align: "center", color: COR_TEXT_DARK },
+          },
           fotoCell,
-          { text: String(it.insercoes_dia), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-          { text: String(it.total_insercoes), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-          { text: fmtBRL(it.valor_unit), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-          { text: fmtBRL(it.valor_tabela), options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
-          { text: `${(it.desconto || 0).toFixed(0)}%`, options: { fontSize: 9, align: "right", color: COR_TEXT_DARK } },
+          {
+            text: String(it.insercoes_dia),
+            options: { fontSize: 9, align: "right", color: COR_TEXT_DARK },
+          },
+          {
+            text: String(it.total_insercoes),
+            options: { fontSize: 9, align: "right", color: COR_TEXT_DARK },
+          },
+          {
+            text: fmtBRL(it.valor_unit),
+            options: { fontSize: 9, align: "right", color: COR_TEXT_DARK },
+          },
+          {
+            text: fmtBRL(it.valor_tabela),
+            options: { fontSize: 9, align: "right", color: COR_TEXT_DARK },
+          },
+          {
+            text: `${(it.desconto || 0).toFixed(0)}%`,
+            options: { fontSize: 9, align: "right", color: COR_TEXT_DARK },
+          },
           it.valor_negociado > 0
-            ? { text: fmtBRL(it.valor_negociado), options: { fontSize: 9, align: "right", bold: true, color: COR_HEADER } }
-            : { text: "Bonificação", options: { fontSize: 9, align: "right", bold: true, color: "F7B500", fill: { color: "FFF7E0" } } },
+            ? {
+                text: fmtBRL(it.valor_negociado),
+                options: { fontSize: 9, align: "right", bold: true, color: COR_HEADER },
+              }
+            : {
+                text: "Bonificação",
+                options: {
+                  fontSize: 9,
+                  align: "right",
+                  bold: true,
+                  color: "F7B500",
+                  fill: { color: "FFF7E0" },
+                },
+              },
         ];
       });
     }
 
     s.addTable([headerRow, ...bodyRows], {
-      x: 0.4, y: 2.15, w: W - 0.8,
+      x: 0.4,
+      y: 2.15,
+      w: W - 0.8,
       colW,
       border: { type: "solid", color: "E5E7EB", pt: 0.5 },
       rowH: 0.34,
@@ -1301,38 +1938,61 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
             { titulo: "Total de Pontos", valor: `${itens.length} pontos` },
             { titulo: "Total de Inserções", valor: String(p.total_insercoes) },
             { titulo: "Praça / Campanha", valor: p.campanha || "Local" },
-            { titulo: "VALOR DO PACOTE DE MÍDIA", valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", destaque: true },
+            {
+              titulo: "VALOR DO PACOTE DE MÍDIA",
+              valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação",
+              destaque: true,
+            },
           ]
         : [
             { titulo: "Total de inserções", valor: String(p.total_insercoes) },
             { titulo: "Valor de tabela", valor: fmtBRL(p.valor_tabela) },
-            { 
-              titulo: "Desconto", 
-              valor: p.valor_tabela > 0 
-                ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)` 
-                : fmtBRL(p.valor_desconto) 
+            {
+              titulo: "Desconto",
+              valor:
+                p.valor_tabela > 0
+                  ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
+                  : fmtBRL(p.valor_desconto),
             },
-            { titulo: "VALOR TOTAL DA PROPOSTA", valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", destaque: true },
+            {
+              titulo: "VALOR TOTAL DA PROPOSTA",
+              valor: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação",
+              destaque: true,
+            },
           ];
       cards.forEach((c, i) => {
         const cw = (W - 0.8) / cards.length;
         const x = 0.4 + i * cw + 0.08;
         const w = cw - 0.16;
         s.addShape("roundRect", {
-          x, y: cardY, w, h: 1.1,
+          x,
+          y: cardY,
+          w,
+          h: 1.1,
           fill: { color: c.destaque ? COR_AMARELO : COR_HEADER },
           line: { color: c.destaque ? COR_AMARELO : COR_HEADER },
           rectRadius: 0.08,
         });
         s.addText(c.titulo, {
-          x, y: cardY + 0.08, w, h: 0.32,
-          fontSize: 11, color: c.destaque ? COR_HEADER : "FFFFFF", align: "center", bold: true,
+          x,
+          y: cardY + 0.08,
+          w,
+          h: 0.32,
+          fontSize: 11,
+          color: c.destaque ? COR_HEADER : "FFFFFF",
+          align: "center",
+          bold: true,
         });
         s.addText(c.valor, {
-          x, y: cardY + 0.40, w, h: 0.65,
-          fontSize: 22, bold: true,
+          x,
+          y: cardY + 0.4,
+          w,
+          h: 0.65,
+          fontSize: 22,
+          bold: true,
           color: c.destaque ? COR_HEADER : "FFFFFF",
-          align: "center", valign: "middle",
+          align: "center",
+          valign: "middle",
         });
       });
     }
@@ -1347,7 +2007,9 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
       // Calcula altura necessária baseada no texto (≈90 chars por linha a 12pt)
       const obsLines = Math.max(
         1,
-        (p.observacao || "").split(/\r?\n/).reduce((acc, l) => acc + Math.max(1, Math.ceil(l.length / 90)), 0),
+        (p.observacao || "")
+          .split(/\r?\n/)
+          .reduce((acc, l) => acc + Math.max(1, Math.ceil(l.length / 90)), 0),
       );
       const requiredH = 0.7 + obsLines * 0.22;
 
@@ -1359,31 +2021,52 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
 
       const renderObs = (slide: PptxGenJS.Slide, y: number, h: number) => {
         slide.addShape("rect", {
-          x: 0.4, y, w: W - 0.8, h,
+          x: 0.4,
+          y,
+          w: W - 0.8,
+          h,
           fill: { color: "FFF7ED" },
-          line: { color: COR_HEADER, width: 1.2 }
+          line: { color: COR_HEADER, width: 1.2 },
         });
         slide.addShape("rect", {
-          x: 0.4, y, w: 0.12, h,
+          x: 0.4,
+          y,
+          w: 0.12,
+          h,
           fill: { color: COR_HEADER },
-          line: { color: COR_HEADER, width: 0 }
+          line: { color: COR_HEADER, width: 0 },
         });
         slide.addText("OBSERVAÇÕES", {
-          x: 0.65, y: y + 0.08, w: 3, h: 0.3,
-          fontSize: 12, bold: true, color: COR_HEADER,
+          x: 0.65,
+          y: y + 0.08,
+          w: 3,
+          h: 0.3,
+          fontSize: 12,
+          bold: true,
+          color: COR_HEADER,
         });
         const segs: any[] = [];
         (p.observacao || "").split(/([A-Za-z]\))/g).forEach((part) => {
           if (!part) return;
           const isPrefix = /^[A-Za-z]\)$/.test(part);
-          segs.push({ text: part, options: { bold: isPrefix, color: isPrefix ? COR_HEADER : "111827" } });
+          segs.push({
+            text: part,
+            options: { bold: isPrefix, color: isPrefix ? COR_HEADER : "111827" },
+          });
         });
-        slide.addText(segs.length ? segs : (p.observacao || ""), {
-          x: 0.65, y: y + 0.42, w: W - 1.2, h: h - 0.5,
-          fontSize: 12, bold: false, color: "111827",
-          align: "left", valign: "top",
+        slide.addText(segs.length ? segs : p.observacao || "", {
+          x: 0.65,
+          y: y + 0.42,
+          w: W - 1.2,
+          h: h - 0.5,
+          fontSize: 12,
+          bold: false,
+          color: "111827",
+          align: "left",
+          valign: "top",
           lineSpacingMultiple: 1,
-          paraSpaceBefore: 0, paraSpaceAfter: 0,
+          paraSpaceBefore: 0,
+          paraSpaceAfter: 0,
         });
       };
 
@@ -1423,23 +2106,37 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
           if (modelos.length > 0) {
             const linksY = H - 0.7;
             sObs.addText("Modelos/Referências:", {
-              x: 0.5, y: linksY, w: 2, h: 0.2,
-              fontSize: 8, bold: true, color: COR_HEADER,
+              x: 0.5,
+              y: linksY,
+              w: 2,
+              h: 0.2,
+              fontSize: 8,
+              bold: true,
+              color: COR_HEADER,
             });
             let xCursor = 0.5;
             modelos.forEach((m, idx) => {
               sObs.addText(m.label, {
-                x: xCursor + 1.2, y: linksY, w: 2, h: 0.2,
-                fontSize: 8, color: COR_HEADER, underline: { style: "sng" },
+                x: xCursor + 1.2,
+                y: linksY,
+                w: 2,
+                h: 0.2,
+                fontSize: 8,
+                color: COR_HEADER,
+                underline: { style: "sng" },
                 hyperlink: { url: m.url },
               });
               if (idx < modelos.length - 1) {
                 sObs.addText("  ·  ", {
-                  x: xCursor + 1.2 + (m.label.length * 0.07), y: linksY, w: 0.2, h: 0.2,
-                  fontSize: 8, color: "6B7280",
+                  x: xCursor + 1.2 + m.label.length * 0.07,
+                  y: linksY,
+                  w: 0.2,
+                  h: 0.2,
+                  fontSize: 8,
+                  color: "6B7280",
                 });
               }
-              xCursor += (m.label.length * 0.08) + 0.2;
+              xCursor += m.label.length * 0.08 + 0.2;
             });
           }
         }
@@ -1453,39 +2150,60 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
     if (modelos.length > 0) {
       const linksY = isUltima ? H - 4.6 : H - 1.8; // Acima das observações se houver espaço
       let xCursor = 0.5;
-      
+
       s.addText("Modelos/Referências:", {
-        x: 0.5, y: linksY, w: 2, h: 0.2,
-        fontSize: 8, bold: true, color: COR_HEADER,
+        x: 0.5,
+        y: linksY,
+        w: 2,
+        h: 0.2,
+        fontSize: 8,
+        bold: true,
+        color: COR_HEADER,
       });
 
       modelos.forEach((m, idx) => {
         const text = `${m.label}${idx < modelos.length - 1 ? "  ·  " : ""}`;
-        const w = (text.length * 0.08); // Estimativa simples de largura
-        if (xCursor + w > W - 1) { xCursor = 0.5; } // wrap simples não suportado nativamente assim, mas ajuda
-        
+        const w = text.length * 0.08; // Estimativa simples de largura
+        if (xCursor + w > W - 1) {
+          xCursor = 0.5;
+        } // wrap simples não suportado nativamente assim, mas ajuda
+
         s.addText(m.label, {
-          x: xCursor + 1.2, y: linksY, w: 2, h: 0.2,
-          fontSize: 8, color: COR_HEADER, underline: { style: "sng" },
-          hyperlink: { url: m.url }
+          x: xCursor + 1.2,
+          y: linksY,
+          w: 2,
+          h: 0.2,
+          fontSize: 8,
+          color: COR_HEADER,
+          underline: { style: "sng" },
+          hyperlink: { url: m.url },
         });
-        
+
         if (idx < modelos.length - 1) {
           s.addText("  ·  ", {
-            x: xCursor + 1.2 + (m.label.length * 0.07), y: linksY, w: 0.2, h: 0.2,
-            fontSize: 8, color: "6B7280"
+            x: xCursor + 1.2 + m.label.length * 0.07,
+            y: linksY,
+            w: 0.2,
+            h: 0.2,
+            fontSize: 8,
+            color: "6B7280",
           });
         }
-        xCursor += (m.label.length * 0.08) + 0.2;
+        xCursor += m.label.length * 0.08 + 0.2;
       });
     }
 
     if (!isUltima) {
-
       // Indicador de continuação
       s.addText("continua →", {
-        x: W - 2.0, y: H - 0.5, w: 1.7, h: 0.3,
-        fontSize: 11, italic: true, color: COR_HEADER, align: "right",
+        x: W - 2.0,
+        y: H - 0.5,
+        w: 1.7,
+        h: 0.3,
+        fontSize: 11,
+        italic: true,
+        color: COR_HEADER,
+        align: "right",
       });
     }
   }
@@ -1502,8 +2220,12 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
   ];
   socials.forEach(({ url, y }) => {
     sFim.addText(" ", {
-      x: 10.0, y, w: 3.1, h: 0.95,
-      fontSize: 1, color: "FFFFFF",
+      x: 10.0,
+      y,
+      w: 3.1,
+      h: 0.95,
+      fontSize: 1,
+      color: "FFFFFF",
       hyperlink: { url },
     });
   });
@@ -1529,13 +2251,17 @@ export async function gerarPptxProposta(p: PropostaApresentacao, _resumoIA: stri
     });
   }
 
-
   const pptxBlob = (await pptx.write({ outputType: "blob" })) as Blob;
   saveBlob(pptxBlob, `${slugify(clienteNome)}-Proposta-${p.numero}.pptx`);
 }
 
 // ====== PDF (mesma estrutura visual) ======
-export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: string, layoutConfig?: any, options?: { returnBlob?: boolean }): Promise<Blob | void> {
+export async function gerarPdfProposta(
+  p: PropostaApresentacao,
+  _resumoIA: string,
+  layoutConfig?: any,
+  options?: { returnBlob?: boolean },
+): Promise<Blob | void> {
   const { p: pAdj, dataStr } = aplicarPadroes(p);
   p = pAdj;
 
@@ -1545,14 +2271,22 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
     layoutConfig?.mapeamento || layoutConfig?.config?.mapeamento;
 
   if (customSlides && customSlides.length > 0) {
-    return await gerarPdfPropostaCustomizada(p, dataStr, customSlides, customMapeamento, layoutConfig, options);
+    return await gerarPdfPropostaCustomizada(
+      p,
+      dataStr,
+      customSlides,
+      customMapeamento,
+      layoutConfig,
+      options,
+    );
   }
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-  const W = doc.internal.pageSize.getWidth();   // 297
-  const H = doc.internal.pageSize.getHeight();  // 210
+  const W = doc.internal.pageSize.getWidth(); // 297
+  const H = doc.internal.pageSize.getHeight(); // 210
 
-  const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+  const clienteNome =
+    p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
   const agenciaNome = p.agencia?.nome_fantasia || p.agencia?.razao_social || null;
 
   const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
@@ -1568,7 +2302,11 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
   ]);
 
   const setBackground = (data: string) => {
-    try { doc.addImage(data, "JPEG", 0, 0, W, H, undefined, "FAST"); } catch { /* ignore */ }
+    try {
+      doc.addImage(data, "JPEG", 0, 0, W, H, undefined, "FAST");
+    } catch {
+      /* ignore */
+    }
   };
 
   const addClienteBadge = (isFirst: boolean) => {
@@ -1579,41 +2317,40 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
         // Posição: 4cm (40mm) acima do rodapé. Logo altura 66mm.
         // Bottom em H - 40 -> y = H - 40 - 66 = H - 106
         doc.addImage(logoData, fmt, 10, H - 76, 79, 66, undefined, "FAST");
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     } else {
-      doc.setFont("helvetica", "bold"); doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
       doc.setTextColor(255, 255, 255);
       doc.text(clienteNome, 10, H - 43, { align: "left" });
-
     }
   };
-
 
   // Páginas 1-4: template como background
   setBackground(bg1);
   addClienteBadge(true); // Apenas na primeira página
-  
+
   for (const bg of [bg2, bg3, bg4]) {
     doc.addPage();
     setBackground(bg);
     // addClienteBadge(false); // Não adiciona nas outras
   }
 
-
   // Página 5..N: proposta
-  const itens = [...(p.itens ?? [])].sort((a, b) =>
-    (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
-    (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
+  const itens = [...(p.itens ?? [])].sort(
+    (a, b) =>
+      (a.tipo || "").localeCompare(b.tipo || "", "pt-BR") ||
+      (a.programa || "").localeCompare(b.programa || "", "pt-BR"),
   );
   const PDF_ITENS_POR_PAGINA = 13;
   const totalPaginas = Math.max(1, Math.ceil(itens.length / PDF_ITENS_POR_PAGINA));
-
 
   for (let pagina = 0; pagina < totalPaginas; pagina++) {
     doc.addPage();
     setBackground(bg5);
     addClienteBadge(false);
-
 
     const inicio = pagina * PDF_ITENS_POR_PAGINA;
     const fim = Math.min(inicio + PDF_ITENS_POR_PAGINA, itens.length);
@@ -1622,14 +2359,15 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
 
     // Cabeçalho cliente / campanha / agência / validade
     doc.setTextColor(15, 92, 124);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
     doc.text("Cliente:", 10, 40);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(31, 41, 55);
     doc.text(clienteNome, 22, 40);
 
     let xCursor = 22 + doc.getTextWidth(clienteNome) + 10;
-    
+
     if (agenciaNome) {
       doc.setTextColor(15, 92, 124);
       doc.setFont("helvetica", "bold");
@@ -1652,7 +2390,12 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
 
     doc.setTextColor(15, 92, 124);
     doc.setFont("helvetica", "bold");
-    doc.text(`Nº ${p.numero}${totalPaginas > 1 ? ` (${pagina + 1}/${totalPaginas})` : ""}`, W - 10, 40, { align: "right" });
+    doc.text(
+      `Nº ${p.numero}${totalPaginas > 1 ? ` (${pagina + 1}/${totalPaginas})` : ""}`,
+      W - 10,
+      40,
+      { align: "right" },
+    );
 
     // Rodapé com Data e Validade (texto branco)
     {
@@ -1699,20 +2442,25 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
         ex += doc.getTextWidth(cg) + 6;
       }
       if (p.executivo.email) {
-        doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
-        doc.text("Email:", ex, yEx); ex += 11;
-        doc.setFont("helvetica", "normal"); doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255);
+        doc.text("Email:", ex, yEx);
+        ex += 11;
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(255, 255, 255);
         doc.text(p.executivo.email, ex, yEx);
         ex += doc.getTextWidth(p.executivo.email) + 6;
       }
       if (p.executivo.telefone) {
-        doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
-        doc.text("Tel:", ex, yEx); ex += 8;
-        doc.setFont("helvetica", "normal"); doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255);
+        doc.text("Tel:", ex, yEx);
+        ex += 8;
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(255, 255, 255);
         doc.text(p.executivo.telefone, ex, yEx);
       }
     }
-
 
     const isPacoteMidia = p.modo_apresentacao === "pacote_midia";
     const showEndereco = p.mostrar_endereco !== false;
@@ -1723,10 +2471,20 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
     let columnStyles: Record<number, any>;
 
     if (isPacoteMidia) {
-      tableHead = [["Tipo / Mídia", "Ponto / Produto / Endereço", "Horário", "Formato", "Ins/dia", "Total Ins.", "Fotos / Mapa"]];
+      tableHead = [
+        [
+          "Tipo / Mídia",
+          "Ponto / Produto / Endereço",
+          "Horário",
+          "Formato",
+          "Ins/dia",
+          "Total Ins.",
+          "Fotos / Mapa",
+        ],
+      ];
       tableBody = slice.map((it) => {
         const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
-        const programa = det ? `${it.programa || "—"}\n${det}` : (it.programa || "—");
+        const programa = det ? `${it.programa || "—"}\n${det}` : it.programa || "—";
         let fotoLabel = "—";
         if (showFotos && it.fotos && it.fotos.length > 0) {
           fotoLabel = `📷 Fotos (${it.fotos.length})`;
@@ -1742,7 +2500,13 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
           it.formato || "—",
           String(it.insercoes_dia),
           String(it.total_insercoes),
-          { content: fotoLabel, styles: { textColor: (fotoLabel !== "—" ? [15, 92, 124] : [31, 41, 55]) as any, fontStyle: fotoLabel !== "—" ? "bold" : "normal" } },
+          {
+            content: fotoLabel,
+            styles: {
+              textColor: (fotoLabel !== "—" ? [15, 92, 124] : [31, 41, 55]) as any,
+              fontStyle: fotoLabel !== "—" ? "bold" : "normal",
+            },
+          },
         ];
       });
       columnStyles = {
@@ -1752,10 +2516,24 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
         6: { halign: "center" },
       };
     } else {
-      tableHead = [["Tipo", "Programa / Ponto / Endereço", "Horário", "Form.", "Fotos", "Ins/dia", "Total Ins.", "Vlr Unit.", "Total Tabela", "Desc.", "Vlr Negociado"]];
+      tableHead = [
+        [
+          "Tipo",
+          "Programa / Ponto / Endereço",
+          "Horário",
+          "Form.",
+          "Fotos",
+          "Ins/dia",
+          "Total Ins.",
+          "Vlr Unit.",
+          "Total Tabela",
+          "Desc.",
+          "Vlr Negociado",
+        ],
+      ];
       tableBody = slice.map((it) => {
         const det = detalhesProduto(it, { mostrarEndereco: showEndereco });
-        const programa = det ? `${it.programa || "—"}\n${det}` : (it.programa || "—");
+        const programa = det ? `${it.programa || "—"}\n${det}` : it.programa || "—";
         let fotoLabel = "—";
         if (showFotos && it.fotos && it.fotos.length > 0) {
           fotoLabel = "📷 Fotos";
@@ -1767,7 +2545,10 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
           { content: programa, styles: { fontSize: 8.5 } },
           it.horario || "—",
           it.formato || "—",
-          { content: fotoLabel, styles: { textColor: (fotoLabel !== "—" ? [15, 92, 124] : [31, 41, 55]) as any } },
+          {
+            content: fotoLabel,
+            styles: { textColor: (fotoLabel !== "—" ? [15, 92, 124] : [31, 41, 55]) as any },
+          },
           String(it.insercoes_dia),
           String(it.total_insercoes),
           fmtBRL(it.valor_unit),
@@ -1797,7 +2578,11 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
       headStyles: { fillColor: [15, 92, 124], textColor: 255 },
       columnStyles,
       didParseCell: (data) => {
-        if (data.section === "body" && typeof data.cell.raw === "string" && data.cell.raw === "Bonificação") {
+        if (
+          data.section === "body" &&
+          typeof data.cell.raw === "string" &&
+          data.cell.raw === "Bonificação"
+        ) {
           data.cell.styles.textColor = [247, 181, 0];
           data.cell.styles.fillColor = [255, 247, 224];
           data.cell.styles.fontStyle = "bold";
@@ -1809,11 +2594,17 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
           const linkCol = isPacoteMidia ? 6 : 4;
           if (data.column.index === linkCol && it) {
             if (it.fotos?.[0]) {
-              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.fotos[0] });
+              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+                url: it.fotos[0],
+              });
             } else if (it.latitude && it.longitude) {
-              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}` });
+              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+                url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}`,
+              });
             } else if (it.link_modelo) {
-              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: it.link_modelo });
+              (doc as any).link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+                url: it.link_modelo,
+              });
             }
           }
         }
@@ -1857,7 +2648,8 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
           segs.forEach((seg) => {
             const isPrefix = /^[A-Za-z]\)$/.test(seg);
             doc.setFont("helvetica", isPrefix ? "bold" : "normal");
-            if (isPrefix) doc.setTextColor(15, 92, 124); else doc.setTextColor(17, 24, 39);
+            if (isPrefix) doc.setTextColor(15, 92, 124);
+            else doc.setTextColor(17, 24, 39);
             doc.text(seg, x, y);
             x += doc.getTextWidth(seg);
           });
@@ -1882,42 +2674,55 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
       }
     }
 
-
     if (isUltima) {
       const cards = isPacoteMidia
         ? [
             { t: "Total de Pontos", v: `${itens.length} pontos`, accent: false },
             { t: "Total de Inserções", v: String(p.total_insercoes), accent: false },
             { t: "Praça / Campanha", v: p.campanha || "Local", accent: false },
-            { t: "VALOR DO PACOTE DE MÍDIA", v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", accent: true },
+            {
+              t: "VALOR DO PACOTE DE MÍDIA",
+              v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação",
+              accent: true,
+            },
           ]
         : [
             { t: "Total de inserções", v: String(p.total_insercoes), accent: false },
             { t: "Valor de tabela", v: fmtBRL(p.valor_tabela), accent: false },
-            { 
-              t: "Desconto", 
-              v: p.valor_tabela > 0 
-                ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)` 
-                : fmtBRL(p.valor_desconto), 
-              accent: false 
+            {
+              t: "Desconto",
+              v:
+                p.valor_tabela > 0
+                  ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
+                  : fmtBRL(p.valor_desconto),
+              accent: false,
             },
-            { t: "VALOR TOTAL DA PROPOSTA", v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação", accent: true },
+            {
+              t: "VALOR TOTAL DA PROPOSTA",
+              v: p.valor_negociado > 0 ? fmtBRL(p.valor_negociado) : "Bonificação",
+              accent: true,
+            },
           ];
       const cardY = H - 32;
       const cardH = 24;
       const cardW = (W - 20) / cards.length - 2;
       cards.forEach((c, i) => {
         const x = 10 + i * (cardW + 2);
-        if (c.accent) doc.setFillColor(247, 181, 0); else doc.setFillColor(15, 92, 124);
+        if (c.accent) doc.setFillColor(247, 181, 0);
+        else doc.setFillColor(15, 92, 124);
         doc.roundedRect(x, cardY, cardW, cardH, 2, 2, "F");
         doc.setTextColor(c.accent ? 15 : 255, c.accent ? 92 : 255, c.accent ? 124 : 255);
-        doc.setFontSize(8); doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
         doc.text(c.t, x + cardW / 2, cardY + 7, { align: "center" });
-        doc.setFontSize(p.valor_negociado > 0 ? 14 : 11); doc.setFont("helvetica", "bold");
+        doc.setFontSize(p.valor_negociado > 0 ? 14 : 11);
+        doc.setFont("helvetica", "bold");
         doc.text(c.v, x + cardW / 2, cardY + 18, { align: "center" });
       });
     } else {
-      doc.setTextColor(15, 92, 124); doc.setFontSize(9); doc.setFont("helvetica", "italic");
+      doc.setTextColor(15, 92, 124);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "italic");
       doc.text("continua →", W - 10, H - 8, { align: "right" });
     }
   }
@@ -1937,7 +2742,6 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
     doc.link(223, y, 70, 26, { url });
   });
 
-
   if (p.executivo?.nome) {
     const perfilLines = [
       p.executivo.nome,
@@ -1953,10 +2757,11 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
     });
   }
 
-
   const rodapeY = H - 14;
   if (p.validade || p.created_at) {
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(0); // Preto
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(0); // Preto
     const partes: string[] = [];
     if (p.created_at) partes.push(`Gerada em ${fmtDataBR(p.created_at)}`);
     if (p.validade) partes.push(`Validade: ${fmtDataBR(p.validade)}`);
@@ -1973,16 +2778,21 @@ export async function gerarPdfProposta(p: PropostaApresentacao, _resumoIA: strin
  * Modelo Simplificado Estratégico para DOOH/OOH
  * Baseado na imagem de referência NEXO
  */
-export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _resumoIA: string, layoutConfig?: any): Promise<void> {
+export async function gerarPdfPropostaSimplificada(
+  p: PropostaApresentacao,
+  _resumoIA: string,
+  layoutConfig?: any,
+): Promise<void> {
   const { p: pAdj, dataStr } = aplicarPadroes(p);
   p = pAdj;
-  
+
   // PDF em A4 Retrato para este modelo (conforme imagem)
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
 
-  const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+  const clienteNome =
+    p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
   const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
   const logoData = await logoToDataUrl(logoUrl);
 
@@ -1990,30 +2800,35 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
   const COR_NAVY = [15, 23, 42]; // Azul escuro
   const COR_PRIMARY = [59, 130, 246]; // Azul MidiaOS
   const COR_BG_LIGHT = [248, 250, 252];
-  
+
   // 1. Header (Logo + Título)
   if (logoData) {
     try {
       doc.addImage(logoData, "PNG", 15, 15, 40, 25, undefined, "FAST");
-    } catch { 
-      doc.setFontSize(22); doc.setFont("helvetica", "bold");
+    } catch {
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
       doc.text(clienteNome.slice(0, 15), 15, 25);
     }
   } else {
-    doc.setFontSize(22); doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
     doc.text("MÍDIA.OS", 15, 25);
   }
 
   doc.setFillColor(COR_NAVY[0], COR_NAVY[1], COR_NAVY[2]);
   doc.roundedRect(W - 85, 15, 70, 8, 1, 1, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9); doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
   doc.text("PLANO ESTRATÉGICO & COMERCIAL", W - 50, 20.5, { align: "center" });
 
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(16);
   doc.text("PROPOSTA DE MÍDIA OOH & DOOH", W - 15, 30, { align: "right" });
-  doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.setTextColor(150);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(150);
   doc.text("Geolocalização, Atração de Fluxo e Blindagem de Marca", W - 15, 36, { align: "right" });
 
   doc.setDrawColor(230);
@@ -2021,13 +2836,15 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
 
   // 2. Info Bar
   const infoY = 50;
-  doc.setFontSize(8); doc.setTextColor(100);
+  doc.setFontSize(8);
+  doc.setTextColor(100);
   doc.text("CLIENTE / SOLICITANTE:", 15, infoY);
   doc.text("PRAÇA DE ATUAÇÃO:", 80, infoY);
   doc.text("PERÍODO PADRÃO:", 135, infoY);
   doc.text("DATA DE EMISSÃO:", 175, infoY);
 
-  doc.setFont("helvetica", "bold"); doc.setTextColor(0);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0);
   doc.text(clienteNome, 15, infoY + 5, { maxWidth: 60 });
   doc.text(p.cliente?.cidade || "Área de Atendimento", 80, infoY + 5);
   doc.text("30 Dias (Mensal)", 135, infoY + 5);
@@ -2035,25 +2852,35 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
 
   // 3. Seções Institucionais
   let y = 70;
-  
+
   // Sobre a Empresa
   doc.setFillColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
   doc.rect(15, y, 2, 6, "F");
-  doc.setFontSize(12); doc.text("1. SOBRE A ESTRATÉGIA", 20, y + 5);
+  doc.setFontSize(12);
+  doc.text("1. SOBRE A ESTRATÉGIA", 20, y + 5);
   y += 10;
-  doc.setFontSize(10); doc.setFont("helvetica", "normal");
-  const sobreTxt = "Nossa estratégia é especializada em conectar marcas e negócios locais ao seu público de interesse no exato instante de maior predisposição ao consumo. Unimos inteligência geográfica e pontos de alto impacto.";
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  const sobreTxt =
+    "Nossa estratégia é especializada em conectar marcas e negócios locais ao seu público de interesse no exato instante de maior predisposição ao consumo. Unimos inteligência geográfica e pontos de alto impacto.";
   doc.text(doc.splitTextToSize(sobreTxt, W - 30), 15, y);
   y += 15;
 
   // Defesa Técnica
   doc.setFillColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
   doc.rect(15, y, 2, 6, "F");
-  doc.setFontSize(12); doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
   doc.text("2. DEFESA TÉCNICA E ESTRATÉGICA (RACIONAL DE MÍDIA)", 20, y + 5);
   y += 10;
-  doc.setFontSize(10); doc.setFont("helvetica", "normal");
-  doc.text("Plano concebido sob a estratégia de Atração de Fluxo e Cerco Geográfico para interceptar o morador em seu deslocamento.", 15, y, { maxWidth: W - 30 });
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    "Plano concebido sob a estratégia de Atração de Fluxo e Cerco Geográfico para interceptar o morador em seu deslocamento.",
+    15,
+    y,
+    { maxWidth: W - 30 },
+  );
   y += 15;
 
   // Cards de Racional
@@ -2061,16 +2888,19 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
   const cards = [
     { t: "Hiperproximidade", d: "Comunicação focada no consumidor que mora e trabalha na área." },
     { t: "Sinergia", d: "Presença em telas que criam lembrança diária e confiança." },
-    { t: "Impacto 100%", d: "Sem custos com cliques desperdiçados. Verba investida na praça." }
+    { t: "Impacto 100%", d: "Sem custos com cliques desperdiçados. Verba investida na praça." },
   ];
-  
+
   cards.forEach((c, i) => {
     const cx = 15 + i * (cardW + 5);
-    doc.setDrawColor(220, 220, 220); doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(220, 220, 220);
+    doc.setFillColor(255, 255, 255);
     doc.roundedRect(cx, y, cardW, 25, 2, 2, "FD");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
     doc.text(c.t, cx + 5, y + 7);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
     doc.text(doc.splitTextToSize(c.d, cardW - 10), cx + 5, y + 13);
   });
   y += 35;
@@ -2082,7 +2912,7 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
     { v: "22", l: "CONDOMÍNIOS" },
     { v: "+" + p.total_insercoes.toLocaleString(), l: "INSERÇÕES" },
     { v: "+21.500", l: "IMPACTOS" },
-    { v: String(p.itens?.length || 0), l: "PONTOS" }
+    { v: String(p.itens?.length || 0), l: "PONTOS" },
   ];
 
   metrics.forEach((m, i) => {
@@ -2090,9 +2920,11 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
     doc.setFillColor(COR_BG_LIGHT[0], COR_BG_LIGHT[1], COR_BG_LIGHT[2]);
     doc.roundedRect(mx, y, metricW, 20, 2, 2, "F");
     doc.setTextColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
-    doc.setFontSize(14); doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
     doc.text(m.v, mx + metricW / 2, y + 10, { align: "center" });
-    doc.setTextColor(100); doc.setFontSize(7);
+    doc.setTextColor(100);
+    doc.setFontSize(7);
     doc.text(m.l, mx + metricW / 2, y + 16, { align: "center" });
   });
   y += 30;
@@ -2105,8 +2937,13 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
   doc.setTextColor(0);
   doc.setFillColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
   doc.rect(15, y, 2, 6, "F");
-  doc.setFontSize(12); doc.setFont("helvetica", "bold");
-  doc.text(isPacoteMidia ? "3. COBERTURA DO PACOTE DE MÍDIA" : "3. DETALHAMENTO DOS PONTOS E VALORES", 20, y + 5);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text(
+    isPacoteMidia ? "3. COBERTURA DO PACOTE DE MÍDIA" : "3. DETALHAMENTO DOS PONTOS E VALORES",
+    20,
+    y + 5,
+  );
   y += 8;
 
   const tableHead = isPacoteMidia
@@ -2134,7 +2971,7 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
         it.formato || "DOOH",
         locStr,
         `${it.total_insercoes || 0} ins`,
-        linkLabel || "—"
+        linkLabel || "—",
       ];
     }
 
@@ -2143,7 +2980,7 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
       it.formato || "DOOH",
       locStr,
       `${it.total_insercoes || 0} ins`,
-      fmtBRL(it.valor_negociado)
+      fmtBRL(it.valor_negociado),
     ];
   });
 
@@ -2155,7 +2992,7 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
     styles: { fontSize: 8, cellPadding: 2.5 },
     columnStyles: {
       3: { halign: "center" },
-      4: { halign: isPacoteMidia ? "center" : "right", fontStyle: "bold" }
+      4: { halign: isPacoteMidia ? "center" : "right", fontStyle: "bold" },
     },
     margin: { left: 15, right: 15 },
     didDrawCell: (data: any) => {
@@ -2168,27 +3005,41 @@ export async function gerarPdfPropostaSimplificada(p: PropostaApresentacao, _res
           });
         }
         if (mostrarFt && it.fotos?.[0]) {
-          doc.link(data.cell.x, data.cell.y + data.cell.height / 2, data.cell.width, data.cell.height / 2, {
-            url: it.fotos[0],
-          });
+          doc.link(
+            data.cell.x,
+            data.cell.y + data.cell.height / 2,
+            data.cell.width,
+            data.cell.height / 2,
+            {
+              url: it.fotos[0],
+            },
+          );
         }
       }
-    }
+    },
   });
 
   const finalY = (doc as any).lastAutoTable.finalY + 10;
-  
+
   // Total Investimento
   const labelTotal = isPacoteMidia ? "VALOR DO PACOTE DE MÍDIA" : "VALOR TOTAL DA PROPOSTA";
   doc.setFillColor(COR_NAVY[0], COR_NAVY[1], COR_NAVY[2]);
   doc.rect(15, finalY, W - 30, 9, "F");
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10); doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
   doc.text(`${labelTotal}: ${fmtBRL(p.valor_negociado)}`, W - 20, finalY + 6, { align: "right" });
 
   // Footer
-  doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(150);
-  doc.text(`${p.executivo?.nome || "Mídia.OS"} | (61) 9 8474-6857 | rafaelnexomidia@gmail.com`, W / 2, H - 10, { align: "center" });
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(150);
+  doc.text(
+    `${p.executivo?.nome || "Mídia.OS"} | (61) 9 8474-6857 | rafaelnexomidia@gmail.com`,
+    W / 2,
+    H - 10,
+    { align: "center" },
+  );
 
   applyTrialWatermark(doc);
   saveBlob(doc.output("blob"), `${slugify(clienteNome)}-Proposta-Simplificada-${p.numero}.pdf`);
@@ -2207,11 +3058,9 @@ async function renderMetricCard(
   // Card background
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? [
-      parseInt(result[1], 16),
-      parseInt(result[2], 16),
-      parseInt(result[3], 16)
-    ] : [0, 0, 0];
+    return result
+      ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+      : [0, 0, 0];
   };
   const rgb = hexToRgb(color);
   doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
@@ -2228,5 +3077,3 @@ async function renderMetricCard(
   doc.setFontSize(18);
   doc.text(value, x + w / 2, y + 16, { align: "center" });
 }
-
-

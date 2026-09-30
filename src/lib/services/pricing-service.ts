@@ -26,7 +26,7 @@ export function findDatabaseProduct(item: PricingItemInput, products: ProductDat
 
   return products.find((p) => {
     if (p?.ativo === false) return false;
-    
+
     const pTipo = normalize(p.tipo);
     const pProg = normalize(p.programa);
     const pForm = normalize(p.formato);
@@ -39,7 +39,11 @@ export function findDatabaseProduct(item: PricingItemInput, products: ProductDat
   });
 }
 
-export function calculateUnitPrice(item: PricingItemInput, products: ProductDatabaseItem[], manualOverride?: number | null) {
+export function calculateUnitPrice(
+  item: PricingItemInput,
+  products: ProductDatabaseItem[],
+  manualOverride?: number | null,
+) {
   if (manualOverride != null && Number.isFinite(manualOverride)) {
     return Math.max(0, manualOverride);
   }
@@ -49,7 +53,10 @@ export function calculateUnitPrice(item: PricingItemInput, products: ProductData
     return dbProduct.valor_unit;
   }
 
-  const tableRow = item.programa && item.formato ? findPrice(item.tipo as any, item.programa, item.formato) : undefined;
+  const tableRow =
+    item.programa && item.formato
+      ? findPrice(item.tipo as any, item.programa, item.formato)
+      : undefined;
   return tableRow?.valorUnit ?? 0;
 }
 
@@ -57,7 +64,7 @@ export function getItemTotals(
   totalInsercoes: number,
   unitPrice: number,
   descontoPct: number,
-  negociadoOverride?: number | null
+  negociadoOverride?: number | null,
 ) {
   const valorTabela = Math.round(unitPrice * totalInsercoes * 100) / 100;
   let valorNegociado: number;
@@ -67,7 +74,8 @@ export function getItemTotals(
   if (negociadoOverride != null && Number.isFinite(negociadoOverride)) {
     valorNegociado = Math.round(Math.max(0, Math.min(negociadoOverride, valorTabela)) * 100) / 100;
     descontoVal = Math.round((valorTabela - valorNegociado) * 100) / 100;
-    currentDescontoPct = valorTabela > 0 ? Math.round((descontoVal / valorTabela) * 10000) / 100 : 0;
+    currentDescontoPct =
+      valorTabela > 0 ? Math.round((descontoVal / valorTabela) * 10000) / 100 : 0;
   } else {
     currentDescontoPct = Math.min(100, Math.max(0, descontoPct || 0));
     descontoVal = Math.round(valorTabela * (currentDescontoPct / 100) * 100) / 100;

@@ -9,10 +9,25 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowUp, ArrowDown, Copy, ExternalLink, Plus, Trash2, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  Copy,
+  ExternalLink,
+  Plus,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import {
   getLandingPage,
   upsertLandingPage,
@@ -24,7 +39,9 @@ import {
 import { LandingRenderer } from "@/components/landing/LandingRenderer";
 
 export const Route = createFileRoute("/landing-pages/$id")({
-  head: () => ({ meta: [{ title: "Editor de Landing Page — mídia.OS" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [{ title: "Editor de Landing Page — mídia.OS" }, { name: "robots", content: "noindex" }],
+  }),
   component: () => (
     <AppShell>
       <Editor />
@@ -33,7 +50,13 @@ export const Route = createFileRoute("/landing-pages/$id")({
 });
 
 const SECTION_TEMPLATES: Record<LandingSection["type"], () => LandingSection> = {
-  hero: () => ({ type: "hero", title: "Título principal", subtitle: "Descrição", ctaLabel: "Quero saber mais", ctaAnchor: "#form" }),
+  hero: () => ({
+    type: "hero",
+    title: "Título principal",
+    subtitle: "Descrição",
+    ctaLabel: "Quero saber mais",
+    ctaAnchor: "#form",
+  }),
   features: () => ({
     type: "features",
     title: "Diferenciais",
@@ -43,13 +66,25 @@ const SECTION_TEMPLATES: Record<LandingSection["type"], () => LandingSection> = 
       { title: "Item 3", description: "Descrição" },
     ],
   }),
-  stats: () => ({ type: "stats", items: [{ value: "100+", label: "Clientes" }, { value: "10 anos", label: "Experiência" }] }),
+  stats: () => ({
+    type: "stats",
+    items: [
+      { value: "100+", label: "Clientes" },
+      { value: "10 anos", label: "Experiência" },
+    ],
+  }),
   testimonials: () => ({
     type: "testimonials",
     items: [{ quote: "Depoimento incrível.", author: "Cliente Feliz", role: "Cargo" }],
   }),
   rich_text: () => ({ type: "rich_text", content: "<p>Texto livre em HTML.</p>" }),
-  cta: () => ({ type: "cta", title: "Vamos conversar?", description: "", buttonLabel: "Fale conosco", buttonAnchor: "#form" }),
+  cta: () => ({
+    type: "cta",
+    title: "Vamos conversar?",
+    description: "",
+    buttonLabel: "Fale conosco",
+    buttonAnchor: "#form",
+  }),
   form: () => ({
     type: "form",
     title: "Fale com a gente",
@@ -68,7 +103,12 @@ const SECTION_TEMPLATES: Record<LandingSection["type"], () => LandingSection> = 
     description: "Consulte disponibilidade sob medida.",
     ctaLabel: "Consultar disponibilidade",
     items: [
-      { nome: "Produto exemplo", categoria: "Categoria", descricao: "Descrição breve", cta_label: "Consultar disponibilidade" },
+      {
+        nome: "Produto exemplo",
+        categoria: "Categoria",
+        descricao: "Descrição breve",
+        cta_label: "Consultar disponibilidade",
+      },
     ],
   }),
 };
@@ -92,7 +132,10 @@ function Editor() {
   const convertFn = useServerFn(convertLeadToCliente);
   const qc = useQueryClient();
 
-  const { data: page } = useQuery({ queryKey: ["landing-page", id], queryFn: () => getFn({ data: { id } }) });
+  const { data: page } = useQuery({
+    queryKey: ["landing-page", id],
+    queryFn: () => getFn({ data: { id } }),
+  });
   const [draft, setDraft] = useState<LandingPage | null>(null);
 
   useEffect(() => {
@@ -131,12 +174,18 @@ function Editor() {
 
   if (!draft) return <div className="text-muted-foreground">Carregando…</div>;
 
-  const url = typeof window !== "undefined" ? `${window.location.origin}/${draft.slug}` : `/${draft.slug}`;
+  const url =
+    typeof window !== "undefined" ? `${window.location.origin}/${draft.slug}` : `/${draft.slug}`;
 
   function updateSection(idx: number, patch: Partial<LandingSection>) {
     setDraft((d) =>
       d
-        ? { ...d, sections: d.sections.map((s, i) => (i === idx ? ({ ...s, ...patch } as LandingSection) : s)) }
+        ? {
+            ...d,
+            sections: d.sections.map((s, i) =>
+              i === idx ? ({ ...s, ...patch } as LandingSection) : s,
+            ),
+          }
         : d,
     );
   }
@@ -206,7 +255,11 @@ function Editor() {
                 Despublicar
               </Button>
             )}
-            <Button size="sm" onClick={() => saveMut.mutate(undefined)} disabled={saveMut.isPending}>
+            <Button
+              size="sm"
+              onClick={() => saveMut.mutate(undefined)}
+              disabled={saveMut.isPending}
+            >
               Salvar
             </Button>
           </div>
@@ -243,7 +296,12 @@ function Editor() {
                   <Button size="sm" variant="ghost" onClick={() => moveSection(idx, 1)}>
                     <ArrowDown className="w-3.5 h-3.5" />
                   </Button>
-                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeSection(idx)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => removeSection(idx)}
+                  >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -257,12 +315,18 @@ function Editor() {
           <div>
             <Label>Estilo (template)</Label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
-              {([
-                { id: "modern", label: "Moderno", desc: "Limpo, sans-serif, bordas suaves" },
-                { id: "minimal", label: "Minimalista", desc: "Alinhado à esquerda, bordas retas" },
-                { id: "bold", label: "Ousado", desc: "Tipografia forte e caixa alta" },
-                { id: "elegant", label: "Elegante", desc: "Serifado com bordas arredondadas" },
-              ] as const).map((t) => {
+              {(
+                [
+                  { id: "modern", label: "Moderno", desc: "Limpo, sans-serif, bordas suaves" },
+                  {
+                    id: "minimal",
+                    label: "Minimalista",
+                    desc: "Alinhado à esquerda, bordas retas",
+                  },
+                  { id: "bold", label: "Ousado", desc: "Tipografia forte e caixa alta" },
+                  { id: "elegant", label: "Elegante", desc: "Serifado com bordas arredondadas" },
+                ] as const
+              ).map((t) => {
                 const active = ((draft as any).template || "modern") === t.id;
                 return (
                   <button
@@ -279,7 +343,6 @@ function Editor() {
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-3">
-
             <div>
               <Label>Cor primária</Label>
               <Input
@@ -307,7 +370,9 @@ function Editor() {
               <Label>Imagem hero (URL)</Label>
               <Input
                 value={draft.hero_image_url || ""}
-                onChange={(e) => setDraft((d) => (d ? { ...d, hero_image_url: e.target.value } : d))}
+                onChange={(e) =>
+                  setDraft((d) => (d ? { ...d, hero_image_url: e.target.value } : d))
+                }
               />
             </div>
           </div>
@@ -316,7 +381,10 @@ function Editor() {
         <TabsContent value="seo" className="space-y-3">
           <div>
             <Label>Slug</Label>
-            <Input value={draft.slug} onChange={(e) => setDraft((d) => (d ? { ...d, slug: e.target.value } : d))} />
+            <Input
+              value={draft.slug}
+              onChange={(e) => setDraft((d) => (d ? { ...d, slug: e.target.value } : d))}
+            />
           </div>
           <div>
             <Label>Meta title</Label>
@@ -329,7 +397,9 @@ function Editor() {
             <Label>Meta description</Label>
             <Textarea
               value={draft.meta_description || ""}
-              onChange={(e) => setDraft((d) => (d ? { ...d, meta_description: e.target.value } : d))}
+              onChange={(e) =>
+                setDraft((d) => (d ? { ...d, meta_description: e.target.value } : d))
+              }
             />
           </div>
           <div>
@@ -366,7 +436,11 @@ function SectionEditor({
     case "hero":
       return (
         <div className="grid md:grid-cols-2 gap-2">
-          <Input placeholder="Título" value={section.title} onChange={(e) => onChange({ title: e.target.value } as any)} />
+          <Input
+            placeholder="Título"
+            value={section.title}
+            onChange={(e) => onChange({ title: e.target.value } as any)}
+          />
           <Input
             placeholder="Subtítulo"
             value={section.subtitle || ""}
@@ -418,7 +492,9 @@ function SectionEditor({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onChange({ items: [...section.items, { title: "Novo", description: "" }] } as any)}
+              onClick={() =>
+                onChange({ items: [...section.items, { title: "Novo", description: "" }] } as any)
+              }
             >
               <Plus className="w-3 h-3 mr-1" /> Item
             </Button>
@@ -463,7 +539,9 @@ function SectionEditor({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onChange({ items: [...section.items, { value: "0", label: "" }] } as any)}
+            onClick={() =>
+              onChange({ items: [...section.items, { value: "0", label: "" }] } as any)
+            }
           >
             <Plus className="w-3 h-3 mr-1" /> Stat
           </Button>
@@ -507,7 +585,9 @@ function SectionEditor({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onChange({ items: [...section.items, { quote: "", author: "" }] } as any)}
+            onClick={() =>
+              onChange({ items: [...section.items, { quote: "", author: "" }] } as any)
+            }
           >
             <Plus className="w-3 h-3 mr-1" /> Depoimento
           </Button>
@@ -525,7 +605,11 @@ function SectionEditor({
     case "cta":
       return (
         <div className="grid md:grid-cols-2 gap-2">
-          <Input placeholder="Título" value={section.title} onChange={(e) => onChange({ title: e.target.value } as any)} />
+          <Input
+            placeholder="Título"
+            value={section.title}
+            onChange={(e) => onChange({ title: e.target.value } as any)}
+          />
           <Input
             placeholder="Rótulo do botão"
             value={section.buttonLabel}

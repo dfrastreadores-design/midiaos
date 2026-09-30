@@ -4,7 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, ShieldCheck, Zap, BarChart3, Loader2 } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  ShieldCheck,
+  Zap,
+  BarChart3,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { translateError } from "@/lib/translate-error";
 import logoMidiaOS from "@/assets/logo-midiaos.png";
@@ -61,7 +71,10 @@ function LoginPage() {
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-violet-500/20 blur-3xl" />
 
         <div className="relative z-10 flex items-center gap-3">
-          <Link to="/" className="inline-flex items-center gap-2 text-xs text-white/60 hover:text-white transition-colors">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-xs text-white/60 hover:text-white transition-colors"
+          >
             <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao site
           </Link>
         </div>
@@ -78,7 +91,8 @@ function LoginPage() {
             </span>
           </h1>
           <p className="mt-5 text-white/60 max-w-md leading-relaxed">
-            CRM, propostas, PI, briefings, programação, financeiro e dashboards — em uma única plataforma.
+            CRM, propostas, PI, briefings, programação, financeiro e dashboards — em uma única
+            plataforma.
           </p>
 
           <div className="mt-10 grid grid-cols-1 gap-3 max-w-md">
@@ -127,7 +141,10 @@ function LoginPage() {
             className="space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm shadow-2xl lg:border-slate-200 lg:bg-white lg:shadow-[0_20px_60px_-20px_rgba(79,70,229,0.25)]"
           >
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-medium text-white/70 lg:text-slate-700">
+              <Label
+                htmlFor="email"
+                className="text-xs font-medium text-white/70 lg:text-slate-700"
+              >
                 E-mail corporativo
               </Label>
               <div className="relative">
@@ -147,7 +164,10 @@ function LoginPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-xs font-medium text-white/70 lg:text-slate-700">
+                <Label
+                  htmlFor="password"
+                  className="text-xs font-medium text-white/70 lg:text-slate-700"
+                >
                   Senha
                 </Label>
                 <Link

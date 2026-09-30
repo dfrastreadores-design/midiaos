@@ -1,12 +1,25 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   Sparkles,
@@ -61,39 +74,38 @@ export function NovoPostDialog({
   initialCopy,
 }: NovoPostDialogProps) {
   const [selectedPlataformas, setSelectedPlataformas] = useState<PlataformaSocial[]>(
-    postToEdit?.plataformas || ["instagram"]
+    postToEdit?.plataformas || ["instagram"],
   );
-  const [formato, setFormato] = useState<SocialPost["formato"]>(
-    postToEdit?.formato || "feed"
-  );
+  const [formato, setFormato] = useState<SocialPost["formato"]>(postToEdit?.formato || "feed");
   const [titulo, setTitulo] = useState(postToEdit?.titulo || initialCopy?.titulo || "");
   const [conteudo, setConteudo] = useState(postToEdit?.conteudo || initialCopy?.conteudo || "");
   const [hashtags, setHashtags] = useState(postToEdit?.hashtags || initialCopy?.hashtags || "");
   const [midiaUrl, setMidiaUrl] = useState(postToEdit?.midia_urls?.[0] || "");
-  const [dataAgendamento, setDataAgendamento] = useState(
-    postToEdit?.data_agendamento || ""
-  );
+  const [dataAgendamento, setDataAgendamento] = useState(postToEdit?.data_agendamento || "");
   const [isAnuncio, setIsAnuncio] = useState(postToEdit?.tipo_anuncio || false);
   const [objetivoAnuncio, setObjetivoAnuncio] = useState(
-    postToEdit?.meta_ads_data?.objetivo_campanha || "leads"
+    postToEdit?.meta_ads_data?.objetivo_campanha || "leads",
   );
   const [ctaAnuncio, setCtaAnuncio] = useState(
-    postToEdit?.meta_ads_data?.cta || initialCopy?.cta || "Saiba Mais"
+    postToEdit?.meta_ads_data?.cta || initialCopy?.cta || "Saiba Mais",
   );
   const [urlDestino, setUrlDestino] = useState(
-    postToEdit?.meta_ads_data?.url_destino || "https://"
+    postToEdit?.meta_ads_data?.url_destino || "https://",
   );
   const [budgetDiario, setBudgetDiario] = useState(
-    postToEdit?.meta_ads_data?.budget_diario?.toString() || "50"
+    postToEdit?.meta_ads_data?.budget_diario?.toString() || "50",
   );
   const [publicoAlvo, setPublicoAlvo] = useState(
-    postToEdit?.meta_ads_data?.publico || "Homens e Mulheres, 25-54 anos, Interessados em Mídia e Negócios"
+    postToEdit?.meta_ads_data?.publico ||
+      "Homens e Mulheres, 25-54 anos, Interessados em Mídia e Negócios",
   );
 
   // IA inline assist
   const [isGerandoIa, setIsGerandoIa] = useState(false);
   const [iaTema, setIaTema] = useState("");
-  const [iaTom, setIaTom] = useState<"persuasivo" | "descontraido" | "corporativo" | "urgencia">("persuasivo");
+  const [iaTom, setIaTom] = useState<"persuasivo" | "descontraido" | "corporativo" | "urgencia">(
+    "persuasivo",
+  );
   const [showIaBox, setShowIaBox] = useState(false);
 
   // Visualizador mobile
@@ -124,7 +136,13 @@ export function NovoPostDialog({
         data: {
           tema_ou_produto: iaTema,
           plataforma: targetPlat,
-          formato: isAnuncio ? "anuncio_trafego" : formato === "reels" ? "reels" : formato === "carrossel" ? "carrossel" : "feed",
+          formato: isAnuncio
+            ? "anuncio_trafego"
+            : formato === "reels"
+              ? "reels"
+              : formato === "carrossel"
+                ? "carrossel"
+                : "feed",
           objetivo: isAnuncio ? "leads" : "engajamento",
           tom_de_voz: iaTom,
         },
@@ -172,13 +190,15 @@ export function NovoPostDialog({
         data_agendamento: status === "agendado" ? dataAgendamento : null,
         data_publicacao: status === "publicado" ? new Date().toISOString() : null,
         tipo_anuncio: isAnuncio,
-        meta_ads_data: isAnuncio ? {
-          objetivo_campanha: objetivoAnuncio,
-          cta: ctaAnuncio,
-          url_destino: urlDestino,
-          budget_diario: parseFloat(budgetDiario) || 50,
-          publico: publicoAlvo,
-        } : undefined,
+        meta_ads_data: isAnuncio
+          ? {
+              objetivo_campanha: objetivoAnuncio,
+              cta: ctaAnuncio,
+              url_destino: urlDestino,
+              budget_diario: parseFloat(budgetDiario) || 50,
+              publico: publicoAlvo,
+            }
+          : undefined,
       };
 
       await onSave(payload);
@@ -186,8 +206,8 @@ export function NovoPostDialog({
         status === "publicado"
           ? "Publicação enviada para as redes!"
           : status === "agendado"
-          ? "Publicação agendada com sucesso!"
-          : "Rascunho salvo com sucesso!"
+            ? "Publicação agendada com sucesso!"
+            : "Rascunho salvo com sucesso!",
       );
       onOpenChange(false);
     } catch (err: any) {
@@ -211,7 +231,8 @@ export function NovoPostDialog({
                   {postToEdit ? "Editar Publicação" : "Criar Nova Publicação ou Campanha"}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Publique ou agende em múltiplas redes simultaneamente com inteligência artificial integrada.
+                  Publique ou agende em múltiplas redes simultaneamente com inteligência artificial
+                  integrada.
                 </DialogDescription>
               </div>
             </div>
@@ -227,7 +248,9 @@ export function NovoPostDialog({
                 1. Selecione as Redes de Destino
               </Label>
               <div className="flex flex-wrap gap-2 pt-1">
-                {(["instagram", "facebook", "tiktok", "linkedin", "meta_ads"] as PlataformaSocial[]).map((plat) => {
+                {(
+                  ["instagram", "facebook", "tiktok", "linkedin", "meta_ads"] as PlataformaSocial[]
+                ).map((plat) => {
                   const isSelected = selectedPlataformas.includes(plat);
                   const cfg = PLATAFORMAS_CONFIG[plat];
                   return (
@@ -253,7 +276,9 @@ export function NovoPostDialog({
             {/* Formato e Tipo de Veiculação */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">Formato do Post</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">
+                  Formato do Post
+                </Label>
                 <Select
                   value={formato}
                   onValueChange={(val: any) => {
@@ -428,7 +453,9 @@ export function NovoPostDialog({
                     size="sm"
                     className="h-8 px-2.5 text-xs shrink-0"
                     onClick={() => {
-                      setMidiaUrl("https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&auto=format&fit=crop&q=80");
+                      setMidiaUrl(
+                        "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&auto=format&fit=crop&q=80",
+                      );
                       toast.info("Imagem de demonstração inserida!");
                     }}
                   >
@@ -451,7 +478,9 @@ export function NovoPostDialog({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-[11px] text-muted-foreground">Objetivo de Campanha</Label>
+                    <Label className="text-[11px] text-muted-foreground">
+                      Objetivo de Campanha
+                    </Label>
                     <Select value={objetivoAnuncio} onValueChange={setObjetivoAnuncio}>
                       <SelectTrigger className="h-8 text-xs bg-background">
                         <SelectValue />
@@ -459,7 +488,9 @@ export function NovoPostDialog({
                       <SelectContent>
                         <SelectItem value="leads">Geração de Leads (WhatsApp / Form)</SelectItem>
                         <SelectItem value="conversoes">Vendas & Conversões no Site</SelectItem>
-                        <SelectItem value="trafego">Tráfego Qualificado para Landing Page</SelectItem>
+                        <SelectItem value="trafego">
+                          Tráfego Qualificado para Landing Page
+                        </SelectItem>
                         <SelectItem value="alcance">Reconhecimento & Alcance Máximo</SelectItem>
                       </SelectContent>
                     </Select>
@@ -484,7 +515,9 @@ export function NovoPostDialog({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-[11px] text-muted-foreground">URL de Destino (Link)</Label>
+                    <Label className="text-[11px] text-muted-foreground">
+                      URL de Destino (Link)
+                    </Label>
                     <Input
                       value={urlDestino}
                       onChange={(e) => setUrlDestino(e.target.value)}
@@ -494,7 +527,9 @@ export function NovoPostDialog({
                   </div>
 
                   <div>
-                    <Label className="text-[11px] text-muted-foreground">Orçamento Diário Sugerido (R$)</Label>
+                    <Label className="text-[11px] text-muted-foreground">
+                      Orçamento Diário Sugerido (R$)
+                    </Label>
                     <Input
                       type="number"
                       value={budgetDiario}
@@ -619,13 +654,18 @@ export function NovoPostDialog({
                     <div className="flex items-center gap-1 font-semibold leading-tight text-foreground">
                       <span>Nexo Mídia</span>
                       {previewTab === "meta_ads" && (
-                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-indigo-300 text-indigo-600">
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1 py-0 h-4 border-indigo-300 text-indigo-600"
+                        >
                           Patrocinado
                         </Badge>
                       )}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
-                      {previewTab === "linkedin" ? "Empresa de Publicidade e Mídia • 12.800 seguidores" : "@nexomidia.oficial"}
+                      {previewTab === "linkedin"
+                        ? "Empresa de Publicidade e Mídia • 12.800 seguidores"
+                        : "@nexomidia.oficial"}
                     </div>
                   </div>
                 </div>
@@ -648,15 +688,21 @@ export function NovoPostDialog({
                   <div className="text-center p-6 text-slate-400 space-y-2">
                     <ImageIcon className="size-10 mx-auto opacity-40" />
                     <p className="text-xs">Nenhuma imagem selecionada</p>
-                    <p className="text-[10px] text-slate-500">Cole a URL da mídia para visualizar</p>
+                    <p className="text-[10px] text-slate-500">
+                      Cole a URL da mídia para visualizar
+                    </p>
                   </div>
                 )}
 
                 {isAnuncio && (
                   <div className="absolute bottom-0 inset-x-0 bg-slate-950/80 backdrop-blur-xs p-2 flex items-center justify-between text-white border-t border-white/10">
                     <div className="truncate pr-2">
-                      <div className="text-[10px] text-slate-300 font-mono truncate">{urlDestino || "nexomidia.com.br"}</div>
-                      <div className="font-semibold text-xs truncate">{titulo || "Conheça nossas soluções"}</div>
+                      <div className="text-[10px] text-slate-300 font-mono truncate">
+                        {urlDestino || "nexomidia.com.br"}
+                      </div>
+                      <div className="font-semibold text-xs truncate">
+                        {titulo || "Conheça nossas soluções"}
+                      </div>
                     </div>
                     <div className="bg-indigo-600 text-white font-medium text-[10px] px-2.5 py-1 rounded shadow-xs shrink-0 flex items-center gap-1">
                       <span>{ctaAnuncio}</span>
@@ -677,24 +723,16 @@ export function NovoPostDialog({
                   <Bookmark className="size-4.5 cursor-pointer" />
                 </div>
 
-                <div className="text-[11px] font-semibold text-foreground">
-                  3.418 curtidas
-                </div>
+                <div className="text-[11px] font-semibold text-foreground">3.418 curtidas</div>
 
                 {/* Texto da Legenda */}
                 <div className="text-[11px] text-foreground leading-snug space-y-1">
-                  {titulo && (
-                    <div className="font-bold text-primary mb-1">
-                      {titulo}
-                    </div>
-                  )}
+                  {titulo && <div className="font-bold text-primary mb-1">{titulo}</div>}
                   <p className="line-clamp-4 whitespace-pre-line text-slate-700 dark:text-slate-300">
                     {conteudo || "Sua copy aparecerá aqui em tempo real enquanto você digita..."}
                   </p>
                   {hashtags && (
-                    <div className="text-primary font-medium text-[10px] pt-1">
-                      {hashtags}
-                    </div>
+                    <div className="text-primary font-medium text-[10px] pt-1">{hashtags}</div>
                   )}
                 </div>
 

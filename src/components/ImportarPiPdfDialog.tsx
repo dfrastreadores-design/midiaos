@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,15 +39,17 @@ export function ImportarPiPdfDialog({ open, onOpenChange, onExtracted }: Props) 
       if (texto.length < 20) throw new Error("Não foi possível ler o texto do PDF.");
       setStep("IA extraindo os dados…");
       const data = await extrairPiDePdf({ data: { texto } });
-      
+
       const updatedData = { ...data };
       if (isHistorico) {
         if (showManualFields) {
-          updatedData.valor_bruto = Number(manualValues.bruto.replace(",", ".")) || data.valor_bruto;
-          updatedData.valor_liquido = Number(manualValues.liquido.replace(",", ".")) || data.valor_liquido;
+          updatedData.valor_bruto =
+            Number(manualValues.bruto.replace(",", ".")) || data.valor_bruto;
+          updatedData.valor_liquido =
+            Number(manualValues.liquido.replace(",", ".")) || data.valor_liquido;
           updatedData.valor_negociado = updatedData.valor_liquido || updatedData.valor_bruto;
         }
-        
+
         if (!updatedData.valor_bruto && !updatedData.valor_liquido && !showManualFields) {
           setShowManualValues(true);
           toast.warning("Valores não reconhecidos. Por favor, informe-os manualmente.");
@@ -64,7 +73,12 @@ export function ImportarPiPdfDialog({ open, onOpenChange, onExtracted }: Props) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!loading) onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!loading) onOpenChange(v);
+      }}
+    >
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -84,13 +98,17 @@ export function ImportarPiPdfDialog({ open, onOpenChange, onExtracted }: Props) 
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               disabled={loading}
             />
-            {file && <div className="text-xs text-muted-foreground">{file.name} · {(file.size/1024).toFixed(0)} KB</div>}
+            {file && (
+              <div className="text-xs text-muted-foreground">
+                {file.name} · {(file.size / 1024).toFixed(0)} KB
+              </div>
+            )}
           </div>
 
           <div className="flex items-center space-x-2 rounded-md border p-3 bg-muted/20">
-            <Checkbox 
-              id="is-historico" 
-              checked={isHistorico} 
+            <Checkbox
+              id="is-historico"
+              checked={isHistorico}
               onCheckedChange={(v) => setIsHistorico(!!v)}
             />
             <div className="grid gap-1.5 leading-none">
@@ -115,18 +133,28 @@ export function ImportarPiPdfDialog({ open, onOpenChange, onExtracted }: Props) 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Valor Bruto (R$)</Label>
-                  <Input 
-                    placeholder="0,00" 
-                    value={manualValues.bruto} 
-                    onChange={(e) => setManualValues(prev => ({ ...prev, bruto: e.target.value.replace(/[^\d.,]/g, "") }))}
+                  <Input
+                    placeholder="0,00"
+                    value={manualValues.bruto}
+                    onChange={(e) =>
+                      setManualValues((prev) => ({
+                        ...prev,
+                        bruto: e.target.value.replace(/[^\d.,]/g, ""),
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Valor Líquido (R$)</Label>
-                  <Input 
-                    placeholder="0,00" 
-                    value={manualValues.liquido} 
-                    onChange={(e) => setManualValues(prev => ({ ...prev, liquido: e.target.value.replace(/[^\d.,]/g, "") }))}
+                  <Input
+                    placeholder="0,00"
+                    value={manualValues.liquido}
+                    onChange={(e) =>
+                      setManualValues((prev) => ({
+                        ...prev,
+                        liquido: e.target.value.replace(/[^\d.,]/g, ""),
+                      }))
+                    }
                   />
                 </div>
               </div>
@@ -144,7 +172,9 @@ export function ImportarPiPdfDialog({ open, onOpenChange, onExtracted }: Props) 
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancelar
+          </Button>
           <Button onClick={handleExtract} disabled={!file || loading}>
             <FileUp className="size-4 mr-2" /> Extrair com IA
           </Button>

@@ -9,17 +9,23 @@ const BUCKET = "assinaturas";
 export const uploadAssinaturaExecutivo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      user_id: z.string().uuid(),
-      dataUrl: z.string().regex(/^data:image\/(png|jpeg|jpg|webp);base64,/),
-    }).parse(d),
+    z
+      .object({
+        user_id: z.string().uuid(),
+        dataUrl: z.string().regex(/^data:image\/(png|jpeg|jpg|webp);base64,/),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
     if (data.user_id !== userId) {
       // só admin pode subir assinatura de outro usuário
       const { data: r } = await supabaseAdmin
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
       if (!r) throw new Error("Sem permissão");
     }
     const m = data.dataUrl.match(/^data:image\/([a-z]+);base64,(.+)$/);
@@ -44,10 +50,18 @@ export const removerAssinaturaExecutivo = createServerFn({ method: "POST" })
     const { userId } = context;
     if (data.user_id !== userId) {
       const { data: r } = await supabaseAdmin
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
       if (!r) throw new Error("Sem permissão");
     }
-    const { data: prof } = await supabaseAdmin.from("profiles").select("assinatura_url").eq("id", data.user_id).maybeSingle();
+    const { data: prof } = await supabaseAdmin
+      .from("profiles")
+      .select("assinatura_url")
+      .eq("id", data.user_id)
+      .maybeSingle();
     if (prof?.assinatura_url) {
       await supabaseAdmin.storage.from(BUCKET).remove([prof.assinatura_url]);
     }
@@ -60,13 +74,22 @@ export const getAssinaturaExecutivoDoPi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ pi_id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    const { data: pi } = await supabaseAdmin.from("pis").select("executivo_id").eq("id", data.pi_id).maybeSingle();
+    const { data: pi } = await supabaseAdmin
+      .from("pis")
+      .select("executivo_id")
+      .eq("id", data.pi_id)
+      .maybeSingle();
     if (!pi?.executivo_id) return { dataUrl: null, nome: null };
     const { data: prof } = await supabaseAdmin
-      .from("profiles").select("assinatura_url, nome").eq("id", pi.executivo_id).maybeSingle();
+      .from("profiles")
+      .select("assinatura_url, nome")
+      .eq("id", pi.executivo_id)
+      .maybeSingle();
     const nome = prof?.nome ?? null;
     if (!prof?.assinatura_url) return { dataUrl: null, nome };
-    const { data: file, error } = await supabaseAdmin.storage.from(BUCKET).download(prof.assinatura_url);
+    const { data: file, error } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .download(prof.assinatura_url);
     if (error || !file) return { dataUrl: null, nome };
     const buf = Buffer.from(await file.arrayBuffer());
     const ext = prof.assinatura_url.split(".").pop() || "png";
@@ -79,20 +102,32 @@ export const getAssinaturaExecutivoPorToken = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token: z.string().min(10).max(100) }).parse(d))
   .handler(async ({ data }) => {
     const { data: assin } = await supabaseAdmin
-      .from("pi_assinaturas_cliente").select("pi_id").eq("token", data.token).maybeSingle();
-    if (!assin?.pi_id) return { exec: { dataUrl: null, nome: null }, dir: { dataUrl: null, nome: null } };
-    
+      .from("pi_assinaturas_cliente")
+      .select("pi_id")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (!assin?.pi_id)
+      return { exec: { dataUrl: null, nome: null }, dir: { dataUrl: null, nome: null } };
+
     const { data: pi } = await supabaseAdmin
-      .from("pis").select("executivo_id, aprovado_por").eq("id", assin.pi_id).maybeSingle();
+      .from("pis")
+      .select("executivo_id, aprovado_por")
+      .eq("id", assin.pi_id)
+      .maybeSingle();
     if (!pi) return { exec: { dataUrl: null, nome: null }, dir: { dataUrl: null, nome: null } };
 
     const getSig = async (uid: string | null) => {
       if (!uid) return { dataUrl: null, nome: null };
       const { data: prof } = await supabaseAdmin
-        .from("profiles").select("assinatura_url, nome").eq("id", uid).maybeSingle();
+        .from("profiles")
+        .select("assinatura_url, nome")
+        .eq("id", uid)
+        .maybeSingle();
       const nome = prof?.nome ?? null;
       if (!prof?.assinatura_url) return { dataUrl: null, nome };
-      const { data: file, error } = await supabaseAdmin.storage.from(BUCKET).download(prof.assinatura_url);
+      const { data: file, error } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .download(prof.assinatura_url);
       if (error || !file) return { dataUrl: null, nome };
       const buf = Buffer.from(await file.arrayBuffer());
       const ext = prof.assinatura_url.split(".").pop() || "png";
@@ -102,12 +137,11 @@ export const getAssinaturaExecutivoPorToken = createServerFn({ method: "POST" })
 
     const [exec, dir] = await Promise.all([
       getSig(pi.executivo_id as string | null),
-      getSig(pi.aprovado_por as string | null)
+      getSig(pi.aprovado_por as string | null),
     ]);
 
     return { exec, dir };
   });
-
 
 /** Cria (ou recupera) o link público de assinatura do cliente para um PI. */
 export const criarLinkAssinaturaCliente = createServerFn({ method: "POST" })
@@ -155,20 +189,34 @@ export const getAssinaturaDiretoriaDoPi = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
     if (aprovLink?.assinatura_url) {
-      const { data: file } = await supabaseAdmin.storage.from(BUCKET).download(aprovLink.assinatura_url);
+      const { data: file } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .download(aprovLink.assinatura_url);
       if (file) {
         const buf = Buffer.from(await file.arrayBuffer());
-        return { dataUrl: `data:image/png;base64,${buf.toString("base64")}`, nome: aprovLink.aprovador_nome ?? null };
+        return {
+          dataUrl: `data:image/png;base64,${buf.toString("base64")}`,
+          nome: aprovLink.aprovador_nome ?? null,
+        };
       }
     }
     // 2) Aprovação interna (usuário admin no sistema) — usa assinatura do perfil
-    const { data: pi } = await supabaseAdmin.from("pis").select("aprovado_por").eq("id", data.pi_id).maybeSingle();
+    const { data: pi } = await supabaseAdmin
+      .from("pis")
+      .select("aprovado_por")
+      .eq("id", data.pi_id)
+      .maybeSingle();
     if (!pi?.aprovado_por) return { dataUrl: null, nome: aprovLink?.aprovador_nome ?? null };
     const { data: prof } = await supabaseAdmin
-      .from("profiles").select("assinatura_url, nome").eq("id", pi.aprovado_por).maybeSingle();
+      .from("profiles")
+      .select("assinatura_url, nome")
+      .eq("id", pi.aprovado_por)
+      .maybeSingle();
     const nome = prof?.nome ?? null;
     if (!prof?.assinatura_url) return { dataUrl: null, nome };
-    const { data: file, error } = await supabaseAdmin.storage.from(BUCKET).download(prof.assinatura_url);
+    const { data: file, error } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .download(prof.assinatura_url);
     if (error || !file) return { dataUrl: null, nome };
     const buf = Buffer.from(await file.arrayBuffer());
     const ext = prof.assinatura_url.split(".").pop() || "png";
@@ -177,7 +225,6 @@ export const getAssinaturaDiretoriaDoPi = createServerFn({ method: "POST" })
   });
 
 export const getAssinaturaClienteDoPi = createServerFn({ method: "POST" })
-
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ pi_id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
@@ -223,12 +270,14 @@ export const getPiPublicoPorToken = createServerFn({ method: "POST" })
 
     const { data: pi } = await supabaseAdmin
       .from("pis")
-      .select(`
+      .select(
+        `
         *,
         cliente:clientes(*),
         agencia:agencias(*),
         itens:pi_itens(*)
-      `)
+      `,
+      )
       .eq("id", assin.pi_id)
       .single();
 
@@ -250,7 +299,8 @@ export const getPiPublicoPorToken = createServerFn({ method: "POST" })
       if (!ent) return ent;
       const contatos = (ent.contatos as Contato[] | undefined) ?? [];
       const principal = contatos[0] ?? {};
-      const telefone = principal.telefone || contatos.find((c: any) => c?.telefone)?.telefone || null;
+      const telefone =
+        principal.telefone || contatos.find((c: any) => c?.telefone)?.telefone || null;
       const email = principal.email || contatos.find((c: any) => c?.email)?.email || null;
       const responsavel = principal.nome
         ? `${principal.nome}${principal.funcao ? ` (${principal.funcao})` : ""}`
@@ -277,23 +327,25 @@ export const getPiPublicoPorToken = createServerFn({ method: "POST" })
 
 export const registrarAssinaturaCliente = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({
-      token: z.string().min(10).max(100),
-      nome: z.string().trim().min(3).max(120),
-      cpf: z.string().trim().min(11).max(20),
-      email: z.string().email().max(160).optional().or(z.literal("")),
-      user_agent: z.string().max(500).optional(),
-      assinatura_data_url: z
-        .string()
-        .regex(/^data:image\/(png|jpeg|jpg|webp);base64,/)
-        .max(2_500_000),
-      documento_tipo: z.enum(["cnh", "rg"]).optional(),
-      documento_data_url: z
-        .string()
-        .regex(/^data:(image\/(png|jpeg|jpg)|application\/pdf);base64,/)
-        .max(8_000_000)
-        .optional(),
-    }).parse(d),
+    z
+      .object({
+        token: z.string().min(10).max(100),
+        nome: z.string().trim().min(3).max(120),
+        cpf: z.string().trim().min(11).max(20),
+        email: z.string().email().max(160).optional().or(z.literal("")),
+        user_agent: z.string().max(500).optional(),
+        assinatura_data_url: z
+          .string()
+          .regex(/^data:image\/(png|jpeg|jpg|webp);base64,/)
+          .max(2_500_000),
+        documento_tipo: z.enum(["cnh", "rg"]).optional(),
+        documento_data_url: z
+          .string()
+          .regex(/^data:(image\/(png|jpeg|jpg)|application\/pdf);base64,/)
+          .max(8_000_000)
+          .optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { getRequestHeader } = await import("@tanstack/react-start/server");
@@ -327,13 +379,16 @@ export const registrarAssinaturaCliente = createServerFn({ method: "POST" })
     let docPath: string | null = null;
     let docMime: string | null = null;
     if (data.documento_data_url && data.documento_tipo) {
-      const dm = data.documento_data_url.match(/^data:(image\/(?:png|jpeg|jpg)|application\/pdf);base64,(.+)$/);
+      const dm = data.documento_data_url.match(
+        /^data:(image\/(?:png|jpeg|jpg)|application\/pdf);base64,(.+)$/,
+      );
       if (!dm) throw new Error("Documento inválido");
       docMime = dm[1];
       const docBytes = Buffer.from(dm[2], "base64");
       if (docBytes.length < 1024) throw new Error("Documento muito pequeno");
       if (docBytes.length > 6 * 1024 * 1024) throw new Error("Documento muito grande (máx 6MB)");
-      const docExt = docMime === "application/pdf" ? "pdf" : docMime === "image/png" ? "png" : "jpg";
+      const docExt =
+        docMime === "application/pdf" ? "pdf" : docMime === "image/png" ? "png" : "jpg";
       docPath = `cliente/${assin.pi_id}/${assin.id}-doc-${data.documento_tipo}.${docExt}`;
       const upDoc = await supabaseAdmin.storage.from(BUCKET).upload(docPath, docBytes, {
         contentType: docMime,
@@ -341,7 +396,6 @@ export const registrarAssinaturaCliente = createServerFn({ method: "POST" })
       });
       if (upDoc.error) throw new Error(upDoc.error.message);
     }
-
 
     const { error } = await supabaseAdmin
       .from("pi_assinaturas_cliente")
@@ -368,7 +422,12 @@ export const registrarAssinaturaCliente = createServerFn({ method: "POST" })
       .eq("id", assin.pi_id)
       .maybeSingle();
 
-    if (piAtual && piAtual.status !== "cancelado" && piAtual.status !== "substituido" && piAtual.status !== "faturado") {
+    if (
+      piAtual &&
+      piAtual.status !== "cancelado" &&
+      piAtual.status !== "substituido" &&
+      piAtual.status !== "faturado"
+    ) {
       await supabaseAdmin
         .from("pis")
         .update({ status: "enviar_opec", aprovado_em: new Date().toISOString() } as never)
@@ -399,17 +458,16 @@ export const registrarAssinaturaCliente = createServerFn({ method: "POST" })
         .from("user_roles")
         .select("user_id")
         .eq("role", "opec");
-      
-      const opecNotificacoes = (opecUsers ?? [])
-        .map((u) => ({
-          user_id: u.user_id,
-          tipo: "pi_aprovado" as never,
-          titulo: `Novo PI assinado — pronto para OPEC`,
-          mensagem: `PI ${piAtual.numero} (${piAtual.campanha}) assinado por ${data.nome}. Dê andamento na programação.`,
-          link: `/pi?id=${assin.pi_id}`,
-          metadata: { ref_id: assin.pi_id, evento: "enviar_opec" } as never,
-        }));
-      
+
+      const opecNotificacoes = (opecUsers ?? []).map((u) => ({
+        user_id: u.user_id,
+        tipo: "pi_aprovado" as never,
+        titulo: `Novo PI assinado — pronto para OPEC`,
+        mensagem: `PI ${piAtual.numero} (${piAtual.campanha}) assinado por ${data.nome}. Dê andamento na programação.`,
+        link: `/pi?id=${assin.pi_id}`,
+        metadata: { ref_id: assin.pi_id, evento: "enviar_opec" } as never,
+      }));
+
       if (opecNotificacoes.length > 0) {
         await supabaseAdmin.from("notificacoes").insert(opecNotificacoes as never);
       }

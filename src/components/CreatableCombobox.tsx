@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +90,9 @@ export function CreatableCombobox({
                       setOpen(false);
                     }}
                   >
-                    <Check className={cn("mr-2 size-4", value === o ? "opacity-100" : "opacity-0")} />
+                    <Check
+                      className={cn("mr-2 size-4", value === o ? "opacity-100" : "opacity-0")}
+                    />
                     {o}
                   </CommandItem>
                 ))}

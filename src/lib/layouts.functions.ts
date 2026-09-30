@@ -140,7 +140,10 @@ export const upsertProposalLayout = createServerFn({ method: "POST" })
     };
 
     if (id) {
-      const { error } = await supabase.from("proposta_layouts").update(payload as never).eq("id", id);
+      const { error } = await supabase
+        .from("proposta_layouts")
+        .update(payload as never)
+        .eq("id", id);
       if (error) throw new Error(error.message);
       return { id };
     }

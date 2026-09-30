@@ -33,7 +33,9 @@ type Row = {
 
 function formatBRL(v: number | null) {
   if (v === null || v === undefined) return null;
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v) || 0);
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    Number(v) || 0,
+  );
 }
 
 type Props = {
@@ -49,7 +51,10 @@ function formatBytes(n: number | null) {
   const u = ["B", "KB", "MB", "GB"];
   let i = 0;
   let v = n;
-  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
   return `${v.toFixed(1)} ${u[i]}`;
 }
 
@@ -68,7 +73,10 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
   const extrairFn = useServerFn(extrairPiDePdf);
 
   async function lerDoPdf() {
-    if (!file) { toast.error("Selecione o PDF do PI primeiro"); return; }
+    if (!file) {
+      toast.error("Selecione o PDF do PI primeiro");
+      return;
+    }
     if (!/pdf/i.test(file.type) && !/\.pdf$/i.test(file.name)) {
       toast.error("Apenas PDF é suportado para leitura automática");
       return;
@@ -80,7 +88,11 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
       const dados = await extrairFn({ data: { texto } });
       if (dados.valor_bruto != null) setValorBruto(String(dados.valor_bruto));
       if (dados.valor_liquido != null) setValorLiquido(String(dados.valor_liquido));
-      if (dados.valor_bruto == null && dados.valor_liquido == null && dados.valor_negociado != null) {
+      if (
+        dados.valor_bruto == null &&
+        dados.valor_liquido == null &&
+        dados.valor_negociado != null
+      ) {
         setValorBruto(String(dados.valor_negociado));
       }
       toast.success("Valores lidos do PDF");
@@ -99,12 +111,12 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
     enabled: !!(clienteId || agenciaId || piId),
     queryFn: async () => {
       let q = supabase.from("pi_anexos").select("*").order("created_at", { ascending: false });
-      
+
       const filters = [];
       if (piId) filters.push(`pi_id.eq.${piId}`);
       if (clienteId) filters.push(`cliente_id.eq.${clienteId}`);
       if (agenciaId) filters.push(`agencia_id.eq.${agenciaId}`);
-      
+
       if (filters.length > 0) {
         q = q.or(filters.join(","));
       }
@@ -121,7 +133,10 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
       const { error } = await supabase.from("pi_anexos").delete().eq("id", row.id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Anexo removido"); qc.invalidateQueries({ queryKey }); },
+    onSuccess: () => {
+      toast.success("Anexo removido");
+      qc.invalidateQueries({ queryKey });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -129,7 +144,10 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
     const { data, error } = await supabase.storage
       .from("pi-anexos")
       .createSignedUrl(row.arquivo_path, 60, { download: row.arquivo_nome });
-    if (error || !data?.signedUrl) { toast.error("Erro ao gerar link"); return; }
+    if (error || !data?.signedUrl) {
+      toast.error("Erro ao gerar link");
+      return;
+    }
     window.open(data.signedUrl, "_blank");
   }
 
@@ -141,7 +159,13 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() ?? "bin";
-      const folder = piId ? `pi/${piId}` : clienteId ? `cliente/${clienteId}` : agenciaId ? `agencia/${agenciaId}` : `geral/${user.id}`;
+      const folder = piId
+        ? `pi/${piId}`
+        : clienteId
+          ? `cliente/${clienteId}`
+          : agenciaId
+            ? `agencia/${agenciaId}`
+            : `geral/${user.id}`;
       const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const up = await supabase.storage.from("pi-anexos").upload(path, file, {
         contentType: file.type || undefined,
@@ -167,7 +191,11 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
         throw error;
       }
       toast.success("Anexo enviado");
-      setTitulo(""); setPeriodo(""); setValorBruto(""); setValorLiquido(""); setFile(null);
+      setTitulo("");
+      setPeriodo("");
+      setValorBruto("");
+      setValorLiquido("");
+      setFile(null);
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey });
     } catch (e) {
@@ -201,19 +229,39 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
         <div className="grid sm:grid-cols-2 gap-2">
           <div className="space-y-1">
             <Label className="text-xs">Título / identificação *</Label>
-            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: PI Janeiro/2024 - Globo" />
+            <Input
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Ex.: PI Janeiro/2024 - Globo"
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Período de referência</Label>
-            <Input value={periodo} onChange={(e) => setPeriodo(e.target.value)} placeholder="Ex.: Jan/2024, 2024-Q1..." />
+            <Input
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value)}
+              placeholder="Ex.: Jan/2024, 2024-Q1..."
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Valor bruto (R$)</Label>
-            <Input type="number" step="0.01" value={valorBruto} onChange={(e) => setValorBruto(e.target.value)} placeholder="0,00" />
+            <Input
+              type="number"
+              step="0.01"
+              value={valorBruto}
+              onChange={(e) => setValorBruto(e.target.value)}
+              placeholder="0,00"
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Valor líquido (R$)</Label>
-            <Input type="number" step="0.01" value={valorLiquido} onChange={(e) => setValorLiquido(e.target.value)} placeholder="0,00" />
+            <Input
+              type="number"
+              step="0.01"
+              value={valorLiquido}
+              onChange={(e) => setValorLiquido(e.target.value)}
+              placeholder="0,00"
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -224,15 +272,38 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
             className="max-w-xs"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
-          <Button type="button" size="sm" variant="outline" onClick={lerDoPdf} disabled={lendoIA || !file}>
-            {lendoIA ? <Loader2 className="size-4 animate-spin mr-1" /> : <Sparkles className="size-4 mr-1" />}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={lerDoPdf}
+            disabled={lendoIA || !file}
+          >
+            {lendoIA ? (
+              <Loader2 className="size-4 animate-spin mr-1" />
+            ) : (
+              <Sparkles className="size-4 mr-1" />
+            )}
             Ler valores do PDF
           </Button>
-          <Button type="button" size="sm" onClick={handleUpload} disabled={uploading || !file || !titulo.trim()}>
-            {uploading ? <Loader2 className="size-4 animate-spin mr-1" /> : <Upload className="size-4 mr-1" />}
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleUpload}
+            disabled={uploading || !file || !titulo.trim()}
+          >
+            {uploading ? (
+              <Loader2 className="size-4 animate-spin mr-1" />
+            ) : (
+              <Upload className="size-4 mr-1" />
+            )}
             Enviar anexo
           </Button>
-          {file && <span className="text-[11px] text-muted-foreground">{file.name} — {formatBytes(file.size)}</span>}
+          {file && (
+            <span className="text-[11px] text-muted-foreground">
+              {file.name} — {formatBytes(file.size)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -245,29 +316,68 @@ export function PisAnexosSection({ clienteId, agenciaId, piId, title, hint }: Pr
           {rows.map((row) => {
             const canDelete = isAdmin || row.created_by === user?.id;
             return (
-              <div key={row.id} className="flex items-center gap-3 border rounded-md p-2 bg-background">
+              <div
+                key={row.id}
+                className="flex items-center gap-3 border rounded-md p-2 bg-background"
+              >
                 <div className="size-9 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <FileText className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate" title={row.titulo}>{row.titulo}</div>
-                  <div className="text-[11px] text-muted-foreground truncate" title={row.arquivo_nome}>
-                    {row.arquivo_nome} · {formatBytes(row.arquivo_tamanho)} · {new Date(row.created_at).toLocaleDateString("pt-BR")}
+                  <div className="text-sm font-medium truncate" title={row.titulo}>
+                    {row.titulo}
+                  </div>
+                  <div
+                    className="text-[11px] text-muted-foreground truncate"
+                    title={row.arquivo_nome}
+                  >
+                    {row.arquivo_nome} · {formatBytes(row.arquivo_tamanho)} ·{" "}
+                    {new Date(row.created_at).toLocaleDateString("pt-BR")}
                   </div>
                   {(row.valor_bruto != null || row.valor_liquido != null) && (
                     <div className="text-[11px] mt-0.5 flex gap-2">
-                      {row.valor_bruto != null && <span className="text-muted-foreground">Bruto: <span className="font-semibold text-foreground">{formatBRL(row.valor_bruto)}</span></span>}
-                      {row.valor_liquido != null && <span className="text-muted-foreground">Líquido: <span className="font-semibold text-foreground">{formatBRL(row.valor_liquido)}</span></span>}
+                      {row.valor_bruto != null && (
+                        <span className="text-muted-foreground">
+                          Bruto:{" "}
+                          <span className="font-semibold text-foreground">
+                            {formatBRL(row.valor_bruto)}
+                          </span>
+                        </span>
+                      )}
+                      {row.valor_liquido != null && (
+                        <span className="text-muted-foreground">
+                          Líquido:{" "}
+                          <span className="font-semibold text-foreground">
+                            {formatBRL(row.valor_liquido)}
+                          </span>
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
-                {row.periodo_referencia && <Badge variant="secondary" className="hidden sm:inline-flex">{row.periodo_referencia}</Badge>}
-                <Button type="button" size="sm" variant="outline" onClick={() => handleDownload(row)}>
+                {row.periodo_referencia && (
+                  <Badge variant="secondary" className="hidden sm:inline-flex">
+                    {row.periodo_referencia}
+                  </Badge>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDownload(row)}
+                >
                   <Download className="size-4" />
                 </Button>
                 {canDelete && (
-                  <Button type="button" size="sm" variant="ghost" className="text-destructive"
-                    onClick={() => { if (confirm("Remover este anexo?")) del.mutate(row); }}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => {
+                      if (confirm("Remover este anexo?")) del.mutate(row);
+                    }}
+                  >
                     <Trash2 className="size-4" />
                   </Button>
                 )}

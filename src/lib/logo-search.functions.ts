@@ -10,9 +10,7 @@ export type LogoResultado = {
 
 export const buscarLogos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ query: z.string().min(1).max(200) }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ query: z.string().min(1).max(200) }).parse(d))
   .handler(async ({ data }) => {
     const q = encodeURIComponent(data.query.trim());
     const res = await fetch(`https://api.brandfetch.io/v2/search/${q}`, {
@@ -47,9 +45,7 @@ const ALLOWED_LOGO_HOSTS = new Set([
 
 export const baixarLogoDataUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ url: z.string().url().max(1000) }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ url: z.string().url().max(1000) }).parse(d))
   .handler(async ({ data }) => {
     let parsed: URL;
     try {
@@ -82,4 +78,3 @@ export const baixarLogoDataUrl = createServerFn({ method: "POST" })
     const b64 = btoa(bin);
     return { dataUrl: `data:${ct};base64,${b64}` };
   });
-

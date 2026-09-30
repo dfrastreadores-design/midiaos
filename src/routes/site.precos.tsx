@@ -6,14 +6,20 @@ export const Route = createFileRoute("/site/precos")({
   head: () => ({
     meta: [
       { title: "Preços — mídia.OS | Planos a partir de R$ 250/mês" },
-      { name: "description", content: "Planos do mídia.OS para emissoras, rádios e portais a partir de R$ 250/mês. Implantação, treinamento e suporte inclusos. 7 dias para começar." },
+      {
+        name: "description",
+        content:
+          "Planos do mídia.OS para emissoras, rádios e portais a partir de R$ 250/mês. Implantação, treinamento e suporte inclusos. 7 dias para começar.",
+      },
       { property: "og:title", content: "Preços do mídia.OS — a partir de R$ 250/mês" },
-      { property: "og:description", content: "Planos escaláveis para veículos de comunicação. Sem taxa de setup, com treinamento e suporte." },
+      {
+        property: "og:description",
+        content:
+          "Planos escaláveis para veículos de comunicação. Sem taxa de setup, com treinamento e suporte.",
+      },
       { property: "og:url", content: "https://midiaos.online/site/precos" },
     ],
-    links: [
-      { rel: "canonical", href: "https://midiaos.online/site/precos" },
-    ],
+    links: [{ rel: "canonical", href: "https://midiaos.online/site/precos" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -21,12 +27,31 @@ export const Route = createFileRoute("/site/precos")({
           "@context": "https://schema.org",
           "@type": "Product",
           name: "mídia.OS",
-          description: "Sistema comercial para veículos de comunicação: CRM, propostas, PI digital, financeiro.",
+          description:
+            "Sistema comercial para veículos de comunicação: CRM, propostas, PI digital, financeiro.",
           brand: { "@type": "Brand", name: "mídia.OS" },
           offers: [
-            { "@type": "Offer", name: "Starter", price: "250", priceCurrency: "BRL", url: "https://midiaos.online/site/precos" },
-            { "@type": "Offer", name: "Essencial", price: "550", priceCurrency: "BRL", url: "https://midiaos.online/site/precos" },
-            { "@type": "Offer", name: "Profissional", price: "1499", priceCurrency: "BRL", url: "https://midiaos.online/site/precos" },
+            {
+              "@type": "Offer",
+              name: "Starter",
+              price: "250",
+              priceCurrency: "BRL",
+              url: "https://midiaos.online/site/precos",
+            },
+            {
+              "@type": "Offer",
+              name: "Essencial",
+              price: "550",
+              priceCurrency: "BRL",
+              url: "https://midiaos.online/site/precos",
+            },
+            {
+              "@type": "Offer",
+              name: "Profissional",
+              price: "1499",
+              priceCurrency: "BRL",
+              url: "https://midiaos.online/site/precos",
+            },
           ],
         }),
       },
@@ -111,7 +136,9 @@ function Precos() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 midia-glow pointer-events-none" />
         <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-12 text-center">
-          <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">Preços</span>
+          <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
+            Preços
+          </span>
           <h1 className="mt-3 text-5xl lg:text-6xl font-bold leading-[1.05]">
             Planos para <span className="midia-grad-text">cada estágio</span>
           </h1>
@@ -184,7 +211,9 @@ function Precos() {
       {/* FAQ */}
       <section className="mx-auto max-w-3xl px-6 py-24">
         <div className="text-center mb-12">
-          <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">FAQ</span>
+          <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
+            FAQ
+          </span>
           <h2 className="mt-3 text-4xl font-bold">Perguntas frequentes</h2>
         </div>
         <div className="space-y-3">
@@ -211,10 +240,28 @@ function annualize(monthly: string) {
 }
 
 const faq = [
-  { q: "Quanto tempo leva a implantação?", a: "A implantação padrão acontece em até 7 dias úteis e inclui configuração inicial, importação de dados básicos e treinamento da equipe." },
-  { q: "Meus dados ficam seguros?", a: "Sim. Toda a infraestrutura roda em nuvem com criptografia em trânsito e em repouso, backups automáticos diários e controle de acesso por perfil." },
-  { q: "Posso migrar dados de outro sistema?", a: "Sim. Suportamos importação por planilha (clientes, agências, executivos) e via integrações específicas combinadas com nossa equipe." },
-  { q: "Tem fidelidade?", a: "Os planos mensais são sem fidelidade. Planos anuais têm 15% de desconto com compromisso de 12 meses." },
-  { q: "Atende rádios, portais e mídia OOH/DOOH, ou só TV?", a: "Atende qualquer veículo de comunicação, incluindo mídia out-of-home (OOH) e digital out-of-home (DOOH). A plataforma foi desenhada para ser configurável por tipo de produto, grade e veículo." },
-  { q: "Posso testar antes de contratar?", a: "Sim. Oferecemos demonstração ao vivo de 30 minutos e, para o plano Profissional, um período de avaliação combinado caso a caso." },
+  {
+    q: "Quanto tempo leva a implantação?",
+    a: "A implantação padrão acontece em até 7 dias úteis e inclui configuração inicial, importação de dados básicos e treinamento da equipe.",
+  },
+  {
+    q: "Meus dados ficam seguros?",
+    a: "Sim. Toda a infraestrutura roda em nuvem com criptografia em trânsito e em repouso, backups automáticos diários e controle de acesso por perfil.",
+  },
+  {
+    q: "Posso migrar dados de outro sistema?",
+    a: "Sim. Suportamos importação por planilha (clientes, agências, executivos) e via integrações específicas combinadas com nossa equipe.",
+  },
+  {
+    q: "Tem fidelidade?",
+    a: "Os planos mensais são sem fidelidade. Planos anuais têm 15% de desconto com compromisso de 12 meses.",
+  },
+  {
+    q: "Atende rádios, portais e mídia OOH/DOOH, ou só TV?",
+    a: "Atende qualquer veículo de comunicação, incluindo mídia out-of-home (OOH) e digital out-of-home (DOOH). A plataforma foi desenhada para ser configurável por tipo de produto, grade e veículo.",
+  },
+  {
+    q: "Posso testar antes de contratar?",
+    a: "Sim. Oferecemos demonstração ao vivo de 30 minutos e, para o plano Profissional, um período de avaliação combinado caso a caso.",
+  },
 ];

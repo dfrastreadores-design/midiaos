@@ -5,7 +5,11 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data } = await supabase
-    .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
   if (!data) throw new Error("Apenas administradores podem visualizar o histórico.");
 }
 
@@ -36,15 +40,19 @@ export const listAuditoriaAlteracoes = createServerFn({ method: "POST" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
-    const userIds = Array.from(new Set((rows ?? []).map((r) => r.user_id).filter(Boolean) as string[]));
+    const userIds = Array.from(
+      new Set((rows ?? []).map((r) => r.user_id).filter(Boolean) as string[]),
+    );
     let nameMap = new Map<string, { nome: string; email: string }>();
     if (userIds.length > 0) {
       const { data: profs } = await supabaseAdmin
-        .from("profiles").select("id, nome, email").in("id", userIds);
+        .from("profiles")
+        .select("id, nome, email")
+        .in("id", userIds);
       nameMap = new Map((profs ?? []).map((p) => [p.id, { nome: p.nome, email: p.email }]));
     }
     return (rows ?? []).map((r) => ({
       ...r,
-      autor: r.user_id ? nameMap.get(r.user_id) ?? null : null,
+      autor: r.user_id ? (nameMap.get(r.user_id) ?? null) : null,
     }));
   });

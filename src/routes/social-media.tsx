@@ -9,7 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Share2,
   Sparkles,
@@ -86,12 +92,15 @@ export function SocialMediaHubPage() {
   const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
-  const [initialCopyForModal, setInitialCopyForModal] = useState<{
-    titulo?: string;
-    conteudo?: string;
-    hashtags?: string;
-    cta?: string;
-  } | undefined>(undefined);
+  const [initialCopyForModal, setInitialCopyForModal] = useState<
+    | {
+        titulo?: string;
+        conteudo?: string;
+        hashtags?: string;
+        cta?: string;
+      }
+    | undefined
+  >(undefined);
 
   // Queries
   const { data: contas = [], isLoading: isLoadingContas } = useQuery({
@@ -149,7 +158,8 @@ export function SocialMediaHubPage() {
   const filteredPosts = useMemo(() => {
     return posts.filter((p) => {
       if (postStatusFilter !== "todos" && p.status !== postStatusFilter) return false;
-      if (postPlatformFilter !== "todas" && !p.plataformas.includes(postPlatformFilter as any)) return false;
+      if (postPlatformFilter !== "todas" && !p.plataformas.includes(postPlatformFilter as any))
+        return false;
       if (searchTerm) {
         const text = `${p.titulo || ""} ${p.conteudo} ${p.hashtags || ""}`.toLowerCase();
         if (!text.includes(searchTerm.toLowerCase())) return false;
@@ -161,9 +171,15 @@ export function SocialMediaHubPage() {
   // Estúdio Criativo IA State
   const [iaTema, setIaTema] = useState("");
   const [iaPlataforma, setIaPlataforma] = useState<PlataformaSocial>("instagram");
-  const [iaFormato, setIaFormato] = useState<"feed" | "reels" | "carrossel" | "story" | "anuncio_trafego">("feed");
-  const [iaObjetivo, setIaObjetivo] = useState<"vendas" | "engajamento" | "leads" | "branding">("vendas");
-  const [iaTom, setIaTom] = useState<"persuasivo" | "descontraido" | "corporativo" | "storytelling" | "urgencia">("persuasivo");
+  const [iaFormato, setIaFormato] = useState<
+    "feed" | "reels" | "carrossel" | "story" | "anuncio_trafego"
+  >("feed");
+  const [iaObjetivo, setIaObjetivo] = useState<"vendas" | "engajamento" | "leads" | "branding">(
+    "vendas",
+  );
+  const [iaTom, setIaTom] = useState<
+    "persuasivo" | "descontraido" | "corporativo" | "storytelling" | "urgencia"
+  >("persuasivo");
   const [iaPublico, setIaPublico] = useState("");
   const [iaDiferenciais, setIaDiferenciais] = useState("");
   const [iaResult, setIaResult] = useState<GerarCopyOutput | null>(null);
@@ -227,7 +243,8 @@ export function SocialMediaHubPage() {
                   Hub de Redes Sociais & Tráfego Pago
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  Agendador multicanal, métricas de alcance, inteligência artificial para criativos e cockpit para Gestor de Tráfego e Social Media.
+                  Agendador multicanal, métricas de alcance, inteligência artificial para criativos
+                  e cockpit para Gestor de Tráfego e Social Media.
                 </p>
               </div>
             </div>
@@ -278,7 +295,9 @@ export function SocialMediaHubPage() {
           <Card className="border-border/60 shadow-xs hover:border-primary/40 transition-colors">
             <CardContent className="p-4 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-medium uppercase tracking-wider">Alcance Total</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider">
+                  Alcance Total
+                </span>
                 <Users className="size-4 text-primary" />
               </div>
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
@@ -310,7 +329,9 @@ export function SocialMediaHubPage() {
           <Card className="border-border/60 shadow-xs hover:border-primary/40 transition-colors">
             <CardContent className="p-4 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-medium uppercase tracking-wider">Engajamento</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider">
+                  Engajamento
+                </span>
                 <Heart className="size-4 text-rose-500" />
               </div>
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
@@ -326,7 +347,9 @@ export function SocialMediaHubPage() {
           <Card className="border-border/60 shadow-xs hover:border-primary/40 transition-colors">
             <CardContent className="p-4 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-medium uppercase tracking-wider">Cliques no Link</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider">
+                  Cliques no Link
+                </span>
                 <MousePointerClick className="size-4 text-amber-500" />
               </div>
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
@@ -342,7 +365,9 @@ export function SocialMediaHubPage() {
           <Card className="border-border/60 shadow-xs hover:border-primary/40 transition-colors">
             <CardContent className="p-4 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-medium uppercase tracking-wider">ROAS Tráfego</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider">
+                  ROAS Tráfego
+                </span>
                 <TrendingUp className="size-4 text-emerald-500" />
               </div>
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
@@ -358,11 +383,15 @@ export function SocialMediaHubPage() {
           <Card className="border-border/60 shadow-xs hover:border-primary/40 transition-colors">
             <CardContent className="p-4 space-y-1">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-[11px] font-medium uppercase tracking-wider">Gasto em Ads</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider">
+                  Gasto em Ads
+                </span>
                 <DollarSign className="size-4 text-indigo-500" />
               </div>
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                R$ {analytics?.gasto_trafego?.toLocaleString("pt-BR", { minimumFractionDigits: 0 }) || "4.890"}
+                R${" "}
+                {analytics?.gasto_trafego?.toLocaleString("pt-BR", { minimumFractionDigits: 0 }) ||
+                  "4.890"}
               </div>
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
                 <span>CPA: R$ 14,05 / lead</span>
@@ -374,22 +403,34 @@ export function SocialMediaHubPage() {
         {/* Navegação por Abas Principais */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-muted/40 p-1 rounded-xl border border-border/60 w-full sm:w-auto grid grid-cols-2 sm:inline-flex h-auto gap-1">
-            <TabsTrigger value="dashboard" className="gap-2 text-xs font-semibold py-2 px-3 sm:px-4">
+            <TabsTrigger
+              value="dashboard"
+              className="gap-2 text-xs font-semibold py-2 px-3 sm:px-4"
+            >
               <BarChart3 className="size-4" />
               <span>Dashboard & Métricas</span>
             </TabsTrigger>
-            <TabsTrigger value="calendario" className="gap-2 text-xs font-semibold py-2 px-3 sm:px-4">
+            <TabsTrigger
+              value="calendario"
+              className="gap-2 text-xs font-semibold py-2 px-3 sm:px-4"
+            >
               <CalendarIcon className="size-4" />
               <span>Posts & Agendados</span>
               <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px] h-4">
                 {posts.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="estudio_ia" className="gap-2 text-xs font-semibold py-2 px-3 sm:px-4">
+            <TabsTrigger
+              value="estudio_ia"
+              className="gap-2 text-xs font-semibold py-2 px-3 sm:px-4"
+            >
               <Sparkles className="size-4 text-primary" />
               <span>Estúdio Criativo IA</span>
             </TabsTrigger>
-            <TabsTrigger value="gestor_trafego" className="gap-2 text-xs font-semibold py-2 px-3 sm:px-4">
+            <TabsTrigger
+              value="gestor_trafego"
+              className="gap-2 text-xs font-semibold py-2 px-3 sm:px-4"
+            >
               <Target className="size-4 text-indigo-500" />
               <span>Gestor de Tráfego & Ads</span>
             </TabsTrigger>
@@ -420,7 +461,10 @@ export function SocialMediaHubPage() {
                     <Badge variant="outline" className="text-xs border-primary/30 text-primary">
                       ● Alcance
                     </Badge>
-                    <Badge variant="outline" className="text-xs border-emerald-500/30 text-emerald-600">
+                    <Badge
+                      variant="outline"
+                      className="text-xs border-emerald-500/30 text-emerald-600"
+                    >
                       ● Engajamento
                     </Badge>
                   </div>
@@ -443,7 +487,13 @@ export function SocialMediaHubPage() {
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#88888820" vertical={false} />
-                        <XAxis dataKey="data" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                        <XAxis
+                          dataKey="data"
+                          stroke="#888888"
+                          fontSize={11}
+                          tickLine={false}
+                          axisLine={false}
+                        />
                         <YAxis stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
                         <Tooltip
                           contentStyle={{
@@ -501,7 +551,10 @@ export function SocialMediaHubPage() {
                       <div key={item.plataforma} className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2 font-medium">
-                            <div className="size-2.5 rounded-full" style={{ backgroundColor: cfg.cor }} />
+                            <div
+                              className="size-2.5 rounded-full"
+                              style={{ backgroundColor: cfg.cor }}
+                            />
                             <span>{cfg.nome}</span>
                           </div>
                           <div className="font-semibold text-foreground">
@@ -531,7 +584,10 @@ export function SocialMediaHubPage() {
                       <Clock className="size-4 text-amber-500" />
                       Melhores Horários para Postar (Algoritmo IA)
                     </CardTitle>
-                    <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-200">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-200"
+                    >
                       Alta Precisão
                     </Badge>
                   </div>
@@ -585,7 +641,10 @@ export function SocialMediaHubPage() {
                       <Target className="size-4 text-indigo-500" />
                       Performance de Anúncios Ativos
                     </CardTitle>
-                    <Badge variant="outline" className="text-[10px] bg-indigo-500/10 text-indigo-600 border-indigo-200">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] bg-indigo-500/10 text-indigo-600 border-indigo-200"
+                    >
                       Meta & Google Ads
                     </Badge>
                   </div>
@@ -596,25 +655,35 @@ export function SocialMediaHubPage() {
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 text-center">
                     <div>
-                      <div className="text-[10px] text-muted-foreground uppercase font-medium">Custo por Lead</div>
+                      <div className="text-[10px] text-muted-foreground uppercase font-medium">
+                        Custo por Lead
+                      </div>
                       <div className="text-base font-bold text-foreground">R$ 14,05</div>
                       <div className="text-[10px] text-emerald-600 font-medium">-18% este mês</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-muted-foreground uppercase font-medium">Custo p/ Clique</div>
+                      <div className="text-[10px] text-muted-foreground uppercase font-medium">
+                        Custo p/ Clique
+                      </div>
                       <div className="text-base font-bold text-foreground">R$ 0,58</div>
                       <div className="text-[10px] text-emerald-600 font-medium">CTR 3.4%</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-muted-foreground uppercase font-medium">Total de Leads</div>
+                      <div className="text-[10px] text-muted-foreground uppercase font-medium">
+                        Total de Leads
+                      </div>
                       <div className="text-base font-bold text-foreground">348 leads</div>
-                      <div className="text-[10px] text-emerald-600 font-medium">WhatsApp / Form</div>
+                      <div className="text-[10px] text-emerald-600 font-medium">
+                        WhatsApp / Form
+                      </div>
                     </div>
                   </div>
 
                   <div className="p-3 rounded-xl border border-border/60 bg-muted/10 space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-foreground">Meta Ads: Campanha Painéis DOOH & Aeroporto</span>
+                      <span className="font-semibold text-foreground">
+                        Meta Ads: Campanha Painéis DOOH & Aeroporto
+                      </span>
                       <Badge className="bg-emerald-500 text-white text-[10px] h-4">Ativa</Badge>
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
@@ -626,7 +695,9 @@ export function SocialMediaHubPage() {
 
                   <div className="p-3 rounded-xl border border-border/60 bg-muted/10 space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-foreground">Google Ads: Busca Comercial Nexo Mídia B2B</span>
+                      <span className="font-semibold text-foreground">
+                        Google Ads: Busca Comercial Nexo Mídia B2B
+                      </span>
                       <Badge className="bg-emerald-500 text-white text-[10px] h-4">Ativa</Badge>
                     </div>
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
@@ -706,9 +777,12 @@ export function SocialMediaHubPage() {
                 <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
                   <CalendarIcon className="size-6" />
                 </div>
-                <h3 className="font-bold text-base text-foreground">Nenhuma publicação encontrada</h3>
+                <h3 className="font-bold text-base text-foreground">
+                  Nenhuma publicação encontrada
+                </h3>
                 <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                  Crie ou agende postagens simultâneas para suas redes ou utilize a IA para redigir o roteiro completo.
+                  Crie ou agende postagens simultâneas para suas redes ou utilize a IA para redigir
+                  o roteiro completo.
                 </p>
                 <Button
                   size="sm"
@@ -759,19 +833,28 @@ export function SocialMediaHubPage() {
 
                           <div>
                             {isAgendado && (
-                              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-300 text-[10px] gap-1">
+                              <Badge
+                                variant="outline"
+                                className="bg-amber-500/10 text-amber-600 border-amber-300 text-[10px] gap-1"
+                              >
                                 <Clock className="size-2.5" />
                                 Agendado
                               </Badge>
                             )}
                             {isPublicado && (
-                              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-300 text-[10px] gap-1">
+                              <Badge
+                                variant="outline"
+                                className="bg-emerald-500/10 text-emerald-600 border-emerald-300 text-[10px] gap-1"
+                              >
                                 <CheckCircle2 className="size-2.5" />
                                 Publicado
                               </Badge>
                             )}
                             {isRascunho && (
-                              <Badge variant="outline" className="bg-slate-500/10 text-slate-600 border-slate-300 text-[10px]">
+                              <Badge
+                                variant="outline"
+                                className="bg-slate-500/10 text-slate-600 border-slate-300 text-[10px]"
+                              >
                                 Rascunho
                               </Badge>
                             )}
@@ -819,15 +902,18 @@ export function SocialMediaHubPage() {
                             <CalendarIcon className="size-3 text-muted-foreground" />
                             <span>
                               {post.data_agendamento
-                                ? `Agendado: ${new Date(post.data_agendamento).toLocaleDateString("pt-BR", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}`
+                                ? `Agendado: ${new Date(post.data_agendamento).toLocaleDateString(
+                                    "pt-BR",
+                                    {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )}`
                                 : post.data_publicacao
-                                ? `Publicado: ${new Date(post.data_publicacao).toLocaleDateString("pt-BR")}`
-                                : "Sem agendamento"}
+                                  ? `Publicado: ${new Date(post.data_publicacao).toLocaleDateString("pt-BR")}`
+                                  : "Sem agendamento"}
                             </span>
                           </div>
 
@@ -904,7 +990,9 @@ export function SocialMediaHubPage() {
                       <Sparkles className="size-5" />
                     </div>
                     <div>
-                      <CardTitle className="text-base font-bold">Gerador de Copy & Roteiros IA</CardTitle>
+                      <CardTitle className="text-base font-bold">
+                        Gerador de Copy & Roteiros IA
+                      </CardTitle>
                       <CardDescription className="text-xs">
                         Copywriting persuasivo ajustado para o algoritmo de cada rede social.
                       </CardDescription>
@@ -913,7 +1001,9 @@ export function SocialMediaHubPage() {
                 </CardHeader>
                 <CardContent className="space-y-4 pt-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Tema, Produto ou Oferta Principal *</Label>
+                    <Label className="text-xs font-semibold">
+                      Tema, Produto ou Oferta Principal *
+                    </Label>
                     <Textarea
                       rows={3}
                       placeholder="Ex: Campanha de Black Friday para locação de painéis DOOH em shopping centers com 40% de desconto no plano trimestral..."
@@ -946,10 +1036,7 @@ export function SocialMediaHubPage() {
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold">Formato</Label>
-                      <Select
-                        value={iaFormato}
-                        onValueChange={(val: any) => setIaFormato(val)}
-                      >
+                      <Select value={iaFormato} onValueChange={(val: any) => setIaFormato(val)}>
                         <SelectTrigger className="h-9 text-xs">
                           <SelectValue />
                         </SelectTrigger>
@@ -967,10 +1054,7 @@ export function SocialMediaHubPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold">Objetivo</Label>
-                      <Select
-                        value={iaObjetivo}
-                        onValueChange={(val: any) => setIaObjetivo(val)}
-                      >
+                      <Select value={iaObjetivo} onValueChange={(val: any) => setIaObjetivo(val)}>
                         <SelectTrigger className="h-9 text-xs">
                           <SelectValue />
                         </SelectTrigger>
@@ -985,10 +1069,7 @@ export function SocialMediaHubPage() {
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold">Tom de Voz</Label>
-                      <Select
-                        value={iaTom}
-                        onValueChange={(val: any) => setIaTom(val)}
-                      >
+                      <Select value={iaTom} onValueChange={(val: any) => setIaTom(val)}>
                         <SelectTrigger className="h-9 text-xs">
                           <SelectValue />
                         </SelectTrigger>
@@ -1014,7 +1095,9 @@ export function SocialMediaHubPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Diferenciais da Oferta (Opcional)</Label>
+                    <Label className="text-xs font-semibold">
+                      Diferenciais da Oferta (Opcional)
+                    </Label>
                     <Input
                       placeholder="Ex: Telas de alta resolução, relatórios em tempo real e bonificação"
                       value={iaDiferenciais}
@@ -1052,9 +1135,12 @@ export function SocialMediaHubPage() {
                       <div className="flex items-center gap-2.5">
                         <Sparkles className="size-5 text-primary shrink-0" />
                         <div>
-                          <div className="font-bold text-xs text-foreground">Copy Pronta para Uso!</div>
+                          <div className="font-bold text-xs text-foreground">
+                            Copy Pronta para Uso!
+                          </div>
                           <div className="text-[11px] text-muted-foreground">
-                            Você pode copiar os blocos individuais ou abrir diretamente no agendador de posts.
+                            Você pode copiar os blocos individuais ou abrir diretamente no agendador
+                            de posts.
                           </div>
                         </div>
                       </div>
@@ -1186,9 +1272,13 @@ export function SocialMediaHubPage() {
                       <Sparkles className="size-7" />
                     </div>
                     <div className="space-y-1">
-                      <h4 className="font-bold text-base text-foreground">O Seu Conteúdo IA Aparecerá Aqui</h4>
+                      <h4 className="font-bold text-base text-foreground">
+                        O Seu Conteúdo IA Aparecerá Aqui
+                      </h4>
                       <p className="text-xs text-muted-foreground max-w-sm">
-                        Preencha o tema e as preferências no painel ao lado e clique em "Gerar com Inteligência Artificial" para receber ganchos, legendas e hashtags sob medida.
+                        Preencha o tema e as preferências no painel ao lado e clique em "Gerar com
+                        Inteligência Artificial" para receber ganchos, legendas e hashtags sob
+                        medida.
                       </p>
                     </div>
                   </Card>
@@ -1208,13 +1298,16 @@ export function SocialMediaHubPage() {
                   <Badge className="bg-indigo-500 text-white text-[10px] px-2 py-0.5">
                     Cockpit do Gestor de Tráfego
                   </Badge>
-                  <span className="text-xs text-indigo-200">Meta Ads Manager & Google Ads Link</span>
+                  <span className="text-xs text-indigo-200">
+                    Meta Ads Manager & Google Ads Link
+                  </span>
                 </div>
                 <h3 className="text-xl font-bold tracking-tight">
                   Controle de Verba, Otimização de ROAS & Laboratório A/B
                 </h3>
                 <p className="text-xs text-indigo-200/90 max-w-xl">
-                  Acompanhe CPA diário, gere variações multivariadas de headlines com inteligência artificial e conecte os anúncios diretamente aos produtos e propostas de mídia.
+                  Acompanhe CPA diário, gere variações multivariadas de headlines com inteligência
+                  artificial e conecte os anúncios diretamente aos produtos e propostas de mídia.
                 </p>
               </div>
 
@@ -1238,33 +1331,49 @@ export function SocialMediaHubPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card className="border-border/60 shadow-xs">
                 <CardContent className="p-4 space-y-1">
-                  <span className="text-[11px] text-muted-foreground uppercase font-semibold">Orçamento Ativo</span>
+                  <span className="text-[11px] text-muted-foreground uppercase font-semibold">
+                    Orçamento Ativo
+                  </span>
                   <div className="text-xl font-bold text-foreground">R$ 190,00 / dia</div>
-                  <div className="text-[11px] text-indigo-600 font-medium">Meta Ads + Google Ads</div>
+                  <div className="text-[11px] text-indigo-600 font-medium">
+                    Meta Ads + Google Ads
+                  </div>
                 </CardContent>
               </Card>
 
               <Card className="border-border/60 shadow-xs">
                 <CardContent className="p-4 space-y-1">
-                  <span className="text-[11px] text-muted-foreground uppercase font-semibold">Custo por Lead (CPL)</span>
+                  <span className="text-[11px] text-muted-foreground uppercase font-semibold">
+                    Custo por Lead (CPL)
+                  </span>
                   <div className="text-xl font-bold text-foreground">R$ 14,05</div>
-                  <div className="text-[11px] text-emerald-600 font-medium">Meta: R$ 12,00 | Abaixo do teto</div>
+                  <div className="text-[11px] text-emerald-600 font-medium">
+                    Meta: R$ 12,00 | Abaixo do teto
+                  </div>
                 </CardContent>
               </Card>
 
               <Card className="border-border/60 shadow-xs">
                 <CardContent className="p-4 space-y-1">
-                  <span className="text-[11px] text-muted-foreground uppercase font-semibold">Taxa de Clique (CTR)</span>
+                  <span className="text-[11px] text-muted-foreground uppercase font-semibold">
+                    Taxa de Clique (CTR)
+                  </span>
                   <div className="text-xl font-bold text-foreground">3.42%</div>
-                  <div className="text-[11px] text-emerald-600 font-medium">Benchmark superior (+1.2%)</div>
+                  <div className="text-[11px] text-emerald-600 font-medium">
+                    Benchmark superior (+1.2%)
+                  </div>
                 </CardContent>
               </Card>
 
               <Card className="border-border/60 shadow-xs">
                 <CardContent className="p-4 space-y-1">
-                  <span className="text-[11px] text-muted-foreground uppercase font-semibold">ROAS Médio</span>
+                  <span className="text-[11px] text-muted-foreground uppercase font-semibold">
+                    ROAS Médio
+                  </span>
                   <div className="text-xl font-bold text-foreground">4.8x</div>
-                  <div className="text-[11px] text-emerald-600 font-medium">R$ 4,80 faturados por R$ 1 gasto</div>
+                  <div className="text-[11px] text-emerald-600 font-medium">
+                    R$ 4,80 faturados por R$ 1 gasto
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -1279,12 +1388,16 @@ export function SocialMediaHubPage() {
                       Laboratório de Teste A/B de Anúncios com IA
                     </CardTitle>
                   </div>
-                  <Badge variant="outline" className="text-[10px] border-indigo-300 text-indigo-600">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] border-indigo-300 text-indigo-600"
+                  >
                     Otimizador de Conversão
                   </Badge>
                 </div>
                 <CardDescription className="text-xs">
-                  Gere combinações de headlines, textos persuasivos de alta conversão e chamadas para ação prontas para teste multivariado no Meta Ads Manager.
+                  Gere combinações de headlines, textos persuasivos de alta conversão e chamadas
+                  para ação prontas para teste multivariado no Meta Ads Manager.
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-4">
@@ -1299,7 +1412,7 @@ export function SocialMediaHubPage() {
                         onClick={() =>
                           handleCopyText(
                             "Cansado de gastar em anúncios que não trazem clientes reais para o seu negócio? Conheça a mídia com maior conversão comprovada.",
-                            "Variação 1"
+                            "Variação 1",
                           )
                         }
                       >
@@ -1311,10 +1424,14 @@ export function SocialMediaHubPage() {
                       "Sua Marca Não Pode Mais Ser Invisível"
                     </div>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Cansado de gastar em anúncios que não trazem clientes reais para o seu negócio? Posicione sua empresa nos pontos de maior fluxo da cidade com métricas auditadas.
+                      Cansado de gastar em anúncios que não trazem clientes reais para o seu
+                      negócio? Posicione sua empresa nos pontos de maior fluxo da cidade com
+                      métricas auditadas.
                     </p>
                     <div className="pt-2">
-                      <Badge className="bg-indigo-600 text-white text-[10px]">CTA: Fale no WhatsApp</Badge>
+                      <Badge className="bg-indigo-600 text-white text-[10px]">
+                        CTA: Fale no WhatsApp
+                      </Badge>
                     </div>
                   </div>
 
@@ -1328,7 +1445,7 @@ export function SocialMediaHubPage() {
                         onClick={() =>
                           handleCopyText(
                             "Descubra como empresas estão multiplicando o faturamento anunciando em telas de alta retenção com ROAS médio de 4.8x.",
-                            "Variação 2"
+                            "Variação 2",
                           )
                         }
                       >
@@ -1340,10 +1457,13 @@ export function SocialMediaHubPage() {
                       "Multiplique Seus Resultados com Mídia de Alta Performance"
                     </div>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Descubra como empresas estão multiplicando o faturamento anunciando em telas de alta retenção com ROAS médio de 4.8x e custo por lead reduzido.
+                      Descubra como empresas estão multiplicando o faturamento anunciando em telas
+                      de alta retenção com ROAS médio de 4.8x e custo por lead reduzido.
                     </p>
                     <div className="pt-2">
-                      <Badge className="bg-emerald-600 text-white text-[10px]">CTA: Saiba Mais</Badge>
+                      <Badge className="bg-emerald-600 text-white text-[10px]">
+                        CTA: Saiba Mais
+                      </Badge>
                     </div>
                   </div>
 
@@ -1357,7 +1477,7 @@ export function SocialMediaHubPage() {
                         onClick={() =>
                           handleCopyText(
                             "Condições exclusivas de veiculação válidas apenas para esta semana. Garanta o espaço da sua marca nos melhores locais.",
-                            "Variação 3"
+                            "Variação 3",
                           )
                         }
                       >
@@ -1369,10 +1489,14 @@ export function SocialMediaHubPage() {
                       "Últimas Posições Disponíveis para o Próximo Mês"
                     </div>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Condições exclusivas de veiculação válidas apenas para esta semana. Garanta o espaço da sua marca nos pontos mais nobres antes que seus concorrentes reservem.
+                      Condições exclusivas de veiculação válidas apenas para esta semana. Garanta o
+                      espaço da sua marca nos pontos mais nobres antes que seus concorrentes
+                      reservem.
                     </p>
                     <div className="pt-2">
-                      <Badge className="bg-amber-600 text-white text-[10px]">CTA: Solicitar Proposta</Badge>
+                      <Badge className="bg-amber-600 text-white text-[10px]">
+                        CTA: Solicitar Proposta
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -1388,7 +1512,8 @@ export function SocialMediaHubPage() {
               <div>
                 <h3 className="font-bold text-base text-foreground">Perfis e Canais Conectados</h3>
                 <p className="text-xs text-muted-foreground">
-                  Gerencie as credenciais, tokens de acesso e status de sincronização de cada rede social.
+                  Gerencie as credenciais, tokens de acesso e status de sincronização de cada rede
+                  social.
                 </p>
               </div>
               <Button
@@ -1410,7 +1535,10 @@ export function SocialMediaHubPage() {
                 };
 
                 return (
-                  <Card key={conta.id} className="border-border/60 shadow-xs hover:border-primary/40 transition-all">
+                  <Card
+                    key={conta.id}
+                    className="border-border/60 shadow-xs hover:border-primary/40 transition-all"
+                  >
                     <CardContent className="p-5 space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -1423,7 +1551,9 @@ export function SocialMediaHubPage() {
                             className="size-11 rounded-full object-cover border border-border"
                           />
                           <div>
-                            <div className="font-bold text-sm text-foreground">{conta.nome_conta}</div>
+                            <div className="font-bold text-sm text-foreground">
+                              {conta.nome_conta}
+                            </div>
                             <div className="text-xs text-muted-foreground font-mono">
                               {conta.username || `@${conta.plataforma}`}
                             </div>
@@ -1440,15 +1570,23 @@ export function SocialMediaHubPage() {
 
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/40 text-xs">
                         <div>
-                          <span className="text-muted-foreground text-[10px] block">Seguidores / Base</span>
+                          <span className="text-muted-foreground text-[10px] block">
+                            Seguidores / Base
+                          </span>
                           <span className="font-bold text-foreground">
-                            {conta.seguidores > 0 ? conta.seguidores.toLocaleString("pt-BR") : "Conta Ads"}
+                            {conta.seguidores > 0
+                              ? conta.seguidores.toLocaleString("pt-BR")
+                              : "Conta Ads"}
                           </span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground text-[10px] block">Engajamento Médio</span>
+                          <span className="text-muted-foreground text-[10px] block">
+                            Engajamento Médio
+                          </span>
                           <span className="font-bold text-emerald-600">
-                            {conta.taxa_engajamento > 0 ? `${conta.taxa_engajamento}%` : "Tráfego Ativo"}
+                            {conta.taxa_engajamento > 0
+                              ? `${conta.taxa_engajamento}%`
+                              : "Tráfego Ativo"}
                           </span>
                         </div>
                       </div>
@@ -1463,7 +1601,9 @@ export function SocialMediaHubPage() {
                             variant="ghost"
                             size="sm"
                             className="h-7 text-xs px-2 text-muted-foreground"
-                            onClick={() => toast.success(`Métricas de ${conta.nome_conta} sincronizadas!`)}
+                            onClick={() =>
+                              toast.success(`Métricas de ${conta.nome_conta} sincronizadas!`)
+                            }
                           >
                             <RefreshCw className="size-3 mr-1" />
                             Sincronizar

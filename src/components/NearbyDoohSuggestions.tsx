@@ -85,8 +85,8 @@ export function NearbyDoohSuggestions({ cliente }: Props) {
 
       {geo.data && !geo.data.ok && (
         <p className="text-xs text-muted-foreground">
-          Não foi possível localizar o endereço do cliente automaticamente.
-          Exibindo pontos disponíveis abaixo como sugestões estratégicas.
+          Não foi possível localizar o endereço do cliente automaticamente. Exibindo pontos
+          disponíveis abaixo como sugestões estratégicas.
         </p>
       )}
 
@@ -103,7 +103,11 @@ export function NearbyDoohSuggestions({ cliente }: Props) {
               <div className="flex items-start gap-2.5 min-w-0 flex-1">
                 {p.fotos && p.fotos.length > 0 && (
                   <div className="size-9 rounded-md overflow-hidden border shrink-0 bg-muted/30">
-                    <ProdutoFotoImg stored={p.fotos[0]} alt={p.nome} className="size-full object-cover" />
+                    <ProdutoFotoImg
+                      stored={p.fotos[0]}
+                      alt={p.nome}
+                      className="size-full object-cover"
+                    />
                   </div>
                 )}
                 <div className="min-w-0 flex-1">

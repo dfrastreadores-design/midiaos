@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +16,16 @@ import { cancelarPi } from "@/lib/pi.functions";
 import { toast } from "sonner";
 
 export function CancelarPiDialog({
-  piId, numero, open, onOpenChange,
-}: { piId: string | null; numero: string; open: boolean; onOpenChange: (v: boolean) => void }) {
+  piId,
+  numero,
+  open,
+  onOpenChange,
+}: {
+  piId: string | null;
+  numero: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const qc = useQueryClient();
   const [motivo, setMotivo] = useState("");
   const [substituir, setSubstituir] = useState(false);
@@ -26,7 +40,8 @@ export function CancelarPiDialog({
       toast.success(substituir ? "PI substituído. Novo rascunho criado." : "PI cancelado.");
       qc.invalidateQueries({ queryKey: ["pis"] });
       onOpenChange(false);
-      setMotivo(""); setSubstituir(false);
+      setMotivo("");
+      setSubstituir(false);
       if (r?.novoId) {
         // Mantém o usuário na lista, o novo aparece em rascunho
       }
@@ -47,13 +62,13 @@ export function CancelarPiDialog({
           </div>
           <label className="flex items-start gap-2 text-sm">
             <Checkbox checked={substituir} onCheckedChange={(v) => setSubstituir(Boolean(v))} />
-            <span>
-              Substituir por um novo PI (rascunho copiado com os mesmos itens).
-            </span>
+            <span>Substituir por um novo PI (rascunho copiado com os mesmos itens).</span>
           </label>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Voltar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Voltar
+          </Button>
           <Button variant="destructive" disabled={m.isPending} onClick={() => m.mutate()}>
             {substituir ? "Cancelar e Substituir" : "Cancelar PI"}
           </Button>

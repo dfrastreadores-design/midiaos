@@ -23,7 +23,12 @@ export const Route = createFileRoute("/lp/$slug")({
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "website" },
-        ...(og ? [{ property: "og:image", content: og }, { name: "twitter:image", content: og }] : []),
+        ...(og
+          ? [
+              { property: "og:image", content: og },
+              { name: "twitter:image", content: og },
+            ]
+          : []),
         { name: "twitter:card", content: og ? "summary_large_image" : "summary" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: desc },

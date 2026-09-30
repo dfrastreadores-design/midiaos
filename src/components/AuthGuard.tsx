@@ -33,11 +33,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       try {
         if (demo) localStorage.setItem("midiaos:is_demo", "1");
         else localStorage.removeItem("midiaos:is_demo");
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
       setExpired(!!(ends && ends.getTime() < Date.now()));
       setChecking(false);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user, loading, nav, tick]);
 
   if (loading || (user && checking)) {
@@ -48,7 +52,17 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
   if (!user) return null;
-  if (expired) return <TrialExpiredScreen email={user.email} onUpgraded={() => { setExpired(false); setChecking(true); setTick((t) => t + 1); }} />;
+  if (expired)
+    return (
+      <TrialExpiredScreen
+        email={user.email}
+        onUpgraded={() => {
+          setExpired(false);
+          setChecking(true);
+          setTick((t) => t + 1);
+        }}
+      />
+    );
   return (
     <>
       {children}
@@ -56,4 +70,3 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     </>
   );
 }
-

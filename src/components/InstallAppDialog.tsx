@@ -33,7 +33,9 @@ interface InstallAppDialogProps {
 
 export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) {
   const { platform, canPromptNative, promptInstall, isStandalone } = usePwaInstall();
-  const [activeTab, setActiveTab] = useState<string>(platform === "ios" ? "ios" : platform === "android" ? "android" : "desktop");
+  const [activeTab, setActiveTab] = useState<string>(
+    platform === "ios" ? "ios" : platform === "android" ? "android" : "desktop",
+  );
   const [installing, setInstalling] = useState(false);
 
   const handleNativeInstall = async () => {
@@ -72,13 +74,22 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
           </div>
 
           <div className="flex flex-wrap items-center gap-2 mt-4 text-[11px]">
-            <Badge variant="outline" className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5">
+            <Badge
+              variant="outline"
+              className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5"
+            >
               <Zap className="size-3 text-amber-400" /> Ultra Rápido (&lt; 3MB)
             </Badge>
-            <Badge variant="outline" className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5">
+            <Badge
+              variant="outline"
+              className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5"
+            >
               <Sparkles className="size-3 text-emerald-400" /> Tela Cheia sem Abas
             </Badge>
-            <Badge variant="outline" className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5">
+            <Badge
+              variant="outline"
+              className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5"
+            >
               <BellRing className="size-3 text-sky-400" /> Alertas de Renovação
             </Badge>
           </div>
@@ -93,7 +104,8 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
               </div>
               <h3 className="font-bold text-base text-foreground">Aplicativo já instalado!</h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                Você já está utilizando o Mídia.OS em modo aplicativo independente. Todos os recursos e notificações estão ativos.
+                Você já está utilizando o Mídia.OS em modo aplicativo independente. Todos os
+                recursos e notificações estão ativos.
               </p>
             </div>
           ) : (
@@ -118,7 +130,8 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
                       <Sparkles className="size-4" /> Instalação com 1 Clique
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Seu navegador suporta instalação direta. O ícone do Mídia.OS será adicionado à tela inicial do seu celular.
+                      Seu navegador suporta instalação direta. O ícone do Mídia.OS será adicionado à
+                      tela inicial do seu celular.
                     </p>
                     <Button
                       onClick={handleNativeInstall}
@@ -132,20 +145,36 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
                 ) : (
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground">
-                      Para instalar no seu celular ou tablet Android pelo Google Chrome ou Samsung Internet:
+                      Para instalar no seu celular ou tablet Android pelo Google Chrome ou Samsung
+                      Internet:
                     </p>
                     <ol className="space-y-2.5 text-xs text-foreground/90">
                       <li className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 border border-border/40">
-                        <span className="size-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[11px]">1</span>
-                        <span>Toque no <strong>menu de três pontinhos (⋮)</strong> no canto superior direito do navegador.</span>
+                        <span className="size-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[11px]">
+                          1
+                        </span>
+                        <span>
+                          Toque no <strong>menu de três pontinhos (⋮)</strong> no canto superior
+                          direito do navegador.
+                        </span>
                       </li>
                       <li className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 border border-border/40">
-                        <span className="size-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[11px]">2</span>
-                        <span>Selecione a opção <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.</span>
+                        <span className="size-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[11px]">
+                          2
+                        </span>
+                        <span>
+                          Selecione a opção <strong>"Instalar aplicativo"</strong> ou{" "}
+                          <strong>"Adicionar à tela inicial"</strong>.
+                        </span>
                       </li>
                       <li className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 border border-border/40">
-                        <span className="size-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[11px]">3</span>
-                        <span>Confirme tocando em <strong>"Instalar"</strong>. Pronto! O app estará na sua gaveta de aplicativos.</span>
+                        <span className="size-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-[11px]">
+                          3
+                        </span>
+                        <span>
+                          Confirme tocando em <strong>"Instalar"</strong>. Pronto! O app estará na
+                          sua gaveta de aplicativos.
+                        </span>
                       </li>
                     </ol>
                   </div>
@@ -164,7 +193,9 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
                     </div>
                     <div>
                       <div className="font-semibold text-foreground">Passo 1: Compartilhar</div>
-                      <div className="text-[11px] text-muted-foreground">Toque no botão de compartilhar na barra inferior do Safari.</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Toque no botão de compartilhar na barra inferior do Safari.
+                      </div>
                     </div>
                   </div>
 
@@ -173,8 +204,12 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
                       <PlusSquare className="size-4" />
                     </div>
                     <div>
-                      <div className="font-semibold text-foreground">Passo 2: Adicionar à Tela de Início</div>
-                      <div className="text-[11px] text-muted-foreground">Role a lista de opções para baixo e selecione "Adicionar à Tela de Início".</div>
+                      <div className="font-semibold text-foreground">
+                        Passo 2: Adicionar à Tela de Início
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Role a lista de opções para baixo e selecione "Adicionar à Tela de Início".
+                      </div>
                     </div>
                   </div>
 
@@ -184,7 +219,10 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
                     </div>
                     <div>
                       <div className="font-semibold text-foreground">Passo 3: Confirmar</div>
-                      <div className="text-[11px] text-muted-foreground">Toque em "Adicionar" no canto superior direito. O app abrirá como aplicativo independente.</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Toque em "Adicionar" no canto superior direito. O app abrirá como aplicativo
+                        independente.
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -198,7 +236,8 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
                       <Monitor className="size-4" /> Instalar no Computador
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Instale o Mídia.OS como aplicativo da Área de Trabalho no Windows ou Mac. Abre em janela própria, super leve e veloz.
+                      Instale o Mídia.OS como aplicativo da Área de Trabalho no Windows ou Mac. Abre
+                      em janela própria, super leve e veloz.
                     </p>
                     <Button
                       onClick={handleNativeInstall}
@@ -219,7 +258,9 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
                         <Download className="size-4 text-primary" /> Ícone na Barra de Endereço
                       </div>
                       <p className="text-muted-foreground text-[11px] leading-relaxed">
-                        Olhe no final da barra de endereços (ao lado da estrela de favoritos). Clique no ícone de <strong>Instalar Aplicativo</strong> ou vá em <strong>Menu (⋮) &gt; Salvar e Compartilhar &gt; Instalar Mídia.OS</strong>.
+                        Olhe no final da barra de endereços (ao lado da estrela de favoritos).
+                        Clique no ícone de <strong>Instalar Aplicativo</strong> ou vá em{" "}
+                        <strong>Menu (⋮) &gt; Salvar e Compartilhar &gt; Instalar Mídia.OS</strong>.
                       </p>
                     </div>
 
@@ -235,7 +276,8 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
                           <Smartphone className="size-3.5 text-primary" /> Abrir no Celular agora
                         </div>
                         <p className="text-[11px] text-muted-foreground leading-snug">
-                          Aponte a câmera do seu iPhone ou Android para o QR Code ao lado para abrir e instalar o app instantaneamente.
+                          Aponte a câmera do seu iPhone ou Android para o QR Code ao lado para abrir
+                          e instalar o app instantaneamente.
                         </p>
                       </div>
                     </div>
@@ -251,7 +293,12 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
             <Tablet className="size-3.5 text-muted-foreground" />
             Compatível com Celular, Tablet e Desktop
           </div>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="rounded-xl">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            className="rounded-xl"
+          >
             Fechar
           </Button>
         </DialogFooter>

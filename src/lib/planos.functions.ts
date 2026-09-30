@@ -35,7 +35,8 @@ async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
   }
   const { data, error } = await ctx.supabase.rpc("is_super_admin", { _user_id: ctx.userId });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Acesso restrito ao proprietário da plataforma (rafaelrodrigo.as@gmail.com)");
+  if (!data)
+    throw new Error("Acesso restrito ao proprietário da plataforma (rafaelrodrigo.as@gmail.com)");
 }
 
 /** Lista planos (qualquer autenticado lê o catálogo). */
@@ -43,7 +44,9 @@ export const listPlanos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
-      .from("planos").select("*").order("preco_mensal", { ascending: true });
+      .from("planos")
+      .select("*")
+      .order("preco_mensal", { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as Plano[];
   });
@@ -65,10 +68,16 @@ export const upsertPlano = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     if (data.is_default) {
-      await context.supabase.from("planos").update({ is_default: false }).neq("id", data.id ?? "00000000-0000-0000-0000-000000000000");
+      await context.supabase
+        .from("planos")
+        .update({ is_default: false })
+        .neq("id", data.id ?? "00000000-0000-0000-0000-000000000000");
     }
     const { data: row, error } = await context.supabase
-      .from("planos").upsert(data).select().single();
+      .from("planos")
+      .upsert(data)
+      .select()
+      .single();
     if (error) throw new Error(error.message);
     return row as Plano;
   });
@@ -113,19 +122,33 @@ export const getMyTenantPlano = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: prof } = await context.supabase
-      .from("profiles").select("tenant_id").eq("id", context.userId).single();
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", context.userId)
+      .single();
     if (!prof?.tenant_id) {
-      return { tenant_id: null, modulos: [] as string[], user_limit: null as number | null, user_count: 0, plano: null as Plano | null };
+      return {
+        tenant_id: null,
+        modulos: [] as string[],
+        user_limit: null as number | null,
+        user_count: 0,
+        plano: null as Plano | null,
+      };
     }
-    const [{ data: modulos }, { data: limit }, { data: count }, { data: tenant }] = await Promise.all([
-      context.supabase.rpc("tenant_modulos", { _tenant_id: prof.tenant_id }),
-      context.supabase.rpc("tenant_user_limit", { _tenant_id: prof.tenant_id }),
-      context.supabase.rpc("tenant_user_count", { _tenant_id: prof.tenant_id }),
-      context.supabase.from("tenants").select("plano_id").eq("id", prof.tenant_id).single(),
-    ]);
+    const [{ data: modulos }, { data: limit }, { data: count }, { data: tenant }] =
+      await Promise.all([
+        context.supabase.rpc("tenant_modulos", { _tenant_id: prof.tenant_id }),
+        context.supabase.rpc("tenant_user_limit", { _tenant_id: prof.tenant_id }),
+        context.supabase.rpc("tenant_user_count", { _tenant_id: prof.tenant_id }),
+        context.supabase.from("tenants").select("plano_id").eq("id", prof.tenant_id).single(),
+      ]);
     let plano: Plano | null = null;
     if (tenant?.plano_id) {
-      const { data: p } = await context.supabase.from("planos").select("*").eq("id", tenant.plano_id).single();
+      const { data: p } = await context.supabase
+        .from("planos")
+        .select("*")
+        .eq("id", tenant.plano_id)
+        .single();
       plano = (p as Plano) ?? null;
     }
     return {

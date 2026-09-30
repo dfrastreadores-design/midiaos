@@ -12,7 +12,13 @@ import { PageHeader } from "@/components/PageHeader";
 import { LayoutManagerDialog } from "@/components/LayoutManagerDialog";
 import { ImportarModeloPropostaDialog } from "@/components/ImportarModeloPropostaDialog";
 import { listProposalLayouts } from "@/lib/layouts.functions";
-import { getPiLayout, savePiLayout, DEFAULT_PI_LAYOUT, invalidatePiLayoutCache, type PiLayoutConfig } from "@/lib/pi-layout.functions";
+import {
+  getPiLayout,
+  savePiLayout,
+  DEFAULT_PI_LAYOUT,
+  invalidatePiLayoutCache,
+  type PiLayoutConfig,
+} from "@/lib/pi-layout.functions";
 import { Loader2, Save, Settings2, Sliders, Presentation, Plus, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -71,7 +77,9 @@ function LayoutsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Layout do PI</CardTitle>
-              <CardDescription>Configurações aplicadas ao PDF do Pedido de Inserção.</CardDescription>
+              <CardDescription>
+                Configurações aplicadas ao PDF do Pedido de Inserção.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {isLoading ? (
@@ -82,59 +90,95 @@ function LayoutsPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label>Cor primária</Label>
-                    <Input type="color" value={cfg.corPrimaria}
-                      onChange={(e) => setCfg({ ...cfg, corPrimaria: e.target.value })} />
+                    <Input
+                      type="color"
+                      value={cfg.corPrimaria}
+                      onChange={(e) => setCfg({ ...cfg, corPrimaria: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Cor do texto</Label>
-                    <Input type="color" value={cfg.corTexto}
-                      onChange={(e) => setCfg({ ...cfg, corTexto: e.target.value })} />
+                    <Input
+                      type="color"
+                      value={cfg.corTexto}
+                      onChange={(e) => setCfg({ ...cfg, corTexto: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Margem (mm)</Label>
-                    <Input type="number" min={0} max={30} value={cfg.margemMm}
-                      onChange={(e) => setCfg({ ...cfg, margemMm: Number(e.target.value) || 0 })} />
+                    <Input
+                      type="number"
+                      min={0}
+                      max={30}
+                      value={cfg.margemMm}
+                      onChange={(e) => setCfg({ ...cfg, margemMm: Number(e.target.value) || 0 })}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Tamanho da fonte base (pt)</Label>
-                    <Input type="number" min={6} max={14} value={cfg.tamanhoFonteBase}
-                      onChange={(e) => setCfg({ ...cfg, tamanhoFonteBase: Number(e.target.value) || 8 })} />
+                    <Input
+                      type="number"
+                      min={6}
+                      max={14}
+                      value={cfg.tamanhoFonteBase}
+                      onChange={(e) =>
+                        setCfg({ ...cfg, tamanhoFonteBase: Number(e.target.value) || 8 })
+                      }
+                    />
                   </div>
                   <div className="flex items-center justify-between rounded-md border p-3">
                     <div>
                       <Label>Mostrar logo da empresa</Label>
                       <p className="text-xs text-muted-foreground">Logo cadastrada no inquilino.</p>
                     </div>
-                    <Switch checked={cfg.mostrarLogoTenant}
-                      onCheckedChange={(v) => setCfg({ ...cfg, mostrarLogoTenant: v })} />
+                    <Switch
+                      checked={cfg.mostrarLogoTenant}
+                      onCheckedChange={(v) => setCfg({ ...cfg, mostrarLogoTenant: v })}
+                    />
                   </div>
                   <div className="flex items-center justify-between rounded-md border p-3">
                     <div>
                       <Label>Mostrar logo da emissora</Label>
-                      <p className="text-xs text-muted-foreground">Logo cadastrada na emissora vinculada.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Logo cadastrada na emissora vinculada.
+                      </p>
                     </div>
-                    <Switch checked={cfg.mostrarLogoEmissora}
-                      onCheckedChange={(v) => setCfg({ ...cfg, mostrarLogoEmissora: v })} />
+                    <Switch
+                      checked={cfg.mostrarLogoEmissora}
+                      onCheckedChange={(v) => setCfg({ ...cfg, mostrarLogoEmissora: v })}
+                    />
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <Label>Texto fixo de rodapé</Label>
-                    <Textarea rows={2} value={cfg.rodapeTexto}
+                    <Textarea
+                      rows={2}
+                      value={cfg.rodapeTexto}
                       onChange={(e) => setCfg({ ...cfg, rodapeTexto: e.target.value })}
-                      placeholder="Ex.: Documento válido apenas após aprovação." />
+                      placeholder="Ex.: Documento válido apenas após aprovação."
+                    />
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <Label>Observação padrão</Label>
-                    <Textarea rows={3} value={cfg.observacaoPadrao}
+                    <Textarea
+                      rows={3}
+                      value={cfg.observacaoPadrao}
                       onChange={(e) => setCfg({ ...cfg, observacaoPadrao: e.target.value })}
-                      placeholder="Adicionada como observação inicial em novos PIs." />
+                      placeholder="Adicionada como observação inicial em novos PIs."
+                    />
                   </div>
                 </div>
               )}
 
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setCfg(DEFAULT_PI_LAYOUT)}>Restaurar padrão</Button>
+                <Button variant="outline" onClick={() => setCfg(DEFAULT_PI_LAYOUT)}>
+                  Restaurar padrão
+                </Button>
                 <Button onClick={() => save.mutate()} disabled={save.isPending}>
-                  {save.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : <Save className="size-4 mr-2" />}
+                  {save.isPending ? (
+                    <Loader2 className="size-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="size-4 mr-2" />
+                  )}
                   Salvar layout do PI
                 </Button>
               </div>
@@ -156,8 +200,9 @@ function LayoutsPage() {
                   Modelo Próprio da Empresa (PDF & Slides Mapeados)
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  Importe o modelo oficial da sua empresa (PDF ou imagens) e defina em qual slide e coordenadas a tabela de
-                  produtos, geolocalização e valores (ou Pacote de Mídia) serão inseridos automaticamente.
+                  Importe o modelo oficial da sua empresa (PDF ou imagens) e defina em qual slide e
+                  coordenadas a tabela de produtos, geolocalização e valores (ou Pacote de Mídia)
+                  serão inseridos automaticamente.
                 </CardDescription>
               </div>
               <Button
@@ -181,8 +226,8 @@ function LayoutsPage() {
                     Nenhum modelo de slide importado para a sua empresa ainda.
                   </p>
                   <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                    Você pode subir a apresentação institucional da sua empresa em PDF e configurar exatamente onde a Capa e a
-                    Tabela Comercial de Produtos/Valores serão geradas.
+                    Você pode subir a apresentação institucional da sua empresa em PDF e configurar
+                    exatamente onde a Capa e a Tabela Comercial de Produtos/Valores serão geradas.
                   </p>
                   <Button
                     variant="outline"
@@ -226,7 +271,8 @@ function LayoutsPage() {
                           <div className="text-xs text-muted-foreground space-y-0.5">
                             <p>🎞️ {layout.slides?.length || 0} slides configurados</p>
                             <p>
-                              📍 Slide de produtos: #{Number(layout.mapeamento?.slideProdutosIndex ?? 1) + 1} (Topo:{" "}
+                              📍 Slide de produtos: #
+                              {Number(layout.mapeamento?.slideProdutosIndex ?? 1) + 1} (Topo:{" "}
                               {layout.mapeamento?.tabela?.margemSuperiorPct ?? 24}%)
                             </p>
                           </div>
@@ -257,7 +303,9 @@ function LayoutsPage() {
               <CardTitle className="text-base flex items-center gap-2">
                 <Settings2 className="size-4" /> Layouts e Temas Padrão (Cores e Fontes)
               </CardTitle>
-              <CardDescription>Cores, fontes, logo e opções de exibição do tema padrão.</CardDescription>
+              <CardDescription>
+                Cores, fontes, logo e opções de exibição do tema padrão.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button variant="outline" onClick={() => setPropostasOpen(true)}>

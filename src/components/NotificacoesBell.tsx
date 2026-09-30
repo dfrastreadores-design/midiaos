@@ -30,18 +30,32 @@ export function NotificacoesBell() {
       .channel(`notif-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notificacoes", filter: `user_id=eq.${user.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notificacoes",
+          filter: `user_id=eq.${user.id}`,
+        },
         (payload) => {
           const n = payload.new as { titulo: string; mensagem: string | null; link: string | null };
           toast(n.titulo, {
             description: n.mensagem ?? undefined,
-            action: n.link ? { label: "Abrir", onClick: () => { window.location.href = n.link!; } } : undefined,
+            action: n.link
+              ? {
+                  label: "Abrir",
+                  onClick: () => {
+                    window.location.href = n.link!;
+                  },
+                }
+              : undefined,
           });
           qc.invalidateQueries({ queryKey: ["minhas-notificacoes"] });
         },
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id, qc]);
 
   const naoLidas = items.filter((i) => !i.lida).length;
@@ -54,7 +68,10 @@ export function NotificacoesBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="relative p-2 rounded-md hover:bg-muted transition" aria-label="Notificações">
+        <button
+          className="relative p-2 rounded-md hover:bg-muted transition"
+          aria-label="Notificações"
+        >
           <Bell className="size-5" />
           {naoLidas > 0 && (
             <Badge className="absolute -top-1 -right-1 size-5 p-0 flex items-center justify-center bg-gold text-gold-foreground text-[10px]">
@@ -66,13 +83,20 @@ export function NotificacoesBell() {
       <PopoverContent align="end" className="w-96 p-0">
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <div className="font-medium text-sm">Notificações</div>
-          <Button variant="ghost" size="sm" disabled={naoLidas === 0} onClick={() => mark.mutate({ todas: true })}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={naoLidas === 0}
+            onClick={() => mark.mutate({ todas: true })}
+          >
             <Check className="size-3.5 mr-1" /> Marcar todas
           </Button>
         </div>
         <div className="max-h-[28rem] overflow-y-auto divide-y">
           {items.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sem notificações no momento.</div>
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              Sem notificações no momento.
+            </div>
           )}
           {items.map((n) => (
             <Link
@@ -82,10 +106,14 @@ export function NotificacoesBell() {
               className={`block px-4 py-3 hover:bg-muted/50 transition ${!n.lida ? "bg-muted/30" : ""}`}
             >
               <div className="flex items-start gap-2">
-                <span className={`mt-1.5 size-2 rounded-full ${!n.lida ? "bg-primary" : "bg-transparent"}`} />
+                <span
+                  className={`mt-1.5 size-2 rounded-full ${!n.lida ? "bg-primary" : "bg-transparent"}`}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium leading-tight">{n.titulo}</div>
-                  {n.mensagem && <div className="text-xs text-muted-foreground mt-0.5">{n.mensagem}</div>}
+                  {n.mensagem && (
+                    <div className="text-xs text-muted-foreground mt-0.5">{n.mensagem}</div>
+                  )}
                   <div className="text-[10px] text-muted-foreground mt-1">
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
                   </div>

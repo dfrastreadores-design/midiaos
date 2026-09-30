@@ -33,7 +33,6 @@ async function resolverOuCriar(
   entidade: { razao_social?: string | null; cnpj?: string | null } | null | undefined,
   agenciaIdParaCliente?: string | null,
 ): Promise<{ id: string | null; criado: boolean; nome: string | null }> {
-
   if (!entidade) return { id: null, criado: false, nome: null };
   const cnpjDigits = entidade.cnpj ? onlyDigits(entidade.cnpj) : "";
   const razao = (entidade.razao_social || "").trim();
@@ -41,10 +40,7 @@ async function resolverOuCriar(
 
   // Tenta achar por CNPJ (qualquer formato)
   if (cnpjDigits.length === 14) {
-    const { data: byCnpj } = await supabase
-      .from(tabela)
-      .select("id, razao_social, cnpj")
-      .limit(50);
+    const { data: byCnpj } = await supabase.from(tabela).select("id, razao_social, cnpj").limit(50);
     const match = (byCnpj ?? []).find(
       (r: { cnpj: string | null }) => r.cnpj && onlyDigits(r.cnpj) === cnpjDigits,
     );

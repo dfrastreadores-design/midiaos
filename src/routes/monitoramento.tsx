@@ -5,7 +5,14 @@ import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Activity, Mail, Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import { useUserRoles } from "@/hooks/use-roles";
 import { getMonitoramentoSummary } from "@/lib/monitoramento.functions";
@@ -21,7 +28,17 @@ function fmt(ts: string | null | undefined) {
   return new Date(ts).toLocaleString("pt-BR");
 }
 
-function StatCard({ label, value, hint, tone = "default" }: { label: string; value: string | number; hint?: string; tone?: "default" | "ok" | "warn" | "fail" }) {
+function StatCard({
+  label,
+  value,
+  hint,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  tone?: "default" | "ok" | "warn" | "fail";
+}) {
   const colors: Record<string, string> = {
     default: "text-foreground",
     ok: "text-emerald-600",
@@ -31,7 +48,9 @@ function StatCard({ label, value, hint, tone = "default" }: { label: string; val
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+          {label}
+        </div>
         <div className={`text-3xl font-bold mt-2 ${colors[tone]}`}>{value}</div>
         {hint && <div className="text-xs text-muted-foreground mt-1">{hint}</div>}
       </CardContent>
@@ -64,8 +83,12 @@ function MonitoramentoPage() {
             <CardContent className="pt-6 text-center">
               <AlertTriangle className="mx-auto h-10 w-10 text-amber-500 mb-3" />
               <p className="font-semibold">Acesso restrito</p>
-              <p className="text-sm text-muted-foreground mt-1">Apenas administradores podem visualizar o monitoramento.</p>
-              <Link to="/" className="text-primary text-sm underline mt-3 inline-block">Voltar ao Dashboard</Link>
+              <p className="text-sm text-muted-foreground mt-1">
+                Apenas administradores podem visualizar o monitoramento.
+              </p>
+              <Link to="/" className="text-primary text-sm underline mt-3 inline-block">
+                Voltar ao Dashboard
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -120,9 +143,18 @@ function MonitoramentoPage() {
 
         <Tabs defaultValue="emails">
           <TabsList>
-            <TabsTrigger value="emails"><Mail className="h-4 w-4 mr-2" />E-mails</TabsTrigger>
-            <TabsTrigger value="jobs"><Clock className="h-4 w-4 mr-2" />Jobs agendados</TabsTrigger>
-            <TabsTrigger value="auditoria"><AlertTriangle className="h-4 w-4 mr-2" />Auditoria</TabsTrigger>
+            <TabsTrigger value="emails">
+              <Mail className="h-4 w-4 mr-2" />
+              E-mails
+            </TabsTrigger>
+            <TabsTrigger value="jobs">
+              <Clock className="h-4 w-4 mr-2" />
+              Jobs agendados
+            </TabsTrigger>
+            <TabsTrigger value="auditoria">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Auditoria
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="emails">
@@ -132,7 +164,9 @@ function MonitoramentoPage() {
               </CardHeader>
               <CardContent>
                 {(data?.emailFailures?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhuma falha registrada nos últimos 7 dias. ✅</p>
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma falha registrada nos últimos 7 dias. ✅
+                  </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
@@ -151,8 +185,12 @@ function MonitoramentoPage() {
                             <TableCell className="text-xs">{fmt(r.created_at)}</TableCell>
                             <TableCell className="text-xs">{r.template_name}</TableCell>
                             <TableCell className="text-xs">{r.recipient_email}</TableCell>
-                            <TableCell><Badge variant="destructive">{r.status}</Badge></TableCell>
-                            <TableCell className="text-xs text-muted-foreground max-w-[420px] truncate">{r.error_message ?? "—"}</TableCell>
+                            <TableCell>
+                              <Badge variant="destructive">{r.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[420px] truncate">
+                              {r.error_message ?? "—"}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -186,17 +224,26 @@ function MonitoramentoPage() {
                       <TableBody>
                         {(data?.cronRuns ?? []).map((r: any, i: number) => (
                           <TableRow key={i}>
-                            <TableCell className="text-xs font-medium">{r.jobname ?? `job ${r.jobid}`}</TableCell>
+                            <TableCell className="text-xs font-medium">
+                              {r.jobname ?? `job ${r.jobid}`}
+                            </TableCell>
                             <TableCell className="text-xs">{fmt(r.start_time)}</TableCell>
                             <TableCell className="text-xs">{fmt(r.end_time)}</TableCell>
                             <TableCell>
                               {r.status === "succeeded" ? (
-                                <Badge variant="outline" className="text-emerald-600 border-emerald-200">{r.status}</Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="text-emerald-600 border-emerald-200"
+                                >
+                                  {r.status}
+                                </Badge>
                               ) : (
                                 <Badge variant="destructive">{r.status}</Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground max-w-[420px] truncate">{r.return_message ?? "—"}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[420px] truncate">
+                              {r.return_message ?? "—"}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

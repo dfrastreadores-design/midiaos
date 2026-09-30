@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  Sparkles, Users, FileText, ClipboardList, BarChart3, KanbanSquare,
-  ArrowRight, ArrowLeft, X, Rocket,
+  Sparkles,
+  Users,
+  FileText,
+  ClipboardList,
+  BarChart3,
+  KanbanSquare,
+  ArrowRight,
+  ArrowLeft,
+  X,
+  Rocket,
 } from "lucide-react";
 
 const STORAGE_KEY = "midiaos:demo_tour_seen";
@@ -19,46 +27,40 @@ const STEPS: Step[] = [
   {
     icon: Rocket,
     title: "Bem-vindo ao mídia.OS 👋",
-    body:
-      "Sua conta demo está pronta com dados fictícios já criados (clientes, propostas, briefing e tarefas). Você tem 48 horas para explorar todos os módulos — sem cartão de crédito.",
+    body: "Sua conta demo está pronta com dados fictícios já criados (clientes, propostas, briefing e tarefas). Você tem 48 horas para explorar todos os módulos — sem cartão de crédito.",
   },
   {
     icon: Users,
     title: "CRM — Clientes e Agências",
-    body:
-      "Cadastre clientes e agências, gerencie contatos e acompanhe o relacionamento comercial em um único lugar.",
+    body: "Cadastre clientes e agências, gerencie contatos e acompanhe o relacionamento comercial em um único lugar.",
     href: "/clientes",
     cta: "Abrir CRM",
   },
   {
     icon: FileText,
     title: "Propostas Comerciais",
-    body:
-      "Monte propostas com desconto, bonificações e validade. Geração automática em PDF/PPTX com o layout da sua marca.",
+    body: "Monte propostas com desconto, bonificações e validade. Geração automática em PDF/PPTX com o layout da sua marca.",
     href: "/propostas",
     cta: "Ver propostas",
   },
   {
     icon: ClipboardList,
     title: "Briefings & PI",
-    body:
-      "Centralize briefings de campanha e gere a Proposta de Inserção (PI) com assinatura digital do cliente.",
+    body: "Centralize briefings de campanha e gere a Proposta de Inserção (PI) com assinatura digital do cliente.",
     href: "/briefings",
     cta: "Ver briefings",
   },
   {
     icon: KanbanSquare,
     title: "Tarefas & Produção",
-    body:
-      "Quadro Kanban para acompanhar tarefas comerciais, solicitações de produção e prazos da equipe.",
+    body: "Quadro Kanban para acompanhar tarefas comerciais, solicitações de produção e prazos da equipe.",
     href: "/tarefas",
     cta: "Abrir tarefas",
   },
   {
     icon: BarChart3,
     title: "Dashboards & Relatórios",
-    body:
-      "Acompanhe metas, pipeline e desempenho do time em dashboards em tempo real. Tudo pronto para decisão.",
+    body: "Acompanhe metas, pipeline e desempenho do time em dashboards em tempo real. Tudo pronto para decisão.",
     href: "/relatorios",
     cta: "Ver relatórios",
   },

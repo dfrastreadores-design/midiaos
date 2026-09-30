@@ -2,7 +2,9 @@ import { EntityFormDialog, type EntityFormData } from "@/components/EntityFormDi
 import { upsertAgencia } from "@/lib/agencias.functions";
 
 export function AgenciaFormDialog({
-  open, onOpenChange, initial,
+  open,
+  onOpenChange,
+  initial,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;

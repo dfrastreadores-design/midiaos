@@ -4,7 +4,14 @@ import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Trash2, RotateCcw, AlertTriangle } from "lucide-react";
 import { listTrashItems, restoreTrashItem, purgeTrashItem } from "@/lib/lixeira.functions";
 import { useUserRoles } from "@/hooks/use-roles";
@@ -47,13 +54,19 @@ function LixeiraPage() {
 
   const restore = useMutation({
     mutationFn: (id: string) => restoreTrashItem({ data: { id } }),
-    onSuccess: () => { toast.success("Item restaurado"); qc.invalidateQueries({ queryKey: ["trash-items"] }); },
+    onSuccess: () => {
+      toast.success("Item restaurado");
+      qc.invalidateQueries({ queryKey: ["trash-items"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const purge = useMutation({
     mutationFn: (id: string) => purgeTrashItem({ data: { id } }),
-    onSuccess: () => { toast.success("Item apagado permanentemente"); qc.invalidateQueries({ queryKey: ["trash-items"] }); },
+    onSuccess: () => {
+      toast.success("Item apagado permanentemente");
+      qc.invalidateQueries({ queryKey: ["trash-items"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -66,14 +79,20 @@ function LixeiraPage() {
           </div>
           <div>
             <h1 className="text-2xl font-display font-semibold leading-tight">Lixeira</h1>
-            <p className="text-sm text-muted-foreground">Itens excluídos ficam aqui por 45 dias antes da remoção definitiva.</p>
+            <p className="text-sm text-muted-foreground">
+              Itens excluídos ficam aqui por 45 dias antes da remoção definitiva.
+            </p>
           </div>
         </div>
 
         {loading ? (
           <p className="text-sm text-muted-foreground">Carregando...</p>
         ) : !autorizado ? (
-          <Card><CardContent className="p-6 text-sm text-muted-foreground">Acesso restrito a administradores.</CardContent></Card>
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              Acesso restrito a administradores.
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardContent className="p-0">
@@ -95,26 +114,58 @@ function LixeiraPage() {
                     </TableHeader>
                     <TableBody>
                       {items.map((r) => {
-                        const dias = Math.max(0, Math.ceil((new Date(r.expires_at).getTime() - Date.now()) / 86400000));
+                        const dias = Math.max(
+                          0,
+                          Math.ceil((new Date(r.expires_at).getTime() - Date.now()) / 86400000),
+                        );
                         return (
                           <TableRow key={r.id}>
-                            <TableCell><Badge variant="secondary">{TABELA_LABEL[r.tabela] || r.tabela}</Badge></TableCell>
-                            <TableCell className="font-medium truncate max-w-[320px]">{r.descricao || r.registro_id}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{new Date(r.deleted_at).toLocaleString("pt-BR")}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {TABELA_LABEL[r.tabela] || r.tabela}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium truncate max-w-[320px]">
+                              {r.descricao || r.registro_id}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(r.deleted_at).toLocaleString("pt-BR")}
+                            </TableCell>
                             <TableCell className="text-sm">
-                              <span className={dias <= 7 ? "text-destructive font-medium flex items-center gap-1" : ""}>
+                              <span
+                                className={
+                                  dias <= 7
+                                    ? "text-destructive font-medium flex items-center gap-1"
+                                    : ""
+                                }
+                              >
                                 {dias <= 7 && <AlertTriangle className="size-3" />}
                                 {dias} dia{dias !== 1 ? "s" : ""}
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button size="sm" variant="outline" onClick={() => restore.mutate(r.id)} disabled={restore.isPending}>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => restore.mutate(r.id)}
+                                  disabled={restore.isPending}
+                                >
                                   <RotateCcw className="size-4 mr-1" /> Restaurar
                                 </Button>
-                                <Button size="sm" variant="destructive" onClick={() => {
-                                  if (confirm("Apagar permanentemente? Esta ação não pode ser desfeita.")) purge.mutate(r.id);
-                                }} disabled={purge.isPending}>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        "Apagar permanentemente? Esta ação não pode ser desfeita.",
+                                      )
+                                    )
+                                      purge.mutate(r.id);
+                                  }}
+                                  disabled={purge.isPending}
+                                >
                                   <Trash2 className="size-4" />
                                 </Button>
                               </div>

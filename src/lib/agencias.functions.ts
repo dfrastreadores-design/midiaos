@@ -8,7 +8,12 @@ const ContatoSchema = z.object({
   funcao: z.string().max(120).optional().default(""),
   email: z.string().max(200).optional().default(""),
   telefone: z.string().max(40).optional().default(""),
-  aniversario: z.string().max(5).regex(/^(\d{2}\/\d{2})?$/).optional().default(""),
+  aniversario: z
+    .string()
+    .max(5)
+    .regex(/^(\d{2}\/\d{2})?$/)
+    .optional()
+    .default(""),
 });
 
 const AgenciaSchema = z.object({
@@ -31,7 +36,11 @@ const AgenciaSchema = z.object({
   instagram: z.string().max(255).nullable().optional(),
   linkedin: z.string().max(255).nullable().optional(),
   facebook: z.string().max(255).nullable().optional(),
-  data_aniversario: z.string().regex(/^\d{2}\/\d{2}$/).nullable().optional(),
+  data_aniversario: z
+    .string()
+    .regex(/^\d{2}\/\d{2}$/)
+    .nullable()
+    .optional(),
   logo_url: z.string().max(500).nullable().optional(),
   status: z.enum(["ativo", "inativa", "bloqueada"]).optional().default("ativo"),
   contatos: z.array(ContatoSchema).default([]),
@@ -44,7 +53,10 @@ const ImportAgenciasSchema = z.object({
 export const listAgencias = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.from("agencias").select("*").order("razao_social");
+    const { data, error } = await context.supabase
+      .from("agencias")
+      .select("*")
+      .order("razao_social");
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -57,7 +69,10 @@ export const upsertAgencia = createServerFn({ method: "POST" })
     const { id, contatos, ...rest } = data;
     const payload = { ...rest, contatos: contatos as unknown as never };
     if (id) {
-      const { error } = await supabase.from("agencias").update(payload as never).eq("id", id!);
+      const { error } = await supabase
+        .from("agencias")
+        .update(payload as never)
+        .eq("id", id!);
       if (error) throw new Error(error.message);
       return { id };
     }
@@ -87,7 +102,13 @@ export const importAgenciasBulk = createServerFn({ method: "POST" })
         created_by: userId,
       }));
       const { error } = await supabase.from("agencias").insert(payloads as never);
-      if (error) errors.push(...creates.map((agencia) => ({ razao_social: agencia.razao_social, message: error.message })));
+      if (error)
+        errors.push(
+          ...creates.map((agencia) => ({
+            razao_social: agencia.razao_social,
+            message: error.message,
+          })),
+        );
       else ok += creates.length;
     }
 
@@ -95,7 +116,10 @@ export const importAgenciasBulk = createServerFn({ method: "POST" })
       const { id, contatos, ...rest } = agencia;
       const payload = { ...rest, contatos: contatos as unknown as never };
       const label = agencia.razao_social;
-      const { error } = await supabase.from("agencias").update(payload as never).eq("id", id!);
+      const { error } = await supabase
+        .from("agencias")
+        .update(payload as never)
+        .eq("id", id!);
 
       if (error) errors.push({ razao_social: label, message: error.message });
       else ok++;

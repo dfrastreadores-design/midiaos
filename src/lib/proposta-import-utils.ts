@@ -21,7 +21,9 @@ export async function extractDocumentText(file: File): Promise<string> {
   if (ext === "pptx" || ext === "ppt") {
     return await extractPptxText(file);
   }
-  throw new Error("Formato não suportado. Por favor envie um arquivo PDF (.pdf) ou PowerPoint (.pptx).");
+  throw new Error(
+    "Formato não suportado. Por favor envie um arquivo PDF (.pdf) ou PowerPoint (.pptx).",
+  );
 }
 
 function parseCurrencyBR(str: string): number {
@@ -78,7 +80,10 @@ export function parsePropostaDocument(
     const matchCli = text.match(/(?:cliente|anunciante|empresa|para|a\/c)[:\s]+([^\n\r,;]{3,60})/i);
     if (matchCli && matchCli[1]) {
       const candidate = matchCli[1].trim();
-      if (!candidate.toLowerCase().includes("proposta") && !candidate.toLowerCase().includes("comercial")) {
+      if (
+        !candidate.toLowerCase().includes("proposta") &&
+        !candidate.toLowerCase().includes("comercial")
+      ) {
         matchedClienteAvulso = candidate;
       }
     }
@@ -117,9 +122,10 @@ export function parsePropostaDocument(
 
   // 4. Identificar Valores Financeiros
   const valoresEncontrados: number[] = [];
-  
+
   // Procura por valores próximos a palavras-chave financeiras
-  const keywords = /(?:investimento|total|valor\s*(?:negociado|líquido|bruto)?|preço)[:\s]*R?\$?\s*([\d\.,]{3,15})/gi;
+  const keywords =
+    /(?:investimento|total|valor\s*(?:negociado|líquido|bruto)?|preço)[:\s]*R?\$?\s*([\d\.,]{3,15})/gi;
   let matchVal;
   while ((matchVal = keywords.exec(text)) !== null) {
     const v = parseCurrencyBR(matchVal[1]);
@@ -156,7 +162,9 @@ export function parsePropostaDocument(
 
   // 5. Identificar Validade
   let validade = "";
-  const matchDate = text.match(/(?:validade|v[aá]lido\s*at[eé]|vencimento)[:\s]*(\d{2})[\/\.-](\d{2})[\/\.-](\d{4})/i);
+  const matchDate = text.match(
+    /(?:validade|v[aá]lido\s*at[eé]|vencimento)[:\s]*(\d{2})[\/\.-](\d{2})[\/\.-](\d{4})/i,
+  );
   if (matchDate) {
     const [, dia, mes, ano] = matchDate;
     validade = `${ano}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
@@ -175,7 +183,11 @@ export function parsePropostaDocument(
     .slice(0, 6)
     .join("\n");
 
-  const observacao = `Proposta importada a partir do arquivo "${fileName}".\n\nResumo extraído:\n${cleanSnippet}`.slice(0, 1900);
+  const observacao =
+    `Proposta importada a partir do arquivo "${fileName}".\n\nResumo extraído:\n${cleanSnippet}`.slice(
+      0,
+      1900,
+    );
 
   return {
     cliente_id: matchedClienteId,

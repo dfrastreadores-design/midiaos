@@ -2,7 +2,19 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, MessageCircle, Sparkles, LogOut, ArrowRight, ShieldCheck, TrendingUp, Zap, Quote, Flame, Lock } from "lucide-react";
+import {
+  CheckCircle2,
+  MessageCircle,
+  Sparkles,
+  LogOut,
+  ArrowRight,
+  ShieldCheck,
+  TrendingUp,
+  Zap,
+  Quote,
+  Flame,
+  Lock,
+} from "lucide-react";
 import { signOut } from "@/hooks/use-auth";
 import { UpgradePlanoDialog } from "@/components/UpgradePlanoDialog";
 
@@ -17,7 +29,12 @@ const PLANOS: Plano[] = [
   {
     nome: "Starter",
     preco: "R$ 250",
-    bullets: ["Até 3 usuários", "Propostas + PI digital", "Assinatura eletrônica", "Suporte por e-mail"],
+    bullets: [
+      "Até 3 usuários",
+      "Propostas + PI digital",
+      "Assinatura eletrônica",
+      "Suporte por e-mail",
+    ],
   },
   {
     nome: "Profissional",
@@ -34,7 +51,12 @@ const PLANOS: Plano[] = [
   {
     nome: "Enterprise",
     preco: "Sob consulta",
-    bullets: ["Multi-emissora e white-label", "Integrações personalizadas", "Onboarding dedicado", "SLA e ambiente exclusivo"],
+    bullets: [
+      "Multi-emissora e white-label",
+      "Integrações personalizadas",
+      "Onboarding dedicado",
+      "SLA e ambiente exclusivo",
+    ],
   },
 ];
 
@@ -48,12 +70,33 @@ function abrirWhatsapp(plano?: string) {
 }
 
 const DEPOIMENTOS = [
-  { nome: "Carla M.", cargo: "Diretora Comercial — TV regional", texto: "Reduzimos em 3x o tempo de emissão de PIs. A diretoria aprova pelo WhatsApp e nunca mais perdi um fechamento por burocracia." },
-  { nome: "Rogério S.", cargo: "Head de Vendas — Rádio", texto: "As propostas ficaram muito mais profissionais. Fechamos 22% a mais no primeiro trimestre usando o mídia.OS." },
-  { nome: "Juliana P.", cargo: "Sócia — Agência de mídia", texto: "Controle total de permuta, comissões e briefings num único lugar. Não volto mais para planilha nenhuma." },
+  {
+    nome: "Carla M.",
+    cargo: "Diretora Comercial — TV regional",
+    texto:
+      "Reduzimos em 3x o tempo de emissão de PIs. A diretoria aprova pelo WhatsApp e nunca mais perdi um fechamento por burocracia.",
+  },
+  {
+    nome: "Rogério S.",
+    cargo: "Head de Vendas — Rádio",
+    texto:
+      "As propostas ficaram muito mais profissionais. Fechamos 22% a mais no primeiro trimestre usando o mídia.OS.",
+  },
+  {
+    nome: "Juliana P.",
+    cargo: "Sócia — Agência de mídia",
+    texto:
+      "Controle total de permuta, comissões e briefings num único lugar. Não volto mais para planilha nenhuma.",
+  },
 ];
 
-export function TrialExpiredScreen({ email, onUpgraded }: { email?: string | null; onUpgraded?: () => void }) {
+export function TrialExpiredScreen({
+  email,
+  onUpgraded,
+}: {
+  email?: string | null;
+  onUpgraded?: () => void;
+}) {
   const [planoOpen, setPlanoOpen] = useState<string | null>(null);
   // Contagem regressiva para desconto de 24h após expirar
   const [restante, setRestante] = useState<string>("");
@@ -89,11 +132,14 @@ export function TrialExpiredScreen({ email, onUpgraded }: { email?: string | nul
             Não perca os dados que você já configurou
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Seus clientes, propostas, PIs e briefings ficam guardados por até <strong>7 dias</strong>. Ative um plano agora e continue exatamente de onde parou.
+            Seus clientes, propostas, PIs e briefings ficam guardados por até{" "}
+            <strong>7 dias</strong>. Ative um plano agora e continue exatamente de onde parou.
           </p>
           <div className="inline-flex items-center gap-2 text-sm font-medium bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 rounded-full px-4 py-2 mt-2">
             <Flame className="size-4" />
-            <span>Bônus por contratar hoje: <strong>15% OFF nos 3 primeiros meses</strong> · expira em</span>
+            <span>
+              Bônus por contratar hoje: <strong>15% OFF nos 3 primeiros meses</strong> · expira em
+            </span>
             <span className="font-mono tabular-nums">{restante}</span>
           </div>
         </div>
@@ -143,9 +189,12 @@ export function TrialExpiredScreen({ email, onUpgraded }: { email?: string | nul
                 <Button
                   className="w-full"
                   variant={p.destaque ? "default" : "outline"}
-                  onClick={() => (p.nome === "Enterprise" ? abrirWhatsapp(p.nome) : setPlanoOpen(p.nome))}
+                  onClick={() =>
+                    p.nome === "Enterprise" ? abrirWhatsapp(p.nome) : setPlanoOpen(p.nome)
+                  }
                 >
-                  {p.nome === "Enterprise" ? "Falar com vendas" : `Ativar ${p.nome}`} <ArrowRight className="size-4 ml-1" />
+                  {p.nome === "Enterprise" ? "Falar com vendas" : `Ativar ${p.nome}`}{" "}
+                  <ArrowRight className="size-4 ml-1" />
                 </Button>
               </CardContent>
             </Card>
@@ -158,7 +207,8 @@ export function TrialExpiredScreen({ email, onUpgraded }: { email?: string | nul
           <div>
             <h3 className="font-semibold">Garantia incondicional de 7 dias</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Se em 7 dias você achar que o mídia.OS não vale cada centavo, devolvemos 100% do valor pago — sem perguntas, sem burocracia.
+              Se em 7 dias você achar que o mídia.OS não vale cada centavo, devolvemos 100% do valor
+              pago — sem perguntas, sem burocracia.
             </p>
           </div>
         </div>
@@ -190,13 +240,19 @@ export function TrialExpiredScreen({ email, onUpgraded }: { email?: string | nul
           <Button size="lg" variant="ghost" onClick={() => (window.location.href = "/site/precos")}>
             Ver comparativo completo
           </Button>
-          <Button size="lg" variant="ghost" onClick={() => signOut()} className="gap-2 text-muted-foreground">
+          <Button
+            size="lg"
+            variant="ghost"
+            onClick={() => signOut()}
+            className="gap-2 text-muted-foreground"
+          >
             <LogOut className="size-4" /> Sair
           </Button>
         </div>
 
         <p className="text-center text-[11px] text-muted-foreground mt-4">
-          *Estimativa baseada em clientes que substituíram planilhas e ferramentas avulsas pelo mídia.OS.
+          *Estimativa baseada em clientes que substituíram planilhas e ferramentas avulsas pelo
+          mídia.OS.
         </p>
         {email && (
           <p className="text-center text-xs text-muted-foreground mt-2">

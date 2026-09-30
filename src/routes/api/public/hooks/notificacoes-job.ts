@@ -15,14 +15,18 @@ export const Route = createFileRoute("/api/public/hooks/notificacoes-job")({
         const secret = process.env.CRON_SECRET;
         if (!secret) {
           return new Response(JSON.stringify({ ok: false, error: "CRON_SECRET não configurado" }), {
-            status: 500, headers: { "Content-Type": "application/json" },
+            status: 500,
+            headers: { "Content-Type": "application/json" },
           });
         }
         const auth = request.headers.get("authorization") ?? "";
-        const provided = auth.startsWith("Bearer ") ? auth.slice(7) : (request.headers.get("x-cron-secret") ?? "");
+        const provided = auth.startsWith("Bearer ")
+          ? auth.slice(7)
+          : (request.headers.get("x-cron-secret") ?? "");
         if (!provided || !timingSafeEq(provided, secret)) {
           return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
-            status: 401, headers: { "Content-Type": "application/json" },
+            status: 401,
+            headers: { "Content-Type": "application/json" },
           });
         }
         try {
@@ -30,11 +34,13 @@ export const Route = createFileRoute("/api/public/hooks/notificacoes-job")({
           return Response.json({ ok: true, ...result });
         } catch (e) {
           return new Response(JSON.stringify({ ok: false, error: (e as Error).message }), {
-            status: 500, headers: { "Content-Type": "application/json" },
+            status: 500,
+            headers: { "Content-Type": "application/json" },
           });
         }
       },
-      GET: async () => Response.json({ ok: true, hint: "POST com Authorization: Bearer <CRON_SECRET>" }),
+      GET: async () =>
+        Response.json({ ok: true, hint: "POST com Authorization: Bearer <CRON_SECRET>" }),
     },
   },
 });

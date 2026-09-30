@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { useActingAsExecutivo } from "@/hooks/use-acting-as";
 import { useFormErrors, type FieldErrors } from "@/lib/form-errors";
 
-
 export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void) {
   const qc = useQueryClient();
   const actingAs = useActingAsExecutivo();
@@ -22,7 +21,12 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
   const [validade, setValidade] = useState("");
   const [observacao, setObservacao] = useState("");
   const [items, setItems] = useState<CalcItemOut[]>([]);
-  const [totals, setTotals] = useState<CalcTotals>({ tabela: 0, desconto: 0, negociado: 0, insercoes: 0 });
+  const [totals, setTotals] = useState<CalcTotals>({
+    tabela: 0,
+    desconto: 0,
+    negociado: 0,
+    insercoes: 0,
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [loadedBriefingId, setLoadedBriefingId] = useState<string | null>(null);
 
@@ -86,8 +90,15 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
   const { errors, setErrors, clear: clearError, has: hasError } = useFormErrors();
 
   const saveMutation = useMutation({
-    mutationFn: async ({ status, obsProdutos }: { status: "rascunho" | "enviada", obsProdutos: string }) => {
-      const validadeFinal = validade || (status === "enviada" ? addBusinessDays(new Date(), 10) : null);
+    mutationFn: async ({
+      status,
+      obsProdutos,
+    }: {
+      status: "rascunho" | "enviada";
+      obsProdutos: string;
+    }) => {
+      const validadeFinal =
+        validade || (status === "enviada" ? addBusinessDays(new Date(), 10) : null);
 
       return upsertProposta({
         data: {
@@ -151,17 +162,27 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
 
   return {
     state: {
-      clienteId, setClienteId,
-      agenciaId, setAgenciaId,
-      executivoId, setExecutivoId,
-      executivoParceiroId, setExecutivoParceiroId,
-      clienteAvulso, setClienteAvulso,
-      campanha, setCampanha,
-      validade, setValidade,
-      observacao, setObservacao,
-      items, setItems,
-      totals, setTotals,
-      isLoading
+      clienteId,
+      setClienteId,
+      agenciaId,
+      setAgenciaId,
+      executivoId,
+      setExecutivoId,
+      executivoParceiroId,
+      setExecutivoParceiroId,
+      clienteAvulso,
+      setClienteAvulso,
+      campanha,
+      setCampanha,
+      validade,
+      setValidade,
+      observacao,
+      setObservacao,
+      items,
+      setItems,
+      totals,
+      setTotals,
+      isLoading,
     },
     save,
     isSaving: saveMutation.isPending,
@@ -170,4 +191,3 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
     clearError,
   };
 }
-

@@ -29,7 +29,9 @@ const CAMPOS_MAP: Record<string, (d: Awaited<ReturnType<typeof fetchCnpj>>) => u
 async function proximaEntidade(tabela: Tabela) {
   const { data, error } = await supabaseAdmin
     .from(tabela)
-    .select("id, razao_social, cnpj, nome_fantasia, endereco, cidade, uf, cep, inscricao_estadual, inscricao_municipal, cnae, situacao_cadastral, cnpj_sync_at")
+    .select(
+      "id, razao_social, cnpj, nome_fantasia, endereco, cidade, uf, cep, inscricao_estadual, inscricao_municipal, cnae, situacao_cadastral, cnpj_sync_at",
+    )
     .not("cnpj", "is", null)
     .order("cnpj_sync_at", { ascending: true, nullsFirst: true })
     .limit(1)
@@ -59,13 +61,20 @@ export async function executarSyncCnpjPasso() {
   const tipo = tabela === "clientes" ? "cliente" : "agencia";
   const digits = onlyDigits(row.cnpj ?? "");
   const marcarSync = async () => {
-    await supabaseAdmin.from(tabela).update({ cnpj_sync_at: new Date().toISOString() } as never).eq("id", row.id);
+    await supabaseAdmin
+      .from(tabela)
+      .update({ cnpj_sync_at: new Date().toISOString() } as never)
+      .eq("id", row.id);
   };
 
   if (digits.length !== 14) {
     await supabaseAdmin.from("sync_cnpj_log").insert({
-      entidade_tipo: tipo, entidade_id: row.id, cnpj: row.cnpj, razao_social: row.razao_social,
-      status: "ignorado", mensagem: "CNPJ inválido",
+      entidade_tipo: tipo,
+      entidade_id: row.id,
+      cnpj: row.cnpj,
+      razao_social: row.razao_social,
+      status: "ignorado",
+      mensagem: "CNPJ inválido",
     } as never);
     await marcarSync();
     return { ok: true, processed: 1, status: "ignorado", id: row.id };
@@ -87,26 +96,41 @@ export async function executarSyncCnpjPasso() {
     }
     if (Object.keys(updates).length > 0) {
       updates.cnpj_sync_at = new Date().toISOString();
-      const { error } = await supabaseAdmin.from(tabela).update(updates as never).eq("id", row.id);
+      const { error } = await supabaseAdmin
+        .from(tabela)
+        .update(updates as never)
+        .eq("id", row.id);
       if (error) throw new Error(error.message);
       await supabaseAdmin.from("sync_cnpj_log").insert({
-        entidade_tipo: tipo, entidade_id: row.id, cnpj: row.cnpj, razao_social: updates.razao_social ?? row.razao_social,
-        status: "atualizado", campos_alterados: changes as never,
+        entidade_tipo: tipo,
+        entidade_id: row.id,
+        cnpj: row.cnpj,
+        razao_social: updates.razao_social ?? row.razao_social,
+        status: "atualizado",
+        campos_alterados: changes as never,
         mensagem: `${Object.keys(changes).length} campo(s) atualizado(s)`,
       } as never);
       return { ok: true, processed: 1, status: "atualizado", id: row.id };
     }
     await marcarSync();
     await supabaseAdmin.from("sync_cnpj_log").insert({
-      entidade_tipo: tipo, entidade_id: row.id, cnpj: row.cnpj, razao_social: row.razao_social,
-      status: "sem_alteracao", mensagem: "Dados conferidos — nenhuma divergência",
+      entidade_tipo: tipo,
+      entidade_id: row.id,
+      cnpj: row.cnpj,
+      razao_social: row.razao_social,
+      status: "sem_alteracao",
+      mensagem: "Dados conferidos — nenhuma divergência",
     } as never);
     return { ok: true, processed: 1, status: "sem_alteracao", id: row.id };
   } catch (e) {
     await marcarSync();
     await supabaseAdmin.from("sync_cnpj_log").insert({
-      entidade_tipo: tipo, entidade_id: row.id, cnpj: row.cnpj, razao_social: row.razao_social,
-      status: "erro", mensagem: (e as Error).message?.slice(0, 500) ?? "Erro desconhecido",
+      entidade_tipo: tipo,
+      entidade_id: row.id,
+      cnpj: row.cnpj,
+      razao_social: row.razao_social,
+      status: "erro",
+      mensagem: (e as Error).message?.slice(0, 500) ?? "Erro desconhecido",
     } as never);
     return { ok: true, processed: 1, status: "erro", id: row.id };
   }

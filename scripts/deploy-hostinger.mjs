@@ -22,7 +22,10 @@ if (fs.existsSync(".env")) {
     const trimmed = line.trim();
     if (trimmed.startsWith("#") || !trimmed.includes("=")) continue;
     const [k, ...v] = trimmed.split("=");
-    const val = v.join("=").trim().replace(/^['"]|['"]$/g, "");
+    const val = v
+      .join("=")
+      .trim()
+      .replace(/^['"]|['"]$/g, "");
     if (k.trim() === "HOSTINGER_FTP_HOST" && !ftpHost) ftpHost = val;
     if (k.trim() === "HOSTINGER_FTP_USER" && !ftpUser) ftpUser = val;
     if (k.trim() === "HOSTINGER_FTP_PASS" && !ftpPass) ftpPass = val;
@@ -42,9 +45,10 @@ const startTime = Date.now();
 // [1/4] Build da aplicação
 if (!skipBuild) {
   console.log("\n📦 [1/4] Compilando a aplicação para produção (npm run build)...");
-  const buildCmd = process.platform === "win32"
-    ? `cmd /c "set NODE_OPTIONS=--max-old-space-size=4096 && npm run build"`
-    : `NODE_OPTIONS=--max-old-space-size=4096 npm run build`;
+  const buildCmd =
+    process.platform === "win32"
+      ? `cmd /c "set NODE_OPTIONS=--max-old-space-size=4096 && npm run build"`
+      : `NODE_OPTIONS=--max-old-space-size=4096 npm run build`;
   execSync(buildCmd, { stdio: "inherit" });
 } else {
   console.log("\n⚡ [1/4] Pulando compilação (usando .output existente)...");
@@ -66,15 +70,19 @@ console.log(`\n🌐 [3/4] Enviando arquivos para Hostinger FTP (${ftpHost})...`)
 
 // 3.1 Enviar deploy_api.php
 console.log("  -> Enviando scripts/deploy_api.php...");
-const apiUpload = spawnSync("curl.exe", [
-  "-s",
-  "-k",
-  "-u",
-  `${ftpUser}:${ftpPass}`,
-  "-T",
-  "scripts/deploy_api.php",
-  `ftp://${ftpHost}/deploy_api.php`,
-], { stdio: "inherit" });
+const apiUpload = spawnSync(
+  "curl.exe",
+  [
+    "-s",
+    "-k",
+    "-u",
+    `${ftpUser}:${ftpPass}`,
+    "-T",
+    "scripts/deploy_api.php",
+    `ftp://${ftpHost}/deploy_api.php`,
+  ],
+  { stdio: "inherit" },
+);
 
 if (apiUpload.status !== 0) {
   console.error("❌ Erro ao enviar deploy_api.php via FTP!");
@@ -84,8 +92,12 @@ if (apiUpload.status !== 0) {
 if (fs.existsSync(".htaccess")) {
   console.log("  -> Enviando .htaccess...");
   spawnSync("curl.exe", [
-    "-s", "-k", "-u", `${ftpUser}:${ftpPass}`,
-    "-T", ".htaccess",
+    "-s",
+    "-k",
+    "-u",
+    `${ftpUser}:${ftpPass}`,
+    "-T",
+    ".htaccess",
     `ftp://${ftpHost}/.htaccess`,
   ]);
 }
@@ -93,8 +105,12 @@ if (fs.existsSync(".htaccess")) {
 if (fs.existsSync(".env")) {
   console.log("  -> Enviando .env...");
   spawnSync("curl.exe", [
-    "-s", "-k", "-u", `${ftpUser}:${ftpPass}`,
-    "-T", ".env",
+    "-s",
+    "-k",
+    "-u",
+    `${ftpUser}:${ftpPass}`,
+    "-T",
+    ".env",
     `ftp://${ftpHost}/.env`,
   ]);
 }
@@ -102,15 +118,19 @@ if (fs.existsSync(".env")) {
 // 3.2 Enviar hostinger_deploy.zip (fluxo contínuo com progresso)
 console.log(`  -> Enviando hostinger_deploy.zip (${zipSizeMb} MB)...`);
 const uploadStart = Date.now();
-const zipUpload = spawnSync("curl.exe", [
-  "--progress-bar",
-  "-k",
-  "-u",
-  `${ftpUser}:${ftpPass}`,
-  "-T",
-  "hostinger_deploy.zip",
-  `ftp://${ftpHost}/hostinger_deploy.zip`,
-], { stdio: "inherit" });
+const zipUpload = spawnSync(
+  "curl.exe",
+  [
+    "--progress-bar",
+    "-k",
+    "-u",
+    `${ftpUser}:${ftpPass}`,
+    "-T",
+    "hostinger_deploy.zip",
+    `ftp://${ftpHost}/hostinger_deploy.zip`,
+  ],
+  { stdio: "inherit" },
+);
 
 if (zipUpload.status !== 0) {
   console.error("❌ Erro ao enviar hostinger_deploy.zip via FTP!");
@@ -124,17 +144,21 @@ console.log("\n⚡ [4/4] Executando extração e reiniciando aplicação no serv
 
 function requestJson(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { rejectUnauthorized: false }, (res) => {
-      let data = "";
-      res.on("data", (chunk) => { data += chunk; });
-      res.on("end", () => {
-        try {
-          resolve({ status: res.statusCode, body: JSON.parse(data) });
-        } catch {
-          resolve({ status: res.statusCode, raw: data });
-        }
-      });
-    }).on("error", reject);
+    https
+      .get(url, { rejectUnauthorized: false }, (res) => {
+        let data = "";
+        res.on("data", (chunk) => {
+          data += chunk;
+        });
+        res.on("end", () => {
+          try {
+            resolve({ status: res.statusCode, body: JSON.parse(data) });
+          } catch {
+            resolve({ status: res.statusCode, raw: data });
+          }
+        });
+      })
+      .on("error", reject);
   });
 }
 
@@ -145,7 +169,9 @@ try {
   if (result.status === 200 && result.body && result.body.success) {
     console.log("  ✅ Extração realizada com sucesso!");
     console.log(`  📦 Arquivos atualizados: ${result.body.files_extracted}`);
-    console.log(`  🔄 Passenger/Node.js reiniciado: ${result.body.passenger_restarted ? 'SIM' : 'OK'}`);
+    console.log(
+      `  🔄 Passenger/Node.js reiniciado: ${result.body.passenger_restarted ? "SIM" : "OK"}`,
+    );
   } else {
     console.warn("  ⚠️ Resposta do deploy:", result.body || result.raw);
   }
@@ -157,9 +183,11 @@ try {
 console.log("\n🔍 Verificando status do site no ar...");
 try {
   const verifyRes = await new Promise((resolve, reject) => {
-    https.get(APP_URL, { rejectUnauthorized: false }, (res) => {
-      resolve(res.statusCode);
-    }).on("error", reject);
+    https
+      .get(APP_URL, { rejectUnauthorized: false }, (res) => {
+        resolve(res.statusCode);
+      })
+      .on("error", reject);
   });
 
   if (verifyRes === 200) {

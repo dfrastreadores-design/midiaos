@@ -14,7 +14,15 @@ import {
 import { getAssinaturaExecutivoPorToken } from "@/lib/assinaturas.functions";
 import { toast } from "sonner";
 import {
-  CheckCircle2, XCircle, ShieldCheck, FileText, Download, User, Info, Loader2, PenLine,
+  CheckCircle2,
+  XCircle,
+  ShieldCheck,
+  FileText,
+  Download,
+  User,
+  Info,
+  Loader2,
+  PenLine,
 } from "lucide-react";
 import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
 
@@ -53,7 +61,9 @@ function AprovarPi() {
       }
       return registrarAprovacaoDiretoria({
         data: {
-          token, decisao, nome: nome.trim(),
+          token,
+          decisao,
+          nome: nome.trim(),
           cargo: cargo.trim() || undefined,
           motivo: motivo.trim() || undefined,
           assinatura_data_url: dataUrl,
@@ -86,24 +96,37 @@ function AprovarPi() {
       if (win && !win.closed) win.location.href = url;
       else {
         const a = document.createElement("a");
-        a.href = url; a.target = "_blank"; a.rel = "noopener";
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener";
         a.download = `PI-${data.pi.numero}.pdf`;
-        document.body.appendChild(a); a.click(); a.remove();
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       }
     } catch (e: any) {
       if (win && !win.closed) win.close();
       toast.error(e?.message || "Erro ao gerar PDF");
-    } finally { setGerandoPdf(false); }
+    } finally {
+      setGerandoPdf(false);
+    }
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
+  if (isLoading)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Carregando…
+      </div>
+    );
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <Card className="max-w-md w-full"><CardContent className="py-10 text-center space-y-2">
-          <h1 className="text-lg font-semibold">Link inválido</h1>
-          <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
-        </CardContent></Card>
+        <Card className="max-w-md w-full">
+          <CardContent className="py-10 text-center space-y-2">
+            <h1 className="text-lg font-semibold">Link inválido</h1>
+            <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -118,9 +141,14 @@ function AprovarPi() {
     <div className="min-h-screen bg-muted/30 py-8 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-2 text-primary"><ShieldCheck className="size-5" /><span className="font-semibold">Mídia.OS</span></div>
+          <div className="inline-flex items-center gap-2 text-primary">
+            <ShieldCheck className="size-5" />
+            <span className="font-semibold">Mídia.OS</span>
+          </div>
           <h1 className="text-2xl font-semibold">Aprovação da Diretoria</h1>
-          <p className="text-sm text-muted-foreground">Revise o Pedido de Inserção e registre sua decisão.</p>
+          <p className="text-sm text-muted-foreground">
+            Revise o Pedido de Inserção e registre sua decisão.
+          </p>
         </div>
 
         <Card className="overflow-hidden border-primary/20">
@@ -132,22 +160,32 @@ function AprovarPi() {
                 </CardTitle>
                 <div className="text-xs text-muted-foreground">Campanha: {pi.campanha}</div>
               </div>
-              <Badge variant="outline" className="capitalize">{pi.status}</Badge>
+              <Badge variant="outline" className="capitalize">
+                {pi.status}
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="p-4 grid sm:grid-cols-2 gap-4 text-sm border-b border-dashed">
               <Linha l="Cliente" v={cli} />
               <Linha l="Agência" v={ag} />
-              <Linha l="Veiculação" v={`${String(pi.mes_veiculacao).padStart(2, "0")}/${pi.ano_veiculacao}`} />
+              <Linha
+                l="Veiculação"
+                v={`${String(pi.mes_veiculacao).padStart(2, "0")}/${pi.ano_veiculacao}`}
+              />
               <Linha l="Valor Total" v={fmtBRL(Number(pi.valor_negociado))} forte />
             </div>
             <div className="p-4 bg-primary/5 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-sm text-primary font-medium">
-                <Info className="size-4" /><span>Visualize o documento completo antes de decidir</span>
+                <Info className="size-4" />
+                <span>Visualize o documento completo antes de decidir</span>
               </div>
               <Button onClick={visualizarPdf} disabled={gerandoPdf} className="w-full sm:w-auto">
-                {gerandoPdf ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Download className="size-4 mr-2" />}
+                {gerandoPdf ? (
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="size-4 mr-2" />
+                )}
                 {gerandoPdf ? "Gerando..." : "Visualizar PI (PDF)"}
               </Button>
             </div>
@@ -155,30 +193,52 @@ function AprovarPi() {
         </Card>
 
         {decidido ? (
-          <Card className={aprov.status === "aprovado" ? "border-success/20 bg-success/5" : "border-destructive/20 bg-destructive/5"}>
+          <Card
+            className={
+              aprov.status === "aprovado"
+                ? "border-success/20 bg-success/5"
+                : "border-destructive/20 bg-destructive/5"
+            }
+          >
             <CardContent className="py-10 text-center space-y-3">
-              <div className={`size-16 rounded-full flex items-center justify-center mx-auto ${aprov.status === "aprovado" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-                {aprov.status === "aprovado" ? <CheckCircle2 className="size-10" /> : <XCircle className="size-10" />}
+              <div
+                className={`size-16 rounded-full flex items-center justify-center mx-auto ${aprov.status === "aprovado" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
+              >
+                {aprov.status === "aprovado" ? (
+                  <CheckCircle2 className="size-10" />
+                ) : (
+                  <XCircle className="size-10" />
+                )}
               </div>
               <div className="space-y-1">
-                <h3 className={`text-xl font-bold ${aprov.status === "aprovado" ? "text-success" : "text-destructive"}`}>
+                <h3
+                  className={`text-xl font-bold ${aprov.status === "aprovado" ? "text-success" : "text-destructive"}`}
+                >
                   {aprov.status === "aprovado" ? "PI Aprovado" : "PI Reprovado"}
                 </h3>
                 <p className="text-sm text-muted-foreground">Decisão registrada eletronicamente.</p>
               </div>
               {aprov.assinatura_signed_url && (
                 <div className="mx-auto max-w-xs bg-white rounded-md border p-2">
-                  <img src={aprov.assinatura_signed_url} alt="Assinatura" className="w-full h-auto" />
+                  <img
+                    src={aprov.assinatura_signed_url}
+                    alt="Assinatura"
+                    className="w-full h-auto"
+                  />
                 </div>
               )}
               <div className="pt-4 mt-4 border-t text-sm">
                 <div className="font-medium">{aprov.aprovador_nome}</div>
-                {aprov.aprovador_cargo && <div className="text-xs text-muted-foreground">{aprov.aprovador_cargo}</div>}
+                {aprov.aprovador_cargo && (
+                  <div className="text-xs text-muted-foreground">{aprov.aprovador_cargo}</div>
+                )}
                 <div className="text-xs text-muted-foreground mt-1">
                   {new Date(aprov.decidido_em).toLocaleString("pt-BR")}
                 </div>
                 {aprov.motivo_reprovacao && (
-                  <div className="text-xs text-destructive mt-2">Motivo: {aprov.motivo_reprovacao}</div>
+                  <div className="text-xs text-destructive mt-2">
+                    Motivo: {aprov.motivo_reprovacao}
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -194,11 +254,21 @@ function AprovarPi() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="nome">Nome completo *</Label>
-                  <Input id="nome" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Seu nome" />
+                  <Input
+                    id="nome"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Seu nome"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="cargo">Cargo</Label>
-                  <Input id="cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Ex.: Diretor Comercial" />
+                  <Input
+                    id="cargo"
+                    value={cargo}
+                    onChange={(e) => setCargo(e.target.value)}
+                    placeholder="Ex.: Diretor Comercial"
+                  />
                 </div>
               </div>
 
@@ -217,7 +287,13 @@ function AprovarPi() {
               {modo === "reprovar" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="motivo">Motivo da reprovação *</Label>
-                  <Textarea id="motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} placeholder="Descreva o motivo" />
+                  <Textarea
+                    id="motivo"
+                    value={motivo}
+                    onChange={(e) => setMotivo(e.target.value)}
+                    rows={3}
+                    placeholder="Descreva o motivo"
+                  />
                 </div>
               )}
 
@@ -226,11 +302,22 @@ function AprovarPi() {
                   className="flex-1 h-12"
                   size="lg"
                   disabled={decidir.isPending}
-                  onClick={() => { setModo("aprovar"); decidir.mutate("aprovado"); }}
+                  onClick={() => {
+                    setModo("aprovar");
+                    decidir.mutate("aprovado");
+                  }}
                 >
-                  {decidir.isPending && modo === "aprovar"
-                    ? <><Loader2 className="size-5 mr-2 animate-spin" />Aprovando...</>
-                    : <><CheckCircle2 className="size-5 mr-2" />Aprovar e Assinar</>}
+                  {decidir.isPending && modo === "aprovar" ? (
+                    <>
+                      <Loader2 className="size-5 mr-2 animate-spin" />
+                      Aprovando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="size-5 mr-2" />
+                      Aprovar e Assinar
+                    </>
+                  )}
                 </Button>
                 <Button
                   className="flex-1 h-12"
@@ -238,7 +325,10 @@ function AprovarPi() {
                   variant="outline"
                   disabled={decidir.isPending}
                   onClick={() => {
-                    if (modo !== "reprovar") { setModo("reprovar"); return; }
+                    if (modo !== "reprovar") {
+                      setModo("reprovar");
+                      return;
+                    }
                     decidir.mutate("reprovado");
                   }}
                 >

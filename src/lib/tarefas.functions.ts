@@ -27,7 +27,7 @@ export const listTarefas = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("tarefas")
       .select(
-        "*, cliente:cliente_id(razao_social,nome_fantasia), agencia:agencia_id(razao_social,nome_fantasia), pi:pi_id(numero), proposta:proposta_id(numero), projeto:projeto_id(nome)"
+        "*, cliente:cliente_id(razao_social,nome_fantasia), agencia:agencia_id(razao_social,nome_fantasia), pi:pi_id(numero), proposta:proposta_id(numero), projeto:projeto_id(nome)",
       )
       .eq("user_id", userId)
       .order("status", { ascending: true })
@@ -108,10 +108,12 @@ export const upsertTarefa = createServerFn({ method: "POST" })
 export const moveTarefa = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      id: z.string().uuid(),
-      status: StatusEnum,
-    }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        status: StatusEnum,
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;

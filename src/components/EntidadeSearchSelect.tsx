@@ -2,7 +2,14 @@ import { useState } from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
 type Entidade = {
@@ -19,12 +26,16 @@ type Props = {
   emptyLabel?: string;
 };
 
-export function EntidadeSearchSelect({ value, onChange, items, placeholder = "Selecione", emptyLabel = "— Nenhum —" }: Props) {
+export function EntidadeSearchSelect({
+  value,
+  onChange,
+  items,
+  placeholder = "Selecione",
+  emptyLabel = "— Nenhum —",
+}: Props) {
   const [open, setOpen] = useState(false);
   const selected = items.find((i) => i.id === value);
-  const label = selected
-    ? selected.nome_fantasia || selected.razao_social || "—"
-    : placeholder;
+  const label = selected ? selected.nome_fantasia || selected.razao_social || "—" : placeholder;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -73,7 +84,9 @@ export function EntidadeSearchSelect({ value, onChange, items, placeholder = "Se
                       setOpen(false);
                     }}
                   >
-                    <Check className={cn("mr-2 h-4 w-4", value === i.id ? "opacity-100" : "opacity-0")} />
+                    <Check
+                      className={cn("mr-2 h-4 w-4", value === i.id ? "opacity-100" : "opacity-0")}
+                    />
                     <div className="flex flex-col">
                       <span>{display}</span>
                       {fantasia && razao && fantasia !== razao && (

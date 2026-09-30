@@ -5,10 +5,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const listSyncCnpjLog = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      limit: z.number().min(1).max(10000).optional().default(5000),
-      status: z.enum(["atualizado", "sem_alteracao", "erro", "ignorado"]).optional(),
-    }).parse(d ?? {}),
+    z
+      .object({
+        limit: z.number().min(1).max(10000).optional().default(5000),
+        status: z.enum(["atualizado", "sem_alteracao", "erro", "ignorado"]).optional(),
+      })
+      .parse(d ?? {}),
   )
   .handler(async ({ data, context }) => {
     let q = context.supabase
@@ -20,12 +22,27 @@ export const listSyncCnpjLog = createServerFn({ method: "GET" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
-    const [{ count: totC }, { count: pendC }, { count: totA }, { count: pendA }] = await Promise.all([
-      context.supabase.from("clientes").select("*", { count: "exact", head: true }).not("cnpj", "is", null),
-      context.supabase.from("clientes").select("*", { count: "exact", head: true }).not("cnpj", "is", null).is("cnpj_sync_at", null),
-      context.supabase.from("agencias").select("*", { count: "exact", head: true }).not("cnpj", "is", null),
-      context.supabase.from("agencias").select("*", { count: "exact", head: true }).not("cnpj", "is", null).is("cnpj_sync_at", null),
-    ]);
+    const [{ count: totC }, { count: pendC }, { count: totA }, { count: pendA }] =
+      await Promise.all([
+        context.supabase
+          .from("clientes")
+          .select("*", { count: "exact", head: true })
+          .not("cnpj", "is", null),
+        context.supabase
+          .from("clientes")
+          .select("*", { count: "exact", head: true })
+          .not("cnpj", "is", null)
+          .is("cnpj_sync_at", null),
+        context.supabase
+          .from("agencias")
+          .select("*", { count: "exact", head: true })
+          .not("cnpj", "is", null),
+        context.supabase
+          .from("agencias")
+          .select("*", { count: "exact", head: true })
+          .not("cnpj", "is", null)
+          .is("cnpj_sync_at", null),
+      ]);
 
     return {
       rows: rows ?? [],

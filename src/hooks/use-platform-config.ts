@@ -1,7 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
-import { getPlatformConfig, DEFAULT_PLATFORM_CONFIG, type PlatformConfig } from "@/lib/platform-config.functions";
+import {
+  getPlatformConfig,
+  DEFAULT_PLATFORM_CONFIG,
+  type PlatformConfig,
+} from "@/lib/platform-config.functions";
 
 export function usePlatformConfig() {
   const { user } = useAuth();

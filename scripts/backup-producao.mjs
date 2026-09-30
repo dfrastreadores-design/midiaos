@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Script de Backup Local de Produção — Mídia.OS
- * 
+ *
  * Executa exportação completa de segurança de todas as tabelas vitais para JSON local.
  * Uso:
  *   node scripts/backup-producao.mjs
@@ -40,7 +40,10 @@ function loadEnv() {
 const env = { ...process.env, ...loadEnv() };
 
 const SUPABASE_URL = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_KEY =
+  env.SUPABASE_SERVICE_ROLE_KEY ||
+  env.SUPABASE_PUBLISHABLE_KEY ||
+  env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("❌ Erro: SUPABASE_URL ou Chave do Supabase não encontradas no arquivo .env");

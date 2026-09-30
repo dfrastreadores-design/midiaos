@@ -8,7 +8,12 @@ const ContatoSchema = z.object({
   funcao: z.string().max(120).optional().default(""),
   email: z.string().max(200).optional().default(""),
   telefone: z.string().max(40).optional().default(""),
-  aniversario: z.string().max(5).regex(/^(\d{2}\/\d{2})?$/).optional().default(""),
+  aniversario: z
+    .string()
+    .max(5)
+    .regex(/^(\d{2}\/\d{2})?$/)
+    .optional()
+    .default(""),
 });
 
 const ClienteSchema = z.object({
@@ -34,7 +39,11 @@ const ClienteSchema = z.object({
   instagram: z.string().max(255).nullable().optional(),
   linkedin: z.string().max(255).nullable().optional(),
   facebook: z.string().max(255).nullable().optional(),
-  data_aniversario: z.string().regex(/^\d{2}\/\d{2}$/).nullable().optional(),
+  data_aniversario: z
+    .string()
+    .regex(/^\d{2}\/\d{2}$/)
+    .nullable()
+    .optional(),
   status: z.enum(["ativo", "inativo", "prospect", "bloqueado"]).optional().default("ativo"),
   contatos: z.array(ContatoSchema).default([]),
 });
@@ -58,7 +67,10 @@ export const upsertCliente = createServerFn({ method: "POST" })
     const { id, contatos, ...rest } = data;
     const payload = { ...rest, contatos: contatos as unknown as never };
     if (id) {
-      const { error } = await supabase.from("clientes").update(payload as never).eq("id", id);
+      const { error } = await supabase
+        .from("clientes")
+        .update(payload as never)
+        .eq("id", id);
       if (error) throw new Error(error.message);
       return { id };
     }

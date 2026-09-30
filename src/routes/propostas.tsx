@@ -5,8 +5,28 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2, ArrowRightCircle, Presentation, Eye, Settings, Copy, ThumbsDown, FileUp, Paperclip, Sliders } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ArrowRightCircle,
+  Presentation,
+  Eye,
+  Settings,
+  Copy,
+  ThumbsDown,
+  FileUp,
+  Paperclip,
+  Sliders,
+} from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { PropostaFormDialog } from "@/components/PropostaFormDialog";
 import { ImportarPropostaDialog } from "@/components/ImportarPropostaDialog";
 import { ImportarModeloPropostaDialog } from "@/components/ImportarModeloPropostaDialog";
@@ -28,7 +48,7 @@ export const Route = createFileRoute("/propostas")({
 function Propostas() {
   const { isAdmin } = useUserRoles();
   const { propostas, isLoading, search, setSearch, deleteProposta } = usePropostas();
-  
+
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [modeloEmpresaOpen, setModeloEmpresaOpen] = useState(false);
@@ -46,13 +66,17 @@ function Propostas() {
     <AppShell>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">Propostas Comerciais</h1>
-          <p className="text-muted-foreground text-sm mt-1">Crie, envie e converta em PI com um clique.</p>
+          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+            Propostas Comerciais
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Crie, envie e converta em PI com um clique.
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button 
-            variant="outline" 
-            className="border-primary/40 text-primary hover:bg-primary/10" 
+          <Button
+            variant="outline"
+            className="border-primary/40 text-primary hover:bg-primary/10"
             onClick={() => setModeloEmpresaOpen(true)}
             title="Importe a apresentação institucional em PDF/slides e mapeie a tabela de produtos e valores"
           >
@@ -63,17 +87,19 @@ function Propostas() {
               <Settings className="size-4 mr-2" /> Layouts
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            className="border-primary/40 text-primary hover:bg-primary/10" 
+          <Button
+            variant="outline"
+            className="border-primary/40 text-primary hover:bg-primary/10"
             onClick={() => setImportOpen(true)}
           >
             <FileUp className="size-4 mr-2" /> Importar PDF / PPTX
           </Button>
-          <Button onClick={() => { 
-            setEditing(null);
-            setFormOpen(true); 
-          }}>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
             <Plus className="size-4 mr-2" /> Nova Proposta
           </Button>
         </div>
@@ -95,7 +121,9 @@ function Propostas() {
         <Card>
           <CardContent className="p-4">
             <div className="text-xs text-muted-foreground">Valor Líquido</div>
-            <div className="text-2xl font-semibold mt-1 text-primary">{formatCurrency(totalLiquido)}</div>
+            <div className="text-2xl font-semibold mt-1 text-primary">
+              {formatCurrency(totalLiquido)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -103,11 +131,11 @@ function Propostas() {
       <Card>
         <CardContent className="p-0">
           <div className="p-4 border-b">
-            <Input 
-              placeholder="Buscar…" 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
-              className="max-w-md" 
+            <Input
+              placeholder="Buscar…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-md"
             />
           </div>
           <Table>
@@ -143,15 +171,24 @@ function Propostas() {
                   <TableCell className="font-mono text-xs">{p.numero}</TableCell>
                   <TableCell>
                     <div className="font-medium">
-                      {p.cliente?.nome_fantasia || p.cliente?.razao_social || p.agencia?.nome_fantasia || p.agencia?.razao_social || p.cliente_avulso || "—"}
+                      {p.cliente?.nome_fantasia ||
+                        p.cliente?.razao_social ||
+                        p.agencia?.nome_fantasia ||
+                        p.agencia?.razao_social ||
+                        p.cliente_avulso ||
+                        "—"}
                     </div>
                     <div className="text-xs text-muted-foreground">{p.campanha}</div>
                   </TableCell>
                   <TableCell className="text-sm">{p.criado_por || "—"}</TableCell>
                   <TableCell className="text-right text-sm">{p.total_insercoes}</TableCell>
-                  <TableCell className="text-right text-sm">{formatCurrency(p.valor_tabela)}</TableCell>
-                  <TableCell className="text-right font-semibold">{formatCurrency(p.valor_negociado)}</TableCell>
-                  
+                  <TableCell className="text-right text-sm">
+                    {formatCurrency(p.valor_tabela)}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">
+                    {formatCurrency(p.valor_negociado)}
+                  </TableCell>
+
                   <TableCell>
                     <Badge className={PROPOSTA_STATUS_CONFIG[p.status]?.className}>
                       {p.status}
@@ -159,29 +196,70 @@ function Propostas() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
-                      <Button size="icon" variant="ghost" title="Visualizar" onClick={() => setVisualizando(p)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Visualizar"
+                        onClick={() => setVisualizando(p)}
+                      >
                         <Eye className="size-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" title="Editar" onClick={() => { setEditing(p); setFormOpen(true); }}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Editar"
+                        onClick={() => {
+                          setEditing(p);
+                          setFormOpen(true);
+                        }}
+                      >
                         <Pencil className="size-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" title="Duplicar para outro cliente" onClick={() => { setEditing({ ...p, isCopy: true } as any); setFormOpen(true); }}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Duplicar para outro cliente"
+                        onClick={() => {
+                          setEditing({ ...p, isCopy: true } as any);
+                          setFormOpen(true);
+                        }}
+                      >
                         <Copy className="size-4" />
                       </Button>
-                      <Button size="icon" variant="ghost" title="Gerar Apresentação" onClick={() => setApresentando(p)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Gerar Apresentação"
+                        onClick={() => setApresentando(p)}
+                      >
                         <Presentation className="size-4 text-primary" />
                       </Button>
                       {p.status !== "convertida" && (
-                        <Button size="icon" variant="ghost" title="Converter em PI" onClick={() => setConverting(p)}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Converter em PI"
+                          onClick={() => setConverting(p)}
+                        >
                           <ArrowRightCircle className="size-4 text-primary" />
                         </Button>
                       )}
                       {p.status !== "convertida" && p.status !== "recusada" && (
-                        <Button size="icon" variant="ghost" title="Cliente não tem interesse" onClick={() => setRecusando(p)}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Cliente não tem interesse"
+                          onClick={() => setRecusando(p)}
+                        >
                           <ThumbsDown className="size-4 text-destructive" />
                         </Button>
                       )}
-                      <Button size="icon" variant="ghost" title="Excluir" onClick={() => deleteProposta(p.id)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Excluir"
+                        onClick={() => deleteProposta(p.id)}
+                      >
                         <Trash2 className="size-4 text-destructive" />
                       </Button>
                     </div>
@@ -190,9 +268,13 @@ function Propostas() {
               ))}
               {!isLoading && propostas.length > 0 && (
                 <TableRow className="bg-muted/40 font-semibold">
-                  <TableCell colSpan={4} className="text-right">Totais</TableCell>
+                  <TableCell colSpan={4} className="text-right">
+                    Totais
+                  </TableCell>
                   <TableCell className="text-right">{formatCurrency(totalBruto)}</TableCell>
-                  <TableCell className="text-right text-primary">{formatCurrency(totalLiquido)}</TableCell>
+                  <TableCell className="text-right text-primary">
+                    {formatCurrency(totalLiquido)}
+                  </TableCell>
                   <TableCell colSpan={2} />
                 </TableRow>
               )}
@@ -201,22 +283,25 @@ function Propostas() {
         </CardContent>
       </Card>
 
-
       {formOpen && (
         <PropostaFormDialog
           open={formOpen}
           onOpenChange={setFormOpen}
-          initial={editing ? {
-            id: editing.id, 
-            isCopy: editing.isCopy,
-            cliente_id: editing.cliente_id, 
-            agencia_id: editing.agencia_id,
-            executivo_id: editing.executivo_id,
-            cliente_avulso: editing.cliente_avulso,
-            campanha: editing.campanha, 
-            validade: editing.validade, 
-            observacao: editing.observacao,
-          } : undefined}
+          initial={
+            editing
+              ? {
+                  id: editing.id,
+                  isCopy: editing.isCopy,
+                  cliente_id: editing.cliente_id,
+                  agencia_id: editing.agencia_id,
+                  executivo_id: editing.executivo_id,
+                  cliente_avulso: editing.cliente_avulso,
+                  campanha: editing.campanha,
+                  validade: editing.validade,
+                  observacao: editing.observacao,
+                }
+              : undefined
+          }
           onOpenImport={() => setImportOpen(true)}
         />
       )}
@@ -228,20 +313,20 @@ function Propostas() {
           setVisualizando({ id } as any);
         }}
       />
-      
+
       <GerarApresentacaoDialog
         open={!!apresentando}
         onOpenChange={(v) => !v && setApresentando(null)}
         propostaId={apresentando?.id ?? null}
       />
-      
+
       <ConverterPropostaDialog
         propostaId={converting?.id ?? null}
         numero={converting?.numero ?? ""}
         open={!!converting}
         onOpenChange={(v) => !v && setConverting(null)}
       />
-      
+
       <VisualizarPropostaDialog
         open={!!visualizando}
         onOpenChange={(v) => !v && setVisualizando(null)}
@@ -254,16 +339,10 @@ function Propostas() {
         propostaId={recusando?.id ?? null}
         numero={recusando?.numero}
       />
-      
-      <LayoutManagerDialog
-        open={layoutOpen}
-        onOpenChange={setLayoutOpen}
-      />
 
-      <ImportarModeloPropostaDialog
-        open={modeloEmpresaOpen}
-        onOpenChange={setModeloEmpresaOpen}
-      />
+      <LayoutManagerDialog open={layoutOpen} onOpenChange={setLayoutOpen} />
+
+      <ImportarModeloPropostaDialog open={modeloEmpresaOpen} onOpenChange={setModeloEmpresaOpen} />
     </AppShell>
   );
 }

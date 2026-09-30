@@ -3,11 +3,24 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Radio, ChevronDown, ChevronRight, FileText, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +31,10 @@ export const Route = createFileRoute("/historico-veiculacao")({
   head: () => ({
     meta: [
       { title: "Histórico de Veiculação por CNPJ — Mídia.OS" },
-      { name: "description", content: "Controle total das veiculações agrupadas pelo CNPJ da emissora emissora do PI." },
+      {
+        name: "description",
+        content: "Controle total das veiculações agrupadas pelo CNPJ da emissora emissora do PI.",
+      },
     ],
   }),
   component: HistoricoVeiculacaoPage,
@@ -64,7 +80,8 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const fmtDate = (d: string | null) => (d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR") : "—");
+const fmtDate = (d: string | null) =>
+  d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR") : "—";
 
 function HistoricoVeiculacaoPage() {
   const [statusFilter, setStatusFilter] = useState<string>("veiculados");
@@ -117,7 +134,12 @@ function HistoricoVeiculacaoPage() {
     const s = search.toLowerCase().trim();
     const filtered = s
       ? pis.filter((p) => {
-          const nome = (p.cliente?.nome_fantasia || p.cliente?.razao_social || p.agencia?.razao_social || "").toLowerCase();
+          const nome = (
+            p.cliente?.nome_fantasia ||
+            p.cliente?.razao_social ||
+            p.agencia?.razao_social ||
+            ""
+          ).toLowerCase();
           return (
             p.numero?.toLowerCase().includes(s) ||
             (p.campanha ?? "").toLowerCase().includes(s) ||
@@ -126,12 +148,21 @@ function HistoricoVeiculacaoPage() {
         })
       : pis;
 
-    const map = new Map<string, { emissora: Emissora | null; pis: PiRow[]; bruto: number; liquido: number; insercoes: number }>();
+    const map = new Map<
+      string,
+      { emissora: Emissora | null; pis: PiRow[]; bruto: number; liquido: number; insercoes: number }
+    >();
     for (const p of filtered) {
       const key = p.emissora_id ?? "__sem__";
       let g = map.get(key);
       if (!g) {
-        g = { emissora: p.emissora_id ? emissoraMap.get(p.emissora_id) ?? null : null, pis: [], bruto: 0, liquido: 0, insercoes: 0 };
+        g = {
+          emissora: p.emissora_id ? (emissoraMap.get(p.emissora_id) ?? null) : null,
+          pis: [],
+          bruto: 0,
+          liquido: 0,
+          insercoes: 0,
+        };
         map.set(key, g);
       }
       g.pis.push(p);
@@ -143,23 +174,27 @@ function HistoricoVeiculacaoPage() {
   }, [pis, emissoras, search]);
 
   const totais = useMemo(
-    () => grupos.reduce(
-      (acc, g) => ({
-        bruto: acc.bruto + g.bruto,
-        liquido: acc.liquido + g.liquido,
-        insercoes: acc.insercoes + g.insercoes,
-        pis: acc.pis + g.pis.length,
-      }),
-      { bruto: 0, liquido: 0, insercoes: 0, pis: 0 },
-    ),
+    () =>
+      grupos.reduce(
+        (acc, g) => ({
+          bruto: acc.bruto + g.bruto,
+          liquido: acc.liquido + g.liquido,
+          insercoes: acc.insercoes + g.insercoes,
+          pis: acc.pis + g.pis.length,
+        }),
+        { bruto: 0, liquido: 0, insercoes: 0, pis: 0 },
+      ),
     [grupos],
   );
 
   const exportCSV = () => {
-    const rows: string[] = ["Emissora;CNPJ;Numero PI;Campanha;Cliente/Agencia;Status;Inicio;Fim;Insercoes;Bruto;Liquido"];
+    const rows: string[] = [
+      "Emissora;CNPJ;Numero PI;Campanha;Cliente/Agencia;Status;Inicio;Fim;Insercoes;Bruto;Liquido",
+    ];
     for (const g of grupos) {
       for (const p of g.pis) {
-        const cli = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.agencia?.razao_social || "";
+        const cli =
+          p.cliente?.nome_fantasia || p.cliente?.razao_social || p.agencia?.razao_social || "";
         rows.push(
           [
             g.emissora?.nome ?? "Sem emissora",
@@ -207,18 +242,30 @@ function HistoricoVeiculacaoPage() {
         <Card>
           <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="lg:col-span-2">
-              <label className="text-xs text-muted-foreground">Buscar (PI, campanha, cliente)</label>
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Digite para filtrar..." />
+              <label className="text-xs text-muted-foreground">
+                Buscar (PI, campanha, cliente)
+              </label>
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Digite para filtrar..."
+              />
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Emissora / CNPJ</label>
-              <Select value={emissoraFilter || "all"} onValueChange={(v) => setEmissoraFilter(v === "all" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+              <Select
+                value={emissoraFilter || "all"}
+                onValueChange={(v) => setEmissoraFilter(v === "all" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as emissoras</SelectItem>
                   {emissoras.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
-                      {e.nome}{e.cnpj ? ` — ${formatCnpj(e.cnpj)}` : ""}
+                      {e.nome}
+                      {e.cnpj ? ` — ${formatCnpj(e.cnpj)}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -227,7 +274,9 @@ function HistoricoVeiculacaoPage() {
             <div>
               <label className="text-xs text-muted-foreground">Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="veiculados">Veiculados (padrão)</SelectItem>
                   <SelectItem value="todos">Todos os status</SelectItem>
@@ -254,16 +303,47 @@ function HistoricoVeiculacaoPage() {
         </Card>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Emissoras</div><div className="text-2xl font-semibold">{grupos.length}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">PIs</div><div className="text-2xl font-semibold">{totais.pis}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Inserções</div><div className="text-2xl font-semibold">{totais.insercoes.toLocaleString("pt-BR")}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total líquido</div><div className="text-2xl font-semibold">{brl(totais.liquido)}</div><div className="text-[11px] text-muted-foreground">Bruto {brl(totais.bruto)}</div></CardContent></Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground">Emissoras</div>
+              <div className="text-2xl font-semibold">{grupos.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground">PIs</div>
+              <div className="text-2xl font-semibold">{totais.pis}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground">Inserções</div>
+              <div className="text-2xl font-semibold">
+                {totais.insercoes.toLocaleString("pt-BR")}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground">Total líquido</div>
+              <div className="text-2xl font-semibold">{brl(totais.liquido)}</div>
+              <div className="text-[11px] text-muted-foreground">Bruto {brl(totais.bruto)}</div>
+            </CardContent>
+          </Card>
         </div>
 
         {isLoading ? (
-          <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">Carregando...</CardContent></Card>
+          <Card>
+            <CardContent className="p-8 text-center text-sm text-muted-foreground">
+              Carregando...
+            </CardContent>
+          </Card>
         ) : grupos.length === 0 ? (
-          <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma veiculação encontrada com os filtros aplicados.</CardContent></Card>
+          <Card>
+            <CardContent className="p-8 text-center text-sm text-muted-foreground">
+              Nenhuma veiculação encontrada com os filtros aplicados.
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-3">
             {grupos.map((g) => {
@@ -277,24 +357,52 @@ function HistoricoVeiculacaoPage() {
                       onClick={() => setExpanded((s) => ({ ...s, [key]: !open }))}
                       className="w-full flex flex-wrap items-center gap-3 p-4 hover:bg-muted/40 text-left"
                     >
-                      {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      {g.emissora?.logo_url ? (
-                        <img src={g.emissora.logo_url} alt="" className="h-8 w-8 rounded object-contain bg-white border" />
+                      {open ? (
+                        <ChevronDown className="h-4 w-4" />
                       ) : (
-                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center"><Radio className="h-4 w-4 text-muted-foreground" /></div>
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                      {g.emissora?.logo_url ? (
+                        <img
+                          src={g.emissora.logo_url}
+                          alt=""
+                          className="h-8 w-8 rounded object-contain bg-white border"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                          <Radio className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{g.emissora?.nome ?? "Sem emissora definida"}</div>
+                        <div className="font-medium truncate">
+                          {g.emissora?.nome ?? "Sem emissora definida"}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {g.emissora?.cnpj ? `CNPJ ${formatCnpj(g.emissora.cnpj)}` : "CNPJ não informado"}
+                          {g.emissora?.cnpj
+                            ? `CNPJ ${formatCnpj(g.emissora.cnpj)}`
+                            : "CNPJ não informado"}
                           {g.emissora?.razao_social ? ` • ${g.emissora.razao_social}` : ""}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-4 text-right text-xs">
-                        <div><div className="text-muted-foreground">PIs</div><div className="font-semibold text-sm">{g.pis.length}</div></div>
-                        <div><div className="text-muted-foreground">Inserções</div><div className="font-semibold text-sm">{g.insercoes.toLocaleString("pt-BR")}</div></div>
-                        <div><div className="text-muted-foreground">Bruto</div><div className="font-semibold text-sm">{brl(g.bruto)}</div></div>
-                        <div><div className="text-muted-foreground">Líquido</div><div className="font-semibold text-sm text-primary">{brl(g.liquido)}</div></div>
+                        <div>
+                          <div className="text-muted-foreground">PIs</div>
+                          <div className="font-semibold text-sm">{g.pis.length}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Inserções</div>
+                          <div className="font-semibold text-sm">
+                            {g.insercoes.toLocaleString("pt-BR")}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Bruto</div>
+                          <div className="font-semibold text-sm">{brl(g.bruto)}</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">Líquido</div>
+                          <div className="font-semibold text-sm text-primary">{brl(g.liquido)}</div>
+                        </div>
                       </div>
                     </button>
 
@@ -316,21 +424,39 @@ function HistoricoVeiculacaoPage() {
                           </TableHeader>
                           <TableBody>
                             {g.pis.map((p) => {
-                              const cli = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.agencia?.razao_social || "—";
+                              const cli =
+                                p.cliente?.nome_fantasia ||
+                                p.cliente?.razao_social ||
+                                p.agencia?.razao_social ||
+                                "—";
                               return (
                                 <TableRow key={p.id}>
                                   <TableCell className="font-mono text-xs">{p.numero}</TableCell>
                                   <TableCell className="text-sm">{cli}</TableCell>
                                   <TableCell className="text-sm">{p.campanha ?? "—"}</TableCell>
-                                  <TableCell className="text-xs whitespace-nowrap">{fmtDate(p.periodo_inicio)} → {fmtDate(p.periodo_fim)}</TableCell>
-                                  <TableCell className="text-right text-sm">{(p.total_insercoes ?? 0).toLocaleString("pt-BR")}</TableCell>
-                                  <TableCell className="text-right text-sm">{brl(Number(p.valor_tabela ?? 0))}</TableCell>
-                                  <TableCell className="text-right text-sm font-medium">{brl(Number(p.valor_negociado ?? 0))}</TableCell>
-                                  <TableCell>
-                                    <Badge className={STATUS_COLOR[p.status] ?? "bg-muted"}>{p.status}</Badge>
+                                  <TableCell className="text-xs whitespace-nowrap">
+                                    {fmtDate(p.periodo_inicio)} → {fmtDate(p.periodo_fim)}
+                                  </TableCell>
+                                  <TableCell className="text-right text-sm">
+                                    {(p.total_insercoes ?? 0).toLocaleString("pt-BR")}
+                                  </TableCell>
+                                  <TableCell className="text-right text-sm">
+                                    {brl(Number(p.valor_tabela ?? 0))}
+                                  </TableCell>
+                                  <TableCell className="text-right text-sm font-medium">
+                                    {brl(Number(p.valor_negociado ?? 0))}
                                   </TableCell>
                                   <TableCell>
-                                    <Link to="/pi" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                                    <Badge className={STATUS_COLOR[p.status] ?? "bg-muted"}>
+                                      {p.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Link
+                                      to="/pi"
+                                      search={{ id: undefined, renovar: undefined, filtro: p.numero }}
+                                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                    >
                                       <FileText className="h-3.5 w-3.5" /> Abrir
                                     </Link>
                                   </TableCell>

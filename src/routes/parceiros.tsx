@@ -48,7 +48,12 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
-import { listParceiros, deleteParceiro, SEGMENTOS_MIDIA, type Parceiro } from "@/lib/parceiros.functions";
+import {
+  listParceiros,
+  deleteParceiro,
+  SEGMENTOS_MIDIA,
+  type Parceiro,
+} from "@/lib/parceiros.functions";
 import { ParceiroFormDialog } from "@/components/ParceiroFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { useUserRoles } from "@/hooks/use-roles";
@@ -111,8 +116,7 @@ export function ParceirosPage() {
         (p.contato_nome && p.contato_nome.toLowerCase().includes(q));
 
       const matchSegmento =
-        segmentoFiltro === "todos" ||
-        (p.segmentos && p.segmentos.includes(segmentoFiltro));
+        segmentoFiltro === "todos" || (p.segmentos && p.segmentos.includes(segmentoFiltro));
 
       const matchStatus =
         statusFiltro === "todos" ||
@@ -153,12 +157,16 @@ export function ParceirosPage() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                 Parceiros de Mídia
-                <Badge variant="secondary" className="text-xs bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300">
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300"
+                >
                   {parceiros.length}
                 </Badge>
               </h1>
               <p className="text-sm text-muted-foreground">
-                Gestão comercial de fornecedores de mídia, remuneração acordada sobre vendas e importação de inventário.
+                Gestão comercial de fornecedores de mídia, remuneração acordada sobre vendas e
+                importação de inventário.
               </p>
             </div>
           </div>
@@ -351,11 +359,7 @@ export function ParceirosPage() {
               </p>
               {canManage && (
                 <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => handleOpenImport()}
-                  >
+                  <Button variant="outline" className="gap-2" onClick={() => handleOpenImport()}>
                     <Upload className="size-4" />
                     Importar Planilha
                   </Button>
@@ -376,7 +380,9 @@ export function ParceirosPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtrados.map((parceiro) => {
-              const cleanPhone = parceiro.contato_telefone ? parceiro.contato_telefone.replace(/\D/g, "") : "";
+              const cleanPhone = parceiro.contato_telefone
+                ? parceiro.contato_telefone.replace(/\D/g, "")
+                : "";
               const whatsappUrl = cleanPhone ? `https://wa.me/55${cleanPhone}` : "";
 
               return (
@@ -394,11 +400,17 @@ export function ParceirosPage() {
                             : parceiro.razao_social.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-bold text-base leading-tight truncate text-foreground" title={parceiro.nome_fantasia || parceiro.razao_social}>
+                          <h4
+                            className="font-bold text-base leading-tight truncate text-foreground"
+                            title={parceiro.nome_fantasia || parceiro.razao_social}
+                          >
                             {parceiro.nome_fantasia || parceiro.razao_social}
                           </h4>
                           {parceiro.nome_fantasia && (
-                            <p className="text-xs text-muted-foreground truncate" title={parceiro.razao_social}>
+                            <p
+                              className="text-xs text-muted-foreground truncate"
+                              title={parceiro.razao_social}
+                            >
                               {parceiro.razao_social}
                             </p>
                           )}
@@ -482,7 +494,9 @@ export function ParceirosPage() {
                     {/* Condições Comerciais e Remuneração */}
                     <div className="p-2.5 rounded-lg bg-muted/40 border flex flex-col gap-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground font-medium">Remuneração do Inquilino:</span>
+                        <span className="text-muted-foreground font-medium">
+                          Remuneração do Inquilino:
+                        </span>
                         <Badge className="bg-purple-600 text-white font-bold text-xs">
                           {parceiro.comissao_padrao_pct}% comissão
                         </Badge>
@@ -491,7 +505,9 @@ export function ParceirosPage() {
                       {parceiro.prazo_repasse && (
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="text-muted-foreground">Prazo de Repasse:</span>
-                          <span className="font-medium text-foreground">{parceiro.prazo_repasse}</span>
+                          <span className="font-medium text-foreground">
+                            {parceiro.prazo_repasse}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -524,9 +540,15 @@ export function ParceirosPage() {
                         )}
 
                         {parceiro.contato_email && (
-                          <div className="flex items-center gap-1 truncate max-w-[200px]" title={parceiro.contato_email}>
+                          <div
+                            className="flex items-center gap-1 truncate max-w-[200px]"
+                            title={parceiro.contato_email}
+                          >
                             <Mail className="size-3 text-blue-600" />
-                            <a href={`mailto:${parceiro.contato_email}`} className="hover:underline">
+                            <a
+                              href={`mailto:${parceiro.contato_email}`}
+                              className="hover:underline"
+                            >
                               {parceiro.contato_email}
                             </a>
                           </div>
@@ -565,12 +587,7 @@ export function ParceirosPage() {
                           Importar Mídias
                         </Button>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          asChild
-                        >
+                        <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
                           <Link to="/produtos" search={{ parceiro: parceiro.razao_social } as any}>
                             Ver Produtos
                             <ExternalLink className="size-3 ml-1" />
@@ -610,8 +627,9 @@ export function ParceirosPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remover parceiro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover <strong>{deleteTarget?.razao_social}</strong>?
-              Os produtos vinculados a este parceiro permanecerão no catálogo, mas perderão a referência direta do cadastro.
+              Tem certeza que deseja remover <strong>{deleteTarget?.razao_social}</strong>? Os
+              produtos vinculados a este parceiro permanecerão no catálogo, mas perderão a
+              referência direta do cadastro.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

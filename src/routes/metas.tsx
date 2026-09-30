@@ -8,10 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Target, ShieldAlert, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -25,8 +34,18 @@ export const Route = createFileRoute("/metas")({
 });
 
 const MESES = [
-  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 
 function MetasPage() {
@@ -58,7 +77,12 @@ function MetasPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (loading) return <AppShell><p className="text-muted-foreground text-sm">Carregando…</p></AppShell>;
+  if (loading)
+    return (
+      <AppShell>
+        <p className="text-muted-foreground text-sm">Carregando…</p>
+      </AppShell>
+    );
 
   if (!canManage) {
     return (
@@ -67,7 +91,8 @@ function MetasPage() {
           <ShieldAlert className="size-12 mx-auto text-muted-foreground" />
           <h1 className="text-xl font-semibold">Acesso restrito</h1>
           <p className="text-sm text-muted-foreground">
-            Somente os perfis <strong>Admin</strong> e <strong>Diretoria</strong> podem lançar as metas dos executivos.
+            Somente os perfis <strong>Admin</strong> e <strong>Diretoria</strong> podem lançar as
+            metas dos executivos.
           </p>
         </div>
       </AppShell>
@@ -79,7 +104,8 @@ function MetasPage() {
       <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight flex items-center gap-2">
-            <Target className="size-6" />Metas dos Executivos
+            <Target className="size-6" />
+            Metas dos Executivos
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             Defina a meta mensal de faturamento de cada executivo.
@@ -87,10 +113,14 @@ function MetasPage() {
         </div>
         <div className="flex gap-2">
           <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {MESES.map((m, i) => (
-                <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
+                <SelectItem key={i} value={String(i + 1)}>
+                  {m}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -117,10 +147,18 @@ function MetasPage() {
             </TableHeader>
             <TableBody>
               {isLoading && (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando…</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Carregando…
+                  </TableCell>
+                </TableRow>
               )}
               {!isLoading && (data ?? []).length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum executivo encontrado.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Nenhum executivo encontrado.
+                  </TableCell>
+                </TableRow>
               )}
               {(data ?? []).map(({ executivo, meta }: any) => {
                 const draft = edits[executivo.id];
@@ -128,7 +166,9 @@ function MetasPage() {
                 return (
                   <TableRow key={executivo.id}>
                     <TableCell className="font-medium">{executivo.nome}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{executivo.email}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {executivo.email}
+                    </TableCell>
                     <TableCell className="text-right">{meta ? formatBRL(current) : "—"}</TableCell>
                     <TableCell>
                       <Input
@@ -137,7 +177,9 @@ function MetasPage() {
                         step="0.01"
                         placeholder={current ? String(current) : "0,00"}
                         value={draft ?? ""}
-                        onChange={(e) => setEdits((s) => ({ ...s, [executivo.id]: e.target.value }))}
+                        onChange={(e) =>
+                          setEdits((s) => ({ ...s, [executivo.id]: e.target.value }))
+                        }
                       />
                     </TableCell>
                     <TableCell className="text-right">
@@ -153,7 +195,8 @@ function MetasPage() {
                           );
                         }}
                       >
-                        <Save className="size-4 mr-1" />Salvar
+                        <Save className="size-4 mr-1" />
+                        Salvar
                       </Button>
                     </TableCell>
                   </TableRow>

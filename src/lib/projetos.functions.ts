@@ -38,7 +38,10 @@ export const upsertProjeto = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { id, ...rest } = data;
     if (id) {
-      const { error } = await supabase.from("projetos_especiais").update(rest as never).eq("id", id);
+      const { error } = await supabase
+        .from("projetos_especiais")
+        .update(rest as never)
+        .eq("id", id);
       if (error) throw new Error(error.message);
       return { id };
     }
@@ -115,15 +118,21 @@ Responda APENAS um JSON no formato:
       }),
     });
     if (!res.ok) {
-      if (res.status === 429) throw new Error("Limite de uso de IA atingido. Tente novamente em instantes.");
-      if (res.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
+      if (res.status === 429)
+        throw new Error("Limite de uso de IA atingido. Tente novamente em instantes.");
+      if (res.status === 402)
+        throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
       throw new Error(`Falha na IA (${res.status})`);
     }
     const json = await res.json();
     const content: string = json.choices?.[0]?.message?.content ?? "{}";
     const cleaned = content.replace(/```json|```/g, "").trim();
     let parsed: { sugestoes?: SugestaoCliente[] } = {};
-    try { parsed = JSON.parse(cleaned); } catch { parsed = {}; }
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      parsed = {};
+    }
     const validIds = new Set(lista.map((c) => c.id));
     const sugestoes = (parsed.sugestoes ?? [])
       .filter((s) => validIds.has(s.cliente_id))

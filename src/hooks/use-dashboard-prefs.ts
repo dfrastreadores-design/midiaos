@@ -19,7 +19,6 @@ export type WidgetId =
   | "welcome_hero"
   | "calendario";
 
-
 export const WIDGET_LABELS: Record<WidgetId, string> = {
   kpi_faturamento: "KPI · Faturamento do mês",
   kpi_propostas: "KPI · Propostas ativas",
@@ -39,7 +38,6 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   welcome_hero: "Boas-vindas / Atalhos",
   calendario: "Calendário do mês",
 };
-
 
 export const ACCENT_PRESETS: { id: string; label: string; value: string }[] = [
   { id: "default", label: "Padrão", value: "" },
@@ -71,7 +69,9 @@ function load(): Prefs {
       return base;
     }
     const p = JSON.parse(raw);
-    const order: WidgetId[] = Array.isArray(p?.order) ? p.order.filter((x: any) => ALL_IDS.includes(x)) : [];
+    const order: WidgetId[] = Array.isArray(p?.order)
+      ? p.order.filter((x: any) => ALL_IDS.includes(x))
+      : [];
     const missing = ALL_IDS.filter((x) => !order.includes(x));
     return {
       hidden: Array.isArray(p?.hidden) ? p.hidden : [],
@@ -86,52 +86,78 @@ function load(): Prefs {
 export function useDashboardPrefs() {
   const [prefs, setPrefs] = useState<Prefs>({ hidden: [], order: [...ALL_IDS], accent: "" });
 
-  useEffect(() => { setPrefs(load()); }, []);
+  useEffect(() => {
+    setPrefs(load());
+  }, []);
 
   const save = useCallback((next: Prefs) => {
     setPrefs(next);
-    try { localStorage.setItem(KEY, JSON.stringify(next)); } catch {}
+    try {
+      localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {}
   }, []);
 
   const isVisible = useCallback((id: WidgetId) => !prefs.hidden.includes(id), [prefs]);
 
-  const toggle = useCallback((id: WidgetId) => {
-    const hidden = prefs.hidden.includes(id)
-      ? prefs.hidden.filter((x) => x !== id)
-      : [...prefs.hidden, id];
-    save({ ...prefs, hidden });
-  }, [prefs, save]);
+  const toggle = useCallback(
+    (id: WidgetId) => {
+      const hidden = prefs.hidden.includes(id)
+        ? prefs.hidden.filter((x) => x !== id)
+        : [...prefs.hidden, id];
+      save({ ...prefs, hidden });
+    },
+    [prefs, save],
+  );
 
-  const move = useCallback((id: WidgetId, dir: -1 | 1) => {
-    const order = [...prefs.order];
-    const i = order.indexOf(id);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= order.length) return;
-    [order[i], order[j]] = [order[j], order[i]];
-    save({ ...prefs, order });
-  }, [prefs, save]);
+  const move = useCallback(
+    (id: WidgetId, dir: -1 | 1) => {
+      const order = [...prefs.order];
+      const i = order.indexOf(id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= order.length) return;
+      [order[i], order[j]] = [order[j], order[i]];
+      save({ ...prefs, order });
+    },
+    [prefs, save],
+  );
 
-  const reorder = useCallback((fromId: WidgetId, toId: WidgetId) => {
-    if (fromId === toId) return;
-    const order = [...prefs.order];
-    const from = order.indexOf(fromId);
-    const to = order.indexOf(toId);
-    if (from < 0 || to < 0) return;
-    order.splice(from, 1);
-    order.splice(to, 0, fromId);
-    save({ ...prefs, order });
-  }, [prefs, save]);
+  const reorder = useCallback(
+    (fromId: WidgetId, toId: WidgetId) => {
+      if (fromId === toId) return;
+      const order = [...prefs.order];
+      const from = order.indexOf(fromId);
+      const to = order.indexOf(toId);
+      if (from < 0 || to < 0) return;
+      order.splice(from, 1);
+      order.splice(to, 0, fromId);
+      save({ ...prefs, order });
+    },
+    [prefs, save],
+  );
 
-  const getOrder = useCallback((id: WidgetId) => {
-
-    const i = prefs.order.indexOf(id);
-    return i < 0 ? 999 : i;
-  }, [prefs]);
+  const getOrder = useCallback(
+    (id: WidgetId) => {
+      const i = prefs.order.indexOf(id);
+      return i < 0 ? 999 : i;
+    },
+    [prefs],
+  );
 
   const setAccent = useCallback((accent: string) => save({ ...prefs, accent }), [prefs, save]);
 
   const reset = useCallback(() => save({ hidden: [], order: [...ALL_IDS], accent: "" }), [save]);
   const hideAll = useCallback(() => save({ ...prefs, hidden: [...ALL_IDS] }), [prefs, save]);
 
-  return { prefs, isVisible, toggle, move, reorder, getOrder, setAccent, reset, hideAll, all: prefs.order.length ? prefs.order : ALL_IDS };
+  return {
+    prefs,
+    isVisible,
+    toggle,
+    move,
+    reorder,
+    getOrder,
+    setAccent,
+    reset,
+    hideAll,
+    all: prefs.order.length ? prefs.order : ALL_IDS,
+  };
 }

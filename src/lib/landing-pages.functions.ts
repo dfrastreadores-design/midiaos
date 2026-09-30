@@ -15,8 +15,19 @@ export type LandingProductItem = {
 };
 
 export type LandingSection =
-  | { type: "hero"; title: string; subtitle?: string; ctaLabel?: string; ctaAnchor?: string; imageUrl?: string }
-  | { type: "features"; title?: string; items: { title: string; description?: string; icon?: string }[] }
+  | {
+      type: "hero";
+      title: string;
+      subtitle?: string;
+      ctaLabel?: string;
+      ctaAnchor?: string;
+      imageUrl?: string;
+    }
+  | {
+      type: "features";
+      title?: string;
+      items: { title: string; description?: string; icon?: string }[];
+    }
   | { type: "stats"; items: { value: string; label: string }[] }
   | { type: "testimonials"; items: { quote: string; author: string; role?: string }[] }
   | { type: "rich_text"; content: string }
@@ -33,7 +44,11 @@ export type LandingSection =
       id?: string;
       title?: string;
       description?: string;
-      fields: { key: "nome" | "email" | "telefone" | "empresa" | "mensagem"; label: string; required?: boolean }[];
+      fields: {
+        key: "nome" | "email" | "telefone" | "empresa" | "mensagem";
+        label: string;
+        required?: boolean;
+      }[];
       submitLabel?: string;
       successMessage?: string;
     };
@@ -68,7 +83,10 @@ const UpsertSchema = z.object({
     .string()
     .min(3)
     .max(80)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug deve conter apenas letras minúsculas, números e hifens"),
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Slug deve conter apenas letras minúsculas, números e hifens",
+    ),
   titulo: z.string().min(1).max(200),
   status: z.enum(["rascunho", "publicada", "arquivada"]).default("rascunho"),
   sections: z.array(SectionSchema).default([]),
@@ -93,8 +111,13 @@ export const listLandingPages = createServerFn({ method: "GET" })
     ]);
     if (error) throw new Error(error.message);
     const counts = new Map<string, number>();
-    (leadCounts ?? []).forEach((l: any) => counts.set(l.landing_page_id, (counts.get(l.landing_page_id) ?? 0) + 1));
-    return (pages ?? []).map((p: any) => ({ ...(p as LandingPage), leads_count: counts.get(p.id) ?? 0 }));
+    (leadCounts ?? []).forEach((l: any) =>
+      counts.set(l.landing_page_id, (counts.get(l.landing_page_id) ?? 0) + 1),
+    );
+    return (pages ?? []).map((p: any) => ({
+      ...(p as LandingPage),
+      leads_count: counts.get(p.id) ?? 0,
+    }));
   });
 
 export const getLandingPage = createServerFn({ method: "GET" })
@@ -111,12 +134,53 @@ export const getLandingPage = createServerFn({ method: "GET" })
   });
 
 const RESERVED_SLUGS = new Set([
-  "agencias","api","aprovar-diretoria","assinar","briefings","calendario","clientes","comissoes",
-  "configuracoes","crm","documentacao","email","financeiro","historico","historico-veiculacao",
-  "influenciadores","landing-pages","layouts","lixeira","login","lovable","lp","materiais-apoio",
-  "metas","minha-conta","monitoramento","owner","permuta","pi","pi-anexos","pos-venda","produtos",
-  "projetos-especiais","propostas","relatorio-sincronizacao","relatorios","site","sitemap.xml",
-  "tarefas","usuarios","veiculos","auth","admin","favicon.ico","robots.txt","assets","public",
+  "agencias",
+  "api",
+  "aprovar-diretoria",
+  "assinar",
+  "briefings",
+  "calendario",
+  "clientes",
+  "comissoes",
+  "configuracoes",
+  "crm",
+  "documentacao",
+  "email",
+  "financeiro",
+  "historico",
+  "historico-veiculacao",
+  "influenciadores",
+  "landing-pages",
+  "layouts",
+  "lixeira",
+  "login",
+  "lovable",
+  "lp",
+  "materiais-apoio",
+  "metas",
+  "minha-conta",
+  "monitoramento",
+  "owner",
+  "permuta",
+  "pi",
+  "pi-anexos",
+  "pos-venda",
+  "produtos",
+  "projetos-especiais",
+  "propostas",
+  "relatorio-sincronizacao",
+  "relatorios",
+  "site",
+  "sitemap.xml",
+  "tarefas",
+  "usuarios",
+  "veiculos",
+  "auth",
+  "admin",
+  "favicon.ico",
+  "robots.txt",
+  "assets",
+  "public",
 ]);
 
 export const upsertLandingPage = createServerFn({ method: "POST" })
@@ -131,11 +195,20 @@ export const upsertLandingPage = createServerFn({ method: "POST" })
     if (data.status === "publicada") payload.published_at = new Date().toISOString();
     let res;
     if (data.id) {
-      res = await supabase.from("landing_pages").update(payload).eq("id", data.id).select().maybeSingle();
+      res = await supabase
+        .from("landing_pages")
+        .update(payload)
+        .eq("id", data.id)
+        .select()
+        .maybeSingle();
     } else {
       // se slug existe, sufixa
       let slug = data.slug;
-      const { data: exists } = await supabase.from("landing_pages").select("id").eq("slug", slug).maybeSingle();
+      const { data: exists } = await supabase
+        .from("landing_pages")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
       if (exists) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
       payload.slug = slug;
       res = await supabase.from("landing_pages").insert(payload).select().maybeSingle();
@@ -155,9 +228,14 @@ export const deleteLandingPage = createServerFn({ method: "POST" })
 
 export const listLeads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { landingPageId?: string }) => z.object({ landingPageId: z.string().uuid().optional() }).parse(d))
+  .inputValidator((d: { landingPageId?: string }) =>
+    z.object({ landingPageId: z.string().uuid().optional() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
-    let q = context.supabase.from("landing_page_leads").select("*").order("created_at", { ascending: false });
+    let q = context.supabase
+      .from("landing_page_leads")
+      .select("*")
+      .order("created_at", { ascending: false });
     if (data.landingPageId) q = q.eq("landing_page_id", data.landingPageId);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -215,13 +293,18 @@ export const generateLandingFromCliente = createServerFn({ method: "POST" })
         .trim()
         .replace(/\s+/g, "-")
         .replace(/-+/g, "-")
-        .slice(0, 60) || "cliente";
+        .slice(0, 60) ||
+      "cliente";
 
     if (RESERVED_SLUGS.has(baseSlug)) {
       throw new Error(`Slug "${baseSlug}" é reservado. Informe outro.`);
     }
     let slug = baseSlug;
-    const { data: exists } = await supabase.from("landing_pages").select("id").eq("slug", slug).maybeSingle();
+    const { data: exists } = await supabase
+      .from("landing_pages")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
     if (exists) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
 
     const localizacao = [cliente.cidade, cliente.uf].filter(Boolean).join("/");
@@ -238,7 +321,8 @@ export const generateLandingFromCliente = createServerFn({ method: "POST" })
       {
         type: "products",
         title: "Vitrine de produtos",
-        description: "Escolha um produto e clique em consultar disponibilidade — retornaremos com valores personalizados.",
+        description:
+          "Escolha um produto e clique em consultar disponibilidade — retornaremos com valores personalizados.",
         ctaLabel: "Consultar disponibilidade",
         items,
       },
@@ -267,7 +351,11 @@ export const generateLandingFromCliente = createServerFn({ method: "POST" })
       meta_title: `${nomeExibicao} — Vitrine de produtos`,
       meta_description: `Consulte disponibilidade dos produtos de ${nomeExibicao}.`,
     };
-    const { data: page, error } = await supabase.from("landing_pages").insert(payload).select().maybeSingle();
+    const { data: page, error } = await supabase
+      .from("landing_pages")
+      .insert(payload)
+      .select()
+      .maybeSingle();
     if (error) throw new Error(error.message);
     return page as unknown as LandingPage;
   });
@@ -287,7 +375,14 @@ export const convertLeadToCliente = createServerFn({ method: "POST" })
     if (lead.cliente_id) return { cliente_id: lead.cliente_id, alreadyConverted: true };
 
     const contatos = [
-      { nome: lead.nome, email: lead.email ?? "", telefone: lead.telefone ?? "", cargo: lead.empresa ?? "", whatsapp: lead.telefone ?? "", ativo: true },
+      {
+        nome: lead.nome,
+        email: lead.email ?? "",
+        telefone: lead.telefone ?? "",
+        cargo: lead.empresa ?? "",
+        whatsapp: lead.telefone ?? "",
+        ativo: true,
+      },
     ];
     const executivoId = (lead as any).landing_pages?.executivo_id ?? null;
     const { data: cliente, error: cErr } = await supabase
@@ -306,7 +401,11 @@ export const convertLeadToCliente = createServerFn({ method: "POST" })
 
     await supabase
       .from("landing_page_leads")
-      .update({ cliente_id: cliente!.id, converted_at: new Date().toISOString(), status: "convertido" })
+      .update({
+        cliente_id: cliente!.id,
+        converted_at: new Date().toISOString(),
+        status: "convertido",
+      })
       .eq("id", data.leadId);
 
     return { cliente_id: cliente!.id, alreadyConverted: false };
@@ -316,14 +415,21 @@ export const convertLeadToCliente = createServerFn({ method: "POST" })
 // ROTAS PÚBLICAS (sem autenticação)
 // ============================================================
 function publicClient() {
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ293Z3Zoamh2cGVhemdsc2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwODYwOTQsImV4cCI6MjA5NDY2MjA5NH0.X0-jxfLmUFTpxUm6O0-802xVK1iNt41He6Gho-oDb0E";
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://odgowgvhjhvpeazglsly.supabase.co";
+  const key =
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ293Z3Zoamh2cGVhemdsc2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwODYwOTQsImV4cCI6MjA5NDY2MjA5NH0.X0-jxfLmUFTpxUm6O0-802xVK1iNt41He6Gho-oDb0E";
+  const url =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    "https://odgowgvhjhvpeazglsly.supabase.co";
   return createClient<Database>(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     global: {
       fetch: (input, init) => {
         const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
+        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
+          h.delete("Authorization");
         h.set("apikey", key);
         return fetch(input, { ...init, headers: h });
       },
@@ -332,9 +438,7 @@ function publicClient() {
 }
 
 export const getPublicLandingPageBySlug = createServerFn({ method: "GET" })
-  .inputValidator((d: { slug: string }) =>
-    z.object({ slug: z.string().min(1).max(100) }).parse(d),
-  )
+  .inputValidator((d: { slug: string }) => z.object({ slug: z.string().min(1).max(100) }).parse(d))
   .handler(async ({ data }) => {
     const supa = publicClient();
     const { data: page, error } = await supa

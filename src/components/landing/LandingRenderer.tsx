@@ -3,19 +3,52 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import type { LandingPage, LandingSection, LandingProductItem } from "@/lib/landing-pages.functions";
+import type {
+  LandingPage,
+  LandingSection,
+  LandingProductItem,
+} from "@/lib/landing-pages.functions";
 import { submitLead } from "@/lib/landing-pages.functions";
 
 const TEMPLATE_STYLES: Record<string, { font: string; radius: string; heroClass: string }> = {
-  modern:  { font: "'Inter', system-ui, sans-serif", radius: "0.75rem", heroClass: "py-24 text-center" },
-  minimal: { font: "'Inter', system-ui, sans-serif", radius: "0.25rem", heroClass: "py-20 text-left max-w-3xl mx-auto" },
-  bold:    { font: "'Archivo Black', Impact, sans-serif", radius: "0.5rem", heroClass: "py-28 text-center uppercase tracking-tight" },
-  elegant: { font: "'Cormorant Garamond', Georgia, serif", radius: "1.25rem", heroClass: "py-24 text-center" },
+  modern: {
+    font: "'Inter', system-ui, sans-serif",
+    radius: "0.75rem",
+    heroClass: "py-24 text-center",
+  },
+  minimal: {
+    font: "'Inter', system-ui, sans-serif",
+    radius: "0.25rem",
+    heroClass: "py-20 text-left max-w-3xl mx-auto",
+  },
+  bold: {
+    font: "'Archivo Black', Impact, sans-serif",
+    radius: "0.5rem",
+    heroClass: "py-28 text-center uppercase tracking-tight",
+  },
+  elegant: {
+    font: "'Cormorant Garamond', Georgia, serif",
+    radius: "1.25rem",
+    heroClass: "py-24 text-center",
+  },
 };
 
-export function LandingRenderer({ page, preview = false }: { page: LandingPage; preview?: boolean }) {
+export function LandingRenderer({
+  page,
+  preview = false,
+}: {
+  page: LandingPage;
+  preview?: boolean;
+}) {
   const cor = page.cor_primaria || "hsl(var(--primary))";
   const corTxt = page.cor_texto || "#ffffff";
   const template = (page as any).template || "modern";
@@ -38,7 +71,14 @@ export function LandingRenderer({ page, preview = false }: { page: LandingPage; 
       ) : null}
       <main>
         {(page.sections || []).map((s, i) => (
-          <SectionView key={i} section={s} slug={page.slug} preview={preview} heroFallback={page.hero_image_url} tpl={tpl} />
+          <SectionView
+            key={i}
+            section={s}
+            slug={page.slug}
+            preview={preview}
+            heroFallback={page.hero_image_url}
+            tpl={tpl}
+          />
         ))}
       </main>
       <footer className="text-center text-xs text-muted-foreground py-6 border-t">
@@ -95,12 +135,16 @@ function SectionView({
     case "features":
       return (
         <section className="px-6 py-16 max-w-5xl mx-auto">
-          {section.title ? <h2 className="text-3xl font-bold text-center mb-10">{section.title}</h2> : null}
+          {section.title ? (
+            <h2 className="text-3xl font-bold text-center mb-10">{section.title}</h2>
+          ) : null}
           <div className="grid md:grid-cols-3 gap-6">
             {section.items.map((it, i) => (
               <div key={i} className="rounded-lg border p-6 space-y-2">
                 <h3 className="font-semibold text-lg">{it.title}</h3>
-                {it.description ? <p className="text-sm text-muted-foreground">{it.description}</p> : null}
+                {it.description ? (
+                  <p className="text-sm text-muted-foreground">{it.description}</p>
+                ) : null}
               </div>
             ))}
           </div>
@@ -162,7 +206,9 @@ function SectionView({
     case "products":
       return (
         <section className="px-6 py-16 max-w-6xl mx-auto">
-          {section.title ? <h2 className="text-3xl font-bold text-center mb-2">{section.title}</h2> : null}
+          {section.title ? (
+            <h2 className="text-3xl font-bold text-center mb-2">{section.title}</h2>
+          ) : null}
           {section.description ? (
             <p className="text-center text-muted-foreground mb-10">{section.description}</p>
           ) : null}
@@ -175,27 +221,43 @@ function SectionView({
               >
                 <div
                   className="aspect-video bg-muted flex items-center justify-center overflow-hidden"
-                  style={{ backgroundImage: it.imagem_url ? `url(${it.imagem_url})` : undefined, backgroundSize: "cover", backgroundPosition: "center" }}
+                  style={{
+                    backgroundImage: it.imagem_url ? `url(${it.imagem_url})` : undefined,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
                 >
-                  {!it.imagem_url && <span className="text-xs text-muted-foreground">Sem imagem</span>}
+                  {!it.imagem_url && (
+                    <span className="text-xs text-muted-foreground">Sem imagem</span>
+                  )}
                 </div>
                 <div className="p-4 flex flex-col gap-2 flex-1">
                   {it.categoria && (
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{it.categoria}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {it.categoria}
+                    </span>
                   )}
                   <h3 className="font-semibold text-lg leading-tight">{it.nome}</h3>
                   {it.endereco && <p className="text-xs text-muted-foreground">{it.endereco}</p>}
-                  {it.descricao && <p className="text-sm text-muted-foreground line-clamp-3">{it.descricao}</p>}
+                  {it.descricao && (
+                    <p className="text-sm text-muted-foreground line-clamp-3">{it.descricao}</p>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
                       try {
-                        const ev = new CustomEvent("lp:open-availability", { detail: { product: it } });
+                        const ev = new CustomEvent("lp:open-availability", {
+                          detail: { product: it },
+                        });
                         window.dispatchEvent(ev);
                       } catch {}
                     }}
                     className="mt-auto inline-flex items-center justify-center px-4 py-2 text-sm font-medium"
-                    style={{ background: "var(--lp-color)", color: "var(--lp-text)", borderRadius: "var(--lp-radius)" }}
+                    style={{
+                      background: "var(--lp-color)",
+                      color: "var(--lp-text)",
+                      borderRadius: "var(--lp-radius)",
+                    }}
                   >
                     {it.cta_label || section.ctaLabel || "Consultar disponibilidade"}
                   </button>
@@ -248,7 +310,9 @@ function FormSection({
     }
     setLoading(true);
     try {
-      const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+      const params = new URLSearchParams(
+        typeof window !== "undefined" ? window.location.search : "",
+      );
       await submitLead({
         data: {
           slug,
@@ -272,8 +336,12 @@ function FormSection({
 
   return (
     <section id="form" className="px-6 py-16 max-w-2xl mx-auto">
-      {section.title ? <h2 className="text-3xl font-bold text-center mb-2">{section.title}</h2> : null}
-      {section.description ? <p className="text-center text-muted-foreground mb-6">{section.description}</p> : null}
+      {section.title ? (
+        <h2 className="text-3xl font-bold text-center mb-2">{section.title}</h2>
+      ) : null}
+      {section.description ? (
+        <p className="text-center text-muted-foreground mb-6">{section.description}</p>
+      ) : null}
       {sent ? (
         <div className="rounded-lg border p-6 text-center">
           {section.successMessage || "Recebemos seu contato. Em breve retornaremos!"}
@@ -320,7 +388,13 @@ function AvailabilityModal({ slug, preview }: { slug: string; preview: boolean }
   const [product, setProduct] = useState<LandingProductItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [values, setValues] = useState({ nome: "", email: "", telefone: "", empresa: "", mensagem: "" });
+  const [values, setValues] = useState({
+    nome: "",
+    email: "",
+    telefone: "",
+    empresa: "",
+    mensagem: "",
+  });
 
   useEffect(() => {
     function onOpen(e: Event) {
@@ -346,7 +420,9 @@ function AvailabilityModal({ slug, preview }: { slug: string; preview: boolean }
     }
     setLoading(true);
     try {
-      const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+      const params = new URLSearchParams(
+        typeof window !== "undefined" ? window.location.search : "",
+      );
       await submitLead({
         data: {
           slug,
@@ -391,30 +467,59 @@ function AvailabilityModal({ slug, preview }: { slug: string; preview: boolean }
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <Label>Nome <span className="text-destructive">*</span></Label>
-              <Input required value={values.nome} onChange={(e) => setValues((v) => ({ ...v, nome: e.target.value }))} />
+              <Label>
+                Nome <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                required
+                value={values.nome}
+                onChange={(e) => setValues((v) => ({ ...v, nome: e.target.value }))}
+              />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label>E-mail <span className="text-destructive">*</span></Label>
-                <Input type="email" required value={values.email} onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))} />
+                <Label>
+                  E-mail <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  type="email"
+                  required
+                  value={values.email}
+                  onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
+                />
               </div>
               <div>
                 <Label>Telefone / WhatsApp</Label>
-                <Input value={values.telefone} onChange={(e) => setValues((v) => ({ ...v, telefone: e.target.value }))} />
+                <Input
+                  value={values.telefone}
+                  onChange={(e) => setValues((v) => ({ ...v, telefone: e.target.value }))}
+                />
               </div>
             </div>
             <div>
               <Label>Empresa</Label>
-              <Input value={values.empresa} onChange={(e) => setValues((v) => ({ ...v, empresa: e.target.value }))} />
+              <Input
+                value={values.empresa}
+                onChange={(e) => setValues((v) => ({ ...v, empresa: e.target.value }))}
+              />
             </div>
             <div>
               <Label>Mensagem</Label>
-              <Textarea rows={4} value={values.mensagem} onChange={(e) => setValues((v) => ({ ...v, mensagem: e.target.value }))} />
+              <Textarea
+                rows={4}
+                value={values.mensagem}
+                onChange={(e) => setValues((v) => ({ ...v, mensagem: e.target.value }))}
+              />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={loading} style={{ background: "var(--lp-color)", color: "var(--lp-text)" }}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                style={{ background: "var(--lp-color)", color: "var(--lp-text)" }}
+              >
                 {loading ? "Enviando..." : "Solicitar contato"}
               </Button>
             </DialogFooter>

@@ -17,10 +17,19 @@ const ProdutoSchema = z.object({
   valor_unit: z.number().min(0),
   ativo: z.boolean().default(true),
   observacao: z.string().max(1000).optional().nullable(),
-  link_modelo: z.string().trim().url().max(500).optional().nullable().or(z.literal("").transform(() => null)),
+  link_modelo: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)),
   requer_producao: z.boolean().default(false),
   emissora_id: z.string().uuid().optional().nullable(),
-  veiculacao_tipo: z.enum(["livre", "dias_uteis", "seg_sab", "dias_fixos", "dias_semana"]).default("livre"),
+  veiculacao_tipo: z
+    .enum(["livre", "dias_uteis", "seg_sab", "dias_fixos", "dias_semana"])
+    .default("livre"),
   dias_fixos: z.array(z.number().int().min(1).max(31)).default([]),
   dias_semana_fixos: z.array(z.number().int().min(0).max(6)).default([]),
   endereco_ponto: z.string().max(300).optional().nullable(),
@@ -47,7 +56,10 @@ function normalizeProdutoRow(row: any) {
   let parceiro_id = row.parceiro_id || null;
   let parceiro_cnpj = row.parceiro_cnpj || null;
   let parceiro_nome = row.parceiro_nome || null;
-  let comissao_inquilino_pct = row.comissao_inquilino_pct !== undefined && row.comissao_inquilino_pct !== null ? Number(row.comissao_inquilino_pct) : null;
+  let comissao_inquilino_pct =
+    row.comissao_inquilino_pct !== undefined && row.comissao_inquilino_pct !== null
+      ? Number(row.comissao_inquilino_pct)
+      : null;
   let cep = row.cep || null;
   let fotos: string[] = [];
 
@@ -80,7 +92,9 @@ function normalizeProdutoRow(row: any) {
           cep = parsed._cep;
         }
         if (fotos.length === 0 && Array.isArray(parsed._fotos)) {
-          fotos = parsed._fotos.filter((f: any) => typeof f === "string" && f.trim().length > 0).slice(0, 2);
+          fotos = parsed._fotos
+            .filter((f: any) => typeof f === "string" && f.trim().length > 0)
+            .slice(0, 2);
         }
       }
     } catch {
@@ -99,7 +113,10 @@ function normalizeProdutoRow(row: any) {
     parceiro_id: parceiro_id || null,
     parceiro_cnpj: parceiro_cnpj ? String(parceiro_cnpj).trim() : null,
     parceiro_nome: parceiro_nome ? String(parceiro_nome).trim() : null,
-    comissao_inquilino_pct: comissao_inquilino_pct !== null && !isNaN(comissao_inquilino_pct) ? comissao_inquilino_pct : null,
+    comissao_inquilino_pct:
+      comissao_inquilino_pct !== null && !isNaN(comissao_inquilino_pct)
+        ? comissao_inquilino_pct
+        : null,
     fotos: fotos,
   };
 }
@@ -122,9 +139,7 @@ export const listProdutos = createServerFn({ method: "GET" })
       query = query.eq("tenant_id", tenantId);
     }
 
-    const { data, error } = await query
-      .order("midia")
-      .order("nome");
+    const { data, error } = await query.order("midia").order("nome");
     if (error) throw new Error(error.message);
     return (data ?? []).map(normalizeProdutoRow);
   });
@@ -143,7 +158,10 @@ export const upsertProduto = createServerFn({ method: "POST" })
     const parceiroId = data.parceiro_id || null;
     const parceiroCnpj = data.parceiro_cnpj ? data.parceiro_cnpj.trim() : null;
     const parceiroNome = data.parceiro_nome ? data.parceiro_nome.trim() : null;
-    const comissaoInquilinoPct = data.comissao_inquilino_pct !== undefined && data.comissao_inquilino_pct !== null ? Number(data.comissao_inquilino_pct) : null;
+    const comissaoInquilinoPct =
+      data.comissao_inquilino_pct !== undefined && data.comissao_inquilino_pct !== null
+        ? Number(data.comissao_inquilino_pct)
+        : null;
     const cep = data.cep ? data.cep.trim() : null;
     const fotos = Array.isArray(data.fotos)
       ? data.fotos.filter((f: any) => typeof f === "string" && f.trim().length > 0).slice(0, 2)
@@ -168,7 +186,13 @@ export const upsertProduto = createServerFn({ method: "POST" })
     let res = await q;
 
     // Se as colunas parceiro_*, comissao_inquilino_pct, cep ou fotos ainda não existirem na tabela SQL do Supabase:
-    if (res.error && (res.error.message.toLowerCase().includes("parceiro") || res.error.message.toLowerCase().includes("cep") || res.error.message.toLowerCase().includes("comissao") || res.error.message.toLowerCase().includes("foto"))) {
+    if (
+      res.error &&
+      (res.error.message.toLowerCase().includes("parceiro") ||
+        res.error.message.toLowerCase().includes("cep") ||
+        res.error.message.toLowerCase().includes("comissao") ||
+        res.error.message.toLowerCase().includes("foto"))
+    ) {
       delete payload.parceiro_id;
       delete payload.parceiro_cnpj;
       delete payload.parceiro_nome;
@@ -232,7 +256,7 @@ export const listProdutoTipos = createServerFn({ method: "GET" })
 
       // Tenta filtrar pela coluna tenant_id
       let { data, error } = await context.supabase
-        .from("produto_tipos")
+        .from("produto_tipos" as any)
         .select("*")
         .eq("tenant_id", tenantId)
         .order("midia")
@@ -288,12 +312,14 @@ export const listProdutoTipos = createServerFn({ method: "GET" })
 
 export const upsertProdutoTipo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => 
-    z.object({
-      id: z.string().uuid().optional(),
-      nome: z.string().min(1).max(100),
-      midia: z.enum(["TV", "Radio", "DOOH"]),
-    }).parse(d)
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        id: z.string().uuid().optional(),
+        nome: z.string().min(1).max(100),
+        midia: z.enum(["TV", "Radio", "DOOH"]),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { data: prof } = await context.supabase
@@ -400,7 +426,10 @@ export const importProdutosBulk = createServerFn({ method: "POST" })
       parceiro_id: rest.parceiro_id || null,
       parceiro_cnpj: rest.parceiro_cnpj ? rest.parceiro_cnpj.trim() : null,
       parceiro_nome: rest.parceiro_nome ? rest.parceiro_nome.trim() : null,
-      comissao_inquilino_pct: rest.comissao_inquilino_pct !== undefined && rest.comissao_inquilino_pct !== null ? Number(rest.comissao_inquilino_pct) : null,
+      comissao_inquilino_pct:
+        rest.comissao_inquilino_pct !== undefined && rest.comissao_inquilino_pct !== null
+          ? Number(rest.comissao_inquilino_pct)
+          : null,
     }));
 
     const errors: { nome: string; message: string }[] = [];
@@ -409,7 +438,13 @@ export const importProdutosBulk = createServerFn({ method: "POST" })
     // Helper para inserir uma linha com fallback
     const insertRow = async (row: any) => {
       let r = await supabase.from("produtos").insert(row as never);
-      if (r.error && (r.error.message.toLowerCase().includes("parceiro") || r.error.message.toLowerCase().includes("cep") || r.error.message.toLowerCase().includes("comissao") || r.error.message.toLowerCase().includes("foto"))) {
+      if (
+        r.error &&
+        (r.error.message.toLowerCase().includes("parceiro") ||
+          r.error.message.toLowerCase().includes("cep") ||
+          r.error.message.toLowerCase().includes("comissao") ||
+          r.error.message.toLowerCase().includes("foto"))
+      ) {
         const rowFallback = { ...row };
         const pId = rowFallback.parceiro_id;
         const pCnpj = rowFallback.parceiro_cnpj;
@@ -436,7 +471,8 @@ export const importProdutosBulk = createServerFn({ method: "POST" })
         }
         if (pId) metaObj._parceiro_id = pId;
         metaObj._parceiro = pCnpj ? { cnpj: pCnpj, nome: pNome } : null;
-        if (pComissao !== null && pComissao !== undefined) metaObj._comissao_inquilino_pct = pComissao;
+        if (pComissao !== null && pComissao !== undefined)
+          metaObj._comissao_inquilino_pct = pComissao;
         if (pCep) metaObj._cep = pCep;
         if (Array.isArray(pFotos) && pFotos.length > 0) metaObj._fotos = pFotos.slice(0, 2);
         rowFallback.detalhes_venda = JSON.stringify(metaObj);

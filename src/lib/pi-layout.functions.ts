@@ -41,21 +41,25 @@ export const getPiLayout = createServerFn({ method: "GET" })
 export const savePiLayout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      corPrimaria: z.string(),
-      corTexto: z.string(),
-      mostrarLogoTenant: z.boolean(),
-      mostrarLogoEmissora: z.boolean(),
-      rodapeTexto: z.string(),
-      observacaoPadrao: z.string(),
-      margemMm: z.number().min(0).max(30),
-      tamanhoFonteBase: z.number().min(6).max(14),
-    }).parse(d),
+    z
+      .object({
+        corPrimaria: z.string(),
+        corTexto: z.string(),
+        mostrarLogoTenant: z.boolean(),
+        mostrarLogoEmissora: z.boolean(),
+        rodapeTexto: z.string(),
+        observacaoPadrao: z.string(),
+        margemMm: z.number().min(0).max(30),
+        tamanhoFonteBase: z.number().min(6).max(14),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("system_settings")
-      .upsert({ key: KEY, value: data, updated_by: context.userId } as never, { onConflict: "key" });
+      .upsert({ key: KEY, value: data, updated_by: context.userId } as never, {
+        onConflict: "key",
+      });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -68,4 +72,6 @@ export async function loadPiLayoutCached(): Promise<PiLayoutConfig> {
   }
   return _layoutCache;
 }
-export function invalidatePiLayoutCache() { _layoutCache = null; }
+export function invalidatePiLayoutCache() {
+  _layoutCache = null;
+}

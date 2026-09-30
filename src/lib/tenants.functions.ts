@@ -8,7 +8,8 @@ async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
   }
   const { data, error } = await ctx.supabase.rpc("is_super_admin", { _user_id: ctx.userId });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Acesso restrito ao proprietário da plataforma (rafaelrodrigo.as@gmail.com)");
+  if (!data)
+    throw new Error("Acesso restrito ao proprietário da plataforma (rafaelrodrigo.as@gmail.com)");
 }
 
 export type TenantInput = {
@@ -87,42 +88,65 @@ export const getOwnerOverview = createServerFn({ method: "GET" })
     const ini7 = new Date(hoje.getTime() - 7 * 86400000).toISOString();
     const fim30 = new Date(hoje.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
-    const [tenants, profiles, pis, propostas, clientes, agencias, vencendo, ativos7d, novos30d] = await Promise.all([
-      sb.from("tenants").select("id, razao_social, nome_fantasia, status, plano, valor_mensal, bloqueado"),
-      sb.from("profiles").select("id, tenant_id, last_active_at, created_at"),
-      sb.from("pis").select("id, tenant_id, valor_negociado, status, created_at"),
-      sb.from("propostas").select("id, tenant_id, valor_total, status, created_at"),
-      sb.from("clientes").select("id, tenant_id"),
-      sb.from("agencias").select("id, tenant_id"),
-      sb.from("tenants").select("id, razao_social, proximo_vencimento, valor_mensal, status")
-        .not("proximo_vencimento", "is", null)
-        .lte("proximo_vencimento", fim30)
-        .order("proximo_vencimento", { ascending: true }).limit(10),
-      sb.from("profiles").select("id, tenant_id").gte("last_active_at", ini7),
-      sb.from("profiles").select("id, nome, email, tenant_id, created_at")
-        .gte("created_at", ini30).order("created_at", { ascending: false }).limit(10),
-    ]);
+    const [tenants, profiles, pis, propostas, clientes, agencias, vencendo, ativos7d, novos30d] =
+      await Promise.all([
+        sb
+          .from("tenants")
+          .select("id, razao_social, nome_fantasia, status, plano, valor_mensal, bloqueado"),
+        sb.from("profiles").select("id, tenant_id, last_active_at, created_at"),
+        sb.from("pis").select("id, tenant_id, valor_negociado, status, created_at"),
+        sb.from("propostas").select("id, tenant_id, valor_total, status, created_at"),
+        sb.from("clientes").select("id, tenant_id"),
+        sb.from("agencias").select("id, tenant_id"),
+        sb
+          .from("tenants")
+          .select("id, razao_social, proximo_vencimento, valor_mensal, status")
+          .not("proximo_vencimento", "is", null)
+          .lte("proximo_vencimento", fim30)
+          .order("proximo_vencimento", { ascending: true })
+          .limit(10),
+        sb.from("profiles").select("id, tenant_id").gte("last_active_at", ini7),
+        sb
+          .from("profiles")
+          .select("id, nome, email, tenant_id, created_at")
+          .gte("created_at", ini30)
+          .order("created_at", { ascending: false })
+          .limit(10),
+      ]);
 
     const tenantsArr = (tenants.data ?? []) as any[];
     const tMap = new Map(tenantsArr.map((t) => [t.id, t]));
 
     const totalsByTenant = new Map<string, any>();
     const bump = (tid: string, key: string, n: number = 1) => {
-      const cur = totalsByTenant.get(tid) ?? { pis: 0, propostas: 0, clientes: 0, agencias: 0, usuarios: 0, mau: 0, valor_pi: 0 };
+      const cur = totalsByTenant.get(tid) ?? {
+        pis: 0,
+        propostas: 0,
+        clientes: 0,
+        agencias: 0,
+        usuarios: 0,
+        mau: 0,
+        valor_pi: 0,
+      };
       cur[key] = (cur[key] ?? 0) + n;
       totalsByTenant.set(tid, cur);
     };
     for (const p of (profiles.data ?? []) as any[]) if (p.tenant_id) bump(p.tenant_id, "usuarios");
     for (const p of (ativos7d.data ?? []) as any[]) if (p.tenant_id) bump(p.tenant_id, "mau");
-    for (const r of (pis.data ?? []) as any[]) if (r.tenant_id) { bump(r.tenant_id, "pis"); bump(r.tenant_id, "valor_pi", Number(r.valor_negociado || 0)); }
-    for (const r of (propostas.data ?? []) as any[]) if (r.tenant_id) bump(r.tenant_id, "propostas");
+    for (const r of (pis.data ?? []) as any[])
+      if (r.tenant_id) {
+        bump(r.tenant_id, "pis");
+        bump(r.tenant_id, "valor_pi", Number(r.valor_negociado || 0));
+      }
+    for (const r of (propostas.data ?? []) as any[])
+      if (r.tenant_id) bump(r.tenant_id, "propostas");
     for (const r of (clientes.data ?? []) as any[]) if (r.tenant_id) bump(r.tenant_id, "clientes");
     for (const r of (agencias.data ?? []) as any[]) if (r.tenant_id) bump(r.tenant_id, "agencias");
 
     const top = Array.from(totalsByTenant.entries())
       .map(([id, v]) => ({ id, ...(tMap.get(id) ?? {}), ...v }))
       .filter((x) => x.razao_social)
-      .sort((a, b) => (b.pis + b.propostas) - (a.pis + a.propostas))
+      .sort((a, b) => b.pis + b.propostas - (a.pis + a.propostas))
       .slice(0, 8);
 
     const pisArr = (pis.data ?? []) as any[];
@@ -150,7 +174,6 @@ export const getOwnerOverview = createServerFn({ method: "GET" })
     };
   });
 
-
 /** Relatório financeiro do SaaS (assinaturas dos clientes do mídia.OS) */
 export const getOwnerFinanceiro = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -158,10 +181,13 @@ export const getOwnerFinanceiro = createServerFn({ method: "GET" })
     await assertSuperAdmin(context);
     const { data, error } = await context.supabase
       .from("tenants")
-      .select("id, razao_social, nome_fantasia, plano, ciclo, valor_mensal, status, proximo_vencimento, data_inicio, bloqueado, contato_email, contato_whatsapp, proposta_layout_padrao");
+      .select(
+        "id, razao_social, nome_fantasia, plano, ciclo, valor_mensal, status, proximo_vencimento, data_inicio, bloqueado, contato_email, contato_whatsapp, proposta_layout_padrao",
+      );
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as any[];
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
     const in7 = new Date(hoje.getTime() + 7 * 86400000);
     const in30 = new Date(hoje.getTime() + 30 * 86400000);
 
@@ -173,12 +199,24 @@ export const getOwnerFinanceiro = createServerFn({ method: "GET" })
     const arr = mrr * 12;
     const ticketMedio = ativos.length ? mrr / ativos.length : 0;
 
-    const vencidos = rows.filter((r) => r.proximo_vencimento && new Date(r.proximo_vencimento) < hoje && !r.bloqueado);
+    const vencidos = rows.filter(
+      (r) => r.proximo_vencimento && new Date(r.proximo_vencimento) < hoje && !r.bloqueado,
+    );
     const valorVencido = vencidos.reduce((s, r) => s + Number(r.valor_mensal || 0), 0);
     const valorBloqueado = inadimplentes.reduce((s, r) => s + Number(r.valor_mensal || 0), 0);
 
-    const venc7 = rows.filter((r) => r.proximo_vencimento && new Date(r.proximo_vencimento) >= hoje && new Date(r.proximo_vencimento) <= in7);
-    const venc30 = rows.filter((r) => r.proximo_vencimento && new Date(r.proximo_vencimento) >= hoje && new Date(r.proximo_vencimento) <= in30);
+    const venc7 = rows.filter(
+      (r) =>
+        r.proximo_vencimento &&
+        new Date(r.proximo_vencimento) >= hoje &&
+        new Date(r.proximo_vencimento) <= in7,
+    );
+    const venc30 = rows.filter(
+      (r) =>
+        r.proximo_vencimento &&
+        new Date(r.proximo_vencimento) >= hoje &&
+        new Date(r.proximo_vencimento) <= in30,
+    );
     const valorVenc7 = venc7.reduce((s, r) => s + Number(r.valor_mensal || 0), 0);
     const valorVenc30 = venc30.reduce((s, r) => s + Number(r.valor_mensal || 0), 0);
 
@@ -193,7 +231,9 @@ export const getOwnerFinanceiro = createServerFn({ method: "GET" })
 
     return {
       resumo: {
-        mrr, arr, ticket_medio: ticketMedio,
+        mrr,
+        arr,
+        ticket_medio: ticketMedio,
         clientes_ativos: ativos.length,
         clientes_trial: trials.length,
         clientes_inadimplentes: inadimplentes.length,
@@ -206,25 +246,29 @@ export const getOwnerFinanceiro = createServerFn({ method: "GET" })
       vencidos: vencidos
         .sort((a, b) => +new Date(a.proximo_vencimento) - +new Date(b.proximo_vencimento))
         .map((r) => ({
-          id: r.id, razao_social: r.razao_social, plano: r.plano,
+          id: r.id,
+          razao_social: r.razao_social,
+          plano: r.plano,
           valor_mensal: Number(r.valor_mensal || 0),
           proximo_vencimento: r.proximo_vencimento,
           dias_atraso: Math.floor((+hoje - +new Date(r.proximo_vencimento)) / 86400000),
-          contato_email: r.contato_email, contato_whatsapp: r.contato_whatsapp,
+          contato_email: r.contato_email,
+          contato_whatsapp: r.contato_whatsapp,
         })),
       a_receber: venc30
         .sort((a, b) => +new Date(a.proximo_vencimento) - +new Date(b.proximo_vencimento))
         .map((r) => ({
-          id: r.id, razao_social: r.razao_social, plano: r.plano,
+          id: r.id,
+          razao_social: r.razao_social,
+          plano: r.plano,
           valor_mensal: Number(r.valor_mensal || 0),
           proximo_vencimento: r.proximo_vencimento,
           dias_para_vencer: Math.ceil((+new Date(r.proximo_vencimento) - +hoje) / 86400000),
-          contato_email: r.contato_email, contato_whatsapp: r.contato_whatsapp,
+          contato_email: r.contato_email,
+          contato_whatsapp: r.contato_whatsapp,
         })),
     };
   });
-
-
 
 export const upsertTenant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -258,7 +302,10 @@ export const getTenantDetails = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     const { data: tenant, error: tErr } = await context.supabase
-      .from("tenants").select("*").eq("id", data.id).single();
+      .from("tenants")
+      .select("*")
+      .eq("id", data.id)
+      .single();
     if (tErr) throw new Error(tErr.message);
 
     const { data: profiles } = await context.supabase
@@ -272,18 +319,14 @@ export const getTenantDetails = createServerFn({ method: "POST" })
         const { data: u } = await supabaseAdmin.auth.admin.getUserById(p.id);
         const lastSignIn = u?.user?.last_sign_in_at ?? null;
         const lastActive = p.last_active_at ?? null;
-        const ultimo = [lastSignIn, lastActive]
-          .filter(Boolean)
-          .sort()
-          .pop() ?? null;
+        const ultimo = [lastSignIn, lastActive].filter(Boolean).sort().pop() ?? null;
         return {
           ...p,
           last_sign_in_at: ultimo,
           banned_until: (u?.user as any)?.banned_until ?? null,
         };
-      })
+      }),
     );
-
 
     const userIds = (profiles ?? []).map((p: any) => p.id);
     let historico: any[] = [];
@@ -298,11 +341,26 @@ export const getTenantDetails = createServerFn({ method: "POST" })
     }
 
     const [pisR, propsR, cliR, agR, prodR] = await Promise.all([
-      context.supabase.from("pis").select("id, valor_negociado, status, created_at", { count: "exact" }).eq("tenant_id", data.id),
-      context.supabase.from("propostas").select("id", { count: "exact", head: true }).eq("tenant_id", data.id),
-      context.supabase.from("clientes").select("id", { count: "exact", head: true }).eq("tenant_id", data.id),
-      context.supabase.from("agencias").select("id", { count: "exact", head: true }).eq("tenant_id", data.id),
-      context.supabase.from("produtos").select("id", { count: "exact", head: true }).eq("tenant_id", data.id),
+      context.supabase
+        .from("pis")
+        .select("id, valor_negociado, status, created_at", { count: "exact" })
+        .eq("tenant_id", data.id),
+      context.supabase
+        .from("propostas")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", data.id),
+      context.supabase
+        .from("clientes")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", data.id),
+      context.supabase
+        .from("agencias")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", data.id),
+      context.supabase
+        .from("produtos")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", data.id),
     ]);
     const pisRows = (pisR.data ?? []) as any[];
     const stats = {
@@ -312,8 +370,14 @@ export const getTenantDetails = createServerFn({ method: "POST" })
       agencias: agR.count ?? 0,
       produtos: prodR.count ?? 0,
       valor_pis: pisRows.reduce((s, r) => s + Number(r.valor_negociado || 0), 0),
-      pis_aprovados: pisRows.filter((r) => ["aprovado","faturado","veiculado","encerrado"].includes(r.status)).length,
-      ultima_atividade: pisRows.map((r) => r.created_at).sort().pop() ?? null,
+      pis_aprovados: pisRows.filter((r) =>
+        ["aprovado", "faturado", "veiculado", "encerrado"].includes(r.status),
+      ).length,
+      ultima_atividade:
+        pisRows
+          .map((r) => r.created_at)
+          .sort()
+          .pop() ?? null,
     };
 
     return { tenant, usuarios, historico, stats };
@@ -342,20 +406,24 @@ export const setTenantBloqueio = createServerFn({ method: "POST" })
       .update({
         bloqueado: data.bloqueado,
         bloqueado_em: data.bloqueado ? new Date().toISOString() : null,
-        bloqueado_motivo: data.bloqueado ? data.motivo ?? null : null,
+        bloqueado_motivo: data.bloqueado ? (data.motivo ?? null) : null,
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
 
     // Banuje/desbanuje usuários do tenant via Admin API
     const { data: profs } = await context.supabase
-      .from("profiles").select("id").eq("tenant_id", data.id);
+      .from("profiles")
+      .select("id")
+      .eq("tenant_id", data.id);
     const ids = (profs ?? []).map((p: any) => p.id);
     if (ids.length) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const banned_until = data.bloqueado ? "2099-12-31T23:59:59Z" : "none";
       await Promise.all(
-        ids.map((uid) => supabaseAdmin.auth.admin.updateUserById(uid, { ban_duration: banned_until } as any))
+        ids.map((uid) =>
+          supabaseAdmin.auth.admin.updateUserById(uid, { ban_duration: banned_until } as any),
+        ),
       );
     }
     return { ok: true };
@@ -369,7 +437,10 @@ export const renovarTenantVencimento = createServerFn({ method: "POST" })
     await assertSuperAdmin(context);
     const dias = data.dias ?? 30;
     const { data: t, error: e1 } = await context.supabase
-      .from("tenants").select("proximo_vencimento").eq("id", data.id).single();
+      .from("tenants")
+      .select("proximo_vencimento")
+      .eq("id", data.id)
+      .single();
     if (e1) throw new Error(e1.message);
     const base = t?.proximo_vencimento ? new Date(t.proximo_vencimento) : new Date();
     if (base.getTime() < Date.now()) base.setTime(Date.now());
@@ -409,18 +480,26 @@ export const signOutTenant = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     const { data: profs, error } = await context.supabase
-      .from("profiles").select("id").eq("tenant_id", data.tenant_id);
+      .from("profiles")
+      .select("id")
+      .eq("tenant_id", data.tenant_id);
     if (error) throw new Error(error.message);
     const ids = (profs ?? []).map((p: any) => p.id as string);
     const url = process.env.SUPABASE_URL!;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    await Promise.all(ids.map((uid) =>
-      fetch(`${url}/auth/v1/admin/users/${uid}/logout`, {
-        method: "POST",
-        headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ scope: "global" }),
-      })
-    ));
+    await Promise.all(
+      ids.map((uid) =>
+        fetch(`${url}/auth/v1/admin/users/${uid}/logout`, {
+          method: "POST",
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ scope: "global" }),
+        }),
+      ),
+    );
     return { ok: true, total: ids.length };
   });
 
@@ -451,28 +530,38 @@ export const autoBloquearInadimplentes = createServerFn({ method: "POST" })
         })
         .eq("id", t.id);
       const { data: profs } = await context.supabase
-        .from("profiles").select("id").eq("tenant_id", t.id);
+        .from("profiles")
+        .select("id")
+        .eq("tenant_id", t.id);
       const ids = ((profs ?? []) as any[]).map((p) => p.id);
-      await Promise.all(ids.map((uid) =>
-        supabaseAdmin.auth.admin.updateUserById(uid, { ban_duration: "2099-12-31T23:59:59Z" } as any)
-      ));
+      await Promise.all(
+        ids.map((uid) =>
+          supabaseAdmin.auth.admin.updateUserById(uid, {
+            ban_duration: "2099-12-31T23:59:59Z",
+          } as any),
+        ),
+      );
     }
     return { ok: true, total: lista.length };
   });
-
-
 
 /** Para o app: lê apenas a mensagem de alerta / bloqueio do tenant do próprio usuário. */
 export const getMyTenantAlert = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: prof } = await context.supabase
-      .from("profiles").select("tenant_id").eq("id", context.userId).single();
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", context.userId)
+      .single();
     if (!prof?.tenant_id) return null;
     const { data: t } = await context.supabase
       .from("tenants")
-      .select("razao_social, mensagem_alerta, bloqueado, bloqueado_motivo, proximo_vencimento, status")
-      .eq("id", prof.tenant_id).single();
+      .select(
+        "razao_social, mensagem_alerta, bloqueado, bloqueado_motivo, proximo_vencimento, status",
+      )
+      .eq("id", prof.tenant_id)
+      .single();
     return t;
   });
 
@@ -481,13 +570,28 @@ export const getMyTenantBranding = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: prof } = await context.supabase
-      .from("profiles").select("tenant_id").eq("id", context.userId).single();
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", context.userId)
+      .single();
     if (!prof?.tenant_id) return null;
     const { data: t } = await context.supabase
       .from("tenants")
-      .select("razao_social, nome_fantasia, logo_url, status, plano, produto_marca, cor_primaria, dominio_proprio")
-      .eq("id", prof.tenant_id).single();
-    return t as { razao_social: string; nome_fantasia: string | null; logo_url: string | null; status: string | null; plano: string | null; produto_marca: string | null; cor_primaria: string | null; dominio_proprio: string | null } | null;
+      .select(
+        "razao_social, nome_fantasia, logo_url, status, plano, produto_marca, cor_primaria, dominio_proprio",
+      )
+      .eq("id", prof.tenant_id)
+      .single();
+    return t as {
+      razao_social: string;
+      nome_fantasia: string | null;
+      logo_url: string | null;
+      status: string | null;
+      plano: string | null;
+      produto_marca: string | null;
+      cor_primaria: string | null;
+      dominio_proprio: string | null;
+    } | null;
   });
 
 /** Retorna o perfil completo da empresa (tenant) vinculada ao usuário logado */
@@ -495,11 +599,16 @@ export const getMeuTenantPerfil = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: prof } = await context.supabase
-      .from("profiles").select("tenant_id").eq("id", context.userId).single();
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", context.userId)
+      .single();
     if (!prof?.tenant_id) return null;
     const { data: t, error } = await context.supabase
       .from("tenants")
-      .select("id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email, contato_whatsapp, logo_url, cor_primaria, produto_marca, status, plano, proximo_vencimento, created_at")
+      .select(
+        "id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email, contato_whatsapp, logo_url, cor_primaria, produto_marca, status, plano, proximo_vencimento, created_at",
+      )
       .eq("id", prof.tenant_id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -509,16 +618,18 @@ export const getMeuTenantPerfil = createServerFn({ method: "GET" })
 /** Permite que administradores da empresa atualizem os dados cadastrais da sua própria empresa */
 export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
-    razao_social: string;
-    nome_fantasia?: string | null;
-    cnpj?: string | null;
-    contato_nome?: string | null;
-    contato_email?: string | null;
-    contato_whatsapp?: string | null;
-    logo_url?: string | null;
-    cor_primaria?: string | null;
-  }) => d)
+  .inputValidator(
+    (d: {
+      razao_social: string;
+      nome_fantasia?: string | null;
+      cnpj?: string | null;
+      contato_nome?: string | null;
+      contato_email?: string | null;
+      contato_whatsapp?: string | null;
+      logo_url?: string | null;
+      cor_primaria?: string | null;
+    }) => d,
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: userAuth } = await supabase.auth.getUser();
@@ -535,7 +646,10 @@ export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
     }
 
     const { data: prof } = await supabase
-      .from("profiles").select("tenant_id").eq("id", userId).single();
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", userId)
+      .single();
     if (!prof?.tenant_id) throw new Error("Usuário não está vinculado a nenhuma empresa");
 
     const { error } = await supabase
@@ -559,15 +673,17 @@ export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
 /** Cria um usuário já vinculado a um inquilino (somente proprietário da plataforma). */
 export const createTenantUsuario = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
-    tenant_id: string;
-    nome: string;
-    email: string;
-    password: string;
-    cargo?: string | null;
-    telefone?: string | null;
-    roles: string[];
-  }) => d)
+  .inputValidator(
+    (d: {
+      tenant_id: string;
+      nome: string;
+      email: string;
+      password: string;
+      cargo?: string | null;
+      telefone?: string | null;
+      roles: string[];
+    }) => d,
+  )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     const nome = (data.nome ?? "").trim();
@@ -581,7 +697,10 @@ export const createTenantUsuario = createServerFn({ method: "POST" })
     // Respeita o limite de usuários do plano
     const [{ data: limite }, { count }] = await Promise.all([
       context.supabase.rpc("tenant_user_limit", { _tenant_id: data.tenant_id }),
-      context.supabase.from("profiles").select("id", { count: "exact", head: true }).eq("tenant_id", data.tenant_id),
+      context.supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", data.tenant_id),
     ]);
     if (limite != null && (count ?? 0) >= Number(limite)) {
       throw new Error(`Limite de usuários do plano atingido (${limite}).`);
@@ -598,14 +717,17 @@ export const createTenantUsuario = createServerFn({ method: "POST" })
     const newId = created.user?.id;
     if (!newId) throw new Error("Falha ao criar usuário");
 
-    await supabaseAdmin.from("profiles").update({
-      nome,
-      email,
-      cargo: data.cargo ?? null,
-      telefone: data.telefone ?? null,
-      tenant_id: data.tenant_id,
-      trial_ends_at: null,
-    }).eq("id", newId);
+    await supabaseAdmin
+      .from("profiles")
+      .update({
+        nome,
+        email,
+        cargo: data.cargo ?? null,
+        telefone: data.telefone ?? null,
+        tenant_id: data.tenant_id,
+        trial_ends_at: null,
+      })
+      .eq("id", newId);
 
     await supabaseAdmin.from("user_roles").delete().eq("user_id", newId);
     const { error: rErr } = await supabaseAdmin
@@ -626,13 +748,18 @@ export const vincularUsuarioTenant = createServerFn({ method: "POST" })
     if (!email) throw new Error("Informe o e-mail do usuário");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: prof, error } = await supabaseAdmin
-      .from("profiles").select("id, tenant_id").ilike("email", email).maybeSingle();
+      .from("profiles")
+      .select("id, tenant_id")
+      .ilike("email", email)
+      .maybeSingle();
     if (error) throw new Error(error.message);
     if (!prof) throw new Error("Nenhum usuário encontrado com esse e-mail");
     if (prof.tenant_id === data.tenant_id) throw new Error("Usuário já pertence a este inquilino");
 
     const { error: uErr } = await supabaseAdmin
-      .from("profiles").update({ tenant_id: data.tenant_id }).eq("id", prof.id);
+      .from("profiles")
+      .update({ tenant_id: data.tenant_id })
+      .eq("id", prof.id);
     if (uErr) throw new Error(uErr.message);
     return { ok: true, user_id: prof.id };
   });
@@ -645,7 +772,9 @@ export const desvincularUsuarioTenant = createServerFn({ method: "POST" })
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
-      .from("profiles").update({ tenant_id: null }).eq("id", data.user_id);
+      .from("profiles")
+      .update({ tenant_id: null })
+      .eq("id", data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

@@ -17,14 +17,20 @@ export const setExecutivoAtendimento = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: adm } = await supabase
-      .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
     if (!adm) throw new Error("Apenas administradores podem reatribuir o atendimento.");
     const table = data.tipo === "cliente" ? "clientes" : "agencias";
-    const { error } = await supabase.from(table).update({ executivo_id: data.executivo_id } as never).eq("id", data.id);
+    const { error } = await supabase
+      .from(table)
+      .update({ executivo_id: data.executivo_id } as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
 
 export const listExecutivos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

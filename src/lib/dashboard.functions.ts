@@ -11,7 +11,10 @@ export const getDashboard = createServerFn({ method: "GET" })
     const execFilter = data?.executivoId || null;
     // Authorize: only admins can filter by another executivo
     if (execFilter && execFilter !== userId) {
-      const { data: isAdminRow } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+      const { data: isAdminRow } = await supabase.rpc("has_role", {
+        _user_id: userId,
+        _role: "admin",
+      });
       if (!isAdminRow) throw new Error("Sem permissão");
     }
     const now = new Date();
@@ -23,9 +26,13 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     let pisQ = supabase
       .from("pis")
-      .select("id,status,valor_negociado,total_insercoes,data_faturamento,executivo_id,created_at,cliente_id,agencia_id,permuta,permuta_uso")
+      .select(
+        "id,status,valor_negociado,total_insercoes,data_faturamento,executivo_id,created_at,cliente_id,agencia_id,permuta,permuta_uso",
+      )
       .gte("created_at", new Date(ano - 1, 0, 1).toISOString());
-    let propQ = supabase.from("propostas").select("id,status,valor_negociado,executivo_id,created_at,agencia_id");
+    let propQ = supabase
+      .from("propostas")
+      .select("id,status,valor_negociado,executivo_id,created_at,agencia_id");
     let clientesQ = supabase.from("clientes").select("id,executivo_id,razao_social,nome_fantasia");
     let metasQ = supabase
       .from("metas_executivo")
@@ -40,16 +47,16 @@ export const getDashboard = createServerFn({ method: "GET" })
       metasQ = metasQ.eq("executivo_id", execFilter);
     }
 
-    const [pisRes, propRes, clientesRes, agenciasRes, itensRes, profilesRes, metasRes] = await Promise.all([
-      pisQ,
-      propQ,
-      clientesQ,
-      supabase.from("agencias").select("id,razao_social,nome_fantasia"),
-      supabase.from("pi_itens").select("tipo,valor_negociado,pi_id"),
-      supabase.from("profiles").select("id,nome").eq("ativo", true),
-      metasQ,
-    ]);
-
+    const [pisRes, propRes, clientesRes, agenciasRes, itensRes, profilesRes, metasRes] =
+      await Promise.all([
+        pisQ,
+        propQ,
+        clientesQ,
+        supabase.from("agencias").select("id,razao_social,nome_fantasia"),
+        supabase.from("pi_itens").select("tipo,valor_negociado,pi_id"),
+        supabase.from("profiles").select("id,nome").eq("ativo", true),
+        metasQ,
+      ]);
 
     const pis = pisRes.data ?? [];
     const propostas = propRes.data ?? [];
@@ -94,9 +101,12 @@ export const getDashboard = createServerFn({ method: "GET" })
         return !!d && d >= inicioMesAnterior && d <= fimMesAnterior;
       })
       .reduce((a, b) => a + paraFaturamento(b), 0);
-    const deltaFat = faturadosMesAnt > 0 ? ((faturadosMes - faturadosMesAnt) / faturadosMesAnt) * 100 : 0;
+    const deltaFat =
+      faturadosMesAnt > 0 ? ((faturadosMes - faturadosMesAnt) / faturadosMesAnt) * 100 : 0;
 
-    const propostasAtivas = propostas.filter((p) => p.status === "rascunho" || p.status === "enviada").length;
+    const propostasAtivas = propostas.filter(
+      (p) => p.status === "rascunho" || p.status === "enviada",
+    ).length;
     const pipelineAberto = pis
       .filter((p) => piAtivo(p) && p.status !== "faturado")
       .reduce((a, b) => a + paraFaturamento(b), 0);
@@ -144,7 +154,10 @@ export const getDashboard = createServerFn({ method: "GET" })
     // Funil: por status PI (bruto + líquido)
     const funilDef: Array<{ stage: string; statuses: string[] }> = [
       { stage: "Rascunho", statuses: ["rascunho"] },
-      { stage: "Enviado", statuses: ["enviado", "aguardando_aprovacao", "aguardando_assinatura", "assinado"] },
+      {
+        stage: "Enviado",
+        statuses: ["enviado", "aguardando_aprovacao", "aguardando_assinatura", "assinado"],
+      },
       { stage: "Aprovado", statuses: ["aprovado", "enviar_opec"] },
       { stage: "Faturado", statuses: ["faturado", "finalizado"] },
     ];
@@ -172,14 +185,23 @@ export const getDashboard = createServerFn({ method: "GET" })
       execMap.set(p.executivo_id, e);
     });
     const desempenhoExecutivos = Array.from(execMap.entries())
-      .map(([id, v]) => ({ id, nome: nomeById.get(id) || "—", vendas: v.vendas, vendasLiq: v.vendasLiq, deals: v.deals }))
+      .map(([id, v]) => ({
+        id,
+        nome: nomeById.get(id) || "—",
+        vendas: v.vendas,
+        vendasLiq: v.vendasLiq,
+        deals: v.deals,
+      }))
       .sort((a, b) => b.vendas - a.vendas)
       .slice(0, 8);
 
-
     // Top clientes / agências por investimento (PIs vigentes no ano corrente, valor líquido)
-    const clienteNome = new Map(clientes.map((c) => [c.id, c.nome_fantasia || c.razao_social || "—"]));
-    const agenciaNome = new Map(agencias.map((a) => [a.id, a.nome_fantasia || a.razao_social || "—"]));
+    const clienteNome = new Map(
+      clientes.map((c) => [c.id, c.nome_fantasia || c.razao_social || "—"]),
+    );
+    const agenciaNome = new Map(
+      agencias.map((a) => [a.id, a.nome_fantasia || a.razao_social || "—"]),
+    );
     const topMap = (campo: "cliente_id" | "agencia_id", nomeMap: Map<string, string>) => {
       const m = new Map<string, number>();
       pis.forEach((p) => {
@@ -200,7 +222,9 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     // Distribuição por status (donut)
     const statusMap = new Map<string, number>();
-    pis.forEach((p) => statusMap.set(p.status as string, (statusMap.get(p.status as string) ?? 0) + 1));
+    pis.forEach((p) =>
+      statusMap.set(p.status as string, (statusMap.get(p.status as string) ?? 0) + 1),
+    );
     const piStatusDist = Array.from(statusMap.entries()).map(([name, value]) => ({ name, value }));
 
     // PIs criados por mês (ano atual vs anterior) — apenas PIs vigentes, valor líquido
@@ -221,15 +245,23 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     // Propostas por status
     const propStatusMap = new Map<string, number>();
-    propostas.forEach((p) => propStatusMap.set(p.status as string, (propStatusMap.get(p.status as string) ?? 0) + 1));
-    const propostasStatusDist = Array.from(propStatusMap.entries()).map(([name, value]) => ({ name, value }));
+    propostas.forEach((p) =>
+      propStatusMap.set(p.status as string, (propStatusMap.get(p.status as string) ?? 0) + 1),
+    );
+    const propostasStatusDist = Array.from(propStatusMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+    }));
 
     // Inserções por mídia (tipo de item)
     const insercoesMap = new Map<string, number>();
     itens.forEach((it) => {
       if (!pisAtivosIds.has(it.pi_id)) return;
       const k = it.tipo || "Outro";
-      insercoesMap.set(k, (insercoesMap.get(k) ?? 0) + Number((it as Record<string, unknown>).valor_negociado || 0));
+      insercoesMap.set(
+        k,
+        (insercoesMap.get(k) ?? 0) + Number((it as Record<string, unknown>).valor_negociado || 0),
+      );
     });
 
     return {
@@ -263,7 +295,10 @@ export const getVendasMes = createServerFn({ method: "GET" })
     const { ano, mes } = data;
     const execFilter = data.executivoId || null;
     if (execFilter && execFilter !== userId) {
-      const { data: isAdminRow } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+      const { data: isAdminRow } = await supabase.rpc("has_role", {
+        _user_id: userId,
+        _role: "admin",
+      });
       if (!isAdminRow) throw new Error("Sem permissão");
     }
     const inicio = new Date(ano, mes - 1, 1);
@@ -273,7 +308,9 @@ export const getVendasMes = createServerFn({ method: "GET" })
 
     let q = supabase
       .from("pis")
-      .select("status,valor_negociado,data_faturamento,created_at,agencia_id,permuta,permuta_uso,executivo_id,mes_meta,ano_meta")
+      .select(
+        "status,valor_negociado,data_faturamento,created_at,agencia_id,permuta,permuta_uso,executivo_id,mes_meta,ano_meta",
+      )
       .or(
         `and(mes_meta.eq.${mes},ano_meta.eq.${ano}),and(mes_meta.is.null,data_faturamento.gte.${inicioStr},data_faturamento.lte.${fimStr}),and(mes_meta.is.null,data_faturamento.is.null,created_at.gte.${inicio.toISOString()},created_at.lte.${new Date(fim.getTime() + 86399999).toISOString()})`,
       );
@@ -321,18 +358,13 @@ export const getVendasMes = createServerFn({ method: "GET" })
       } else if (d.getFullYear() !== ano || d.getMonth() + 1 !== mes) {
         return;
       }
-      const idx = (p.mes_meta && p.ano_meta ? 0 : d.getDate() - 1);
+      const idx = p.mes_meta && p.ano_meta ? 0 : d.getDate() - 1;
       const v = paraFaturamento(p);
       if (porDia[idx]) porDia[idx].valor += v;
       total += v;
     });
 
-
-    let mq = supabase
-      .from("metas_executivo")
-      .select("valor_meta")
-      .eq("ano", ano)
-      .eq("mes", mes);
+    let mq = supabase.from("metas_executivo").select("valor_meta").eq("ano", ano).eq("mes", mes);
     if (execFilter) mq = mq.eq("executivo_id", execFilter);
     const { data: metas } = await mq;
     const meta = (metas ?? []).reduce((a, b) => a + Number(b.valor_meta || 0), 0);
@@ -353,7 +385,6 @@ export type DrillFilter = {
   scope?: "ano" | "mes" | null;
 };
 
-
 export const getPisDrillDown = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data?: DrillFilter) => data ?? {})
@@ -365,7 +396,7 @@ export const getPisDrillDown = createServerFn({ method: "GET" })
     let q = supabase
       .from("pis")
       .select(
-        "id,numero_pi,status,valor_negociado,valor_liquido,data_faturamento,created_at,cliente_id,agencia_id,executivo_id,clientes(razao_social,nome_fantasia),agencias(nome),profiles:executivo_id(nome,email)"
+        "id,numero_pi,status,valor_negociado,valor_liquido,data_faturamento,created_at,cliente_id,agencia_id,executivo_id,clientes(razao_social,nome_fantasia),agencias(nome),profiles:executivo_id(nome,email)",
       )
       .order("created_at", { ascending: false })
       .limit(100);
@@ -386,9 +417,11 @@ export const getPisDrillDown = createServerFn({ method: "GET" })
     // tipo: filtragem por tipo é feita client-side pois vive em pi_itens
     if (data.executivoId) q = q.eq("executivo_id", data.executivoId);
 
-
     // Non-admins só veem os próprios
-    const { data: isAdminRow } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    const { data: isAdminRow } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
     if (!isAdminRow && !data.executivoId) q = q.eq("executivo_id", userId);
 
     const { data: rows, error } = await q;

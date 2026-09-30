@@ -3,7 +3,15 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { touchLastActive } from "@/lib/presence.functions";
 
-export type AppRole = "super_admin" | "admin" | "executivo" | "opec" | "financeiro" | "diretoria" | "producao" | "parceiro_comercial";
+export type AppRole =
+  | "super_admin"
+  | "admin"
+  | "executivo"
+  | "opec"
+  | "financeiro"
+  | "diretoria"
+  | "producao"
+  | "parceiro_comercial";
 
 const MAX_SESSION_MS = 5 * 24 * 60 * 60 * 1000; // 5 dias
 const HEARTBEAT_MS = 5 * 60 * 1000; // 5 minutos
@@ -15,7 +23,9 @@ export function useAuth() {
   const lastTouchRef = useRef(0);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
     });
@@ -47,7 +57,11 @@ export function useAuth() {
       const now = Date.now();
       if (now - lastTouchRef.current < HEARTBEAT_MS) return;
       lastTouchRef.current = now;
-      try { await touchLastActive(); } catch { /* ignore */ }
+      try {
+        await touchLastActive();
+      } catch {
+        /* ignore */
+      }
     };
 
     touch();

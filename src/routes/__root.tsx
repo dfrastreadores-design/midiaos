@@ -88,21 +88,53 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "mídia.OS — Sistema comercial para veículos de comunicação" },
-      { name: "description", content: "Aumente suas vendas de mídia: CRM, propostas, PI digital e financeiro em uma plataforma feita para TVs, rádios, portais e OOH/DOOH. Agende uma demonstração gratuita." },
-      { name: "keywords", content: "sistema para emissora de tv, software para rádio, CRM mídia, PI digital, propostas comerciais, gestão de mídia, software para veículos de comunicação" },
+      {
+        name: "description",
+        content:
+          "Aumente suas vendas de mídia: CRM, propostas, PI digital e financeiro em uma plataforma feita para TVs, rádios, portais e OOH/DOOH. Agende uma demonstração gratuita.",
+      },
+      {
+        name: "keywords",
+        content:
+          "sistema para emissora de tv, software para rádio, CRM mídia, PI digital, propostas comerciais, gestão de mídia, software para veículos de comunicação",
+      },
       { name: "author", content: "mídia.OS" },
       { name: "robots", content: "index, follow, max-image-preview:large" },
       { property: "og:site_name", content: "mídia.OS" },
-      { property: "og:title", content: "mídia.OS — Sistema comercial para veículos de comunicação" },
-      { property: "og:description", content: "Do briefing à PI assinada: tudo em uma plataforma feita para quem vende mídia. Demonstração gratuita." },
+      {
+        property: "og:title",
+        content: "mídia.OS — Sistema comercial para veículos de comunicação",
+      },
+      {
+        property: "og:description",
+        content:
+          "Do briefing à PI assinada: tudo em uma plataforma feita para quem vende mídia. Demonstração gratuita.",
+      },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pt_BR" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9bdbc7cd-7703-4e9b-8dec-61e20fa07162" },
-      { property: "og:image:alt", content: "mídia.OS — sistema comercial para veículos de comunicação" },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9bdbc7cd-7703-4e9b-8dec-61e20fa07162",
+      },
+      {
+        property: "og:image:alt",
+        content: "mídia.OS — sistema comercial para veículos de comunicação",
+      },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "mídia.OS — Sistema comercial para veículos de comunicação" },
-      { name: "twitter:description", content: "Do briefing à PI assinada: tudo em uma plataforma feita para quem vende mídia." },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9bdbc7cd-7703-4e9b-8dec-61e20fa07162" },
+      {
+        name: "twitter:title",
+        content: "mídia.OS — Sistema comercial para veículos de comunicação",
+      },
+      {
+        name: "twitter:description",
+        content: "Do briefing à PI assinada: tudo em uma plataforma feita para quem vende mídia.",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9bdbc7cd-7703-4e9b-8dec-61e20fa07162",
+      },
       { name: "theme-color", content: "#0d0d24" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
@@ -117,7 +149,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap",
+      },
     ],
     scripts: [
       {
@@ -128,7 +163,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           name: "mídia.OS",
           url: "https://midiaos.online",
           logo: "https://midiaos.online/favicon.png",
-          description: "Plataforma SaaS de gestão comercial para veículos de comunicação: emissoras de TV, rádios, portais e mídia OOH/DOOH.",
+          description:
+            "Plataforma SaaS de gestão comercial para veículos de comunicação: emissoras de TV, rádios, portais e mídia OOH/DOOH.",
           sameAs: [],
         }),
       },
@@ -198,7 +234,10 @@ function RootComponent() {
       });
 
       // Registra o Service Worker para suporte a PWA (instalação no celular, tablet e computador)
-      if ("serviceWorker" in navigator && window.location.protocol === "https:" || window.location.hostname === "localhost") {
+      if (
+        ("serviceWorker" in navigator && window.location.protocol === "https:") ||
+        window.location.hostname === "localhost"
+      ) {
         navigator.serviceWorker
           .register("/sw.js")
           .then((reg) => {
@@ -218,4 +257,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-

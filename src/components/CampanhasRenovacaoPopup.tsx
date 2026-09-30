@@ -100,12 +100,16 @@ export function CampanhasRenovacaoPopup() {
                   <DialogTitle className="text-lg font-bold tracking-tight text-foreground">
                     Campanhas Próximas da Renovação
                   </DialogTitle>
-                  <Badge variant="outline" className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 font-bold text-[10px]">
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 font-bold text-[10px]"
+                  >
                     ≤ 10 Dias Úteis
                   </Badge>
                 </div>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Existem <strong>{campanhas.length}</strong> campanha(s) na janela ideal para iniciar as negociações de renovação contratual com os clientes.
+                  Existem <strong>{campanhas.length}</strong> campanha(s) na janela ideal para
+                  iniciar as negociações de renovação contratual com os clientes.
                 </DialogDescription>
               </div>
             </div>
@@ -121,15 +125,15 @@ export function CampanhasRenovacaoPopup() {
             const badgeBg = isCritico
               ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/50"
               : isAlta
-              ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/50"
-              : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/50";
+                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/50"
+                : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/50";
 
             const diasFormatados =
               c.dias_uteis_restantes === 0
                 ? "Encerra HOJE!"
                 : c.dias_uteis_restantes === 1
-                ? "Resta 1 dia útil"
-                : `Restam ${c.dias_uteis_restantes} dias úteis`;
+                  ? "Resta 1 dia útil"
+                  : `Restam ${c.dias_uteis_restantes} dias úteis`;
 
             return (
               <div
@@ -139,12 +143,8 @@ export function CampanhasRenovacaoPopup() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-foreground">
-                        {c.cliente_nome}
-                      </span>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        PI {c.numero}
-                      </span>
+                      <span className="font-bold text-sm text-foreground">{c.cliente_nome}</span>
+                      <span className="text-xs text-muted-foreground font-mono">PI {c.numero}</span>
                     </div>
 
                     <div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
@@ -161,17 +161,30 @@ export function CampanhasRenovacaoPopup() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-2 px-3 rounded-lg bg-muted/30 border border-border/40 text-xs">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Calendar className="size-3.5 text-muted-foreground" />
-                    <span>Término: <strong className="text-foreground">{c.periodo_fim.split("-").reverse().join("/")}</strong></span>
+                    <span>
+                      Término:{" "}
+                      <strong className="text-foreground">
+                        {c.periodo_fim.split("-").reverse().join("/")}
+                      </strong>
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <DollarSign className="size-3.5 text-emerald-600" />
-                    <span>Valor: <strong className="text-foreground">R$ {c.valor_negociado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</strong></span>
+                    <span>
+                      Valor:{" "}
+                      <strong className="text-foreground">
+                        R$ {c.valor_negociado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </strong>
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <User className="size-3.5 text-muted-foreground" />
-                    <span className="truncate">Executivo: <strong className="text-foreground">{c.executivo_nome || "Geral"}</strong></span>
+                    <span className="truncate">
+                      Executivo:{" "}
+                      <strong className="text-foreground">{c.executivo_nome || "Geral"}</strong>
+                    </span>
                   </div>
                 </div>
 
@@ -218,12 +231,7 @@ export function CampanhasRenovacaoPopup() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setOpen(false)}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
               Fechar
             </Button>
 

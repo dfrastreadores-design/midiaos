@@ -5,10 +5,20 @@ import { applyTrialWatermark } from "@/lib/trial-watermark";
 import { DEFAULT_PI_LAYOUT, type PiLayoutConfig } from "@/lib/pi-layout.functions";
 
 const MESES = [
-  "JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
-  "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO",
+  "JANEIRO",
+  "FEVEREIRO",
+  "MARÇO",
+  "ABRIL",
+  "MAIO",
+  "JUNHO",
+  "JULHO",
+  "AGOSTO",
+  "SETEMBRO",
+  "OUTUBRO",
+  "NOVEMBRO",
+  "DEZEMBRO",
 ];
-const DOW_ABBR = ["Dom","Seg","Ter","Qua","Qui","Sex","Sab"];
+const DOW_ABBR = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
@@ -30,20 +40,23 @@ type Item = {
   valor_negociado: number;
 };
 
-type Entidade = {
-  razao_social?: string | null;
-  nome_fantasia?: string | null;
-  cnpj?: string | null;
-  endereco?: string | null;
-  cidade?: string | null;
-  uf?: string | null;
-  cep?: string | null;
-  telefone?: string | null;
-  email?: string | null;
-  ie?: string | null;
-  im?: string | null;
-  responsavel?: string | null;
-} | null | undefined;
+type Entidade =
+  | {
+      razao_social?: string | null;
+      nome_fantasia?: string | null;
+      cnpj?: string | null;
+      endereco?: string | null;
+      cidade?: string | null;
+      uf?: string | null;
+      cep?: string | null;
+      telefone?: string | null;
+      email?: string | null;
+      ie?: string | null;
+      im?: string | null;
+      responsavel?: string | null;
+    }
+  | null
+  | undefined;
 
 type Pi = {
   numero: string;
@@ -124,9 +137,9 @@ export function gerarPdfPi(
   pi: Pi,
   mode: "download" | "preview" | "blob" = "download",
   previewWin?: Window | null,
-  opts?: { 
-    assinaturaExecutivoDataUrl?: string | null; 
-    nomeExecutivo?: string | null; 
+  opts?: {
+    assinaturaExecutivoDataUrl?: string | null;
+    nomeExecutivo?: string | null;
     assinaturaCliente?: AssinaturaCliente;
     assinaturaDiretoriaDataUrl?: string | null;
     nomeDiretoria?: string | null;
@@ -144,7 +157,6 @@ export function gerarPdfPi(
     layout?: Partial<PiLayoutConfig> | null;
   },
 ): string | void {
-
   // A janela deve ser aberta no clique (síncrono); aqui usamos a referência recebida.
   const win = mode === "preview" ? (previewWin ?? null) : null;
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
@@ -171,48 +183,94 @@ export function gerarPdfPi(
     } else {
       doc.addImage(logoMidiaOS, "PNG", M, 6, 26, 13);
     }
-  } catch { /* opcional */ }
+  } catch {
+    /* opcional */
+  }
 
   const em = pi.emissora;
   const tenant = opts?.tenantInfo;
-  
-  const emNome = (em?.nome_fantasia || em?.nome || em?.razao_social || tenant?.nome || "INQUILINO").toUpperCase();
+
+  const emNome = (
+    em?.nome_fantasia ||
+    em?.nome ||
+    em?.razao_social ||
+    tenant?.nome ||
+    "INQUILINO"
+  ).toUpperCase();
   const emRazao = em?.razao_social || tenant?.razao_social || "";
   const emEnd = em
-    ? [em.endereco, em.cep && `CEP: ${em.cep}`, [em.cidade, em.uf].filter(Boolean).join("/")].filter(Boolean).join(" — ")
-    : tenant ? [tenant.endereco, tenant.cep && `CEP: ${tenant.cep}`, [tenant.cidade, tenant.uf].filter(Boolean).join("/")].filter(Boolean).join(" — ") : "";
+    ? [em.endereco, em.cep && `CEP: ${em.cep}`, [em.cidade, em.uf].filter(Boolean).join("/")]
+        .filter(Boolean)
+        .join(" — ")
+    : tenant
+      ? [
+          tenant.endereco,
+          tenant.cep && `CEP: ${tenant.cep}`,
+          [tenant.cidade, tenant.uf].filter(Boolean).join("/"),
+        ]
+          .filter(Boolean)
+          .join(" — ")
+      : "";
   const emCnpjTel = em
-    ? [em.cnpj && `CNPJ: ${em.cnpj}`, em.telefone && `FONE: ${em.telefone}`].filter(Boolean).join("  ·  ")
-    : tenant ? [tenant.cnpj && `CNPJ: ${tenant.cnpj}`, tenant.telefone && `FONE: ${tenant.telefone}`].filter(Boolean).join("  ·  ") : "";
+    ? [em.cnpj && `CNPJ: ${em.cnpj}`, em.telefone && `FONE: ${em.telefone}`]
+        .filter(Boolean)
+        .join("  ·  ")
+    : tenant
+      ? [tenant.cnpj && `CNPJ: ${tenant.cnpj}`, tenant.telefone && `FONE: ${tenant.telefone}`]
+          .filter(Boolean)
+          .join("  ·  ")
+      : "";
 
   const headerMaxW = LEFT_END - (M + 28);
   const truncate = (s: string, max: number) => {
     const lines = doc.splitTextToSize(s, max) as string[];
     return lines[0] + (lines.length > 1 ? "…" : "");
   };
-  doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
   doc.text(truncate(emNome, headerMaxW), M + 28, 9);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(60);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(60);
   let hy = 12;
-  if (emRazao) { doc.text(truncate(emRazao, headerMaxW), M + 28, hy); hy += 3; }
-  if (emEnd) { doc.text(truncate(emEnd, headerMaxW), M + 28, hy); hy += 3; }
-  if (emCnpjTel) { doc.text(truncate(emCnpjTel, headerMaxW), M + 28, hy); hy += 3; }
+  if (emRazao) {
+    doc.text(truncate(emRazao, headerMaxW), M + 28, hy);
+    hy += 3;
+  }
+  if (emEnd) {
+    doc.text(truncate(emEnd, headerMaxW), M + 28, hy);
+    hy += 3;
+  }
+  if (emCnpjTel) {
+    doc.text(truncate(emCnpjTel, headerMaxW), M + 28, hy);
+    hy += 3;
+  }
   doc.setTextColor(0);
 
   // Centro — título e PI
-  doc.setFont("helvetica", "bold"); doc.setFontSize(13);
-  doc.text("AUTORIZAÇÃO DE VEICULAÇÃO", W / 2, 11, { align: "center", maxWidth: RIGHT_START - LEFT_END });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("AUTORIZAÇÃO DE VEICULAÇÃO", W / 2, 11, {
+    align: "center",
+    maxWidth: RIGHT_START - LEFT_END,
+  });
   doc.setFontSize(10);
   doc.text(`PI ${pi.numero}`, W / 2, 16, { align: "center", maxWidth: RIGHT_START - LEFT_END });
-  doc.setFont("helvetica", "normal"); doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
   doc.text(`Status: ${pi.status.toUpperCase()}`, W / 2, 20, { align: "center" });
 
   // Direita — emissão / executivo (cada linha com maxWidth para não invadir o centro)
-  const rightColW = (W - M) - RIGHT_START;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(7);
-  doc.text(`Emissão: ${new Date().toLocaleDateString("pt-BR")}`, W - M, 9, { align: "right", maxWidth: rightColW });
+  const rightColW = W - M - RIGHT_START;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.text(`Emissão: ${new Date().toLocaleDateString("pt-BR")}`, W - M, 9, {
+    align: "right",
+    maxWidth: rightColW,
+  });
   if (pi.atendimento) {
-    doc.setFont("helvetica", "bold"); doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
     doc.text("EXECUTIVO RESPONSÁVEL", W - M, 13, { align: "right", maxWidth: rightColW });
     doc.setFont("helvetica", "normal");
     doc.text(pi.atendimento.nome, W - M, 16, { align: "right", maxWidth: rightColW });
@@ -234,20 +292,28 @@ export function gerarPdfPi(
     ["I.E:", cli?.ie || "ISENTA"],
     ["I.M:", cli?.im || "ISENTA"],
     ["Responsável:", cli?.responsavel || "—"],
-    ["E-mail:", (pi.faturamento_contra === "cliente" ? pi.email_faturamento : null) || cli?.email || "—"],
+    [
+      "E-mail:",
+      (pi.faturamento_contra === "cliente" ? pi.email_faturamento : null) || cli?.email || "—",
+    ],
   ];
-  const blocoAg: [string, string][] = ag ? [
-    ["Agência:", ag.nome_fantasia || ag.razao_social || "—"],
-    ["Razão social:", ag.razao_social || "—"],
-    ["Endereço:", [ag.endereco, ag.cidade, ag.uf].filter(Boolean).join(" — ") || "—"],
-    ["CEP:", ag.cep || "—"],
-    ["Tel:", ag.telefone || "—"],
-    ["CNPJ:", ag.cnpj || "—"],
-    ["I.E:", ag.ie || "ISENTA"],
-    ["I.M:", ag.im || "ISENTA"],
-    ["Responsável:", ag.responsavel || "—"],
-    ["E-mail:", (pi.faturamento_contra === "agencia" ? pi.email_faturamento : null) || ag.email || "—"],
-  ] : [["Agência:", "Negociação direta"]];
+  const blocoAg: [string, string][] = ag
+    ? [
+        ["Agência:", ag.nome_fantasia || ag.razao_social || "—"],
+        ["Razão social:", ag.razao_social || "—"],
+        ["Endereço:", [ag.endereco, ag.cidade, ag.uf].filter(Boolean).join(" — ") || "—"],
+        ["CEP:", ag.cep || "—"],
+        ["Tel:", ag.telefone || "—"],
+        ["CNPJ:", ag.cnpj || "—"],
+        ["I.E:", ag.ie || "ISENTA"],
+        ["I.M:", ag.im || "ISENTA"],
+        ["Responsável:", ag.responsavel || "—"],
+        [
+          "E-mail:",
+          (pi.faturamento_contra === "agencia" ? pi.email_faturamento : null) || ag.email || "—",
+        ],
+      ]
+    : [["Agência:", "Negociação direta"]];
 
   const colW = (W - M * 2 - 4) / 2;
   const blocosStartY = 25;
@@ -257,8 +323,17 @@ export function gerarPdfPi(
     margin: { left: M },
     tableWidth: colW,
     body: blocoCli,
-    styles: { fontSize: 7.5, cellPadding: 1.2, lineColor: [180, 180, 180], lineWidth: 0.15, overflow: "linebreak" },
-    columnStyles: { 0: { fontStyle: "bold", cellWidth: 22, fillColor: [240, 240, 245] }, 1: { cellWidth: colW - 22 } },
+    styles: {
+      fontSize: 7.5,
+      cellPadding: 1.2,
+      lineColor: [180, 180, 180],
+      lineWidth: 0.15,
+      overflow: "linebreak",
+    },
+    columnStyles: {
+      0: { fontStyle: "bold", cellWidth: 22, fillColor: [240, 240, 245] },
+      1: { cellWidth: colW - 22 },
+    },
     theme: "grid",
   });
   // @ts-expect-error lastAutoTable injetado
@@ -269,8 +344,17 @@ export function gerarPdfPi(
     margin: { left: M + colW + 4 },
     tableWidth: colW,
     body: blocoAg,
-    styles: { fontSize: 7.5, cellPadding: 1.2, lineColor: [180, 180, 180], lineWidth: 0.15, overflow: "linebreak" },
-    columnStyles: { 0: { fontStyle: "bold", cellWidth: 22, fillColor: [240, 240, 245] }, 1: { cellWidth: colW - 22 } },
+    styles: {
+      fontSize: 7.5,
+      cellPadding: 1.2,
+      lineColor: [180, 180, 180],
+      lineWidth: 0.15,
+      overflow: "linebreak",
+    },
+    columnStyles: {
+      0: { fontStyle: "bold", cellWidth: 22, fillColor: [240, 240, 245] },
+      1: { cellWidth: colW - 22 },
+    },
     theme: "grid",
   });
   // @ts-expect-error
@@ -279,7 +363,8 @@ export function gerarPdfPi(
   let y = Math.max(finalCli, finalAg) + 3;
 
   // ── Linha "INÍCIO/FIM · PRODUTO · Formato · PERÍODO" ──
-  const formatos = Array.from(new Set((pi.itens ?? []).map((i) => i.formato).filter(Boolean))).join(" / ") || "—";
+  const formatos =
+    Array.from(new Set((pi.itens ?? []).map((i) => i.formato).filter(Boolean))).join(" / ") || "—";
 
   // Calcula início/fim a partir do mapa (dias_mes/dias_semana) ou usa os campos do PI.
   const fmtDateIso = (iso: string | null | undefined) => {
@@ -306,12 +391,18 @@ export function gerarPdfPi(
       fimStr = fimStr ?? `${String(maxD).padStart(2, "0")}/${mm}/${pi.ano_veiculacao}`;
     }
   }
-  const periodoLeft = inicioStr && fimStr
-    ? `INÍCIO: ${inicioStr}   ·   FIM: ${fimStr}`
-    : `INÍCIO/FIM: —`;
+  const periodoLeft =
+    inicioStr && fimStr ? `INÍCIO: ${inicioStr}   ·   FIM: ${fimStr}` : `INÍCIO/FIM: —`;
 
   // Período (texto à direita): se itens cobrem múltiplos meses, mostra range
-  const mesesItens = Array.from(new Set((pi.itens ?? []).map(it => `${it.ano || pi.ano_veiculacao}-${String(it.mes || pi.mes_veiculacao).padStart(2,"0")}`))).sort();
+  const mesesItens = Array.from(
+    new Set(
+      (pi.itens ?? []).map(
+        (it) =>
+          `${it.ano || pi.ano_veiculacao}-${String(it.mes || pi.mes_veiculacao).padStart(2, "0")}`,
+      ),
+    ),
+  ).sort();
   let periodoRight: string;
   if (mesesItens.length > 1) {
     const [a1, m1] = mesesItens[0].split("-").map(Number);
@@ -324,11 +415,13 @@ export function gerarPdfPi(
   autoTable(doc, {
     startY: y,
     margin: { left: M, right: M },
-    body: [[
-      { content: periodoLeft, styles: { fontStyle: "bold" } },
-      { content: `PRODUTO: MÍDIA TV  ·  Formato: ${formatos}`, styles: { halign: "center" } },
-      { content: periodoRight, styles: { halign: "right", fontStyle: "bold" } },
-    ]],
+    body: [
+      [
+        { content: periodoLeft, styles: { fontStyle: "bold" } },
+        { content: `PRODUTO: MÍDIA TV  ·  Formato: ${formatos}`, styles: { halign: "center" } },
+        { content: periodoRight, styles: { halign: "right", fontStyle: "bold" } },
+      ],
+    ],
     styles: { fontSize: 8, cellPadding: 1.5, fillColor: [11, 27, 43], textColor: 255 },
     theme: "grid",
   });
@@ -339,34 +432,36 @@ export function gerarPdfPi(
   const usableW = W - M * 2;
 
   const uniqueMonths = new Set<string>();
-  (pi.itens ?? []).forEach(it => {
+  (pi.itens ?? []).forEach((it) => {
     const m = it.mes || pi.mes_veiculacao;
     const a = it.ano || pi.ano_veiculacao;
     uniqueMonths.add(`${a}-${String(m).padStart(2, "0")}`);
   });
   const sortedMonths = Array.from(uniqueMonths).sort((a, b) => a.localeCompare(b));
 
-
   for (const monthKey of sortedMonths) {
     const [ano, mes] = monthKey.split("-").map(Number);
     const diasNoMes = new Date(ano, mes, 0).getDate();
-    
-    // Filtra apenas itens que pertencem a este mês
-    const itensDoMes = (pi.itens ?? []).filter(it => {
-      const itM = it.mes || pi.mes_veiculacao;
-      const itA = it.ano || pi.ano_veiculacao;
-      return itM === mes && itA === ano;
-    }).sort((a, b) => {
-      const firstDay = (x: Item) => {
-        for (let d = 1; d <= diasNoMes; d++) if (insercoesNoDia(x, ano, mes, d) > 0) return d;
-        return 999;
-      };
-      const da = firstDay(a), db = firstDay(b);
-      if (da !== db) return da - db;
-      const k = (x: Item) => `${(x.horario || "").toLowerCase()}|${(x.programa || "").toLowerCase()}|${(x.formato || "").toLowerCase()}`;
-      return k(a).localeCompare(k(b), "pt-BR");
-    });
 
+    // Filtra apenas itens que pertencem a este mês
+    const itensDoMes = (pi.itens ?? [])
+      .filter((it) => {
+        const itM = it.mes || pi.mes_veiculacao;
+        const itA = it.ano || pi.ano_veiculacao;
+        return itM === mes && itA === ano;
+      })
+      .sort((a, b) => {
+        const firstDay = (x: Item) => {
+          for (let d = 1; d <= diasNoMes; d++) if (insercoesNoDia(x, ano, mes, d) > 0) return d;
+          return 999;
+        };
+        const da = firstDay(a),
+          db = firstDay(b);
+        if (da !== db) return da - db;
+        const k = (x: Item) =>
+          `${(x.horario || "").toLowerCase()}|${(x.programa || "").toLowerCase()}|${(x.formato || "").toLowerCase()}`;
+        return k(a).localeCompare(k(b), "pt-BR");
+      });
 
     if (itensDoMes.length === 0) continue;
 
@@ -386,18 +481,18 @@ export function gerarPdfPi(
       y += 1;
     }
 
-
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
     doc.setTextColor(11, 27, 43);
     doc.text(`MAPA DE INSERÇÕES — ${MESES[mes - 1].toUpperCase()} / ${ano}`, M, y);
     doc.setTextColor(0, 0, 0);
     y += 3;
 
-
     const headDays1 = Array.from({ length: diasNoMes }, (_, i) => String(i + 1));
     const DOW_3 = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
-    const headDays2 = Array.from({ length: diasNoMes }, (_, i) =>
-      DOW_3[new Date(ano, mes - 1, i + 1).getDay()],
+    const headDays2 = Array.from(
+      { length: diasNoMes },
+      (_, i) => DOW_3[new Date(ano, mes - 1, i + 1).getDay()],
     );
 
     const head = [
@@ -414,7 +509,10 @@ export function gerarPdfPi(
         { content: "Desc", rowSpan: 2 },
         { content: "Valor Total c/Desc.", rowSpan: 2 },
       ],
-      headDays2.map((d) => ({ content: d, styles: { fontSize: 4.2, cellPadding: 0.3, overflow: "visible" as const } })),
+      headDays2.map((d) => ({
+        content: d,
+        styles: { fontSize: 4.2, cellPadding: 0.3, overflow: "visible" as const },
+      })),
     ];
 
     const body = itensDoMes.map((it) => {
@@ -426,12 +524,20 @@ export function gerarPdfPi(
         if (dt.getMonth() === mes - 1) dowSet.add(dt.getDay());
       });
       (it.dias_semana ?? []).forEach((s) => {
-        const idx = DOW_ABBR.findIndex((x) => x.toLowerCase() === (s || "").toLowerCase().slice(0, 3));
+        const idx = DOW_ABBR.findIndex(
+          (x) => x.toLowerCase() === (s || "").toLowerCase().slice(0, 3),
+        );
         if (idx >= 0) dowSet.add(idx);
       });
-      const exibicao = dowSet.size > 0
-        ? Array.from(dowSet).sort((a, b) => a - b).map((d) => DOW_ABBR[d]).join("/")
-        : (it.dias_mes && it.dias_mes.length ? "Dias fixos" : "Todos");
+      const exibicao =
+        dowSet.size > 0
+          ? Array.from(dowSet)
+              .sort((a, b) => a - b)
+              .map((d) => DOW_ABBR[d])
+              .join("/")
+          : it.dias_mes && it.dias_mes.length
+            ? "Dias fixos"
+            : "Todos";
       const cells: (string | number)[] = [
         it.programa || it.tipo,
         it.horario || "—",
@@ -461,12 +567,22 @@ export function gerarPdfPi(
     const rightW = [8, 18, 20, 10, 22];
     const dayW = Math.max(3.2, (usableW - 78 - 78) / diasNoMes);
 
-    const columnStyles: Record<number, { cellWidth: number; halign?: "left" | "center" | "right"; fontStyle?: "bold" | "normal" }> = {};
-    leftW.forEach((w, i) => (columnStyles[i] = { cellWidth: w, halign: i === 0 ? "left" : "center" }));
-    for (let i = 0; i < diasNoMes; i++) columnStyles[fixedLeft + i] = { cellWidth: dayW, halign: "center" };
+    const columnStyles: Record<
+      number,
+      { cellWidth: number; halign?: "left" | "center" | "right"; fontStyle?: "bold" | "normal" }
+    > = {};
+    leftW.forEach(
+      (w, i) => (columnStyles[i] = { cellWidth: w, halign: i === 0 ? "left" : "center" }),
+    );
+    for (let i = 0; i < diasNoMes; i++)
+      columnStyles[fixedLeft + i] = { cellWidth: dayW, halign: "center" };
     rightW.forEach((w, i) => {
       const idx = fixedLeft + diasNoMes + i;
-      columnStyles[idx] = { cellWidth: w, halign: i === 0 ? "center" : "right", fontStyle: i === 4 ? "bold" : "normal" };
+      columnStyles[idx] = {
+        cellWidth: w,
+        halign: i === 0 ? "center" : "right",
+        fontStyle: i === 4 ? "bold" : "normal",
+      };
     });
 
     autoTable(doc, {
@@ -474,12 +590,25 @@ export function gerarPdfPi(
       margin: { left: M, right: M, bottom: 40 },
       head,
       body,
-      styles: { fontSize: 6.2, cellPadding: 0.8, lineColor: [160, 160, 160], lineWidth: 0.1, overflow: "linebreak" },
-      headStyles: { fillColor: [11, 27, 43], textColor: 255, fontStyle: "bold", halign: "center", fontSize: 6.2 },
+      styles: {
+        fontSize: 6.2,
+        cellPadding: 0.8,
+        lineColor: [160, 160, 160],
+        lineWidth: 0.1,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        fillColor: [11, 27, 43],
+        textColor: 255,
+        fontStyle: "bold",
+        halign: "center",
+        fontSize: 6.2,
+      },
       columnStyles,
       theme: "grid",
       didParseCell: (data) => {
-        const isDayCol = data.column.index >= fixedLeft && data.column.index < fixedLeft + diasNoMes;
+        const isDayCol =
+          data.column.index >= fixedLeft && data.column.index < fixedLeft + diasNoMes;
         if (isDayCol && data.section === "body" && data.cell.raw && data.cell.raw !== "") {
           data.cell.styles.fillColor = [255, 247, 200];
           data.cell.styles.fontStyle = "bold";
@@ -487,7 +616,7 @@ export function gerarPdfPi(
       },
     });
     // @ts-expect-error
-    y = (doc.lastAutoTable?.finalY ?? y);
+    y = doc.lastAutoTable?.finalY ?? y;
 
     // Rodapé do mapa: investimento mensal do cliente (só quando o contrato cobre >1 mês).
     if (sortedMonths.length > 1) {
@@ -498,19 +627,27 @@ export function gerarPdfPi(
       autoTable(doc, {
         startY: y,
         margin: { left: M, right: M },
-        body: [[
-          {
-            content: `Investimento do cliente em ${MESES[mes - 1]}/${ano}${isManual ? " (valor definido manualmente)" : " (soma automática da entrega do mês)"}`,
-            styles: { fontStyle: "bold", halign: "right" },
-          },
-          { content: fmtBRL(valorMes), styles: { fontStyle: "bold", halign: "right" } },
-        ]],
-        styles: { fontSize: 7.5, cellPadding: 1, fillColor: [245, 247, 250], lineColor: [160, 160, 160], lineWidth: 0.1 },
+        body: [
+          [
+            {
+              content: `Investimento do cliente em ${MESES[mes - 1]}/${ano}${isManual ? " (valor definido manualmente)" : " (soma automática da entrega do mês)"}`,
+              styles: { fontStyle: "bold", halign: "right" },
+            },
+            { content: fmtBRL(valorMes), styles: { fontStyle: "bold", halign: "right" } },
+          ],
+        ],
+        styles: {
+          fontSize: 7.5,
+          cellPadding: 1,
+          fillColor: [245, 247, 250],
+          lineColor: [160, 160, 160],
+          lineWidth: 0.1,
+        },
         columnStyles: { 0: { cellWidth: usableW - 50 }, 1: { cellWidth: 50 } },
         theme: "grid",
       });
       // @ts-expect-error
-      y = (doc.lastAutoTable?.finalY ?? y);
+      y = doc.lastAutoTable?.finalY ?? y;
     }
   }
 
@@ -519,10 +656,15 @@ export function gerarPdfPi(
     autoTable(doc, {
       startY: y,
       margin: { left: M, right: M },
-      body: [[
-        { content: "VALOR NEGOCIADO BRUTO", styles: { fontStyle: "bold", halign: "right" } },
-        { content: `- ${fmtBRL(pi.valor_desconto)} -`, styles: { fontStyle: "bold", halign: "right", textColor: [200, 0, 0] } },
-      ]],
+      body: [
+        [
+          { content: "VALOR NEGOCIADO BRUTO", styles: { fontStyle: "bold", halign: "right" } },
+          {
+            content: `- ${fmtBRL(pi.valor_desconto)} -`,
+            styles: { fontStyle: "bold", halign: "right", textColor: [200, 0, 0] },
+          },
+        ],
+      ],
       styles: { fontSize: 8, cellPadding: 1.2 },
       columnStyles: { 0: { cellWidth: usableW - 50 }, 1: { cellWidth: 50 } },
       theme: "grid",
@@ -538,18 +680,17 @@ export function gerarPdfPi(
   const RESERVA_RODAPE = 40; // assinaturas + rodapé
   const alturaFatLinha = 10;
   const alturaDescMedia = 8;
-  const alturaDatas = (pi.data_faturamento || pi.data_envio_nota || pi.data_vencimento_nota) ? 10 : 0;
+  const alturaDatas = pi.data_faturamento || pi.data_envio_nota || pi.data_vencimento_nota ? 10 : 0;
   const obsTexto = [pi.observacao, pi.emissora?.observacoes, layout.observacaoPadrao]
     .filter((s) => !!s && String(s).trim())
     .join("\n\n");
-  const alturaObs = obsTexto
-    ? 4 + doc.splitTextToSize(obsTexto, W - M * 2).length * 4 + 3
-    : 0;
+  const alturaObs = obsTexto ? 4 + doc.splitTextToSize(obsTexto, W - M * 2).length * 4 + 3 : 0;
   const entregaTxt = (pi.emissora?.entrega_material ?? "").trim();
   const alturaEntrega = entregaTxt
     ? 4 + doc.splitTextToSize(entregaTxt, W - M * 2).length * 4 + 3
     : 0;
-  const blocoFinalH = alturaFatLinha + alturaDescMedia + alturaDatas + alturaObs + alturaEntrega + RESERVA_RODAPE;
+  const blocoFinalH =
+    alturaFatLinha + alturaDescMedia + alturaDatas + alturaObs + alturaEntrega + RESERVA_RODAPE;
   if (y + blocoFinalH > H - RESERVA_RODAPE) {
     // Avisa na primeira página que os detalhes da negociação seguem na próxima
     const aviso = "→ Detalhes da negociação continuam na página 2";
@@ -562,10 +703,10 @@ export function gerarPdfPi(
     y = 14;
   }
 
-
   const tipo = pi.faturamento_tipo ?? "bruto";
   const contra = pi.faturamento_contra ?? "cliente";
-  const fmtDate = (s?: string | null) => (s ? new Date(s + "T00:00:00").toLocaleDateString("pt-BR") : "—");
+  const fmtDate = (s?: string | null) =>
+    s ? new Date(s + "T00:00:00").toLocaleDateString("pt-BR") : "—";
   const partes = [
     `Faturar: ${tipo === "liquido" ? "Líquido" : "Bruto"}`,
     `Contra: ${contra === "agencia" ? "Agência" : "Cliente"}`,
@@ -586,72 +727,89 @@ export function gerarPdfPi(
     const valorPermuta = Number(pi.valor_negociado ?? 0);
     const restante = Math.max(valorPermuta - faturado, 0);
     partes.push("Permuta: Sim");
-    if (pi.permuta_uso) partes.push(`Uso: ${pi.permuta_uso === "comercial" ? "Comercial" : "Empresa"}`);
+    if (pi.permuta_uso)
+      partes.push(`Uso: ${pi.permuta_uso === "comercial" ? "Comercial" : "Empresa"}`);
     partes.push(`Valor Permuta: ${fmtBRL(valorPermuta)}`);
     partes.push(`Valor Faturado: ${fmtBRL(faturado)}`);
     partes.push(`Saldo Permuta: ${fmtBRL(restante)}`);
     if (mesesVeiculacao > 1) {
-      partes.push(`Investimento mensal do cliente: ${fmtBRL(valorPermuta / mesesVeiculacao)} (${mesesVeiculacao} meses)`);
+      partes.push(
+        `Investimento mensal do cliente: ${fmtBRL(valorPermuta / mesesVeiculacao)} (${mesesVeiculacao} meses)`,
+      );
     }
     if (pi.permuta_detalhes) partes.push(`Detalhes: ${pi.permuta_detalhes}`);
   } else if (mesesVeiculacao > 1) {
-    partes.push(`Investimento mensal do cliente: ${fmtBRL(Number(pi.valor_negociado ?? 0) / mesesVeiculacao)} (${mesesVeiculacao} meses)`);
+    partes.push(
+      `Investimento mensal do cliente: ${fmtBRL(Number(pi.valor_negociado ?? 0) / mesesVeiculacao)} (${mesesVeiculacao} meses)`,
+    );
   }
 
   const fatLinha = partes.join("     ·     ");
   const temAgencia = !!pi.agencia;
   // Quando for permuta: valor faturado vai para o campo Valor Líquido; o saldo em permuta fica nas observações (fatLinha)
-  const baseValor = pi.permuta
-    ? Number(pi.permuta_valor_faturado ?? 0)
-    : pi.valor_negociado;
+  const baseValor = pi.permuta ? Number(pi.permuta_valor_faturado ?? 0) : pi.valor_negociado;
   const valorLiquido = pi.permuta
     ? baseValor
-    : (temAgencia ? (tipo === "liquido" ? baseValor : baseValor * 0.8) : baseValor);
+    : temAgencia
+      ? tipo === "liquido"
+        ? baseValor
+        : baseValor * 0.8
+      : baseValor;
   const valorBruto = pi.permuta
-    ? (temAgencia ? baseValor / 0.8 : baseValor)
-    : (tipo === "liquido" && temAgencia ? baseValor / 0.8 : baseValor);
+    ? temAgencia
+      ? baseValor / 0.8
+      : baseValor
+    : tipo === "liquido" && temAgencia
+      ? baseValor / 0.8
+      : baseValor;
   const destaqueBruto = tipo !== "liquido";
 
   autoTable(doc, {
     startY: y,
     margin: { left: M, right: M, bottom: RESERVA_RODAPE },
-    body: [[
-      { content: fatLinha, styles: { fontStyle: "bold", halign: "left" } },
-      { content: "TOTAL DE INSERÇÕES", styles: { fontStyle: "bold", halign: "center" } },
-      { content: String(pi.total_insercoes), styles: { halign: "center", fontStyle: "bold" } },
-      {
-        content: "VALOR BRUTO",
-        styles: {
-          fontStyle: "bold", halign: "center",
-          fillColor: destaqueBruto ? [11, 27, 43] : [240, 240, 245],
-          textColor: destaqueBruto ? 255 : 20,
+    body: [
+      [
+        { content: fatLinha, styles: { fontStyle: "bold", halign: "left" } },
+        { content: "TOTAL DE INSERÇÕES", styles: { fontStyle: "bold", halign: "center" } },
+        { content: String(pi.total_insercoes), styles: { halign: "center", fontStyle: "bold" } },
+        {
+          content: "VALOR BRUTO",
+          styles: {
+            fontStyle: "bold",
+            halign: "center",
+            fillColor: destaqueBruto ? [11, 27, 43] : [240, 240, 245],
+            textColor: destaqueBruto ? 255 : 20,
+          },
         },
-      },
-      {
-        content: fmtBRL(valorBruto),
-        styles: {
-          halign: "right", fontStyle: "bold",
-          fillColor: destaqueBruto ? [11, 27, 43] : [240, 240, 245],
-          textColor: destaqueBruto ? 255 : 20,
+        {
+          content: fmtBRL(valorBruto),
+          styles: {
+            halign: "right",
+            fontStyle: "bold",
+            fillColor: destaqueBruto ? [11, 27, 43] : [240, 240, 245],
+            textColor: destaqueBruto ? 255 : 20,
+          },
         },
-      },
-      {
-        content: "VALOR LÍQUIDO",
-        styles: {
-          fontStyle: "bold", halign: "center",
-          fillColor: !destaqueBruto ? [11, 27, 43] : [240, 240, 245],
-          textColor: !destaqueBruto ? 255 : 20,
+        {
+          content: "VALOR LÍQUIDO",
+          styles: {
+            fontStyle: "bold",
+            halign: "center",
+            fillColor: !destaqueBruto ? [11, 27, 43] : [240, 240, 245],
+            textColor: !destaqueBruto ? 255 : 20,
+          },
         },
-      },
-      {
-        content: fmtBRL(valorLiquido),
-        styles: {
-          halign: "right", fontStyle: "bold",
-          fillColor: !destaqueBruto ? [11, 27, 43] : [240, 240, 245],
-          textColor: !destaqueBruto ? 255 : 20,
+        {
+          content: fmtBRL(valorLiquido),
+          styles: {
+            halign: "right",
+            fontStyle: "bold",
+            fillColor: !destaqueBruto ? [11, 27, 43] : [240, 240, 245],
+            textColor: !destaqueBruto ? 255 : 20,
+          },
         },
-      },
-    ]],
+      ],
+    ],
     styles: { fontSize: 8.5, cellPadding: 2 },
     columnStyles: {
       0: { cellWidth: usableW - 40 - 18 - 36 - 32 - 36 - 32 },
@@ -669,13 +827,19 @@ export function gerarPdfPi(
   y = (doc.lastAutoTable?.finalY ?? y) + 1;
 
   // Média de desconto aplicada
-  const mediaDesc = pi.valor_tabela > 0 ? ((pi.valor_desconto / pi.valor_tabela) * 100).toFixed(2) + "%" : "0%";
+  const mediaDesc =
+    pi.valor_tabela > 0 ? ((pi.valor_desconto / pi.valor_tabela) * 100).toFixed(2) + "%" : "0%";
   autoTable(doc, {
     startY: y,
     margin: { left: M, right: M, bottom: RESERVA_RODAPE },
-    body: [[
-      { content: `Desconto médio aplicado: ${mediaDesc}`, styles: { fontStyle: "bold", halign: "right" } },
-    ]],
+    body: [
+      [
+        {
+          content: `Desconto médio aplicado: ${mediaDesc}`,
+          styles: { fontStyle: "bold", halign: "right" },
+        },
+      ],
+    ],
     styles: { fontSize: 8, cellPadding: 1.2 },
     columnStyles: { 0: { cellWidth: usableW } },
     theme: "grid",
@@ -689,11 +853,13 @@ export function gerarPdfPi(
     autoTable(doc, {
       startY: y,
       margin: { left: M, right: M, bottom: RESERVA_RODAPE },
-      body: [[
-        { content: `Data de faturamento: ${fmtDate(pi.data_faturamento)}` },
-        { content: `Envio da nota: ${fmtDate(pi.data_envio_nota)}` },
-        { content: `Vencimento: ${fmtDate(pi.data_vencimento_nota)}` },
-      ]],
+      body: [
+        [
+          { content: `Data de faturamento: ${fmtDate(pi.data_faturamento)}` },
+          { content: `Envio da nota: ${fmtDate(pi.data_envio_nota)}` },
+          { content: `Vencimento: ${fmtDate(pi.data_vencimento_nota)}` },
+        ],
+      ],
       styles: { fontSize: 8, cellPadding: 1.5 },
       theme: "grid",
     });
@@ -703,13 +869,22 @@ export function gerarPdfPi(
 
   // Observação (PI + emissora)
   if (obsTexto) {
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
     const lines = doc.splitTextToSize(obsTexto, W - M * 2);
     const blocoH = 4 + lines.length * 4 + 3;
-    if (y + blocoH + RESERVA_RODAPE > H) { doc.addPage(); y = 14; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(11, 27, 43);
-    doc.text("OBSERVAÇÕES", M, y); y += 4;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(40);
+    if (y + blocoH + RESERVA_RODAPE > H) {
+      doc.addPage();
+      y = 14;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(11, 27, 43);
+    doc.text("OBSERVAÇÕES", M, y);
+    y += 4;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(40);
     doc.text(lines, M, y, { align: "left" });
     y += lines.length * 4 + 3;
     doc.setTextColor(0);
@@ -721,16 +896,23 @@ export function gerarPdfPi(
     if (txt) {
       const entregaLinhas = doc.splitTextToSize(txt, W - M * 2) as string[];
       const blocoH = 4 + entregaLinhas.length * 4 + 3;
-      if (y + blocoH + RESERVA_RODAPE > H) { doc.addPage(); y = 14; }
-      doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(11, 27, 43);
-      doc.text("ENTREGA DE MATERIAL", M, y); y += 4;
-      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(40);
+      if (y + blocoH + RESERVA_RODAPE > H) {
+        doc.addPage();
+        y = 14;
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(11, 27, 43);
+      doc.text("ENTREGA DE MATERIAL", M, y);
+      y += 4;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(40);
       doc.text(entregaLinhas, M, y);
       y += entregaLinhas.length * 4 + 3;
       doc.setTextColor(0);
     }
   }
-
 
   // Assinaturas em TODAS as páginas (executivo + diretoria + cliente/agência) + rodapé.
   const totalPages = doc.getNumberOfPages();
@@ -738,10 +920,10 @@ export function gerarPdfPi(
     doc.setPage(pIdx);
     const sigY = H - 24; // Subiu um pouco para caber 3 assinaturas se necessário
     doc.setDrawColor(120);
-    
+
     // Layout com 3 colunas para assinaturas
     const colWidth = (W - M * 2) / 3;
-    
+
     // Linhas horizontais
     doc.line(M + 5, sigY, M + colWidth - 5, sigY); // Executivo
     doc.line(M + colWidth + 5, sigY, M + colWidth * 2 - 5, sigY); // Diretoria
@@ -752,44 +934,89 @@ export function gerarPdfPi(
       try {
         const fmt = opts.assinaturaExecutivoDataUrl.includes("image/jpeg") ? "JPEG" : "PNG";
         doc.addImage(opts.assinaturaExecutivoDataUrl, fmt, M + 10, sigY - 14, colWidth - 20, 13);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     if (opts?.nomeExecutivo) {
-      doc.setFont("helvetica", "italic"); doc.setFontSize(8); doc.setTextColor(11, 27, 43);
-      doc.text(opts.nomeExecutivo, M + colWidth / 2, sigY - 2, { align: "center", maxWidth: colWidth - 10 });
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(11, 27, 43);
+      doc.text(opts.nomeExecutivo, M + colWidth / 2, sigY - 2, {
+        align: "center",
+        maxWidth: colWidth - 10,
+      });
     }
-    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(80);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(80);
     doc.text("Assinatura do Executivo", M + colWidth / 2, sigY + 4, { align: "center" });
 
     // 2. Assinatura da Diretoria
     if (opts?.assinaturaDiretoriaDataUrl) {
       try {
         const fmt = opts.assinaturaDiretoriaDataUrl.includes("image/jpeg") ? "JPEG" : "PNG";
-        doc.addImage(opts.assinaturaDiretoriaDataUrl, fmt, M + colWidth + 10, sigY - 14, colWidth - 20, 13);
-      } catch { /* ignore */ }
+        doc.addImage(
+          opts.assinaturaDiretoriaDataUrl,
+          fmt,
+          M + colWidth + 10,
+          sigY - 14,
+          colWidth - 20,
+          13,
+        );
+      } catch {
+        /* ignore */
+      }
     }
     if (opts?.nomeDiretoria) {
-      doc.setFont("helvetica", "italic"); doc.setFontSize(8); doc.setTextColor(11, 27, 43);
-      doc.text(opts.nomeDiretoria, M + colWidth * 1.5, sigY - 2, { align: "center", maxWidth: colWidth - 10 });
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(11, 27, 43);
+      doc.text(opts.nomeDiretoria, M + colWidth * 1.5, sigY - 2, {
+        align: "center",
+        maxWidth: colWidth - 10,
+      });
     }
-    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(80);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(80);
     doc.text("Assinatura da Diretoria", M + colWidth * 1.5, sigY + 4, { align: "center" });
 
     // 3. Assinatura digital do cliente
     const ac = opts?.assinaturaCliente;
     if (ac?.assinado_em) {
-      doc.setFont("helvetica", "italic"); doc.setFontSize(8); doc.setTextColor(11, 27, 43);
-      doc.text(ac.nome_assinante || "—", M + colWidth * 2.5, sigY - 4, { align: "center", maxWidth: colWidth - 10 });
-      doc.setFont("helvetica", "normal"); doc.setFontSize(6); doc.setTextColor(100);
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(11, 27, 43);
+      doc.text(ac.nome_assinante || "—", M + colWidth * 2.5, sigY - 4, {
+        align: "center",
+        maxWidth: colWidth - 10,
+      });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6);
+      doc.setTextColor(100);
       const carimbo = `CPF ${ac.cpf || "—"} · ${new Date(ac.assinado_em).toLocaleString("pt-BR")}${ac.ip ? ` · IP ${ac.ip}` : ""}`;
       doc.text(carimbo, M + colWidth * 2.5, sigY + 8, { align: "center", maxWidth: colWidth - 5 });
     }
-    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(80);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(80);
     doc.text("Assinatura do Cliente / Agência", M + colWidth * 2.5, sigY + 4, { align: "center" });
 
     // Rodapé de página — dados do perfil que gerou o PI
-    const criador = (pi as unknown as { criador?: { nome?: string | null; email?: string | null; cargo?: string | null; telefone?: string | null; whatsapp?: string | null } | null }).criador;
-    doc.setFontSize(7); doc.setTextColor(90);
+    const criador = (
+      pi as unknown as {
+        criador?: {
+          nome?: string | null;
+          email?: string | null;
+          cargo?: string | null;
+          telefone?: string | null;
+          whatsapp?: string | null;
+        } | null;
+      }
+    ).criador;
+    doc.setFontSize(7);
+    doc.setTextColor(90);
     if (criador && (criador.nome || criador.email)) {
       const partes = [
         criador.nome ? `Gerado por: ${criador.nome}` : null,
@@ -797,25 +1024,28 @@ export function gerarPdfPi(
         criador.email || null,
         criador.telefone ? `Tel: ${criador.telefone}` : null,
         criador.whatsapp ? `WhatsApp: ${criador.whatsapp}` : null,
-      ].filter(Boolean).join("  ·  ");
+      ]
+        .filter(Boolean)
+        .join("  ·  ");
       doc.text(partes, W / 2, H - 9, { align: "center", maxWidth: W - M * 2 });
     }
-    doc.setFontSize(7); doc.setTextColor(140);
+    doc.setFontSize(7);
+    doc.setTextColor(140);
     doc.text(
       `Página ${pIdx}/${totalPages} · Documento gerado em ${new Date().toLocaleString("pt-BR")} · Mídia.OS — TV Brasília`,
-      W / 2, H - 5, { align: "center" },
+      W / 2,
+      H - 5,
+      { align: "center" },
     );
     if (layout.rodapeTexto && layout.rodapeTexto.trim()) {
-      doc.setFontSize(7); doc.setTextColor(100);
+      doc.setFontSize(7);
+      doc.setTextColor(100);
       doc.text(layout.rodapeTexto.trim(), W / 2, H - 13, { align: "center", maxWidth: W - M * 2 });
     }
     doc.setTextColor(0);
   }
 
   applyTrialWatermark(doc);
-
-
-
 
   if (mode === "blob") {
     const blob = doc.output("blob") as Blob;

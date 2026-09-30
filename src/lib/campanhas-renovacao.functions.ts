@@ -80,7 +80,7 @@ export const listCampanhasRenovacao10Dias = createServerFn({ method: "GET" })
       .eq("user_id", userId);
     const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
     const hasBroadAccess = roles.some((r: string) =>
-      ["admin", "diretoria", "opec", "financeiro", "super_admin"].includes(r)
+      ["admin", "diretoria", "opec", "financeiro", "super_admin"].includes(r),
     );
 
     // Buscar PIs ativos/veiculando/aprovados
@@ -110,7 +110,7 @@ export const listCampanhasRenovacao10Dias = createServerFn({ method: "GET" })
         status,
         observacao,
         cliente:clientes(id, razao_social, nome_fantasia, contato_nome, telefone, email)
-      `
+      `,
       )
       .in("status", statusAtivos);
 
@@ -126,7 +126,7 @@ export const listCampanhasRenovacao10Dias = createServerFn({ method: "GET" })
 
     // Buscar nomes dos executivos
     const executivoIds = Array.from(
-      new Set((pis ?? []).map((p) => p.executivo_id).filter(Boolean))
+      new Set((pis ?? []).map((p) => p.executivo_id).filter(Boolean)),
     );
     const executivosMap = new Map<string, string>();
     if (executivoIds.length > 0) {
@@ -168,9 +168,7 @@ export const listCampanhasRenovacao10Dias = createServerFn({ method: "GET" })
 
         const clienteObj = p.cliente as any;
         const clienteNome =
-          clienteObj?.nome_fantasia ||
-          clienteObj?.razao_social ||
-          "Cliente não identificado";
+          clienteObj?.nome_fantasia || clienteObj?.razao_social || "Cliente não identificado";
 
         alertas.push({
           pi_id: p.id,
@@ -214,8 +212,14 @@ export const dispararNotificacoesRenovacao10Dias = createServerFn({ method: "POS
 
     // Buscar admins e diretores para notificar também
     const [{ data: admins }, { data: diretorias }] = await Promise.all([
-      supabase.from("user_roles").select("user_id").eq("role", "admin" as never),
-      supabase.from("user_roles").select("user_id").eq("role", "diretoria" as never),
+      supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin" as never),
+      supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "diretoria" as never),
     ]);
 
     const adminIds = new Set<string>();
@@ -230,8 +234,8 @@ export const dispararNotificacoesRenovacao10Dias = createServerFn({ method: "POS
         c.dias_uteis_restantes === 0
           ? "termina HOJE"
           : c.dias_uteis_restantes === 1
-          ? "termina em 1 dia útil"
-          : `termina em ${c.dias_uteis_restantes} dias úteis`;
+            ? "termina em 1 dia útil"
+            : `termina em ${c.dias_uteis_restantes} dias úteis`;
 
       const titulo = `⏰ Alerta Renovação: ${c.cliente_nome} (${diasTexto})`;
       const mensagem = `A campanha "${c.campanha}" (PI ${c.numero}) encerra em ${c.periodo_fim.split("-").reverse().join("/")}. Inicie a negociação de renovação comercial.`;

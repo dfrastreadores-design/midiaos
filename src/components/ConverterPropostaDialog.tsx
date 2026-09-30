@@ -1,14 +1,35 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, FileUp, Sparkles, CheckCircle2, AlertTriangle, FilePlus2, ArrowRightCircle } from "lucide-react";
+import {
+  Loader2,
+  FileUp,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  FilePlus2,
+  ArrowRightCircle,
+} from "lucide-react";
 import { converterPropostaEmPi, getProposta } from "@/lib/propostas.functions";
 import { extractPdfText } from "@/lib/pdf-extract";
 import { extrairPiDePdf, type PiExtraido } from "@/lib/pi-ai.functions";
@@ -16,16 +37,43 @@ import { PiFormDialog } from "@/components/PiFormDialog";
 import type { CalcItemOut } from "@/components/PriceCalculator";
 import { toast } from "sonner";
 
-const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MESES = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
 type Divergencia = { campo: string; proposta: string; pi: string };
 
 const fmtBRL = (v: number | null | undefined) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
-function comparar(prop: { campanha: string; valor_negociado: number; total_insercoes: number; itens?: Array<unknown> }, pi: PiExtraido, mes: number, ano: number): Divergencia[] {
+function comparar(
+  prop: {
+    campanha: string;
+    valor_negociado: number;
+    total_insercoes: number;
+    itens?: Array<unknown>;
+  },
+  pi: PiExtraido,
+  mes: number,
+  ano: number,
+): Divergencia[] {
   const divs: Divergencia[] = [];
-  if (pi.campanha && prop.campanha && pi.campanha.trim().toLowerCase() !== prop.campanha.trim().toLowerCase()) {
+  if (
+    pi.campanha &&
+    prop.campanha &&
+    pi.campanha.trim().toLowerCase() !== prop.campanha.trim().toLowerCase()
+  ) {
     divs.push({ campo: "Campanha", proposta: prop.campanha, pi: pi.campanha });
   }
   if (pi.mes_veiculacao && pi.mes_veiculacao !== mes) {
@@ -37,20 +85,41 @@ function comparar(prop: { campanha: string; valor_negociado: number; total_inser
   if (pi.valor_negociado != null) {
     const diff = Math.abs(pi.valor_negociado - prop.valor_negociado);
     const tol = Math.max(1, prop.valor_negociado * 0.01);
-    if (diff > tol) divs.push({ campo: "Valor negociado", proposta: fmtBRL(prop.valor_negociado), pi: fmtBRL(pi.valor_negociado) });
+    if (diff > tol)
+      divs.push({
+        campo: "Valor negociado",
+        proposta: fmtBRL(prop.valor_negociado),
+        pi: fmtBRL(pi.valor_negociado),
+      });
   }
   if (pi.total_insercoes != null && pi.total_insercoes !== prop.total_insercoes) {
-    divs.push({ campo: "Total de inserções", proposta: String(prop.total_insercoes), pi: String(pi.total_insercoes) });
+    divs.push({
+      campo: "Total de inserções",
+      proposta: String(prop.total_insercoes),
+      pi: String(pi.total_insercoes),
+    });
   }
   if (pi.itens && prop.itens && pi.itens.length !== prop.itens.length) {
-    divs.push({ campo: "Quantidade de itens", proposta: String(prop.itens.length), pi: String(pi.itens.length) });
+    divs.push({
+      campo: "Quantidade de itens",
+      proposta: String(prop.itens.length),
+      pi: String(pi.itens.length),
+    });
   }
   return divs;
 }
 
 export function ConverterPropostaDialog({
-  propostaId, numero, open, onOpenChange,
-}: { propostaId: string | null; numero: string; open: boolean; onOpenChange: (v: boolean) => void }) {
+  propostaId,
+  numero,
+  open,
+  onOpenChange,
+}: {
+  propostaId: string | null;
+  numero: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const now = new Date();
@@ -97,7 +166,9 @@ export function ConverterPropostaDialog({
   const converter = useMutation({
     mutationFn: () => {
       if (!propostaId) throw new Error("Proposta inválida");
-      return converterPropostaEmPi({ data: { proposta_id: propostaId, mes_veiculacao: mes, ano_veiculacao: ano } });
+      return converterPropostaEmPi({
+        data: { proposta_id: propostaId, mes_veiculacao: mes, ano_veiculacao: ano },
+      });
     },
     onSuccess: () => {
       toast.success("PI gerado a partir da proposta");
@@ -165,7 +236,8 @@ export function ConverterPropostaDialog({
           <DialogHeader>
             <DialogTitle>Converter {numero} em PI</DialogTitle>
             <DialogDescription>
-              Você pode anexar um PI já enviado pelo cliente/agência ou criar um novo a partir da proposta.
+              Você pode anexar um PI já enviado pelo cliente/agência ou criar um novo a partir da
+              proposta.
             </DialogDescription>
           </DialogHeader>
 
@@ -173,22 +245,41 @@ export function ConverterPropostaDialog({
             <div className="space-y-1.5">
               <Label>Mês de Veiculação</Label>
               <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{MESES.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MESES.map((m, i) => (
+                    <SelectItem key={i} value={String(i + 1)}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Ano</Label>
               <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{anos.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {anos.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
           </div>
 
           {modo === "escolha" && (
             <div className="grid sm:grid-cols-2 gap-3">
-              <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setModo("anexar")}>
+              <Card
+                className="cursor-pointer hover:border-primary transition-colors"
+                onClick={() => setModo("anexar")}
+              >
                 <CardContent className="p-4 space-y-2">
                   <FileUp className="size-6 text-primary" />
                   <div className="font-medium">Anexar PI pronto</div>
@@ -197,7 +288,10 @@ export function ConverterPropostaDialog({
                   </p>
                 </CardContent>
               </Card>
-              <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setPiFormOpen(true)}>
+              <Card
+                className="cursor-pointer hover:border-primary transition-colors"
+                onClick={() => setPiFormOpen(true)}
+              >
                 <CardContent className="p-4 space-y-2">
                   <FilePlus2 className="size-6 text-primary" />
                   <div className="font-medium">Criar PI agora</div>
@@ -207,7 +301,12 @@ export function ConverterPropostaDialog({
                 </CardContent>
               </Card>
               <div className="sm:col-span-2">
-                <Button variant="outline" className="w-full" onClick={() => converter.mutate()} disabled={converter.isPending}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => converter.mutate()}
+                  disabled={converter.isPending}
+                >
                   <ArrowRightCircle className="size-4 mr-2" />
                   Ou gerar PI automaticamente (sem revisar)
                 </Button>
@@ -221,12 +320,20 @@ export function ConverterPropostaDialog({
               <Input
                 type="file"
                 accept="application/pdf"
-                onChange={(e) => { setFile(e.target.files?.[0] ?? null); setExtraido(null); setDivergencias(null); }}
+                onChange={(e) => {
+                  setFile(e.target.files?.[0] ?? null);
+                  setExtraido(null);
+                  setDivergencias(null);
+                }}
                 disabled={extracting}
               />
               {file && !extraido && (
                 <Button onClick={handleExtract} disabled={extracting} className="w-full">
-                  {extracting ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Sparkles className="size-4 mr-2" />}
+                  {extracting ? (
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-4 mr-2" />
+                  )}
                   {extracting ? "Lendo PDF e comparando…" : "Ler PDF e comparar com a proposta"}
                 </Button>
               )}
@@ -249,7 +356,8 @@ export function ConverterPropostaDialog({
                     <ul className="mt-2 space-y-1 text-xs">
                       {divergencias.map((d, i) => (
                         <li key={i}>
-                          <strong>{d.campo}:</strong> proposta = <code>{d.proposta}</code> · PI = <code>{d.pi}</code>
+                          <strong>{d.campo}:</strong> proposta = <code>{d.proposta}</code> · PI ={" "}
+                          <code>{d.pi}</code>
                         </li>
                       ))}
                     </ul>
@@ -258,15 +366,21 @@ export function ConverterPropostaDialog({
                 </Alert>
               )}
 
-              <Button variant="ghost" size="sm" onClick={() => setModo("escolha")}>← Voltar</Button>
+              <Button variant="ghost" size="sm" onClick={() => setModo("escolha")}>
+                ← Voltar
+              </Button>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             {modo === "anexar" && extraido && (
               <Button onClick={() => converter.mutate()} disabled={converter.isPending}>
-                {divergencias && divergencias.length > 0 ? "Prosseguir mesmo assim" : "Confirmar e converter"}
+                {divergencias && divergencias.length > 0
+                  ? "Prosseguir mesmo assim"
+                  : "Confirmar e converter"}
               </Button>
             )}
           </DialogFooter>

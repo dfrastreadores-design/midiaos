@@ -2,12 +2,42 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Upload, FileSpreadsheet, AlertTriangle, Loader2, Handshake, CheckCircle2, Building2, Percent } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Download,
+  Upload,
+  FileSpreadsheet,
+  AlertTriangle,
+  Loader2,
+  Handshake,
+  CheckCircle2,
+  Building2,
+  Percent,
+} from "lucide-react";
 import { toast } from "sonner";
 import { importProdutosBulk } from "@/lib/produtos.functions";
 import { listParceiros, type Parceiro } from "@/lib/parceiros.functions";
@@ -41,55 +71,167 @@ type Linha = {
 };
 
 const COLUNAS = [
-  "nome", "midia", "tipo", "programa", "formato", "faixa",
-  "duracao_segundos", "insercoes_padrao", "valor_unit", "ativo",
-  "parceiro_nome", "parceiro_cnpj", "comissao_inquilino_pct",
-  "observacao", "endereco_ponto", "cep", "quantidade_telas", "formato_tela", "resolucao",
-  "foto1", "foto2",
+  "nome",
+  "midia",
+  "tipo",
+  "programa",
+  "formato",
+  "faixa",
+  "duracao_segundos",
+  "insercoes_padrao",
+  "valor_unit",
+  "ativo",
+  "parceiro_nome",
+  "parceiro_cnpj",
+  "comissao_inquilino_pct",
+  "observacao",
+  "endereco_ponto",
+  "cep",
+  "quantidade_telas",
+  "formato_tela",
+  "resolucao",
+  "foto1",
+  "foto2",
 ] as const;
 
 const norm = (s: string) =>
-  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 
 const ALIASES: Record<string, string> = {
-  "nome": "nome", "produto": "nome", "descricao": "nome", "descricao do produto": "nome", "item": "nome", "titulo": "nome",
-  "midia": "midia", "mídia": "midia", "veiculo": "midia", "tipo de midia": "midia", "canal": "midia",
-  "tipo": "tipo", "categoria": "tipo", "segmento": "tipo",
-  "programa": "programa", "programacao": "programa", "atracao": "programa", "circuito": "programa",
-  "formato": "formato",
-  "faixa": "faixa", "horario": "faixa", "faixa horaria": "faixa",
-  "duracao_segundos": "duracao_segundos", "duracao": "duracao_segundos", "duracao (s)": "duracao_segundos",
-  "segundos": "duracao_segundos", "tempo": "duracao_segundos", "duracao em segundos": "duracao_segundos",
-  "insercoes_padrao": "insercoes_padrao", "insercoes": "insercoes_padrao", "qtd insercoes": "insercoes_padrao",
-  "quantidade de insercoes": "insercoes_padrao", "spots": "insercoes_padrao", "exibicoes": "insercoes_padrao",
-  "valor_unit": "valor_unit", "valor": "valor_unit", "valor unitario": "valor_unit", "preco": "valor_unit",
-  "preco unitario": "valor_unit", "valor unit": "valor_unit", "valor unit.": "valor_unit", "tabela": "valor_unit",
-  "ativo": "ativo", "status": "ativo", "situacao": "ativo",
-  "parceiro_cnpj": "parceiro_cnpj", "cnpj_parceiro": "parceiro_cnpj", "cnpj do parceiro": "parceiro_cnpj", "cnpj parceiro": "parceiro_cnpj", "cnpj": "parceiro_cnpj",
-  "parceiro_nome": "parceiro_nome", "nome_parceiro": "parceiro_nome", "nome do parceiro": "parceiro_nome", "parceiro": "parceiro_nome", "fornecedor": "parceiro_nome", "empresa_parceira": "parceiro_nome",
-  "comissao_inquilino_pct": "comissao_inquilino_pct", "comissao": "comissao_inquilino_pct", "comissao_pct": "comissao_inquilino_pct", "% comissao": "comissao_inquilino_pct", "% comissão": "comissao_inquilino_pct", "comissao %": "comissao_inquilino_pct", "remuneracao": "comissao_inquilino_pct", "remuneração": "comissao_inquilino_pct", "comissao inquilino": "comissao_inquilino_pct", "comissao_inquilino": "comissao_inquilino_pct",
-  "observacao": "observacao", "obs": "observacao", "observacoes": "observacao",
-  "endereco_ponto": "endereco_ponto", "endereco": "endereco_ponto", "local": "endereco_ponto", "ponto": "endereco_ponto", "localizacao": "endereco_ponto",
-  "cep": "cep", "cep_ponto": "cep", "codigo_postal": "cep", "cep do ponto": "cep",
-  "quantidade_telas": "quantidade_telas", "telas": "quantidade_telas", "qtd telas": "quantidade_telas", "pontos": "quantidade_telas",
-  "formato_tela": "formato_tela", "formato da tela": "formato_tela", "orientacao": "formato_tela",
-  "resolucao": "resolucao",
-  "foto1": "foto1", "foto 1": "foto1", "foto": "foto1", "imagem": "foto1", "imagem 1": "foto1", "url foto": "foto1", "foto principal": "foto1", "link foto": "foto1",
-  "foto2": "foto2", "foto 2": "foto2", "imagem 2": "foto2", "foto secundaria": "foto2", "link foto 2": "foto2",
+  nome: "nome",
+  produto: "nome",
+  descricao: "nome",
+  "descricao do produto": "nome",
+  item: "nome",
+  titulo: "nome",
+  midia: "midia",
+  mídia: "midia",
+  veiculo: "midia",
+  "tipo de midia": "midia",
+  canal: "midia",
+  tipo: "tipo",
+  categoria: "tipo",
+  segmento: "tipo",
+  programa: "programa",
+  programacao: "programa",
+  atracao: "programa",
+  circuito: "programa",
+  formato: "formato",
+  faixa: "faixa",
+  horario: "faixa",
+  "faixa horaria": "faixa",
+  duracao_segundos: "duracao_segundos",
+  duracao: "duracao_segundos",
+  "duracao (s)": "duracao_segundos",
+  segundos: "duracao_segundos",
+  tempo: "duracao_segundos",
+  "duracao em segundos": "duracao_segundos",
+  insercoes_padrao: "insercoes_padrao",
+  insercoes: "insercoes_padrao",
+  "qtd insercoes": "insercoes_padrao",
+  "quantidade de insercoes": "insercoes_padrao",
+  spots: "insercoes_padrao",
+  exibicoes: "insercoes_padrao",
+  valor_unit: "valor_unit",
+  valor: "valor_unit",
+  "valor unitario": "valor_unit",
+  preco: "valor_unit",
+  "preco unitario": "valor_unit",
+  "valor unit": "valor_unit",
+  "valor unit.": "valor_unit",
+  tabela: "valor_unit",
+  ativo: "ativo",
+  status: "ativo",
+  situacao: "ativo",
+  parceiro_cnpj: "parceiro_cnpj",
+  cnpj_parceiro: "parceiro_cnpj",
+  "cnpj do parceiro": "parceiro_cnpj",
+  "cnpj parceiro": "parceiro_cnpj",
+  cnpj: "parceiro_cnpj",
+  parceiro_nome: "parceiro_nome",
+  nome_parceiro: "parceiro_nome",
+  "nome do parceiro": "parceiro_nome",
+  parceiro: "parceiro_nome",
+  fornecedor: "parceiro_nome",
+  empresa_parceira: "parceiro_nome",
+  comissao_inquilino_pct: "comissao_inquilino_pct",
+  comissao: "comissao_inquilino_pct",
+  comissao_pct: "comissao_inquilino_pct",
+  "% comissao": "comissao_inquilino_pct",
+  "% comissão": "comissao_inquilino_pct",
+  "comissao %": "comissao_inquilino_pct",
+  remuneracao: "comissao_inquilino_pct",
+  remuneração: "comissao_inquilino_pct",
+  "comissao inquilino": "comissao_inquilino_pct",
+  comissao_inquilino: "comissao_inquilino_pct",
+  observacao: "observacao",
+  obs: "observacao",
+  observacoes: "observacao",
+  endereco_ponto: "endereco_ponto",
+  endereco: "endereco_ponto",
+  local: "endereco_ponto",
+  ponto: "endereco_ponto",
+  localizacao: "endereco_ponto",
+  cep: "cep",
+  cep_ponto: "cep",
+  codigo_postal: "cep",
+  "cep do ponto": "cep",
+  quantidade_telas: "quantidade_telas",
+  telas: "quantidade_telas",
+  "qtd telas": "quantidade_telas",
+  pontos: "quantidade_telas",
+  formato_tela: "formato_tela",
+  "formato da tela": "formato_tela",
+  orientacao: "formato_tela",
+  resolucao: "resolucao",
+  foto1: "foto1",
+  "foto 1": "foto1",
+  foto: "foto1",
+  imagem: "foto1",
+  "imagem 1": "foto1",
+  "url foto": "foto1",
+  "foto principal": "foto1",
+  "link foto": "foto1",
+  foto2: "foto2",
+  "foto 2": "foto2",
+  "imagem 2": "foto2",
+  "foto secundaria": "foto2",
+  "link foto 2": "foto2",
 };
 
 function parseMidia(v: string, fallback: Midia): Midia {
   const s = norm(v);
   if (!s) return fallback;
   if (s.startsWith("tv") || s.includes("televis")) return "TV";
-  if (s.startsWith("rad") || s.startsWith("rád") || s.includes("fm") || s.includes("am")) return "Radio";
-  if (s.includes("dooh") || s.includes("ooh") || s.includes("outdoor") || s.includes("painel") || s.includes("tela") || s.includes("digital") || s.includes("ponto") || s.includes("banca") || s.includes("front") || s.includes("elevador") || s.includes("shopping")) return "DOOH";
+  if (s.startsWith("rad") || s.startsWith("rád") || s.includes("fm") || s.includes("am"))
+    return "Radio";
+  if (
+    s.includes("dooh") ||
+    s.includes("ooh") ||
+    s.includes("outdoor") ||
+    s.includes("painel") ||
+    s.includes("tela") ||
+    s.includes("digital") ||
+    s.includes("ponto") ||
+    s.includes("banca") ||
+    s.includes("front") ||
+    s.includes("elevador") ||
+    s.includes("shopping")
+  )
+    return "DOOH";
   return fallback;
 }
 
 function parseNumero(v: unknown): number {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  const s = String(v ?? "").replace(/[^\d.,-]/g, "").trim();
+  const s = String(v ?? "")
+    .replace(/[^\d.,-]/g, "")
+    .trim();
   if (!s) return 0;
   const normalized = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
   const n = Number(normalized);
@@ -121,7 +263,9 @@ export function ImportarProdutosDialog({
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [arquivo, setArquivo] = useState<string>("");
   const [midiaFallback, setMidiaFallback] = useState<Midia>(midiaPadrao);
-  const [selectedParceiroId, setSelectedParceiroId] = useState<string>(parceiroPadraoId || "nenhum");
+  const [selectedParceiroId, setSelectedParceiroId] = useState<string>(
+    parceiroPadraoId || "nenhum",
+  );
   const [lendo, setLendo] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
@@ -156,9 +300,11 @@ export function ImportarProdutosDialog({
         return {
           ...linha,
           parceiro_id: parceiroAtivo.id,
-          parceiro_nome: linha.parceiro_nome || parceiroAtivo.nome_fantasia || parceiroAtivo.razao_social,
+          parceiro_nome:
+            linha.parceiro_nome || parceiroAtivo.nome_fantasia || parceiroAtivo.razao_social,
           parceiro_cnpj: linha.parceiro_cnpj || parceiroAtivo.cnpj,
-          comissao_inquilino_pct: linha.comissao_inquilino_pct ?? parceiroAtivo.comissao_padrao_pct ?? 20.0,
+          comissao_inquilino_pct:
+            linha.comissao_inquilino_pct ?? parceiroAtivo.comissao_padrao_pct ?? 20.0,
         };
       }
       return linha;
@@ -181,62 +327,69 @@ export function ImportarProdutosDialog({
       if (!ws) throw new Error("Planilha vazia");
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
 
-      const parsed: Linha[] = rows.map((row) => {
-        const mapped: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(row)) {
-          const key = ALIASES[norm(k)];
-          if (key && (mapped[key] === undefined || mapped[key] === "")) mapped[key] = v;
-        }
-
-        const nome = String(mapped.nome ?? "").trim();
-        const midia = parseMidia(String(mapped.midia ?? ""), midiaFallback);
-        const duracao = Math.round(parseNumero(mapped.duracao_segundos)) || 30;
-        const insercoes = Math.round(parseNumero(mapped.insercoes_padrao)) || 1;
-        const telas = mapped.quantidade_telas ? Math.round(parseNumero(mapped.quantidade_telas)) : null;
-        
-        let parceiroCnpj = String(mapped.parceiro_cnpj ?? "").trim() || null;
-        let parceiroNome = String(mapped.parceiro_nome ?? "").trim() || null;
-        let comissaoPct = mapped.comissao_inquilino_pct !== undefined && mapped.comissao_inquilino_pct !== "" 
-          ? parseNumero(mapped.comissao_inquilino_pct) 
-          : null;
-
-        // Se encontrou parceiro cadastrado pelo CNPJ da linha, associa
-        let parceiroIdEncontrado: string | null = null;
-        if (parceiroCnpj) {
-          const cleanCnpj = parceiroCnpj.replace(/\D/g, "");
-          const match = parceiros.find((p) => p.cnpj && p.cnpj.replace(/\D/g, "") === cleanCnpj);
-          if (match) {
-            parceiroIdEncontrado = match.id || null;
-            if (!parceiroNome) parceiroNome = match.nome_fantasia || match.razao_social;
-            if (comissaoPct === null) comissaoPct = match.comissao_padrao_pct ?? 20.0;
+      const parsed: Linha[] = rows
+        .map((row) => {
+          const mapped: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(row)) {
+            const key = ALIASES[norm(k)];
+            if (key && (mapped[key] === undefined || mapped[key] === "")) mapped[key] = v;
           }
-        }
 
-        return {
-          nome,
-          midia,
-          tipo: String(mapped.tipo ?? "").trim() || null,
-          programa: String(mapped.programa ?? "").trim() || null,
-          formato: String(mapped.formato ?? "").trim() || null,
-          faixa: String(mapped.faixa ?? "").trim() || null,
-          duracao_segundos: duracao,
-          insercoes_padrao: insercoes,
-          valor_unit: Math.max(0, parseNumero(mapped.valor_unit)),
-          ativo: parseBool(mapped.ativo),
-          parceiro_id: parceiroIdEncontrado,
-          parceiro_cnpj: parceiroCnpj,
-          parceiro_nome: parceiroNome,
-          comissao_inquilino_pct: comissaoPct,
-          observacao: String(mapped.observacao ?? "").trim() || null,
-          endereco_ponto: String(mapped.endereco_ponto ?? "").trim() || null,
-          cep: String(mapped.cep ?? "").trim() || null,
-          quantidade_telas: telas,
-          formato_tela: String(mapped.formato_tela ?? "").trim() || null,
-          resolucao: String(mapped.resolucao ?? "").trim() || null,
-          fotos: [String(mapped.foto1 ?? "").trim(), String(mapped.foto2 ?? "").trim()].filter(Boolean).slice(0, 2),
-          erro: nome ? undefined : "Nome do produto ausente",
-        };
-      }).filter((l) => l.nome || l.erro);
+          const nome = String(mapped.nome ?? "").trim();
+          const midia = parseMidia(String(mapped.midia ?? ""), midiaFallback);
+          const duracao = Math.round(parseNumero(mapped.duracao_segundos)) || 30;
+          const insercoes = Math.round(parseNumero(mapped.insercoes_padrao)) || 1;
+          const telas = mapped.quantidade_telas
+            ? Math.round(parseNumero(mapped.quantidade_telas))
+            : null;
+
+          let parceiroCnpj = String(mapped.parceiro_cnpj ?? "").trim() || null;
+          let parceiroNome = String(mapped.parceiro_nome ?? "").trim() || null;
+          let comissaoPct =
+            mapped.comissao_inquilino_pct !== undefined && mapped.comissao_inquilino_pct !== ""
+              ? parseNumero(mapped.comissao_inquilino_pct)
+              : null;
+
+          // Se encontrou parceiro cadastrado pelo CNPJ da linha, associa
+          let parceiroIdEncontrado: string | null = null;
+          if (parceiroCnpj) {
+            const cleanCnpj = parceiroCnpj.replace(/\D/g, "");
+            const match = parceiros.find((p) => p.cnpj && p.cnpj.replace(/\D/g, "") === cleanCnpj);
+            if (match) {
+              parceiroIdEncontrado = match.id || null;
+              if (!parceiroNome) parceiroNome = match.nome_fantasia || match.razao_social;
+              if (comissaoPct === null) comissaoPct = match.comissao_padrao_pct ?? 20.0;
+            }
+          }
+
+          return {
+            nome,
+            midia,
+            tipo: String(mapped.tipo ?? "").trim() || null,
+            programa: String(mapped.programa ?? "").trim() || null,
+            formato: String(mapped.formato ?? "").trim() || null,
+            faixa: String(mapped.faixa ?? "").trim() || null,
+            duracao_segundos: duracao,
+            insercoes_padrao: insercoes,
+            valor_unit: Math.max(0, parseNumero(mapped.valor_unit)),
+            ativo: parseBool(mapped.ativo),
+            parceiro_id: parceiroIdEncontrado,
+            parceiro_cnpj: parceiroCnpj,
+            parceiro_nome: parceiroNome,
+            comissao_inquilino_pct: comissaoPct,
+            observacao: String(mapped.observacao ?? "").trim() || null,
+            endereco_ponto: String(mapped.endereco_ponto ?? "").trim() || null,
+            cep: String(mapped.cep ?? "").trim() || null,
+            quantidade_telas: telas,
+            formato_tela: String(mapped.formato_tela ?? "").trim() || null,
+            resolucao: String(mapped.resolucao ?? "").trim() || null,
+            fotos: [String(mapped.foto1 ?? "").trim(), String(mapped.foto2 ?? "").trim()]
+              .filter(Boolean)
+              .slice(0, 2),
+            erro: nome ? undefined : "Nome do produto ausente",
+          };
+        })
+        .filter((l) => l.nome || l.erro);
 
       setLinhas(parsed);
       setArquivo(file.name);
@@ -303,7 +456,8 @@ export function ImportarProdutosDialog({
             <div>
               <DialogTitle className="text-xl">Importar Produtos de Mídia</DialogTitle>
               <DialogDescription>
-                Importe planilhas (.xlsx, .csv) de inventário próprio ou de parceiros comerciais (DOOH, Front Light, Elevadores, etc.).
+                Importe planilhas (.xlsx, .csv) de inventário próprio ou de parceiros comerciais
+                (DOOH, Front Light, Elevadores, etc.).
               </DialogDescription>
             </div>
           </div>
@@ -323,13 +477,18 @@ export function ImportarProdutosDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="nenhum">
-                  <span className="font-medium text-muted-foreground">🏢 Nenhum / Definido na Planilha / Próprio</span>
+                  <span className="font-medium text-muted-foreground">
+                    🏢 Nenhum / Definido na Planilha / Próprio
+                  </span>
                 </SelectItem>
                 {parceiros.map((p) => (
                   <SelectItem key={p.id} value={p.id!}>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{p.nome_fantasia || p.razao_social}</span>
-                      <Badge variant="outline" className="text-[10px] text-purple-700 bg-purple-50 dark:bg-purple-950/40">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] text-purple-700 bg-purple-50 dark:bg-purple-950/40"
+                      >
                         {p.comissao_padrao_pct}% comissão
                       </Badge>
                     </div>
@@ -346,7 +505,9 @@ export function ImportarProdutosDialog({
               Mídia Fallback
             </label>
             <Select value={midiaFallback} onValueChange={(v) => setMidiaFallback(v as Midia)}>
-              <SelectTrigger className="h-9 bg-background"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 bg-background">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="DOOH">DOOH / Mídia Exterior</SelectItem>
                 <SelectItem value="TV">TV Tradicional</SelectItem>
@@ -404,16 +565,23 @@ export function ImportarProdutosDialog({
             <div className="flex items-center gap-2">
               <CheckCircle2 className="size-4 text-purple-600 shrink-0" />
               <div>
-                <strong>Parceiro Ativo:</strong> {parceiroAtivo.nome_fantasia || parceiroAtivo.razao_social} {parceiroAtivo.cnpj && `(${parceiroAtivo.cnpj})`}
+                <strong>Parceiro Ativo:</strong>{" "}
+                {parceiroAtivo.nome_fantasia || parceiroAtivo.razao_social}{" "}
+                {parceiroAtivo.cnpj && `(${parceiroAtivo.cnpj})`}
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="bg-purple-200/60 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 text-[11px]">
+              <Badge
+                variant="secondary"
+                className="bg-purple-200/60 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 text-[11px]"
+              >
                 <Percent className="size-3 mr-1" />
                 Remuneração: {parceiroAtivo.comissao_padrao_pct}%
               </Badge>
               {parceiroAtivo.prazo_repasse && (
-                <span className="text-[11px] opacity-80">Repasse: {parceiroAtivo.prazo_repasse}</span>
+                <span className="text-[11px] opacity-80">
+                  Repasse: {parceiroAtivo.prazo_repasse}
+                </span>
               )}
             </div>
           </div>
@@ -424,7 +592,10 @@ export function ImportarProdutosDialog({
           <div className="text-xs text-muted-foreground flex items-center gap-2 shrink-0">
             <FileSpreadsheet className="size-4 text-purple-600" />
             <span className="font-semibold text-foreground">{arquivo}</span>
-            <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40">
+            <Badge
+              variant="outline"
+              className="text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
+            >
               {validas.length} válido(s) para importação
             </Badge>
             {linhasComParceiro.length - validas.length > 0 && (
@@ -482,11 +653,16 @@ export function ImportarProdutosDialog({
                               {l.parceiro_nome || "Parceiro Comercial"}
                             </span>
                             {l.parceiro_cnpj && (
-                              <span className="text-muted-foreground text-[10px]">{l.parceiro_cnpj}</span>
+                              <span className="text-muted-foreground text-[10px]">
+                                {l.parceiro_cnpj}
+                              </span>
                             )}
                           </div>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30"
+                          >
                             🏢 Próprio
                           </Badge>
                         )}
@@ -495,10 +671,16 @@ export function ImportarProdutosDialog({
                       {/* Mídia & Tipo */}
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
-                          <Badge variant="secondary" className="w-fit text-[10px] uppercase font-bold tracking-wider">
+                          <Badge
+                            variant="secondary"
+                            className="w-fit text-[10px] uppercase font-bold tracking-wider"
+                          >
                             {l.midia}
                           </Badge>
-                          <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={l.tipo || ""}>
+                          <span
+                            className="text-xs text-muted-foreground truncate max-w-[150px]"
+                            title={l.tipo || ""}
+                          >
                             {l.tipo || "—"}
                           </span>
                         </div>
@@ -507,9 +689,16 @@ export function ImportarProdutosDialog({
                       {/* Endereço / Local */}
                       <TableCell className="text-xs text-muted-foreground max-w-[180px]">
                         {l.endereco_ponto ? (
-                          <div className="truncate" title={`${l.endereco_ponto} ${l.cep ? `(CEP: ${l.cep})` : ""}`}>
+                          <div
+                            className="truncate"
+                            title={`${l.endereco_ponto} ${l.cep ? `(CEP: ${l.cep})` : ""}`}
+                          >
                             {l.endereco_ponto}
-                            {l.cep && <span className="block text-[10px] text-muted-foreground/80 font-mono">CEP: {l.cep}</span>}
+                            {l.cep && (
+                              <span className="block text-[10px] text-muted-foreground/80 font-mono">
+                                CEP: {l.cep}
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-muted-foreground/60">—</span>
@@ -534,19 +723,29 @@ export function ImportarProdutosDialog({
 
                       {/* Valor Unit */}
                       <TableCell className="text-right font-semibold text-sm">
-                        {l.valor_unit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        {l.valor_unit.toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}
                       </TableCell>
 
                       {/* Remuneração / Comissão */}
                       <TableCell className="text-right">
                         {l.comissao_inquilino_pct ? (
                           <div className="flex flex-col items-end">
-                            <Badge variant="outline" className="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40">
+                            <Badge
+                              variant="outline"
+                              className="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40"
+                            >
                               {l.comissao_inquilino_pct}%
                             </Badge>
                             {l.valor_unit > 0 && (
                               <span className="text-[10px] text-muted-foreground font-medium">
-                                +{comissaoValor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                                +
+                                {comissaoValor.toLocaleString("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                })}
                               </span>
                             )}
                           </div>
@@ -562,9 +761,13 @@ export function ImportarProdutosDialog({
           ) : (
             <div className="h-full flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
               <FileSpreadsheet className="size-12 text-muted-foreground/40 mb-3" />
-              <p className="font-medium text-sm text-foreground">Nenhuma planilha carregada no momento</p>
+              <p className="font-medium text-sm text-foreground">
+                Nenhuma planilha carregada no momento
+              </p>
               <p className="text-xs max-w-md mt-1">
-                Clique em <strong>"Baixar Modelo Completo"</strong> para obter uma planilha pré-preenchida com exemplos reais de DOOH, Front Lights, telas em vans/apps, elevadores e shoppings, ou clique em <strong>"Enviar Planilha"</strong>.
+                Clique em <strong>"Baixar Modelo Completo"</strong> para obter uma planilha
+                pré-preenchida com exemplos reais de DOOH, Front Lights, telas em vans/apps,
+                elevadores e shoppings, ou clique em <strong>"Enviar Planilha"</strong>.
               </p>
             </div>
           )}
@@ -577,8 +780,13 @@ export function ImportarProdutosDialog({
               <span>
                 Pronto para importar <strong>{validas.length}</strong> produto(s)
                 {parceiroAtivo && (
-                  <> vinculados ao parceiro <strong>{parceiroAtivo.nome_fantasia || parceiroAtivo.razao_social}</strong></>
-                )}.
+                  <>
+                    {" "}
+                    vinculados ao parceiro{" "}
+                    <strong>{parceiroAtivo.nome_fantasia || parceiroAtivo.razao_social}</strong>
+                  </>
+                )}
+                .
               </span>
             )}
           </div>

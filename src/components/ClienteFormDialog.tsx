@@ -2,7 +2,10 @@ import { EntityFormDialog, type EntityFormData } from "@/components/EntityFormDi
 import { upsertCliente } from "@/lib/clientes.functions";
 
 export function ClienteFormDialog({
-  open, onOpenChange, initial, agencias,
+  open,
+  onOpenChange,
+  initial,
+  agencias,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;

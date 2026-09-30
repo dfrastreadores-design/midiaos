@@ -7,13 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { BriefingFormDialog } from "@/components/BriefingFormDialog";
 import { listBriefings, deleteBriefing, updateBriefingStatus } from "@/lib/briefings.functions";
 import { useUserRoles } from "@/hooks/use-roles";
-import { Plus, Pencil, Trash2, FileText, FilePlus2, UserCheck, Inbox, FileEdit, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  FileText,
+  FilePlus2,
+  UserCheck,
+  Inbox,
+  FileEdit,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +61,7 @@ function BriefingTimeline({ status }: { status: string }) {
               <span
                 className={cn(
                   "absolute top-3 right-1/2 w-full h-0.5",
-                  done || active ? "bg-primary" : "bg-border"
+                  done || active ? "bg-primary" : "bg-border",
                 )}
               />
             )}
@@ -55,7 +70,7 @@ function BriefingTimeline({ status }: { status: string }) {
                 "relative z-10 flex size-6 items-center justify-center rounded-full border-2 bg-background",
                 done && "border-primary bg-primary text-primary-foreground",
                 active && "border-primary text-primary ring-2 ring-primary/20",
-                !done && !active && "border-border text-muted-foreground"
+                !done && !active && "border-border text-muted-foreground",
               )}
             >
               <Icon className="size-3" />
@@ -63,7 +78,7 @@ function BriefingTimeline({ status }: { status: string }) {
             <span
               className={cn(
                 "mt-1 text-[10px] leading-tight",
-                active ? "font-semibold text-foreground" : "text-muted-foreground"
+                active ? "font-semibold text-foreground" : "text-muted-foreground",
               )}
             >
               {step.label}
@@ -129,7 +144,8 @@ export default function Briefings() {
   });
 
   const filtered = (briefings as any[]).filter((b) => {
-    const matchSearch = !search ||
+    const matchSearch =
+      !search ||
       b.razao_social?.toLowerCase().includes(search.toLowerCase()) ||
       b.campanha?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || b.status === statusFilter;
@@ -143,10 +159,16 @@ export default function Briefings() {
           <div>
             <h1 className="text-2xl font-display font-semibold">Solicitação de Proposta</h1>
             <p className="text-sm text-muted-foreground">
-              Solicite ao ADM a confecção de uma proposta. Informe cliente/agência, campanha, verba e produtos de TV desejados.
+              Solicite ao ADM a confecção de uma proposta. Informe cliente/agência, campanha, verba
+              e produtos de TV desejados.
             </p>
           </div>
-          <Button onClick={() => { setEditing(null); setOpen(true); }}>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
             <Plus className="size-4" /> Nova Solicitação
           </Button>
         </div>
@@ -159,11 +181,15 @@ export default function Briefings() {
             className="max-w-sm"
           />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos status</SelectItem>
               {Object.entries(STATUS_LABEL).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
+                <SelectItem key={k} value={k}>
+                  {v}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -192,31 +218,44 @@ export default function Briefings() {
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col gap-3">
                   <div className="text-sm">
-                    <div><span className="text-muted-foreground">Campanha:</span> {b.campanha}</div>
+                    <div>
+                      <span className="text-muted-foreground">Campanha:</span> {b.campanha}
+                    </div>
                     {b.verba_estimada && (
                       <div>
                         <span className="text-muted-foreground">Verba:</span>{" "}
-                        {Number(b.verba_estimada).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        {Number(b.verba_estimada).toLocaleString("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        })}
                       </div>
                     )}
                     {b.periodo_estimado && (
-                      <div><span className="text-muted-foreground">Período:</span> {b.periodo_estimado}</div>
+                      <div>
+                        <span className="text-muted-foreground">Período:</span> {b.periodo_estimado}
+                      </div>
                     )}
                     {b.produtos && b.produtos.length > 0 && (
-                      <div><span className="text-muted-foreground">Produtos TV:</span> {b.produtos.length}</div>
+                      <div>
+                        <span className="text-muted-foreground">Produtos TV:</span>{" "}
+                        {b.produtos.length}
+                      </div>
                     )}
                   </div>
                   <BriefingTimeline status={b.status} />
                   <div className="flex gap-2 mt-auto flex-wrap">
-
                     <Select
                       value={b.status}
                       onValueChange={(v) => changeStatus.mutate({ id: b.id, status: v })}
                     >
-                      <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-8 text-xs flex-1 min-w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
                         {Object.entries(STATUS_LABEL).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                          <SelectItem key={k} value={k}>
+                            {v}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -234,13 +273,22 @@ export default function Briefings() {
                         <FilePlus2 className="size-4 mr-1" /> Criar Proposta
                       </Button>
                     )}
-                    <Button size="icon" variant="ghost" onClick={() => { setEditing(b); setOpen(true); }}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditing(b);
+                        setOpen(true);
+                      }}
+                    >
                       <Pencil className="size-4" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => { if (confirm("Excluir esta solicitação?")) del.mutate(b.id); }}
+                      onClick={() => {
+                        if (confirm("Excluir esta solicitação?")) del.mutate(b.id);
+                      }}
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -252,11 +300,7 @@ export default function Briefings() {
         )}
       </div>
 
-      <BriefingFormDialog
-        open={open}
-        onOpenChange={setOpen}
-        initial={editing}
-      />
+      <BriefingFormDialog open={open} onOpenChange={setOpen} initial={editing} />
     </AppShell>
   );
 }

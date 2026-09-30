@@ -51,7 +51,14 @@ import { cn } from "@/lib/utils";
 import { AuthGuard } from "@/components/AuthGuard";
 import { useAuth, signOut } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-roles";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useActingAsExecutivo, setActingAsExecutivo } from "@/hooks/use-acting-as";
 import { ImpersonateDialog } from "@/components/ImpersonateDialog";
 import { UserCheck } from "lucide-react";
@@ -62,7 +69,6 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { useQuery } from "@tanstack/react-query";
 import { getInicio } from "@/lib/inicio.functions";
 import { Badge } from "@/components/ui/badge";
-
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, modulo: null },
@@ -78,7 +84,7 @@ const nav = [
   { to: "/historico-veiculacao", label: "Histórico de Veiculação", icon: Radio, modulo: "pi" },
   { to: "/propostas", label: "Propostas", icon: FileSignature, modulo: "propostas" },
   // { to: "/briefings", label: "Briefing de Proposta", icon: FileText, modulo: "briefings" },
-  
+
   { to: "/financeiro", label: "Financeiro", icon: Wallet, modulo: "financeiro" },
   { to: "/comissoes", label: "Comissões", icon: Percent, modulo: "comissoes" },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3, modulo: "relatorios" },
@@ -95,7 +101,6 @@ const nav = [
   { to: "/documentacao", label: "Manual do Sistema", icon: BookOpen, modulo: null },
 ] as const;
 
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
@@ -110,9 +115,19 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { can, loading: rolesLoading, isSuperAdmin, isAdmin } = useUserRoles();
   const actingAs = useActingAsExecutivo();
   const [impersonateOpen, setImpersonateOpen] = useState(false);
-  const displayName = (user?.user_metadata?.nome as string) || user?.email?.split("@")[0] || "Usuário";
-  const initials = displayName.split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase();
-  const { data: inicioData } = useQuery({ queryKey: ["inicio"], queryFn: () => getInicio(), staleTime: 5 * 60_000 });
+  const displayName =
+    (user?.user_metadata?.nome as string) || user?.email?.split("@")[0] || "Usuário";
+  const initials = displayName
+    .split(" ")
+    .map((s) => s[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const { data: inicioData } = useQuery({
+    queryKey: ["inicio"],
+    queryFn: () => getInicio(),
+    staleTime: 5 * 60_000,
+  });
   const { hasModulo } = useTenantModulos();
   const visibleNav = nav.filter((item) => {
     if (item.to === "/lixeira") return isAdmin;
@@ -120,21 +135,25 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     const hasMod = item.modulo == null || hasModulo(item.modulo);
     return canAccess && hasMod;
   });
-  const matchedNavItem = nav.find((item) =>
-    item.to === location.pathname || (item.to !== "/" && location.pathname.startsWith(item.to))
+  const matchedNavItem = nav.find(
+    (item) =>
+      item.to === location.pathname || (item.to !== "/" && location.pathname.startsWith(item.to)),
   );
 
-  const blocked = !rolesLoading && (
-    (!isSuperAdmin && (location.pathname.startsWith("/owner") || location.pathname.startsWith("/monitoramento"))) ||
-    !can(location.pathname) ||
-    (matchedNavItem ? (!can(matchedNavItem.to) || (matchedNavItem.modulo != null && !hasModulo(matchedNavItem.modulo))) : false)
-  );
+  const blocked =
+    !rolesLoading &&
+    ((!isSuperAdmin &&
+      (location.pathname.startsWith("/owner") || location.pathname.startsWith("/monitoramento"))) ||
+      !can(location.pathname) ||
+      (matchedNavItem
+        ? !can(matchedNavItem.to) ||
+          (matchedNavItem.modulo != null && !hasModulo(matchedNavItem.modulo))
+        : false));
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [installDialogOpen, setInstallDialogOpen] = useState(false);
   const { logoSrc: tenantLogo, nome: tenantNome } = useTenantBranding();
   const brandLogo = tenantLogo ?? logoMidiaOS;
   const brandAlt = tenantNome ?? "mídia.OS";
-
 
   return (
     <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/20">
@@ -149,17 +168,27 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-display font-bold text-lg tracking-tight text-sidebar truncate flex items-center gap-1.5">
-              {tenantNome || <>Mídia<span className="text-gold">.</span>OS</>}
+              {tenantNome || (
+                <>
+                  Mídia<span className="text-gold">.</span>OS
+                </>
+              )}
             </div>
             <div className="text-[10px] uppercase tracking-widest font-bold text-sidebar/40 truncate">
-              {isSuperAdmin ? "👑 Gestão Global" : (tenantNome ? "Espaço da Empresa" : "Premium Suite")}
+              {isSuperAdmin
+                ? "👑 Gestão Global"
+                : tenantNome
+                  ? "Espaço da Empresa"
+                  : "Premium Suite"}
             </div>
           </div>
         </div>
 
         <nav className="flex-1 px-4 py-8 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-border/50">
           {visibleNav.map((item) => {
-            const active = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+            const active =
+              location.pathname === item.to ||
+              (item.to !== "/" && location.pathname.startsWith(item.to));
             const Icon = item.icon;
             return (
               <Link
@@ -169,10 +198,17 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                   "group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-300 relative overflow-hidden",
                   active
                     ? "bg-sidebar-accent text-sidebar-primary shadow-sm"
-                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
                 )}
               >
-                <Icon className={cn("size-4.5 transition-transform duration-300 group-hover:scale-110", active ? "text-sidebar-primary" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70")} />
+                <Icon
+                  className={cn(
+                    "size-4.5 transition-transform duration-300 group-hover:scale-110",
+                    active
+                      ? "text-sidebar-primary"
+                      : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70",
+                  )}
+                />
                 <span className="flex-1">{item.label}</span>
                 {active && <ChevronRight className="size-3 text-sidebar-primary/50" />}
               </Link>
@@ -205,18 +241,32 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 w-full group hover:bg-sidebar-accent/50 rounded-2xl p-2 transition-all duration-300 border border-transparent hover:border-sidebar-border/30">
                 <Avatar className="size-10 shadow-sm border-2 border-white ring-2 ring-gold/10">
-                  <AvatarFallback className="bg-gradient-to-tr from-gold to-gold/80 text-white font-bold text-xs">{initials}</AvatarFallback>
+                  <AvatarFallback className="bg-gradient-to-tr from-gold to-gold/80 text-white font-bold text-xs">
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="text-sm min-w-0 flex-1">
-                  <div className="font-bold truncate text-sidebar-foreground group-hover:text-sidebar-primary transition-colors">{displayName}</div>
-                  <div className="text-[11px] text-sidebar-foreground/40 truncate font-medium">{user?.email}</div>
+                  <div className="font-bold truncate text-sidebar-foreground group-hover:text-sidebar-primary transition-colors">
+                    {displayName}
+                  </div>
+                  <div className="text-[11px] text-sidebar-foreground/40 truncate font-medium">
+                    {user?.email}
+                  </div>
                 </div>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 p-2 rounded-2xl shadow-premium border-sidebar-border/30 backdrop-blur-md">
-              <DropdownMenuLabel className="px-3 py-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Minha conta</DropdownMenuLabel>
+            <DropdownMenuContent
+              align="end"
+              className="w-64 p-2 rounded-2xl shadow-premium border-sidebar-border/30 backdrop-blur-md"
+            >
+              <DropdownMenuLabel className="px-3 py-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Minha conta
+              </DropdownMenuLabel>
               {isSuperAdmin && (
-                <DropdownMenuItem asChild className="rounded-xl focus:bg-amber-500/10 focus:text-amber-600 transition-all cursor-pointer py-2.5">
+                <DropdownMenuItem
+                  asChild
+                  className="rounded-xl focus:bg-amber-500/10 focus:text-amber-600 transition-all cursor-pointer py-2.5"
+                >
                   <Link to="/owner">
                     <ShieldCheck className="size-4 mr-3 text-amber-500" />
                     <span className="font-bold text-amber-600">Painel do Proprietário</span>
@@ -225,12 +275,21 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               )}
               {isAdmin && (
                 <>
-                  <DropdownMenuItem onClick={() => setImpersonateOpen(true)} className="rounded-xl focus:bg-primary/5 focus:text-primary transition-all cursor-pointer py-2.5">
+                  <DropdownMenuItem
+                    onClick={() => setImpersonateOpen(true)}
+                    className="rounded-xl focus:bg-primary/5 focus:text-primary transition-all cursor-pointer py-2.5"
+                  >
                     <UserCheck className="size-4 mr-3 text-muted-foreground" />
                     <span className="font-semibold">Trocar de perfil</span>
                   </DropdownMenuItem>
                   {actingAs && (
-                    <DropdownMenuItem onClick={() => { setActingAsExecutivo(null); window.location.reload(); }} className="rounded-xl focus:bg-amber-50 text-amber-700 focus:text-amber-800 transition-all cursor-pointer py-2.5">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setActingAsExecutivo(null);
+                        window.location.reload();
+                      }}
+                      className="rounded-xl focus:bg-amber-50 text-amber-700 focus:text-amber-800 transition-all cursor-pointer py-2.5"
+                    >
                       <UserCheck className="size-4 mr-3" />
                       <span className="font-semibold">Sair do modo "atuar como"</span>
                     </DropdownMenuItem>
@@ -238,15 +297,21 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 </>
               )}
               <DropdownMenuSeparator className="my-1 bg-sidebar-border/30" />
-              <DropdownMenuItem asChild className="rounded-xl focus:bg-primary/5 focus:text-primary transition-all cursor-pointer py-2.5">
+              <DropdownMenuItem
+                asChild
+                className="rounded-xl focus:bg-primary/5 focus:text-primary transition-all cursor-pointer py-2.5"
+              >
                 <Link to="/minha-conta">
-                  <UserCog className="size-4 mr-3 text-muted-foreground" /> 
+                  <UserCog className="size-4 mr-3 text-muted-foreground" />
                   <span className="font-semibold">Editar Perfil</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1 bg-sidebar-border/30" />
-              <DropdownMenuItem onClick={() => signOut()} className="rounded-xl focus:bg-destructive/5 text-destructive focus:text-destructive transition-all cursor-pointer py-2.5">
-                <LogOut className="size-4 mr-3" /> 
+              <DropdownMenuItem
+                onClick={() => signOut()}
+                className="rounded-xl focus:bg-destructive/5 text-destructive focus:text-destructive transition-all cursor-pointer py-2.5"
+              >
+                <LogOut className="size-4 mr-3" />
                 <span className="font-semibold">Encerrar Sessão</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -258,13 +323,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-w-0 bg-background/50 relative">
         <header className="sticky top-0 z-30 h-16 lg:h-20 bg-background/60 backdrop-blur-xl border-b border-border/40 px-3 sm:px-6 lg:px-10 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden shrink-0 hover:bg-muted/50 rounded-xl">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden shrink-0 hover:bg-muted/50 rounded-xl"
+                >
                   <Menu className="size-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[85vw] max-w-xs sm:w-80 p-0 border-r border-sidebar-border/50 bg-sidebar text-sidebar-foreground flex flex-col">
+              <SheetContent
+                side="left"
+                className="w-[85vw] max-w-xs sm:w-80 p-0 border-r border-sidebar-border/50 bg-sidebar text-sidebar-foreground flex flex-col"
+              >
                 <div className="px-8 py-8 flex items-center gap-4 border-b border-sidebar-border/30 bg-white/95 backdrop-blur-sm">
                   <div className="size-10 rounded-xl bg-white shadow-sm flex items-center justify-center p-1.5 border border-slate-100">
                     <img src={brandLogo} alt={brandAlt} className="h-full w-auto object-contain" />
@@ -278,7 +350,9 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
                 <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto scrollbar-thin">
                   {visibleNav.map((item) => {
-                    const active = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+                    const active =
+                      location.pathname === item.to ||
+                      (item.to !== "/" && location.pathname.startsWith(item.to));
                     const Icon = item.icon;
                     return (
                       <Link
@@ -289,10 +363,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                           "group flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold transition-all duration-300",
                           active
                             ? "bg-sidebar-accent text-sidebar-primary shadow-sm"
-                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40"
+                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
                         )}
                       >
-                        <Icon className={cn("size-4.5", active ? "text-sidebar-primary" : "text-sidebar-foreground/40")} />
+                        <Icon
+                          className={cn(
+                            "size-4.5",
+                            active ? "text-sidebar-primary" : "text-sidebar-foreground/40",
+                          )}
+                        />
                         <span className="flex-1">{item.label}</span>
                       </Link>
                     );
@@ -300,20 +379,37 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 </nav>
 
                 <div className="p-6 border-t border-sidebar-border/30 bg-sidebar/30 backdrop-blur-sm">
-                   <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-3 mb-4">
                     <Avatar className="size-9 shadow-sm border border-white">
-                      <AvatarFallback className="bg-gold text-white font-bold text-xs">{initials}</AvatarFallback>
+                      <AvatarFallback className="bg-gold text-white font-bold text-xs">
+                        {initials}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="text-sm min-w-0 flex-1">
-                      <div className="font-bold truncate text-sidebar-foreground">{displayName}</div>
-                      <div className="text-[10px] text-sidebar-foreground/40 truncate font-medium">{user?.email}</div>
+                      <div className="font-bold truncate text-sidebar-foreground">
+                        {displayName}
+                      </div>
+                      <div className="text-[10px] text-sidebar-foreground/40 truncate font-medium">
+                        {user?.email}
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mb-3">
-                    <Button asChild variant="secondary" size="sm" className="rounded-xl h-9" onClick={() => setMobileNavOpen(false)}>
+                    <Button
+                      asChild
+                      variant="secondary"
+                      size="sm"
+                      className="rounded-xl h-9"
+                      onClick={() => setMobileNavOpen(false)}
+                    >
                       <Link to="/minha-conta">Perfil</Link>
                     </Button>
-                    <Button variant="ghost" size="sm" className="rounded-xl h-9 text-destructive" onClick={() => signOut()}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-xl h-9 text-destructive"
+                      onClick={() => signOut()}
+                    >
                       Sair
                     </Button>
                   </div>
@@ -321,7 +417,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => { setMobileNavOpen(false); setInstallDialogOpen(true); }}
+                    onClick={() => {
+                      setMobileNavOpen(false);
+                      setInstallDialogOpen(true);
+                    }}
                     className="w-full h-9 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-700 font-bold text-xs flex items-center justify-center gap-2"
                   >
                     <Download className="size-4 text-amber-600 animate-bounce" />
@@ -331,8 +430,8 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
             <div className="lg:hidden flex items-center gap-2 min-w-0">
-               <img src={brandLogo} alt={brandAlt} className="h-7 w-auto shrink-0" />
-               <span className="font-display font-bold text-base sm:text-lg truncate">Mídia.OS</span>
+              <img src={brandLogo} alt={brandAlt} className="h-7 w-auto shrink-0" />
+              <span className="font-display font-bold text-base sm:text-lg truncate">Mídia.OS</span>
             </div>
             <div className="hidden lg:flex items-center gap-3">
               <div className="h-5 w-1 bg-gold/30 rounded-full" />
@@ -340,7 +439,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 {tenantNome ? `Empresa: ${tenantNome}` : "Comercial Engine"}
               </h2>
               {isSuperAdmin && (
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs px-2.5 py-0.5 font-bold flex items-center gap-1">
+                <Badge
+                  variant="outline"
+                  className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs px-2.5 py-0.5 font-bold flex items-center gap-1"
+                >
                   👑 Super Admin Global
                 </Badge>
               )}
@@ -349,19 +451,29 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               const now = new Date();
               const h = now.getHours();
               const saud = h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
-              const dataFmt = now.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+              const dataFmt = now.toLocaleDateString("pt-BR", {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              });
               return (
                 <div className="hidden md:flex flex-col leading-tight ml-2 min-w-0">
-                  <span className="text-xs font-semibold text-foreground truncate">{saud}, {displayName.split(" ")[0]}</span>
-                  <span className="text-[10px] text-muted-foreground/70 capitalize truncate">{dataFmt}</span>
+                  <span className="text-xs font-semibold text-foreground truncate">
+                    {saud}, {displayName.split(" ")[0]}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/70 capitalize truncate">
+                    {dataFmt}
+                  </span>
                 </div>
               );
             })()}
           </div>
 
-          
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 shrink-0">
-            <div className="hidden sm:block flex-1"><GlobalSearch /></div>
+            <div className="hidden sm:block flex-1">
+              <GlobalSearch />
+            </div>
             <div className="h-6 w-px bg-border/40 mx-1 hidden sm:block" />
 
             {/* Botão Baixar App / Instalar */}
@@ -382,13 +494,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             <div className="h-6 w-px bg-border/40 mx-1 hidden sm:block" />
             <HoverCard openDelay={150} closeDelay={100}>
               <HoverCardTrigger asChild>
-                <Link to="/minha-conta" className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
+                <Link
+                  to="/minha-conta"
+                  className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
+                >
                   <Avatar className="size-8 shadow-sm border border-border/40">
-                    <AvatarFallback className="bg-gold text-white font-bold text-[11px]">{initials}</AvatarFallback>
+                    <AvatarFallback className="bg-gold text-white font-bold text-[11px]">
+                      {initials}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:block text-right min-w-0 max-w-[180px]">
                     <div className="text-xs font-bold truncate leading-tight">{displayName}</div>
-                    <div className="text-[10px] text-muted-foreground truncate leading-tight">{user?.email}</div>
+                    <div className="text-[10px] text-muted-foreground truncate leading-tight">
+                      {user?.email}
+                    </div>
                   </div>
                 </Link>
               </HoverCardTrigger>
@@ -418,13 +537,18 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-xs px-4 py-2 flex items-center justify-center gap-3">
             <UserCheck className="size-3.5" />
             <span className="font-semibold">Você está atuando como outro usuário.</span>
-            <button className="underline font-semibold hover:no-underline" onClick={() => { setActingAsExecutivo(null); window.location.reload(); }}>
+            <button
+              className="underline font-semibold hover:no-underline"
+              onClick={() => {
+                setActingAsExecutivo(null);
+                window.location.reload();
+              }}
+            >
               Voltar ao meu perfil
             </button>
           </div>
         )}
         <ImpersonateDialog open={impersonateOpen} onOpenChange={setImpersonateOpen} />
-
 
         <main className="flex-1 px-3 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-12 pb-24 lg:pb-12 max-w-[1600px] w-full mx-auto animate-fade-up min-w-0">
           {blocked ? (
@@ -435,11 +559,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Módulo Restrito</h1>
                 <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                  Sua conta atual não possui privilégios de acesso para este setor. 
-                  Entre em contato com a diretoria para solicitar autorização.
+                  Sua conta atual não possui privilégios de acesso para este setor. Entre em contato
+                  com a diretoria para solicitar autorização.
                 </p>
               </div>
-              <Button variant="outline" onClick={() => window.history.back()} className="rounded-xl px-8">
+              <Button
+                variant="outline"
+                onClick={() => window.history.back()}
+                className="rounded-xl px-8"
+              >
                 Voltar ao Início
               </Button>
             </div>

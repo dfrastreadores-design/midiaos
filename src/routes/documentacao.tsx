@@ -256,7 +256,8 @@ const MODULOS: ModuloDoc[] = [
     titulo: "PI — Anexos",
     rota: "/pi-anexos",
     modulo: "pi",
-    resumo: "Repositório centralizado dos anexos vinculados às PIs (autorizações, materiais, contratos).",
+    resumo:
+      "Repositório centralizado dos anexos vinculados às PIs (autorizações, materiais, contratos).",
     recursos: [
       "Upload de múltiplos arquivos por PI",
       "Filtro por cliente, agência e período",
@@ -314,8 +315,7 @@ const MODULOS: ModuloDoc[] = [
     icon: Repeat,
     titulo: "Permuta Comercial",
     rota: "/permuta",
-    resumo:
-      "Controle completo de operações de permuta — entrada, saída e saldo por parceiro.",
+    resumo: "Controle completo de operações de permuta — entrada, saída e saldo por parceiro.",
     recursos: [
       "Saldo de permuta por parceiro",
       "Movimentações (entrada/saída)",
@@ -379,8 +379,7 @@ const MODULOS: ModuloDoc[] = [
     titulo: "Relatórios",
     rota: "/relatorios",
     modulo: "relatorios",
-    resumo:
-      "Relatórios consolidados de vendas, performance, metas, mídia colocada e comparativos.",
+    resumo: "Relatórios consolidados de vendas, performance, metas, mídia colocada e comparativos.",
     recursos: [
       "Filtros por período, executivo, agência, cliente, produto e veículo",
       "Gráficos comparativos (mês a mês, ano a ano)",
@@ -394,11 +393,7 @@ const MODULOS: ModuloDoc[] = [
     rota: "/materiais-apoio",
     resumo:
       "Repositório central de mídias kit, apresentações institucionais e documentos de apoio comercial.",
-    recursos: [
-      "Upload com categorização",
-      "Compartilhamento por link público",
-      "Versionamento",
-    ],
+    recursos: ["Upload com categorização", "Compartilhamento por link público", "Versionamento"],
   },
   {
     icon: History,
@@ -520,7 +515,8 @@ function DocumentacaoPage() {
             <h1 className="text-3xl font-bold">Documentação do Sistema</h1>
           </div>
           <p className="text-muted-foreground">
-            Guia completo dos módulos, fluxos comerciais, papéis e permissões da plataforma mídia.OS.
+            Guia completo dos módulos, fluxos comerciais, papéis e permissões da plataforma
+            mídia.OS.
           </p>
         </div>
 
@@ -532,14 +528,14 @@ function DocumentacaoPage() {
           <CardContent className="space-y-3 text-sm leading-relaxed">
             <p>
               O <strong>mídia.OS</strong> é a plataforma de gestão comercial para veículos de
-              comunicação — emissoras de TV, rádios, portais e mídia OOH/DOOH. Cobre todo o
-              ciclo: prospecção (CRM) → briefing → proposta → assinatura eletrônica → Pedido de
-              Inserção (PI) → faturamento → relatórios.
+              comunicação — emissoras de TV, rádios, portais e mídia OOH/DOOH. Cobre todo o ciclo:
+              prospecção (CRM) → briefing → proposta → assinatura eletrônica → Pedido de Inserção
+              (PI) → faturamento → relatórios.
             </p>
             <p>
-              É multiusuário, multi-veículo, com controle granular de papéis e permissões.
-              Possui geração automática de PDFs/PPTX, importação de PI via IA, assinatura
-              eletrônica, sincronização diária de CNPJ e dashboards em tempo real.
+              É multiusuário, multi-veículo, com controle granular de papéis e permissões. Possui
+              geração automática de PDFs/PPTX, importação de PI via IA, assinatura eletrônica,
+              sincronização diária de CNPJ e dashboards em tempo real.
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
               <Badge variant="secondary">Multi-veículo</Badge>
@@ -563,16 +559,20 @@ function DocumentacaoPage() {
           <CardContent>
             <ol className="space-y-3 text-sm list-decimal list-inside">
               <li>
-                <strong>Prospecção (CRM)</strong> — oportunidade criada e movida entre etapas do funil.
+                <strong>Prospecção (CRM)</strong> — oportunidade criada e movida entre etapas do
+                funil.
               </li>
               <li>
-                <strong>Briefing</strong> — parceiro/agência registra a demanda via formulário público.
+                <strong>Briefing</strong> — parceiro/agência registra a demanda via formulário
+                público.
               </li>
               <li>
-                <strong>Proposta</strong> — montagem com calculadora de mídia + apresentação PDF/PPTX.
+                <strong>Proposta</strong> — montagem com calculadora de mídia + apresentação
+                PDF/PPTX.
               </li>
               <li>
-                <strong>Envio e assinatura</strong> — link de assinatura eletrônica com validade jurídica.
+                <strong>Envio e assinatura</strong> — link de assinatura eletrônica com validade
+                jurídica.
               </li>
               <li>
                 <strong>Conversão em PI</strong> — proposta assinada vira PI automaticamente.
@@ -581,7 +581,8 @@ function DocumentacaoPage() {
                 <strong>Aprovação interna</strong> — fluxo executivo → gerência → financeiro.
               </li>
               <li>
-                <strong>Faturamento e comissão</strong> — alimenta contas a receber e comissionamento.
+                <strong>Faturamento e comissão</strong> — alimenta contas a receber e
+                comissionamento.
               </li>
               <li>
                 <strong>Relatórios e metas</strong> — consolidação de resultados e batimento.
@@ -661,7 +662,8 @@ function DocumentacaoPage() {
             <div className="flex items-start gap-3">
               <Badge variant="default">admin</Badge>
               <p className="text-muted-foreground">
-                Acesso total — incluindo Usuários, Configurações, Sincronização CNPJ e gestão de tenants.
+                Acesso total — incluindo Usuários, Configurações, Sincronização CNPJ e gestão de
+                tenants.
               </p>
             </div>
             <Separator />
@@ -676,12 +678,14 @@ function DocumentacaoPage() {
             <div className="flex items-start gap-3">
               <Badge variant="outline">parceiro_comercial</Badge>
               <p className="text-muted-foreground">
-                Acesso restrito a Dashboard, Minha Conta e Briefings (solicitar proposta, receber retorno).
+                Acesso restrito a Dashboard, Minha Conta e Briefings (solicitar proposta, receber
+                retorno).
               </p>
             </div>
             <Separator />
             <p className="text-xs text-muted-foreground">
-              Permissões adicionais por módulo podem ser refinadas em <code>Usuários → Permissões</code>.
+              Permissões adicionais por módulo podem ser refinadas em{" "}
+              <code>Usuários → Permissões</code>.
             </p>
           </CardContent>
         </Card>
@@ -697,7 +701,8 @@ function DocumentacaoPage() {
               <div>
                 <p className="font-medium">Notificações em tempo real</p>
                 <p className="text-muted-foreground text-xs">
-                  Sino no topo com alertas (PI aprovado, tarefa vencendo, briefing novo, atualização do sistema).
+                  Sino no topo com alertas (PI aprovado, tarefa vencendo, briefing novo, atualização
+                  do sistema).
                 </p>
               </div>
             </div>
@@ -733,7 +738,8 @@ function DocumentacaoPage() {
               <div>
                 <p className="font-medium">Segurança</p>
                 <p className="text-muted-foreground text-xs">
-                  Criptografia em trânsito e em repouso, backups diários, RBAC granular e auditoria completa.
+                  Criptografia em trânsito e em repouso, backups diários, RBAC granular e auditoria
+                  completa.
                 </p>
               </div>
             </div>
@@ -759,8 +765,8 @@ function DocumentacaoPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              Para suporte técnico, dúvidas, sugestões de melhorias ou novas implementações,
-              entre em contato com o desenvolvedor responsável:
+              Para suporte técnico, dúvidas, sugestões de melhorias ou novas implementações, entre
+              em contato com o desenvolvedor responsável:
             </p>
             <div className="rounded-lg border bg-muted/40 p-4 space-y-2">
               <div className="flex items-center gap-2 font-semibold">

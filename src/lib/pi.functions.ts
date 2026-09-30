@@ -405,21 +405,24 @@ export const upsertPi = createServerFn({ method: "POST" })
     if ((piData.data_vencimento_nota || piData.data_faturamento) && piData.valor_negociado > 0) {
       const dataVenc = piData.data_vencimento_nota || piData.data_faturamento;
       const { data: transExistente } = await supabase
-        .from("financeiro_transacoes")
+        .from("financeiro_transacoes" as any)
         .select("id")
         .eq("pi_id", piId)
         .eq("tipo", "entrada")
         .maybeSingle();
 
       if (transExistente) {
-        await supabase.from("financeiro_transacoes").update({
-          valor: piData.valor_negociado,
-          data_vencimento: dataVenc,
-          descricao: `Receita PI ${piData.campanha}`,
-          cliente_id: piData.cliente_id,
-        }).eq("id", transExistente.id);
+        await supabase
+          .from("financeiro_transacoes" as any)
+          .update({
+            valor: piData.valor_negociado,
+            data_vencimento: dataVenc,
+            descricao: `Receita PI ${piData.campanha}`,
+            cliente_id: piData.cliente_id,
+          })
+          .eq("id", transExistente.id);
       } else {
-        await supabase.from("financeiro_transacoes").insert({
+        await supabase.from("financeiro_transacoes" as any).insert({
           tipo: "entrada",
           descricao: `Receita PI ${piData.campanha}`,
           categoria: "Receitas de PIs / Mídia",

@@ -3,7 +3,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
 import { ativarPlanoUpgrade } from "@/lib/upgrade.functions";
@@ -84,11 +91,20 @@ export function UpgradePlanoDialog({
             </div>
             <div className="grid gap-2">
               <Label>WhatsApp</Label>
-              <Input value={form.contato_whatsapp} onChange={set("contato_whatsapp")} placeholder="(61) 9 9999-9999" />
+              <Input
+                value={form.contato_whatsapp}
+                onChange={set("contato_whatsapp")}
+                placeholder="(61) 9 9999-9999"
+              />
             </div>
           </div>
           <DialogFooter className="pt-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
               Cancelar
             </Button>
             <Button type="submit" disabled={saving}>

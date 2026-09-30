@@ -19,11 +19,14 @@ export function SiteHeader() {
           <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-white" />
           </span>
-          <span>mídia<span className="midia-grad-text">.OS</span></span>
+          <span>
+            mídia<span className="midia-grad-text">.OS</span>
+          </span>
         </Link>
         <nav className="hidden md:flex items-center gap-1">
           {nav.map((n) => {
-            const active = loc.pathname === n.to || (n.to !== "/site" && loc.pathname.startsWith(n.to));
+            const active =
+              loc.pathname === n.to || (n.to !== "/site" && loc.pathname.startsWith(n.to));
             return (
               <Link
                 key={n.to}
@@ -88,23 +91,48 @@ export function SiteFooter() {
             mídia<span className="midia-grad-text">.OS</span>
           </div>
           <p className="text-sm text-[var(--m-muted)] max-w-xs">
-            Sistema operacional comercial para veículos de comunicação. Do briefing à PI, em um só lugar.
+            Sistema operacional comercial para veículos de comunicação. Do briefing à PI, em um só
+            lugar.
           </p>
         </div>
         <div>
           <h4 className="text-sm font-semibold mb-3 text-white">Produto</h4>
           <ul className="space-y-2 text-sm text-[var(--m-muted)]">
-            <li><Link to="/site/recursos" className="hover:text-white">Recursos</Link></li>
-            <li><Link to="/site/precos" className="hover:text-white">Preços</Link></li>
-            <li><Link to="/login" className="hover:text-white">Entrar</Link></li>
+            <li>
+              <Link to="/site/recursos" className="hover:text-white">
+                Recursos
+              </Link>
+            </li>
+            <li>
+              <Link to="/site/precos" className="hover:text-white">
+                Preços
+              </Link>
+            </li>
+            <li>
+              <Link to="/login" className="hover:text-white">
+                Entrar
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
           <h4 className="text-sm font-semibold mb-3 text-white">Empresa</h4>
           <ul className="space-y-2 text-sm text-[var(--m-muted)]">
-            <li><Link to="/site/contato" className="hover:text-white">Contato</Link></li>
-            <li><Link to="/site/termos" className="hover:text-white">Termos de Uso</Link></li>
-            <li><Link to="/site/privacidade" className="hover:text-white">Privacidade &amp; LGPD</Link></li>
+            <li>
+              <Link to="/site/contato" className="hover:text-white">
+                Contato
+              </Link>
+            </li>
+            <li>
+              <Link to="/site/termos" className="hover:text-white">
+                Termos de Uso
+              </Link>
+            </li>
+            <li>
+              <Link to="/site/privacidade" className="hover:text-white">
+                Privacidade &amp; LGPD
+              </Link>
+            </li>
           </ul>
         </div>
         <div>

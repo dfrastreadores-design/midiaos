@@ -122,16 +122,13 @@ export function ProdutoFotosUploader({ fotos = [], onChange, disabled = false }:
         <div className="flex items-center gap-2">
           <Camera className="size-4 text-primary" />
           <Label className="text-sm font-semibold">Fotos do Produto / Ponto</Label>
-          <span className="text-[11px] text-muted-foreground font-normal">
-            (máximo de 2 fotos)
-          </span>
+          <span className="text-[11px] text-muted-foreground font-normal">(máximo de 2 fotos)</span>
         </div>
 
         <div className="flex items-center gap-1.5">
           {currentFotos.length === 2 ? (
             <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-[11px] py-0.5">
-              <CheckCircle2 className="size-3" />
-              2 de 2 fotos cadastradas
+              <CheckCircle2 className="size-3" />2 de 2 fotos cadastradas
             </Badge>
           ) : (
             <Badge variant="outline" className="text-[11px] py-0.5">
@@ -156,7 +153,8 @@ export function ProdutoFotosUploader({ fotos = [], onChange, disabled = false }:
       </div>
 
       <p className="text-[11px] text-muted-foreground">
-        Adicione até 2 imagens para demonstrar o ponto, fachada, estúdio, painel de LED ou formato comercial (ex.: foto frontal e vista da rua).
+        Adicione até 2 imagens para demonstrar o ponto, fachada, estúdio, painel de LED ou formato
+        comercial (ex.: foto frontal e vista da rua).
       </p>
 
       {/* Grid de Fotos e Slots */}
@@ -253,9 +251,7 @@ export function ProdutoFotosUploader({ fotos = [], onChange, disabled = false }:
                       ? "Adicionar Foto 1 (Principal)"
                       : "Adicionar Foto 2 (Secundária)"}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    JPG, PNG ou WEBP até 8MB
-                  </p>
+                  <p className="text-[10px] text-muted-foreground">JPG, PNG ou WEBP até 8MB</p>
                 </div>
 
                 <div className="flex items-center gap-1.5 pt-1">

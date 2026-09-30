@@ -1,17 +1,35 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Search, Loader2, DollarSign, Handshake, Plus, X } from "lucide-react";
 import { toast } from "sonner";
-import { upsertParceiro, SEGMENTOS_MIDIA, MODELOS_REMUNERACAO, type Parceiro } from "@/lib/parceiros.functions";
+import {
+  upsertParceiro,
+  SEGMENTOS_MIDIA,
+  MODELOS_REMUNERACAO,
+  type Parceiro,
+} from "@/lib/parceiros.functions";
 import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
 import { lookupCep, formatCEP } from "@/lib/geocode.functions";
 
@@ -55,27 +73,29 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
 
   useEffect(() => {
     if (open) {
-      setForm(initial || {
-        razao_social: "",
-        nome_fantasia: "",
-        cnpj: "",
-        segmentos: [],
-        modelo_remuneracao: "comissao_percentual",
-        comissao_padrao_pct: 20.0,
-        prazo_repasse: "30 dias após emissão da fatura",
-        condicoes_comerciais: "",
-        contato_nome: "",
-        contato_email: "",
-        contato_telefone: "",
-        chave_pix: "",
-        dados_bancarios: "",
-        endereco: "",
-        cidade: "",
-        uf: "",
-        cep: "",
-        observacoes: "",
-        ativo: true,
-      });
+      setForm(
+        initial || {
+          razao_social: "",
+          nome_fantasia: "",
+          cnpj: "",
+          segmentos: [],
+          modelo_remuneracao: "comissao_percentual",
+          comissao_padrao_pct: 20.0,
+          prazo_repasse: "30 dias após emissão da fatura",
+          condicoes_comerciais: "",
+          contato_nome: "",
+          contato_email: "",
+          contato_telefone: "",
+          chave_pix: "",
+          dados_bancarios: "",
+          endereco: "",
+          cidade: "",
+          uf: "",
+          cep: "",
+          observacoes: "",
+          ativo: true,
+        },
+      );
       setCustomSegmento("");
     }
   }, [open, initial]);
@@ -159,7 +179,9 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
     onSuccess: (saved) => {
       qc.invalidateQueries({ queryKey: ["parceiros"] });
       qc.invalidateQueries({ queryKey: ["produtos"] });
-      toast.success(form.id ? "Parceiro atualizado com sucesso" : "Parceiro cadastrado com sucesso");
+      toast.success(
+        form.id ? "Parceiro atualizado com sucesso" : "Parceiro cadastrado com sucesso",
+      );
       onOpenChange(false);
       if (onSuccess) onSuccess(saved);
     },
@@ -175,7 +197,8 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
             {form.id ? "Editar Parceiro de Mídia" : "Novo Parceiro de Mídia"}
           </DialogTitle>
           <DialogDescription>
-            Cadastre os veículos, exibidores e proprietários de pontos que disponibilizam inventário para comercialização.
+            Cadastre os veículos, exibidores e proprietários de pontos que disponibilizam inventário
+            para comercialização.
           </DialogDescription>
         </DialogHeader>
 
@@ -222,7 +245,11 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                     onClick={handleBuscarCnpj}
                     title="Puxar dados da Receita Federal"
                   >
-                    {searchingCnpj ? <Loader2 className="size-3.5 animate-spin" /> : <Search className="size-3.5" />}
+                    {searchingCnpj ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Search className="size-3.5" />
+                    )}
                     Receita
                   </Button>
                 </div>
@@ -262,7 +289,8 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
               </Badge>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Selecione os tipos de mídia e pontos que este parceiro fornece para você comercializar:
+              Selecione os tipos de mídia e pontos que este parceiro fornece para você
+              comercializar:
             </p>
 
             <div className="flex flex-wrap gap-1.5 pt-1 max-h-40 overflow-y-auto pr-1">
@@ -376,7 +404,9 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                     onChange={(e) => set({ comissao_padrao_pct: Number(e.target.value) })}
                     className="font-mono text-xs pr-7 bg-background"
                   />
-                  <span className="absolute right-2.5 top-2 text-xs text-muted-foreground font-semibold">%</span>
+                  <span className="absolute right-2.5 top-2 text-xs text-muted-foreground font-semibold">
+                    %
+                  </span>
                 </div>
               </div>
 
@@ -483,7 +513,11 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                     disabled={searchingCep}
                     onClick={handleBuscarCep}
                   >
-                    {searchingCep ? <Loader2 className="size-3 animate-spin" /> : <Search className="size-3" />}
+                    {searchingCep ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      <Search className="size-3" />
+                    )}
                   </Button>
                 </div>
               </div>

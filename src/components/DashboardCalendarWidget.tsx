@@ -12,7 +12,11 @@ import { cn } from "@/lib/utils";
 type Ev = { id: string; titulo: string; inicio: string; fim: string | null; origem: string | null };
 
 function sameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
 export function DashboardCalendarWidget() {
@@ -39,14 +43,11 @@ export function DashboardCalendarWidget() {
     },
   });
 
-  const diasComEvento = useMemo(
-    () => eventos.map((e) => new Date(e.inicio)),
-    [eventos]
-  );
+  const diasComEvento = useMemo(() => eventos.map((e) => new Date(e.inicio)), [eventos]);
 
   const doDia = useMemo(
     () => eventos.filter((e) => sameDay(new Date(e.inicio), selected)),
-    [eventos, selected]
+    [eventos, selected],
   );
 
   return (
@@ -63,7 +64,9 @@ export function DashboardCalendarWidget() {
             </div>
           </div>
           <Button asChild size="sm" variant="ghost" className="h-7 gap-1 text-xs">
-            <Link to="/calendario">Abrir <ArrowRight className="size-3" /></Link>
+            <Link to="/calendario">
+              Abrir <ArrowRight className="size-3" />
+            </Link>
           </Button>
         </div>
 
@@ -75,22 +78,34 @@ export function DashboardCalendarWidget() {
             month={month}
             onMonthChange={setMonth}
             modifiers={{ hasEvent: diasComEvento }}
-            modifiersClassNames={{ hasEvent: "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:size-1 after:rounded-full after:bg-primary" }}
+            modifiersClassNames={{
+              hasEvent:
+                "relative after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:size-1 after:rounded-full after:bg-primary",
+            }}
             className={cn("p-2 pointer-events-auto rounded-md border")}
           />
           <div className="min-h-[220px] rounded-md border p-2">
             <div className="mb-2 text-xs font-semibold text-muted-foreground">
-              {selected.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+              {selected.toLocaleDateString("pt-BR", {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+              })}
             </div>
             {doDia.length === 0 ? (
-              <div className="py-6 text-center text-xs text-muted-foreground">Sem eventos neste dia</div>
+              <div className="py-6 text-center text-xs text-muted-foreground">
+                Sem eventos neste dia
+              </div>
             ) : (
               <ul className="space-y-1.5">
                 {doDia.slice(0, 6).map((e) => (
                   <li key={e.id} className="rounded-md border bg-muted/30 p-2 text-xs">
                     <div className="font-medium truncate">{e.titulo}</div>
                     <div className="text-[11px] text-muted-foreground">
-                      {new Date(e.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(e.inicio).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                       {e.origem ? ` · ${e.origem}` : ""}
                     </div>
                   </li>

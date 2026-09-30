@@ -4,7 +4,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,8 +19,23 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { listUsuarios, setUserRole, toggleUserAtivo, createUsuario, listAuditoriaAcessos, adminResetPassword, deleteUsuario } from "@/lib/usuarios.functions";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  listUsuarios,
+  setUserRole,
+  toggleUserAtivo,
+  createUsuario,
+  listAuditoriaAcessos,
+  adminResetPassword,
+  deleteUsuario,
+} from "@/lib/usuarios.functions";
 import { uploadAssinaturaExecutivo, removerAssinaturaExecutivo } from "@/lib/assinaturas.functions";
 import { listPermissions, setRolePermission } from "@/lib/permissions.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +49,15 @@ export const Route = createFileRoute("/usuarios")({
   component: UsuariosPage,
 });
 
-type RoleKey = "admin" | "executivo" | "opec" | "financeiro" | "producao" | "diretoria" | "parceiro_comercial" | "teste";
+type RoleKey =
+  | "admin"
+  | "executivo"
+  | "opec"
+  | "financeiro"
+  | "producao"
+  | "diretoria"
+  | "parceiro_comercial"
+  | "teste";
 const ROLES: { key: RoleKey; label: string; desc: string }[] = [
   { key: "admin", label: "Admin", desc: "Acesso total" },
   { key: "executivo", label: "Executivo", desc: "Comercial / PI" },
@@ -35,23 +65,35 @@ const ROLES: { key: RoleKey; label: string; desc: string }[] = [
   { key: "financeiro", label: "Financeiro", desc: "Faturamento" },
   { key: "producao", label: "Produção", desc: "Recebe avisos de produção de material" },
   { key: "diretoria", label: "Diretoria", desc: "Visualização e aprovação" },
-  { key: "parceiro_comercial", label: "Parceiro (Briefing)", desc: "Solicita briefings de proposta" },
+  {
+    key: "parceiro_comercial",
+    label: "Parceiro (Briefing)",
+    desc: "Solicita briefings de proposta",
+  },
   { key: "teste", label: "Teste", desc: "Cadastro via site (avaliação)" },
 ];
 
-function UsuariosHeader({ createFn }: { createFn: ReturnType<typeof useServerFn<typeof createUsuario>> }) {
+function UsuariosHeader({
+  createFn,
+}: {
+  createFn: ReturnType<typeof useServerFn<typeof createUsuario>>;
+}) {
   const qc = useQueryClient();
   const { userCount, userLimit, loaded } = useTenantModulos();
   const atingiuLimite = loaded && userLimit != null && userCount >= userLimit;
   return (
     <div className="mb-6 flex items-start justify-between gap-4">
       <div>
-        <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">Usuários e Perfis</h1>
+        <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+          Usuários e Perfis
+        </h1>
         <p className="text-muted-foreground text-sm mt-1">
           Apenas administradores podem criar, ativar/inativar usuários e atribuir perfis.
         </p>
         {loaded && (
-          <p className={`text-xs mt-1 ${atingiuLimite ? "text-destructive" : "text-muted-foreground"}`}>
+          <p
+            className={`text-xs mt-1 ${atingiuLimite ? "text-destructive" : "text-muted-foreground"}`}
+          >
             Usuários cadastrados: <strong>{userCount}</strong>
             {userLimit != null ? ` de ${userLimit} (limite do plano)` : " (ilimitado)"}
             {atingiuLimite && " — limite atingido. Atualize o plano para adicionar mais usuários."}
@@ -75,7 +117,6 @@ function UsuariosHeader({ createFn }: { createFn: ReturnType<typeof useServerFn<
 }
 
 function UsuariosPage() {
-
   const qc = useQueryClient();
   const { isAdmin, loading: rolesLoading } = useUserRoles();
   const fetchList = useServerFn(listUsuarios);
@@ -137,12 +178,18 @@ function UsuariosPage() {
       {data && data.length > 0 && (
         <Card className="mb-4">
           <CardContent className="p-4">
-            <div className="text-xs font-medium text-muted-foreground mb-2">Usuários ativos por perfil</div>
+            <div className="text-xs font-medium text-muted-foreground mb-2">
+              Usuários ativos por perfil
+            </div>
             <div className="flex flex-wrap gap-2">
               {ROLES.map((r) => {
                 const count = data.filter((u) => u.ativo && u.roles.includes(r.key)).length;
                 return (
-                  <Badge key={r.key} variant={count > 0 ? "default" : "secondary"} className="gap-1.5">
+                  <Badge
+                    key={r.key}
+                    variant={count > 0 ? "default" : "secondary"}
+                    className="gap-1.5"
+                  >
                     <span>{r.label}</span>
                     <span className="font-mono opacity-80">{count}</span>
                   </Badge>
@@ -152,9 +199,6 @@ function UsuariosPage() {
           </CardContent>
         </Card>
       )}
-
-
-
 
       <Card>
         <CardContent className="p-0">
@@ -176,22 +220,41 @@ function UsuariosPage() {
             </TableHeader>
             <TableBody>
               {isLoading && (
-                <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">Carregando…</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                    Carregando…
+                  </TableCell>
+                </TableRow>
               )}
               {!isLoading && data?.length === 0 && (
-                <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">Nenhum usuário ainda.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                    Nenhum usuário ainda.
+                  </TableCell>
+                </TableRow>
               )}
               {data?.map((u) => {
-                const initials = (u.nome || u.email).split(" ").map((s: string) => s[0]).join("").slice(0, 2).toUpperCase();
+                const initials = (u.nome || u.email)
+                  .split(" ")
+                  .map((s: string) => s[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase();
                 return (
                   <TableRow key={u.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="size-8"><AvatarFallback>{initials}</AvatarFallback></Avatar>
+                        <Avatar className="size-8">
+                          <AvatarFallback>{initials}</AvatarFallback>
+                        </Avatar>
                         <div>
                           <div className="font-medium">{u.nome}</div>
                           <div className="text-xs text-muted-foreground">{u.email}</div>
-                          {!u.ativo && <Badge variant="secondary" className="mt-1">Inativo</Badge>}
+                          {!u.ativo && (
+                            <Badge variant="secondary" className="mt-1">
+                              Inativo
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </TableCell>
@@ -238,10 +301,16 @@ function NovoUsuarioDialog({
   onCreate,
   disabled,
 }: {
-  onCreate: (vars: { email: string; password: string; nome: string; cargo: string; telefone: string; roles: RoleKey[] }) => Promise<void>;
+  onCreate: (vars: {
+    email: string;
+    password: string;
+    nome: string;
+    cargo: string;
+    telefone: string;
+    roles: RoleKey[];
+  }) => Promise<void>;
   disabled?: boolean;
 }) {
-
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState("");
   const [cargo, setCargo] = useState("");
@@ -262,10 +331,22 @@ function NovoUsuarioDialog({
     if (telefone.trim().length < 8) return toast.error("Informe um telefone válido");
     setSaving(true);
     try {
-      await onCreate({ email, password, nome: nome.trim(), cargo: cargo.trim(), telefone: telefone.trim(), roles });
+      await onCreate({
+        email,
+        password,
+        nome: nome.trim(),
+        cargo: cargo.trim(),
+        telefone: telefone.trim(),
+        roles,
+      });
       toast.success("Usuário criado");
       setOpen(false);
-      setNome(""); setCargo(""); setTelefone(""); setEmail(""); setPassword(""); setRoles(["executivo"]);
+      setNome("");
+      setCargo("");
+      setTelefone("");
+      setEmail("");
+      setPassword("");
+      setRoles(["executivo"]);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -276,25 +357,45 @@ function NovoUsuarioDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !disabled && setOpen(o)}>
       <DialogTrigger asChild>
-        <Button disabled={disabled} title={disabled ? "Limite de usuários do plano atingido" : undefined}>
-          <UserPlus className="size-4 mr-2" />Novo usuário
+        <Button
+          disabled={disabled}
+          title={disabled ? "Limite de usuários do plano atingido" : undefined}
+        >
+          <UserPlus className="size-4 mr-2" />
+          Novo usuário
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Adicionar usuário</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Adicionar usuário</DialogTitle>
+        </DialogHeader>
 
         <form onSubmit={handle} className="space-y-4">
           <div>
             <Label>Nome completo</Label>
-            <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome e sobrenome" required />
+            <Input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Nome e sobrenome"
+              required
+            />
           </div>
           <div>
             <Label>Função na empresa (cargo)</Label>
-            <Input value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Ex: Executivo de contas, Diretor Comercial…" />
+            <Input
+              value={cargo}
+              onChange={(e) => setCargo(e.target.value)}
+              placeholder="Ex: Executivo de contas, Diretor Comercial…"
+            />
           </div>
           <div>
             <Label>Telefone</Label>
-            <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(61) 99999-9999" required />
+            <Input
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              placeholder="(61) 99999-9999"
+              required
+            />
           </div>
           <div>
             <Label>E-mail</Label>
@@ -302,14 +403,25 @@ function NovoUsuarioDialog({
           </div>
           <div>
             <Label>Senha provisória</Label>
-            <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-            <p className="text-xs text-muted-foreground mt-1">Compartilhe com o usuário. Ele poderá alterá-la depois.</p>
+            <Input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Compartilhe com o usuário. Ele poderá alterá-la depois.
+            </p>
           </div>
           <div>
             <Label>Perfis</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
               {ROLES.map((r) => (
-                <label key={r.key} className="flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer">
+                <label
+                  key={r.key}
+                  className="flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer"
+                >
                   <Checkbox
                     checked={roles.includes(r.key)}
                     onCheckedChange={(v) => toggleRole(r.key, Boolean(v))}
@@ -323,8 +435,12 @@ function NovoUsuarioDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Criando…" : "Criar usuário"}</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Criando…" : "Criar usuário"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -332,7 +448,10 @@ function NovoUsuarioDialog({
   );
 }
 
-const ACAO_LABEL: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+const ACAO_LABEL: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
   usuario_criado: { label: "Usuário criado", variant: "default" },
   usuario_ativado: { label: "Ativado", variant: "default" },
   usuario_desativado: { label: "Desativado", variant: "destructive" },
@@ -353,7 +472,10 @@ function AuditoriaDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline"><History className="size-4 mr-2" />Auditoria</Button>
+        <Button variant="outline">
+          <History className="size-4 mr-2" />
+          Auditoria
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
@@ -372,13 +494,24 @@ function AuditoriaDialog() {
             </TableHeader>
             <TableBody>
               {isLoading && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Carregando…</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                    Carregando…
+                  </TableCell>
+                </TableRow>
               )}
               {!isLoading && (data?.length ?? 0) === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Nenhum registro ainda.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                    Nenhum registro ainda.
+                  </TableCell>
+                </TableRow>
               )}
               {data?.map((row: any) => {
-                const info = ACAO_LABEL[row.acao] ?? { label: row.acao, variant: "outline" as const };
+                const info = ACAO_LABEL[row.acao] ?? {
+                  label: row.acao,
+                  variant: "outline" as const,
+                };
                 return (
                   <TableRow key={row.id}>
                     <TableCell className="text-xs whitespace-nowrap">
@@ -389,7 +522,9 @@ function AuditoriaDialog() {
                     </TableCell>
                     <TableCell className="text-sm">{row.target_email ?? "—"}</TableCell>
                     <TableCell className="text-sm">{row.role ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{row.actor_email ?? "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {row.actor_email ?? "—"}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -426,7 +561,10 @@ function PermissoesGeraisDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline"><Lock className="size-4 mr-2" />Permissões</Button>
+        <Button variant="outline">
+          <Lock className="size-4 mr-2" />
+          Permissões
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
@@ -438,30 +576,42 @@ function PermissoesGeraisDialog() {
               <TableRow>
                 <TableHead className="w-[200px]">Módulo / Permissão</TableHead>
                 {ROLES.map((r) => (
-                  <TableHead key={r.key} className="text-center">{r.label}</TableHead>
+                  <TableHead key={r.key} className="text-center">
+                    {r.label}
+                  </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
-                <TableRow><TableCell colSpan={ROLES.length + 1} className="text-center py-8">Carregando…</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={ROLES.length + 1} className="text-center py-8">
+                    Carregando…
+                  </TableCell>
+                </TableRow>
               )}
               {data?.permissions.map((p: any) => (
                 <TableRow key={p.key}>
                   <TableCell>
                     <div className="font-medium text-sm">{p.name || p.key}</div>
-                    {p.description && <div className="text-[10px] text-muted-foreground">{p.description}</div>}
+                    {p.description && (
+                      <div className="text-[10px] text-muted-foreground">{p.description}</div>
+                    )}
                   </TableCell>
                   {ROLES.map((r) => {
                     const has = data.rolePermissions.some(
-                      (rp: any) => rp.role === r.key && rp.permission_key === p.key
+                      (rp: any) => rp.role === r.key && rp.permission_key === p.key,
                     );
                     return (
                       <TableCell key={r.key} className="text-center">
                         <Checkbox
                           checked={has}
                           onCheckedChange={(v) =>
-                            permMut.mutate({ role: r.key, permission_key: p.key, enabled: Boolean(v) })
+                            permMut.mutate({
+                              role: r.key,
+                              permission_key: p.key,
+                              enabled: Boolean(v),
+                            })
                           }
                         />
                       </TableCell>
@@ -477,7 +627,13 @@ function PermissoesGeraisDialog() {
   );
 }
 
-function AssinaturaCell({ userId, assinaturaPath }: { userId: string; assinaturaPath: string | null }) {
+function AssinaturaCell({
+  userId,
+  assinaturaPath,
+}: {
+  userId: string;
+  assinaturaPath: string | null;
+}) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -488,7 +644,9 @@ function AssinaturaCell({ userId, assinaturaPath }: { userId: string; assinatura
     queryKey: ["assinatura-preview", userId, assinaturaPath],
     queryFn: async () => {
       if (!assinaturaPath) return null;
-      const { data } = await supabase.storage.from("assinaturas").createSignedUrl(assinaturaPath, 3600);
+      const { data } = await supabase.storage
+        .from("assinaturas")
+        .createSignedUrl(assinaturaPath, 3600);
       return data?.signedUrl ?? null;
     },
     enabled: open && Boolean(assinaturaPath),
@@ -543,10 +701,13 @@ function AssinaturaCell({ userId, assinaturaPath }: { userId: string; assinatura
         </Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Assinatura do executivo</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Assinatura do executivo</DialogTitle>
+        </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Envie uma imagem PNG ou JPG (fundo transparente recomendado). Ela será inserida automaticamente nos PIs gerados por este usuário.
+            Envie uma imagem PNG ou JPG (fundo transparente recomendado). Ela será inserida
+            automaticamente nos PIs gerados por este usuário.
           </p>
           {assinaturaPath && previewUrl && (
             <div className="border rounded-md p-3 bg-muted/30 flex justify-center">
@@ -569,10 +730,13 @@ function AssinaturaCell({ userId, assinaturaPath }: { userId: string; assinatura
         <DialogFooter>
           {assinaturaPath && (
             <Button variant="destructive" onClick={handleRemove} disabled={busy}>
-              <Trash2 className="size-4 mr-1.5" />Remover
+              <Trash2 className="size-4 mr-1.5" />
+              Remover
             </Button>
           )}
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Fechar</Button>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
+            Fechar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -682,15 +846,23 @@ function ExcluirUsuarioButton({ userId, userEmail }: { userId: string; userEmail
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm">
-            Esta ação remove <strong>{userEmail}</strong> de todo o sistema (login, perfil e permissões). Não pode ser desfeita.
+            Esta ação remove <strong>{userEmail}</strong> de todo o sistema (login, perfil e
+            permissões). Não pode ser desfeita.
           </p>
           <div>
             <Label>Digite o e-mail do usuário para confirmar</Label>
-            <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={userEmail} autoComplete="off" />
+            <Input
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder={userEmail}
+              autoComplete="off"
+            />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancelar</Button>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
+            Cancelar
+          </Button>
           <Button variant="destructive" onClick={handle} disabled={busy || confirm !== userEmail}>
             {busy ? "Excluindo…" : "Excluir definitivamente"}
           </Button>

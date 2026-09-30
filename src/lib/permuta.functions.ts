@@ -46,14 +46,16 @@ export const getPermutaDetalhes = createServerFn({ method: "POST" })
 export const createPermutaRecebimento = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      cliente_id: z.string().uuid().nullable(),
-      agencia_id: z.string().uuid().nullable(),
-      pi_id: z.string().uuid().nullable().optional(),
-      descricao: z.string().min(1),
-      valor: z.number().positive(),
-      data_recebimento: z.string(),
-    }).parse(d),
+    z
+      .object({
+        cliente_id: z.string().uuid().nullable(),
+        agencia_id: z.string().uuid().nullable(),
+        pi_id: z.string().uuid().nullable().optional(),
+        descricao: z.string().min(1),
+        valor: z.number().positive(),
+        data_recebimento: z.string(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
@@ -68,10 +70,7 @@ export const deletePermutaRecebimento = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
-    const { error } = await supabaseAdmin
-      .from("permuta_recebimentos")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await supabaseAdmin.from("permuta_recebimentos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

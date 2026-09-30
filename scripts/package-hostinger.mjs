@@ -7,9 +7,10 @@ const skipBuild = process.argv.includes("--skip-build");
 
 if (!skipBuild) {
   console.log("🚀 [1/2] Compilando a aplicação para produção (npm run build)...");
-  const cmd = process.platform === "win32"
-    ? `cmd /c "set NODE_OPTIONS=--max-old-space-size=4096 && npm run build"`
-    : `NODE_OPTIONS=--max-old-space-size=4096 npm run build`;
+  const cmd =
+    process.platform === "win32"
+      ? `cmd /c "set NODE_OPTIONS=--max-old-space-size=4096 && npm run build"`
+      : `NODE_OPTIONS=--max-old-space-size=4096 npm run build`;
   execSync(cmd, { stdio: "inherit" });
 } else {
   console.log("⚡ [1/2] Pulando compilação (usando .output existente)...");

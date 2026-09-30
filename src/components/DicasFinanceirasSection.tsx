@@ -55,13 +55,29 @@ export function DicasFinanceirasSection() {
   const getBadge = (tipo: DicaFinanceira["tipo"]) => {
     switch (tipo) {
       case "alerta":
-        return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 text-[10px]">⚠️ Alerta de Risco</Badge>;
+        return (
+          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 text-[10px]">
+            ⚠️ Alerta de Risco
+          </Badge>
+        );
       case "estrategia":
-        return <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-300 text-[10px]">📈 Estratégia de Crescimento</Badge>;
+        return (
+          <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-300 text-[10px]">
+            📈 Estratégia de Crescimento
+          </Badge>
+        );
       case "positivo":
-        return <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 text-[10px]">✅ Boa Prática</Badge>;
+        return (
+          <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 text-[10px]">
+            ✅ Boa Prática
+          </Badge>
+        );
       case "otimizacao":
-        return <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-300 text-[10px]">💡 Otimização de Custos</Badge>;
+        return (
+          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-300 text-[10px]">
+            💡 Otimização de Custos
+          </Badge>
+        );
       default:
         return null;
     }
@@ -81,7 +97,8 @@ export function DicasFinanceirasSection() {
               Dicas & Recomendações Financeiras da Sua Empresa
             </h2>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Diagnósticos contínuos gerados a partir do seu fluxo de caixa, pagamentos de comissões, faturamento de PIs e despesas fixas para maximizar a lucratividade.
+              Diagnósticos contínuos gerados a partir do seu fluxo de caixa, pagamentos de
+              comissões, faturamento de PIs e despesas fixas para maximizar a lucratividade.
             </p>
           </div>
 
@@ -143,13 +160,9 @@ export function DicasFinanceirasSection() {
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-3">
-                <div className="p-2 rounded-xl bg-muted/40 shrink-0">
-                  {getIcon(dica.tipo)}
-                </div>
+                <div className="p-2 rounded-xl bg-muted/40 shrink-0">{getIcon(dica.tipo)}</div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    {getBadge(dica.tipo)}
-                  </div>
+                  <div className="flex items-center gap-2 mb-1">{getBadge(dica.tipo)}</div>
                   <CardTitle className="text-base font-semibold leading-snug">
                     {dica.titulo}
                   </CardTitle>
@@ -157,9 +170,7 @@ export function DicasFinanceirasSection() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {dica.descricao}
-              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{dica.descricao}</p>
 
               <div className="p-2.5 rounded-lg bg-muted/30 border space-y-1.5">
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground/80">
@@ -169,7 +180,10 @@ export function DicasFinanceirasSection() {
                 </div>
                 <div className="flex items-start gap-1.5 text-[11px] font-semibold text-primary">
                   <ArrowRight className="size-3.5 shrink-0 mt-0.5" />
-                  <span>Ação Recomendada: <strong className="font-medium text-foreground">{dica.acaoRecomendada}</strong></span>
+                  <span>
+                    Ação Recomendada:{" "}
+                    <strong className="font-medium text-foreground">{dica.acaoRecomendada}</strong>
+                  </span>
                 </div>
               </div>
             </CardContent>

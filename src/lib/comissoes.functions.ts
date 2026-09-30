@@ -3,7 +3,16 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAnyRole } from "@/lib/roles.server";
 
-const TIPOS_MIDIA = ["tv","radio","portal","ooh","dooh","influencer","redes_sociais","outros"] as const;
+const TIPOS_MIDIA = [
+  "tv",
+  "radio",
+  "portal",
+  "ooh",
+  "dooh",
+  "influencer",
+  "redes_sociais",
+  "outros",
+] as const;
 
 const RegraSchema = z.object({
   id: z.string().uuid().optional(),
@@ -39,7 +48,10 @@ export const saveComissaoRegra = createServerFn({ method: "POST" })
     await assertAnyRole(context.supabase as never, context.userId, ["admin"]);
     const { id, ...payload } = data;
     if (id) {
-      const { error } = await context.supabase.from("comissoes_regras").update(payload as never).eq("id", id);
+      const { error } = await context.supabase
+        .from("comissoes_regras")
+        .update(payload as never)
+        .eq("id", id);
       if (error) throw new Error(error.message);
       return { id };
     }
@@ -75,7 +87,9 @@ export const listApuracoes = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("comissoes_apuracao")
-      .select("*, emissoras:fornecedor_id(nome,cnpj,cpf,pessoa_tipo), pis:pi_id(numero_pi,cliente_id), clientes:cliente_id(nome_fantasia,razao_social)")
+      .select(
+        "*, emissoras:fornecedor_id(nome,cnpj,cpf,pessoa_tipo), pis:pi_id(numero_pi,cliente_id), clientes:cliente_id(nome_fantasia,razao_social)",
+      )
       .order("created_at", { ascending: false })
       .limit(500);
     if (data.inicio) q = q.gte("competencia", data.inicio);
@@ -90,15 +104,20 @@ export const listApuracoes = createServerFn({ method: "POST" })
 
 export const updateApuracaoStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({
-    id: z.string().uuid(),
-    status: z.enum(["prevista", "confirmada", "paga", "cancelada"]),
-    pago_em: z.string().nullable().optional(),
-  }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["prevista", "confirmada", "paga", "cancelada"]),
+        pago_em: z.string().nullable().optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await assertAnyRole(context.supabase as never, context.userId, ["admin", "financeiro"]);
     const patch: any = { status: data.status };
-    if (data.status === "paga") patch.pago_em = data.pago_em || new Date().toISOString().slice(0, 10);
+    if (data.status === "paga")
+      patch.pago_em = data.pago_em || new Date().toISOString().slice(0, 10);
     const { error } = await context.supabase
       .from("comissoes_apuracao")
       .update(patch as never)
@@ -111,7 +130,9 @@ export const recalcComissoesPi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ pi_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await (context.supabase as any).rpc("refresh_comissoes_pi", { p_pi_id: data.pi_id });
+    const { error } = await (context.supabase as any).rpc("refresh_comissoes_pi", {
+      p_pi_id: data.pi_id,
+    });
     if (error) throw new Error(error.message);
     return { ok: true };
   });

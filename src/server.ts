@@ -23,7 +23,10 @@ if (typeof process !== "undefined" && process.env) {
             if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
             const [k, ...v] = trimmed.split("=");
             const key = k.trim();
-            const val = v.join("=").trim().replace(/^['"]|['"]$/g, "");
+            const val = v
+              .join("=")
+              .trim()
+              .replace(/^['"]|['"]$/g, "");
             if (!process.env[key]) {
               process.env[key] = val;
             }
@@ -62,7 +65,7 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => ((m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry)),
+      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
     );
   }
   return serverEntryPromise;

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,18 +11,52 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Pencil, Trash2, Tv, Radio, Monitor, Building2, Tags, Upload, Handshake, Download, FileSpreadsheet, Camera } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Tv,
+  Radio,
+  Monitor,
+  Building2,
+  Tags,
+  Upload,
+  Handshake,
+  Download,
+  FileSpreadsheet,
+  Camera,
+} from "lucide-react";
 import { toast } from "sonner";
-import { listProdutos, upsertProduto, deleteProduto, listProdutoTipos, upsertProdutoTipo, deleteProdutoTipo } from "@/lib/produtos.functions";
+import {
+  listProdutos,
+  upsertProduto,
+  deleteProduto,
+  listProdutoTipos,
+  upsertProdutoTipo,
+  deleteProdutoTipo,
+} from "@/lib/produtos.functions";
 import { listMidiaConfig, upsertMidiaConfig } from "@/lib/midia-config.functions";
 import { useUserRoles } from "@/hooks/use-roles";
 import { formatBRL } from "@/lib/mock-data";
@@ -79,14 +113,14 @@ function ProdutosPage() {
   const fetchConfigs = useServerFn(listMidiaConfig);
   const upsertConfigFn = useServerFn(upsertMidiaConfig);
   const fetchTipos = useServerFn(listProdutoTipos);
-  
+
   const searchParams = Route.useSearch();
   const [tab, setTab] = useState<Midia>("TV");
   const [search, setSearch] = useState(searchParams.parceiro || "");
   const [filtroTipo, setFiltroTipo] = useState<string>("__all__");
   const [filtroStatus, setFiltroStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [filtroOrigem, setFiltroOrigem] = useState<"all" | "proprio" | "parceiro">(
-    searchParams.parceiro ? "parceiro" : "all"
+    searchParams.parceiro ? "parceiro" : "all",
   );
   const [editing, setEditing] = useState<Partial<Produto> | null>(null);
   const [open, setOpen] = useState(false);
@@ -94,17 +128,24 @@ function ProdutosPage() {
   const [cfgEditing, setCfgEditing] = useState<Partial<MidiaConfig> | null>(null);
   const [tiposOpen, setTiposOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [galleryFotos, setGalleryFotos] = useState<{ fotos: string[]; titulo: string; subtitulo?: string } | null>(null);
+  const [galleryFotos, setGalleryFotos] = useState<{
+    fotos: string[];
+    titulo: string;
+    subtitulo?: string;
+  } | null>(null);
   const [novaMidiaOpen, setNovaMidiaOpen] = useState(false);
   const [novaMidiaNome, setNovaMidiaNome] = useState("");
 
   const { data, isLoading } = useQuery({ queryKey: ["produtos"], queryFn: () => fetchList() });
   const { data: configs } = useQuery({ queryKey: ["midia_config"], queryFn: () => fetchConfigs() });
-  const { data: todosTipos = [] } = useQuery({ queryKey: ["produto_tipos"], queryFn: () => fetchTipos() });
+  const { data: todosTipos = [] } = useQuery({
+    queryKey: ["produto_tipos"],
+    queryFn: () => fetchTipos(),
+  });
 
   const allProdutos = (data as Produto[]) ?? [];
 
-  const listaMidias = useMemo(() => {
+  const listaMidias = useMemo<string[]>(() => {
     const fromConfigs = ((configs as MidiaConfig[]) ?? []).map((c) => c.midia).filter(Boolean);
     const fromProdutos = allProdutos.map((p) => p.midia).filter(Boolean);
     return Array.from(new Set(["TV", "Radio", "DOOH", ...fromConfigs, ...fromProdutos]));
@@ -118,7 +159,7 @@ function ProdutosPage() {
         (p) =>
           p.midia === "DOOH" &&
           (p.parceiro_nome?.toLowerCase().includes(searchParams.parceiro!.toLowerCase()) ||
-            p.parceiro_cnpj?.includes(searchParams.parceiro!))
+            p.parceiro_cnpj?.includes(searchParams.parceiro!)),
       );
       if (hasInDooh) setTab("DOOH");
     }
@@ -150,14 +191,16 @@ function ProdutosPage() {
     if (filtroTipo !== "__all__" && (p.tipo ?? "") !== filtroTipo) return false;
     if (filtroStatus === "ativo" && !p.ativo) return false;
     if (filtroStatus === "inativo" && p.ativo) return false;
-    if (filtroOrigem === "proprio" && (p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id)) return false;
-    if (filtroOrigem === "parceiro" && !p.parceiro_cnpj && !p.parceiro_nome && !p.parceiro_id) return false;
+    if (filtroOrigem === "proprio" && (p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id))
+      return false;
+    if (filtroOrigem === "parceiro" && !p.parceiro_cnpj && !p.parceiro_nome && !p.parceiro_id)
+      return false;
     if (!q) return true;
     return [p.nome, p.tipo, p.programa, p.formato, p.faixa, p.parceiro_nome, p.parceiro_cnpj]
       .filter(Boolean)
       .some((v) => String(v).toLowerCase().includes(q));
   });
-  
+
   // Função para retornar os tipos cadastrados para uma mídia específica deste inquilino
   const getTiposPorMidia = (m: Midia) => {
     const tiposDaMidia = (todosTipos as ProdutoTipo[])
@@ -168,27 +211,53 @@ function ProdutosPage() {
       .filter((p) => p.midia === m && p.tipo && p.tipo.trim())
       .map((p) => p.tipo!.trim());
     return Array.from(new Set([...tiposDaMidia, ...tiposDosProdutos])).sort((a, b) =>
-      a.localeCompare(b, "pt-BR")
+      a.localeCompare(b, "pt-BR"),
     );
   };
 
   // Sugestões estritamente do que foi cadastrado pelo inquilino para a mídia ativa
   const tiposSugeridos = getTiposPorMidia(tab);
-  const programasSugeridos = Array.from(new Set(allProdutos.filter(p => p.midia === tab).map(p => p.programa).filter(Boolean))).sort();
-  const formatosSugeridos = Array.from(new Set(allProdutos.filter(p => p.midia === tab).map(p => p.formato).filter(Boolean))).sort();
-  const faixasSugeridas = Array.from(new Set(allProdutos.filter(p => p.midia === tab).map(p => p.faixa).filter(Boolean))).sort();
+  const programasSugeridos = Array.from(
+    new Set(
+      allProdutos
+        .filter((p) => p.midia === tab)
+        .map((p) => p.programa)
+        .filter(Boolean),
+    ),
+  ).sort();
+  const formatosSugeridos = Array.from(
+    new Set(
+      allProdutos
+        .filter((p) => p.midia === tab)
+        .map((p) => p.formato)
+        .filter(Boolean),
+    ),
+  ).sort();
+  const faixasSugeridas = Array.from(
+    new Set(
+      allProdutos
+        .filter((p) => p.midia === tab)
+        .map((p) => p.faixa)
+        .filter(Boolean),
+    ),
+  ).sort();
 
   const currentCfg = ((configs as MidiaConfig[]) ?? []).find((c) => c.midia === tab);
 
   const openNew = () => {
     setEditing({
-      midia: tab, nome: "", duracao_segundos: 30, insercoes_padrao: 1, valor_unit: 0, ativo: true,
+      midia: tab,
+      nome: "",
+      duracao_segundos: 30,
+      insercoes_padrao: 1,
+      valor_unit: 0,
+      ativo: true,
     });
     setOpen(true);
   };
 
   const openCfg = () => {
-    setCfgEditing(currentCfg ?? { midia: tab });
+    setCfgEditing(currentCfg ?? { midia: tab as any });
     setCfgOpen(true);
   };
 
@@ -196,13 +265,19 @@ function ProdutosPage() {
     <AppShell>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">Produtos</h1>
+          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+            Produtos
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">
             Cadastro de produtos de TV, Rádio e DOOH (valor, tempo e inserções padrão).
           </p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <Button variant="outline" asChild className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/40">
+          <Button
+            variant="outline"
+            asChild
+            className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+          >
             <Link to="/parceiros">
               <Handshake className="size-4 text-purple-600" />
               <span>Parceiros de Mídia</span>
@@ -249,14 +324,25 @@ function ProdutosPage() {
       {currentCfg && (currentCfg.cnpj || currentCfg.razao_social) && (
         <Card className="mb-4">
           <CardContent className="py-3 px-4 text-sm flex flex-wrap gap-x-6 gap-y-1">
-            <span><strong>{midiaLabel[tab]}:</strong> {currentCfg.razao_social ?? "—"}</span>
-            {currentCfg.cnpj && <span><strong>CNPJ:</strong> {currentCfg.cnpj}</span>}
-            {currentCfg.cidade && <span><strong>Cidade:</strong> {currentCfg.cidade}{currentCfg.uf ? `/${currentCfg.uf}` : ""}</span>}
+            <span>
+              <strong>{midiaLabel[tab]}:</strong> {currentCfg.razao_social ?? "—"}
+            </span>
+            {currentCfg.cnpj && (
+              <span>
+                <strong>CNPJ:</strong> {currentCfg.cnpj}
+              </span>
+            )}
+            {currentCfg.cidade && (
+              <span>
+                <strong>Cidade:</strong> {currentCfg.cidade}
+                {currentCfg.uf ? `/${currentCfg.uf}` : ""}
+              </span>
+            )}
           </CardContent>
         </Card>
       )}
 
-      <ImportarProdutosDialog open={importOpen} onOpenChange={setImportOpen} midiaPadrao={tab} />
+      <ImportarProdutosDialog open={importOpen} onOpenChange={setImportOpen} midiaPadrao={tab as any} />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v)}>
         <TabsList className="flex flex-wrap h-auto gap-1">
@@ -298,16 +384,22 @@ function ProdutosPage() {
                   className="max-w-sm"
                 />
                 <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                  <SelectTrigger className="w-[200px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__all__">Todos os tipos</SelectItem>
                     {tiposSugeridos.map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as any)}>
-                  <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos status</SelectItem>
                     <SelectItem value="ativo">Ativos</SelectItem>
@@ -315,7 +407,9 @@ function ProdutosPage() {
                   </SelectContent>
                 </Select>
                 <Select value={filtroOrigem} onValueChange={(v) => setFiltroOrigem(v as any)}>
-                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="Origem" /></SelectTrigger>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Origem" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas as origens</SelectItem>
                     <SelectItem value="proprio">🏢 Próprios do Inquilino</SelectItem>
@@ -344,59 +438,80 @@ function ProdutosPage() {
                   </TableHeader>
                   <TableBody>
                     {isLoading && (
-                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando…</TableCell></TableRow>
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Carregando…
+                        </TableCell>
+                      </TableRow>
                     )}
-                    {!isLoading && list.length === 0 && (() => {
-                      const totalMidia = allProdutos.filter((p) => p.midia === tab).length;
-                      if (totalMidia === 0) {
+                    {!isLoading &&
+                      list.length === 0 &&
+                      (() => {
+                        const totalMidia = allProdutos.filter((p) => p.midia === tab).length;
+                        if (totalMidia === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={8} className="py-12">
+                                <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
+                                  <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                                    {tab === "TV" ? (
+                                      <Tv className="size-7" />
+                                    ) : tab === "Radio" ? (
+                                      <Radio className="size-7" />
+                                    ) : (
+                                      <Monitor className="size-7" />
+                                    )}
+                                  </div>
+                                  <div className="space-y-1">
+                                    <h3 className="font-semibold text-lg">
+                                      Nenhum produto cadastrado para {midiaLabel[tab]}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                      Você pode cadastrar produtos manualmente um a um ou importar
+                                      todo o seu catálogo em lote via planilha Excel ou CSV.
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                                    <Button onClick={openNew} className="gap-2">
+                                      <Plus className="size-4" />
+                                      Cadastrar Manualmente
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setImportOpen(true)}
+                                      className="gap-2"
+                                    >
+                                      <Upload className="size-4" />
+                                      Importar Planilha (.xlsx, .csv)
+                                    </Button>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
                         return (
                           <TableRow>
-                            <TableCell colSpan={8} className="py-12">
-                              <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
-                                <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                                  {tab === "TV" ? <Tv className="size-7" /> : tab === "Radio" ? <Radio className="size-7" /> : <Monitor className="size-7" />}
-                                </div>
-                                <div className="space-y-1">
-                                  <h3 className="font-semibold text-lg">Nenhum produto cadastrado para {midiaLabel[tab]}</h3>
-                                  <p className="text-sm text-muted-foreground">
-                                    Você pode cadastrar produtos manualmente um a um ou importar todo o seu catálogo em lote via planilha Excel ou CSV.
-                                  </p>
-                                </div>
-                                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                                  <Button onClick={openNew} className="gap-2">
-                                    <Plus className="size-4" />
-                                    Cadastrar Manualmente
-                                  </Button>
-                                  <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
-                                    <Upload className="size-4" />
-                                    Importar Planilha (.xlsx, .csv)
-                                  </Button>
-                                </div>
-                              </div>
+                            <TableCell colSpan={8} className="py-10 text-center space-y-2">
+                              <p className="text-sm text-muted-foreground">
+                                Nenhum produto encontrado com os filtros aplicados.
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSearch("");
+                                  setFiltroTipo("__all__");
+                                  setFiltroStatus("all");
+                                  setFiltroOrigem("all");
+                                }}
+                              >
+                                Limpar filtros
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
-                      }
-                      return (
-                        <TableRow>
-                          <TableCell colSpan={8} className="py-10 text-center space-y-2">
-                            <p className="text-sm text-muted-foreground">Nenhum produto encontrado com os filtros aplicados.</p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSearch("");
-                                setFiltroTipo("__all__");
-                                setFiltroStatus("all");
-                                setFiltroOrigem("all");
-                              }}
-                            >
-                              Limpar filtros
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })()}
+                      })()}
                     {list.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">
@@ -436,7 +551,10 @@ function ProdutosPage() {
                               </div>
                             )}
                             <div className="flex flex-col min-w-0">
-                              <span className="font-semibold text-foreground truncate max-w-[240px]" title={p.nome}>
+                              <span
+                                className="font-semibold text-foreground truncate max-w-[240px]"
+                                title={p.nome}
+                              >
                                 {p.nome}
                               </span>
                               {p.tipo && (
@@ -455,18 +573,31 @@ function ProdutosPage() {
                                   🤝 Parceiro
                                 </Badge>
                                 {p.comissao_inquilino_pct != null && (
-                                  <Badge variant="outline" className="text-[10px] font-bold text-purple-700 dark:text-purple-300 border-purple-300 bg-purple-50 dark:bg-purple-950/40 py-0">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] font-bold text-purple-700 dark:text-purple-300 border-purple-300 bg-purple-50 dark:bg-purple-950/40 py-0"
+                                  >
                                     {p.comissao_inquilino_pct}% remuneração
                                   </Badge>
                                 )}
                               </div>
-                              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[170px]" title={p.parceiro_nome || undefined}>
+                              <span
+                                className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[170px]"
+                                title={p.parceiro_nome || undefined}
+                              >
                                 {p.parceiro_nome || "Parceiro de Mídia"}
                               </span>
-                              {p.parceiro_cnpj && <span className="font-mono text-[10px] text-muted-foreground">{p.parceiro_cnpj}</span>}
+                              {p.parceiro_cnpj && (
+                                <span className="font-mono text-[10px] text-muted-foreground">
+                                  {p.parceiro_cnpj}
+                                </span>
+                              )}
                             </div>
                           ) : (
-                            <Badge variant="outline" className="border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 text-[10px] py-0 font-normal">
+                            <Badge
+                              variant="outline"
+                              className="border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 text-[10px] py-0 font-normal"
+                            >
                               🏢 Próprio
                             </Badge>
                           )}
@@ -481,19 +612,36 @@ function ProdutosPage() {
                         </TableCell>
                         <TableCell className="text-right">{p.duracao_segundos}s</TableCell>
                         <TableCell className="text-right">{p.insercoes_padrao}</TableCell>
-                        <TableCell className="text-right">{formatBRL(Number(p.valor_unit))}</TableCell>
+                        <TableCell className="text-right">
+                          {formatBRL(Number(p.valor_unit))}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={p.ativo ? "default" : "outline"}>{p.ativo ? "Ativo" : "Inativo"}</Badge>
+                          <Badge variant={p.ativo ? "default" : "outline"}>
+                            {p.ativo ? "Ativo" : "Inativo"}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           {canManage && (
                             <div className="flex justify-end gap-1">
-                              <Button size="icon" variant="ghost" onClick={() => { setEditing(p); setOpen(true); }} title="Editar produto">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditing(p);
+                                  setOpen(true);
+                                }}
+                                title="Editar produto"
+                              >
                                 <Pencil className="size-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => {
-                                if (confirm(`Remover "${p.nome}"?`)) delMut.mutate(p.id);
-                              }} title="Remover produto">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                  if (confirm(`Remover "${p.nome}"?`)) delMut.mutate(p.id);
+                                }}
+                                title="Remover produto"
+                              >
                                 <Trash2 className="size-4 text-destructive" />
                               </Button>
                             </div>
@@ -511,7 +659,10 @@ function ProdutosPage() {
 
       <ProdutoFormDialog
         open={open}
-        onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setEditing(null);
+        }}
         initial={editing}
         sugestoes={{
           tipos: tiposSugeridos as string[],
@@ -532,10 +683,12 @@ function ProdutosPage() {
         subtitulo={galleryFotos?.subtitulo}
       />
 
-
       <MidiaConfigDialog
         open={cfgOpen}
-        onOpenChange={(v) => { setCfgOpen(v); if (!v) setCfgEditing(null); }}
+        onOpenChange={(v) => {
+          setCfgOpen(v);
+          if (!v) setCfgEditing(null);
+        }}
         value={cfgEditing}
         onChange={setCfgEditing}
         onSave={() => cfgEditing && saveCfgMut.mutate(cfgEditing)}
@@ -582,7 +735,8 @@ function ProdutosPage() {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Ao cadastrar uma nova mídia, ela ficará disponível para seleção no cadastro de produtos e receberá uma aba dedicada.
+                Ao cadastrar uma nova mídia, ela ficará disponível para seleção no cadastro de
+                produtos e receberá uma aba dedicada.
               </p>
             </div>
             <DialogFooter>
@@ -601,7 +755,10 @@ function ProdutosPage() {
 }
 
 function ProdutoTiposDialog({
-  open, onOpenChange, tipos, midia
+  open,
+  onOpenChange,
+  tipos,
+  midia,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -613,7 +770,7 @@ function ProdutoTiposDialog({
   const deleteFn = useServerFn(deleteProdutoTipo);
   const [novo, setNovo] = useState("");
 
-  const tiposDaMidia = tipos.filter(t => t.midia === midia);
+  const tiposDaMidia = tipos.filter((t) => t.midia === midia);
 
   const addMut = useMutation({
     mutationFn: () => upsertFn({ data: { nome: novo.trim(), midia } }),
@@ -645,14 +802,15 @@ function ProdutoTiposDialog({
         </DialogHeader>
 
         <p className="text-xs text-muted-foreground">
-          Cada inquilino tem seus próprios tipos de produtos. Apenas os tipos cadastrados pelo seu inquilino aparecerão nos formulários e filtros.
+          Cada inquilino tem seus próprios tipos de produtos. Apenas os tipos cadastrados pelo seu
+          inquilino aparecerão nos formulários e filtros.
         </p>
-        
+
         <div className="space-y-4 py-2">
           <div className="flex gap-2">
-            <Input 
-              placeholder={`Novo tipo para ${midiaLabel[midia]} (ex: VT, Spot, Banner...)`} 
-              value={novo} 
+            <Input
+              placeholder={`Novo tipo para ${midiaLabel[midia]} (ex: VT, Spot, Banner...)`}
+              value={novo}
               onChange={(e) => setNovo(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && novo.trim() && addMut.mutate()}
             />
@@ -664,16 +822,23 @@ function ProdutoTiposDialog({
           <div className="rounded-md border divide-y max-h-[300px] overflow-y-auto">
             {tiposDaMidia.length === 0 && (
               <div className="p-6 text-center text-sm text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">Nenhum tipo cadastrado para {midiaLabel[midia]}</p>
-                <p className="text-xs">Digite um nome acima para cadastrar seu primeiro tipo de produto.</p>
+                <p className="font-medium text-foreground">
+                  Nenhum tipo cadastrado para {midiaLabel[midia]}
+                </p>
+                <p className="text-xs">
+                  Digite um nome acima para cadastrar seu primeiro tipo de produto.
+                </p>
               </div>
             )}
             {tiposDaMidia.map((t) => (
-              <div key={t.id} className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
+              <div
+                key={t.id}
+                className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+              >
                 <span className="text-sm font-medium">{t.nome}</span>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
+                <Button
+                  size="icon"
+                  variant="ghost"
                   className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={() => confirm(`Remover o tipo "${t.nome}"?`) && delMut.mutate(t.id)}
                   disabled={delMut.isPending}
@@ -687,7 +852,9 @@ function ProdutoTiposDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -695,7 +862,12 @@ function ProdutoTiposDialog({
 }
 
 function MidiaConfigDialog({
-  open, onOpenChange, value, onChange, onSave, saving,
+  open,
+  onOpenChange,
+  value,
+  onChange,
+  onSave,
+  saving,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -718,20 +890,25 @@ function MidiaConfigDialog({
         razao_social: d.razaoSocial || value.razao_social || "",
         nome_fantasia: value.nome_fantasia || d.nomeFantasia,
         cep: d.cep || value.cep,
-        endereco: [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", ") || value.endereco || "",
+        endereco:
+          [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", ") || value.endereco || "",
         cidade: d.cidade || value.cidade,
         uf: d.estado || value.uf,
         telefone: value.telefone || d.telefone,
         email: value.email || d.email,
-        inscricao_estadual: (value.inscricao_estadual && value.inscricao_estadual.trim())
-          ? value.inscricao_estadual
-          : (d.inscricaoEstadual || "ISENTA"),
-        inscricao_municipal: (value.inscricao_municipal && value.inscricao_municipal.trim())
-          ? value.inscricao_municipal
-          : (d.inscricaoMunicipal || "ISENTA"),
+        inscricao_estadual:
+          value.inscricao_estadual && value.inscricao_estadual.trim()
+            ? value.inscricao_estadual
+            : d.inscricaoEstadual || "ISENTA",
+        inscricao_municipal:
+          value.inscricao_municipal && value.inscricao_municipal.trim()
+            ? value.inscricao_municipal
+            : d.inscricaoMunicipal || "ISENTA",
       });
       toast.success("Dados preenchidos pela Receita Federal");
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   const uploadLogo = async (file: File) => {
@@ -740,12 +917,16 @@ function MidiaConfigDialog({
       const { supabase } = await import("@/integrations/supabase/client");
       const ext = file.name.split(".").pop() || "png";
       const path = `emissora-${value.midia}-${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("client-logos").upload(path, file, { upsert: true, contentType: file.type });
+      const { error } = await supabase.storage
+        .from("client-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
       // Bucket privado: guardamos apenas o path.
       set({ logo_url: path });
       toast.success("Logo enviada");
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   return (
@@ -754,18 +935,43 @@ function MidiaConfigDialog({
         <DialogHeader>
           <DialogTitle>Dados da emissora — {midiaLabel[value.midia as Midia]}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); onSave(); }} className="space-y-3">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSave();
+          }}
+          className="space-y-3"
+        >
           <div className="space-y-1.5">
             <Label>Logo (usada no cabeçalho da PI)</Label>
             <div className="flex items-center gap-3">
               {value.logo_url && (
                 <div className="relative h-16 w-32 rounded-md border bg-muted/30 overflow-hidden">
-                  <LogoImg stored={value.logo_url} alt="Logo" className="h-full w-full object-contain" />
+                  <LogoImg
+                    stored={value.logo_url}
+                    alt="Logo"
+                    className="h-full w-full object-contain"
+                  />
                 </div>
               )}
-              <Input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); }} className="max-w-xs" />
+              <Input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadLogo(f);
+                }}
+                className="max-w-xs"
+              />
               {value.logo_url && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => set({ logo_url: null })}>Remover</Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => set({ logo_url: null })}
+                >
+                  Remover
+                </Button>
               )}
             </div>
           </div>
@@ -773,36 +979,57 @@ function MidiaConfigDialog({
           <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
             <div>
               <Label>CNPJ</Label>
-              <Input value={value.cnpj ?? ""} onChange={(e) => set({ cnpj: e.target.value })} placeholder="00.000.000/0000-00" />
+              <Input
+                value={value.cnpj ?? ""}
+                onChange={(e) => set({ cnpj: e.target.value })}
+                placeholder="00.000.000/0000-00"
+              />
             </div>
-            <Button type="button" variant="secondary" onClick={lookupCnpj}>Buscar CNPJ</Button>
+            <Button type="button" variant="secondary" onClick={lookupCnpj}>
+              Buscar CNPJ
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Razão Social</Label>
-              <Input value={value.razao_social ?? ""} onChange={(e) => set({ razao_social: e.target.value })} />
+              <Input
+                value={value.razao_social ?? ""}
+                onChange={(e) => set({ razao_social: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Nome Fantasia</Label>
-              <Input value={value.nome_fantasia ?? ""} onChange={(e) => set({ nome_fantasia: e.target.value })} />
+              <Input
+                value={value.nome_fantasia ?? ""}
+                onChange={(e) => set({ nome_fantasia: e.target.value })}
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Inscrição Estadual</Label>
-              <Input value={value.inscricao_estadual ?? ""} onChange={(e) => set({ inscricao_estadual: e.target.value })} />
+              <Input
+                value={value.inscricao_estadual ?? ""}
+                onChange={(e) => set({ inscricao_estadual: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Inscrição Municipal</Label>
-              <Input value={value.inscricao_municipal ?? ""} onChange={(e) => set({ inscricao_municipal: e.target.value })} />
+              <Input
+                value={value.inscricao_municipal ?? ""}
+                onChange={(e) => set({ inscricao_municipal: e.target.value })}
+              />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label>Endereço completo</Label>
-            <Input value={value.endereco ?? ""} onChange={(e) => set({ endereco: e.target.value })} />
+            <Input
+              value={value.endereco ?? ""}
+              onChange={(e) => set({ endereco: e.target.value })}
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
@@ -823,7 +1050,10 @@ function MidiaConfigDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Telefone</Label>
-              <Input value={value.telefone ?? ""} onChange={(e) => set({ telefone: e.target.value })} />
+              <Input
+                value={value.telefone ?? ""}
+                onChange={(e) => set({ telefone: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>E-mail</Label>
@@ -838,12 +1068,20 @@ function MidiaConfigDialog({
 
           <div className="space-y-1.5">
             <Label>Observações</Label>
-            <Textarea rows={2} value={value.observacao ?? ""} onChange={(e) => set({ observacao: e.target.value })} />
+            <Textarea
+              rows={2}
+              value={value.observacao ?? ""}
+              onChange={(e) => set({ observacao: e.target.value })}
+            />
           </div>
 
           <DialogFooter className="pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar"}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Salvando…" : "Salvar"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

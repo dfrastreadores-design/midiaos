@@ -97,7 +97,7 @@ function InfluenciadoresPage() {
     return data.filter((r: Influ) =>
       [r.nome, r.nicho, r.cidade, r.instagram, r.tiktok, r.youtube]
         .filter(Boolean)
-        .some((v: any) => String(v).toLowerCase().includes(term))
+        .some((v: any) => String(v).toLowerCase().includes(term)),
     );
   }, [data, q]);
 
@@ -143,9 +143,7 @@ function InfluenciadoresPage() {
           ? null
           : Number(form.seguidores_total),
       cache_valor:
-        form.cache_valor === "" || form.cache_valor === null
-          ? null
-          : Number(form.cache_valor),
+        form.cache_valor === "" || form.cache_valor === null ? null : Number(form.cache_valor),
     };
     if (!payload.id) delete payload.id;
     save.mutate(payload);
@@ -161,7 +159,8 @@ function InfluenciadoresPage() {
               Influenciadores & Criadores
             </h1>
             <p className="text-sm text-muted-foreground">
-              Cadastro de influenciadores e criadores de conteúdo (acesso restrito: Admin e Produção).
+              Cadastro de influenciadores e criadores de conteúdo (acesso restrito: Admin e
+              Produção).
             </p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
@@ -177,12 +176,20 @@ function InfluenciadoresPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
                 <div className="md:col-span-2">
                   <Label>Nome *</Label>
-                  <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+                  <Input
+                    value={form.nome}
+                    onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Tipo</Label>
-                  <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as any })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={form.tipo}
+                    onValueChange={(v) => setForm({ ...form, tipo: v as any })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="influenciador">Influenciador</SelectItem>
                       <SelectItem value="criador">Criador de conteúdo</SelectItem>
@@ -191,51 +198,93 @@ function InfluenciadoresPage() {
                 </div>
                 <div>
                   <Label>Nicho</Label>
-                  <Input value={form.nicho} onChange={(e) => setForm({ ...form, nicho: e.target.value })} placeholder="Moda, gastronomia, esportes..." />
+                  <Input
+                    value={form.nicho}
+                    onChange={(e) => setForm({ ...form, nicho: e.target.value })}
+                    placeholder="Moda, gastronomia, esportes..."
+                  />
                 </div>
                 <div>
                   <Label>Cidade</Label>
-                  <Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} />
+                  <Input
+                    value={form.cidade}
+                    onChange={(e) => setForm({ ...form, cidade: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Estado (UF)</Label>
-                  <Input maxLength={2} value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value.toUpperCase() })} />
+                  <Input
+                    maxLength={2}
+                    value={form.estado}
+                    onChange={(e) => setForm({ ...form, estado: e.target.value.toUpperCase() })}
+                  />
                 </div>
                 <div>
                   <Label>E-mail</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Telefone</Label>
-                  <Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
+                  <Input
+                    value={form.telefone}
+                    onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>WhatsApp</Label>
-                  <Input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
+                  <Input
+                    value={form.whatsapp}
+                    onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Instagram</Label>
-                  <Input value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} placeholder="@usuario" />
+                  <Input
+                    value={form.instagram}
+                    onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+                    placeholder="@usuario"
+                  />
                 </div>
                 <div>
                   <Label>TikTok</Label>
-                  <Input value={form.tiktok} onChange={(e) => setForm({ ...form, tiktok: e.target.value })} placeholder="@usuario" />
+                  <Input
+                    value={form.tiktok}
+                    onChange={(e) => setForm({ ...form, tiktok: e.target.value })}
+                    placeholder="@usuario"
+                  />
                 </div>
                 <div>
                   <Label>YouTube</Label>
-                  <Input value={form.youtube} onChange={(e) => setForm({ ...form, youtube: e.target.value })} />
+                  <Input
+                    value={form.youtube}
+                    onChange={(e) => setForm({ ...form, youtube: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Facebook</Label>
-                  <Input value={form.facebook} onChange={(e) => setForm({ ...form, facebook: e.target.value })} />
+                  <Input
+                    value={form.facebook}
+                    onChange={(e) => setForm({ ...form, facebook: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Twitter / X</Label>
-                  <Input value={form.twitter} onChange={(e) => setForm({ ...form, twitter: e.target.value })} />
+                  <Input
+                    value={form.twitter}
+                    onChange={(e) => setForm({ ...form, twitter: e.target.value })}
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <Label>Outras redes</Label>
-                  <Input value={form.outras_redes} onChange={(e) => setForm({ ...form, outras_redes: e.target.value })} placeholder="Twitch, Kwai, LinkedIn..." />
+                  <Input
+                    value={form.outras_redes}
+                    onChange={(e) => setForm({ ...form, outras_redes: e.target.value })}
+                    placeholder="Twitch, Kwai, LinkedIn..."
+                  />
                 </div>
                 <div>
                   <Label>Seguidores (total)</Label>
@@ -264,7 +313,9 @@ function InfluenciadoresPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  Cancelar
+                </Button>
                 <Button onClick={submit} disabled={save.isPending}>
                   {save.isPending ? "Salvando..." : "Salvar"}
                 </Button>
@@ -304,7 +355,11 @@ function InfluenciadoresPage() {
                         {r.tipo === "criador" ? "Criador" : "Influencer"}
                       </Badge>
                     </div>
-                    {r.nicho && <div className="text-xs"><b>Nicho:</b> {r.nicho}</div>}
+                    {r.nicho && (
+                      <div className="text-xs">
+                        <b>Nicho:</b> {r.nicho}
+                      </div>
+                    )}
                     <div className="text-xs space-y-0.5">
                       {r.instagram && <div>IG: {r.instagram}</div>}
                       {r.tiktok && <div>TikTok: {r.tiktok}</div>}
@@ -317,7 +372,12 @@ function InfluenciadoresPage() {
                         </span>
                       )}
                       {r.cache_valor != null && (
-                        <span><b>Cachê:</b> R$ {Number(r.cache_valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                        <span>
+                          <b>Cachê:</b> R${" "}
+                          {Number(r.cache_valor).toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
                       )}
                     </div>
                     <div className="flex gap-2 pt-1">

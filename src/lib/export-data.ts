@@ -3,7 +3,11 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { applyTrialWatermark } from "@/lib/trial-watermark";
 
-export function exportToXlsx(filename: string, rows: Record<string, unknown>[], sheetName = "Dados") {
+export function exportToXlsx(
+  filename: string,
+  rows: Record<string, unknown>[],
+  sheetName = "Dados",
+) {
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);

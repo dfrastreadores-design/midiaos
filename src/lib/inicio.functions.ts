@@ -42,7 +42,9 @@ export const getInicio = createServerFn({ method: "GET" })
         .order("inicio"),
       supabase
         .from("propostas")
-        .select("id,numero,campanha,validade,valor_negociado,status,cliente_id,agencia_id,created_at")
+        .select(
+          "id,numero,campanha,validade,valor_negociado,status,cliente_id,agencia_id,created_at",
+        )
         .not("validade", "is", null)
         .gte("validade", hojeStr)
         .lte("validade", em7Str)
@@ -50,7 +52,9 @@ export const getInicio = createServerFn({ method: "GET" })
         .order("created_at", { ascending: false }),
       supabase
         .from("pis")
-        .select("id,numero,campanha,periodo_inicio,periodo_fim,valor_negociado,status,cliente_id,agencia_id,created_at")
+        .select(
+          "id,numero,campanha,periodo_inicio,periodo_fim,valor_negociado,status,cliente_id,agencia_id,created_at",
+        )
         .not("periodo_fim", "is", null)
         .gte("periodo_fim", hojeStr)
         .lte("periodo_fim", em7Str)
@@ -59,11 +63,19 @@ export const getInicio = createServerFn({ method: "GET" })
     ]);
 
     // Mantém apenas o registro mais recente por cliente/agência
-    const dedupeByEntidade = <T extends { cliente_id?: string | null; agencia_id?: string | null; id: string }>(rows: T[]) => {
+    const dedupeByEntidade = <
+      T extends { cliente_id?: string | null; agencia_id?: string | null; id: string },
+    >(
+      rows: T[],
+    ) => {
       const seen = new Set<string>();
       const out: T[] = [];
       for (const r of rows) {
-        const key = r.cliente_id ? `c:${r.cliente_id}` : r.agencia_id ? `a:${r.agencia_id}` : `x:${r.id}`;
+        const key = r.cliente_id
+          ? `c:${r.cliente_id}`
+          : r.agencia_id
+            ? `a:${r.agencia_id}`
+            : `x:${r.id}`;
         if (seen.has(key)) continue;
         seen.add(key);
         out.push(r);

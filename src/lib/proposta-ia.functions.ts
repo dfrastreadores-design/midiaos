@@ -14,7 +14,8 @@ export const SOLUCOES_PORTFOLIO_NEXO = [
     id: "compra_negociacao_midia",
     numero: 2,
     titulo: "Compra e Negociação de Mídia (Tradicional & DOOH)",
-    exemplos: "TV, Rádio, Jornal, Revista, Outdoor, Frontlight, Painéis LED/DOOH, Mobiliário Urbano",
+    exemplos:
+      "TV, Rádio, Jornal, Revista, Outdoor, Frontlight, Painéis LED/DOOH, Mobiliário Urbano",
   },
   {
     id: "marketing_digital_redes",
@@ -44,7 +45,8 @@ export const SOLUCOES_PORTFOLIO_NEXO = [
     id: "producao_audiovisual",
     numero: 7,
     titulo: "Produção Audiovisual",
-    exemplos: "Comerciais de TV, Vídeos Institucionais, Reels/Stories, Captação com Drone, Motion Graphics",
+    exemplos:
+      "Comerciais de TV, Vídeos Institucionais, Reels/Stories, Captação com Drone, Motion Graphics",
   },
   {
     id: "eventos_feiras_ativacoes",
@@ -186,7 +188,7 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
   const pool = produtosElegiveis.length > 0 ? produtosElegiveis : produtos.filter((p) => p.ativo);
 
   const foco = (data.foco_horario || "").toLowerCase();
-  const obj = ((data.dor_ou_momento || data.objetivo || "")).toLowerCase();
+  const obj = (data.dor_ou_momento || data.objetivo || "").toLowerCase();
   const solIds = new Set(data.solucoes || []);
 
   // Pontuação de relevância de cada produto
@@ -196,8 +198,16 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
     const nome = (p.nome || "").toLowerCase();
     const prog = (p.programa || "").toLowerCase();
 
-    if (foco.includes("nobre") && (faixa.includes("noite") || faixa.includes("nobre") || nome.includes("nobre"))) score += 30;
-    if (foco.includes("manh") && (faixa.includes("manh") || prog.includes("bom dia") || nome.includes("manh"))) score += 30;
+    if (
+      foco.includes("nobre") &&
+      (faixa.includes("noite") || faixa.includes("nobre") || nome.includes("nobre"))
+    )
+      score += 30;
+    if (
+      foco.includes("manh") &&
+      (faixa.includes("manh") || prog.includes("bom dia") || nome.includes("manh"))
+    )
+      score += 30;
     if (foco.includes("rotativ") && Number(p.valor_unit) <= 1500) score += 25;
 
     // Se selecionou Compra de Mídia ou DOOH
@@ -239,12 +249,13 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
   // Determinar dias do mês para distribuição
   const totalDiasMes = new Date(anoAtual, mesAtual, 0).getDate();
   const diasPeriodo = Math.min(data.periodo_dias || 15, totalDiasMes);
-  
+
   // Gera dias úteis ou distribuídos
   const diasSugeridos: number[] = [];
   for (let d = 1; d <= diasPeriodo && diasSugeridos.length < 20; d++) {
     const dow = new Date(anoAtual, mesAtual - 1, d).getDay();
-    if (dow !== 0 && dow !== 6) { // Seg a Sex
+    if (dow !== 0 && dow !== 6) {
+      // Seg a Sex
       diasSugeridos.push(d);
     }
   }
@@ -270,7 +281,7 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
     if (orcamentoPorProduto > 0) {
       if (valorTabela > orcamentoPorProduto) {
         const proporcao = orcamentoPorProduto / valorTabela;
-        if (proporcao >= 0.70) {
+        if (proporcao >= 0.7) {
           // Desconto comercial plausível até 30%
           desconto = round2((1 - proporcao) * 100);
           valorNegociado = round2(orcamentoPorProduto);
@@ -316,18 +327,21 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
 
   // Montagem rica do briefing
   const nomeCliente = data.cliente_nome ? ` — ${data.cliente_nome}` : "";
-  const focoMidia = data.midias && data.midias.length > 0 ? data.midias.join(" + ") : "Mídia Integrada";
-  
+  const focoMidia =
+    data.midias && data.midias.length > 0 ? data.midias.join(" + ") : "Mídia Integrada";
+
   // Título das soluções contratadas
   const titulosSolucoes = (data.solucoes || [])
     .map((sId) => SOLUCOES_PORTFOLIO_NEXO.find((n) => n.id === sId)?.titulo || sId)
     .filter(Boolean);
 
-  const campanha = titulosSolucoes.length > 0
-    ? `Proposta Comercial${nomeCliente} (${titulosSolucoes.slice(0, 2).join(" & ")})`
-    : `Campanha ${data.dor_ou_momento || data.objetivo || "Comercial"}${nomeCliente} (${focoMidia})`;
+  const campanha =
+    titulosSolucoes.length > 0
+      ? `Proposta Comercial${nomeCliente} (${titulosSolucoes.slice(0, 2).join(" & ")})`
+      : `Campanha ${data.dor_ou_momento || data.objetivo || "Comercial"}${nomeCliente} (${focoMidia})`;
 
-  const estrategia = `Plano estratégico estruturado com foco em ${data.dor_ou_momento || data.objetivo || "alcance, conversão e consolidação de marca"}. ` +
+  const estrategia =
+    `Plano estratégico estruturado com foco em ${data.dor_ou_momento || data.objetivo || "alcance, conversão e consolidação de marca"}. ` +
     `A proposta atende ao momento da empresa ${data.cliente_nome || "do cliente"}` +
     `${data.segmento_atuacao ? ` no segmento de ${data.segmento_atuacao}` : ""}` +
     `${data.contato_decisor ? `, em alinhamento direto com ${data.contato_decisor}` : ""}. ` +
@@ -353,7 +367,8 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
   if (data.condicoes_pagamento) condicoesArr.push(`Pagamento: ${data.condicoes_pagamento}`);
   if (data.condicoes_especiais) condicoesArr.push(`Condição Especial: ${data.condicoes_especiais}`);
 
-  const justificativa = `A composição da proposta contempla ${itens.length} formatos táticos entregando ${totInsercoes} veiculações/entregáveis planejados, ` +
+  const justificativa =
+    `A composição da proposta contempla ${itens.length} formatos táticos entregando ${totInsercoes} veiculações/entregáveis planejados, ` +
     `otimizando o budget ${orcamentoTotal > 0 ? `estimado de R$ ${orcamentoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "proposto"} ` +
     `com taxa de desconto comercial de ${descPct}%.` +
     (condicoesArr.length > 0 ? ` (${condicoesArr.join(" • ")})` : "");
@@ -392,17 +407,20 @@ export const sugerirPropostaIA = createServerFn({ method: "POST" })
     if (tenantId) {
       query = query.eq("tenant_id", tenantId);
     }
-    const { data: produtosDb, error: errProd } = await query.order("valor_unit", { ascending: false });
+    const { data: produtosDb, error: errProd } = await query.order("valor_unit", {
+      ascending: false,
+    });
 
     if (errProd) throw new Error(errProd.message);
     if (!produtosDb || produtosDb.length === 0) {
       throw new Error(
-        "Seu catálogo ainda não possui produtos ativos cadastrados. Cadastre seus produtos na página de Produtos para que a IA possa elaborar sugestões sob medida."
+        "Seu catálogo ainda não possui produtos ativos cadastrados. Cadastre seus produtos na página de Produtos para que a IA possa elaborar sugestões sob medida.",
       );
     }
 
     // 3. Tentar chamada à IA (Lovable Gateway / Gemini / OpenAI)
-    const apiKey = process.env.LOVABLE_API_KEY || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+    const apiKey =
+      process.env.LOVABLE_API_KEY || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
 
     if (apiKey) {
       try {
@@ -417,7 +435,7 @@ export const sugerirPropostaIA = createServerFn({ method: "POST" })
           valor_unit: p.valor_unit,
           duracao_segundos: p.duracao_segundos,
           insercoes_padrao: p.insercoes_padrao,
-          parceiro_nome: p.parceiro_nome,
+          parceiro_nome: (p as any).parceiro_nome,
         }));
 
         const hoje = new Date();
@@ -484,7 +502,7 @@ FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
 }`;
 
         const isLovable = !process.env.OPENAI_API_KEY && !process.env.GEMINI_API_KEY;
-        const endpoint = isLovable 
+        const endpoint = isLovable
           ? "https://ai.gateway.lovable.dev/v1/chat/completions"
           : "https://api.openai.com/v1/chat/completions";
 
@@ -516,9 +534,10 @@ FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
                 const desc = Number(it.desconto) || 0;
                 const valTabela = round2(unit * totalIns);
                 const valNegociado = round2(valTabela * (1 - desc / 100));
-                const diasMes = Array.isArray(it.dias_mes) && it.dias_mes.length > 0 
-                  ? it.dias_mes 
-                  : [1, 2, 3, 4, 5, 8, 9, 10, 11, 12];
+                const diasMes =
+                  Array.isArray(it.dias_mes) && it.dias_mes.length > 0
+                    ? it.dias_mes
+                    : [1, 2, 3, 4, 5, 8, 9, 10, 11, 12];
 
                 return {
                   tipo: String(it.tipo || "VT"),
@@ -541,12 +560,16 @@ FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
               });
 
               const totTabela = round2(itensFormatados.reduce((a, b) => a + b.valor_tabela, 0));
-              const totNegociado = round2(itensFormatados.reduce((a, b) => a + b.valor_negociado, 0));
+              const totNegociado = round2(
+                itensFormatados.reduce((a, b) => a + b.valor_negociado, 0),
+              );
               const totInsercoes = itensFormatados.reduce((a, b) => a + b.total_insercoes, 0);
-              const descGeral = totTabela > 0 ? round2(((totTabela - totNegociado) / totTabela) * 100) : 0;
+              const descGeral =
+                totTabela > 0 ? round2(((totTabela - totNegociado) / totTabela) * 100) : 0;
 
               return {
-                campanha: parsed.campanha || `Proposta Comercial — ${data.cliente_nome || "Cliente"}`,
+                campanha:
+                  parsed.campanha || `Proposta Comercial — ${data.cliente_nome || "Cliente"}`,
                 estrategia: parsed.estrategia || "",
                 justificativa_comercial: parsed.justificativa_comercial || "",
                 escopo_detalhado: parsed.escopo_detalhado || undefined,

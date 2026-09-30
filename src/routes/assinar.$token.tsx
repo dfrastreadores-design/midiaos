@@ -7,11 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { getPiPublicoPorToken, registrarAssinaturaCliente, getAssinaturaExecutivoPorToken } from "@/lib/assinaturas.functions";
+import {
+  getPiPublicoPorToken,
+  registrarAssinaturaCliente,
+  getAssinaturaExecutivoPorToken,
+} from "@/lib/assinaturas.functions";
 import { toast } from "sonner";
-import { CheckCircle2, ShieldCheck, FileText, Download, User, Info, Loader2, PenLine } from "lucide-react";
+import {
+  CheckCircle2,
+  ShieldCheck,
+  FileText,
+  Download,
+  User,
+  Info,
+  Loader2,
+  PenLine,
+} from "lucide-react";
 import { SignaturePad, type SignaturePadHandle } from "@/components/SignaturePad";
-
 
 export const Route = createFileRoute("/assinar/$token")({
   ssr: false,
@@ -37,7 +49,6 @@ function AssinarPi() {
   const [consultandoCpf, setConsultandoCpf] = useState(false);
   const padRef = useRef<SignaturePadHandle>(null);
 
-
   const formatarCpf = (v: string) => {
     v = v.replace(/\D/g, "");
     if (v.length > 11) v = v.slice(0, 11);
@@ -54,7 +65,9 @@ function AssinarPi() {
       // Usando uma API pública/gratuita para teste (BrasilAPI ou similar)
       // Nota: Muitas APIs de CPF exigem token ou data de nascimento por segurança.
       // Aqui simulamos a busca ou usamos um serviço que permita consulta básica se disponível.
-      const res = await fetch(`https://brasilapi.com.br/api/cpf/v1/${cpfPuro}`).then(r => r.json());
+      const res = await fetch(`https://brasilapi.com.br/api/cpf/v1/${cpfPuro}`).then((r) =>
+        r.json(),
+      );
       if (res.nome) {
         setNome(res.nome);
         toast.success("Dados preenchidos via CPF");
@@ -101,7 +114,7 @@ function AssinarPi() {
     setGerandoPdf(true);
     try {
       const { gerarPdfPi } = await import("@/lib/pi-pdf");
-      const sigs = await getAssinaturaExecutivoPorToken({ data: { token } }) as any;
+      const sigs = (await getAssinaturaExecutivoPorToken({ data: { token } })) as any;
       const url = gerarPdfPi(data.pi as any, "blob", null, {
         assinaturaExecutivoDataUrl: sigs.exec?.dataUrl,
         nomeExecutivo: sigs.exec?.nome,
@@ -131,7 +144,11 @@ function AssinarPi() {
   };
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando…</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Carregando…
+      </div>
+    );
   }
   if (error) {
     return (
@@ -156,9 +173,14 @@ function AssinarPi() {
     <div className="min-h-screen bg-muted/30 py-8 px-4">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-2 text-primary"><ShieldCheck className="size-5" /><span className="font-semibold">Mídia.OS · TV Brasília</span></div>
+          <div className="inline-flex items-center gap-2 text-primary">
+            <ShieldCheck className="size-5" />
+            <span className="font-semibold">Mídia.OS · TV Brasília</span>
+          </div>
           <h1 className="text-2xl font-semibold">Assinatura do Pedido de Inserção</h1>
-          <p className="text-sm text-muted-foreground">Confira os dados e assine eletronicamente.</p>
+          <p className="text-sm text-muted-foreground">
+            Confira os dados e assine eletronicamente.
+          </p>
         </div>
 
         <Card className="overflow-hidden border-primary/20">
@@ -180,7 +202,10 @@ function AssinarPi() {
             <div className="p-4 grid sm:grid-cols-2 gap-4 text-sm border-b border-dashed">
               <Linha l="Cliente" v={cli} />
               <Linha l="Agência" v={ag} />
-              <Linha l="Veiculação" v={`${String(pi.mes_veiculacao).padStart(2, "0")}/${pi.ano_veiculacao}`} />
+              <Linha
+                l="Veiculação"
+                v={`${String(pi.mes_veiculacao).padStart(2, "0")}/${pi.ano_veiculacao}`}
+              />
               <Linha l="Valor Total" v={fmtBRL(Number(pi.valor_negociado))} forte />
             </div>
             <div className="p-4 bg-primary/5 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -188,8 +213,17 @@ function AssinarPi() {
                 <Info className="size-4" />
                 <span>Visualize o documento completo antes de assinar</span>
               </div>
-              <Button onClick={visualizarPdf} disabled={gerandoPdf} variant="default" className="w-full sm:w-auto shadow-sm">
-                {gerandoPdf ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Download className="size-4 mr-2" />}
+              <Button
+                onClick={visualizarPdf}
+                disabled={gerandoPdf}
+                variant="default"
+                className="w-full sm:w-auto shadow-sm"
+              >
+                {gerandoPdf ? (
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="size-4 mr-2" />
+                )}
                 {gerandoPdf ? "Gerando PDF..." : "Visualizar PI (PDF)"}
               </Button>
             </div>
@@ -204,16 +238,24 @@ function AssinarPi() {
               </div>
               <div className="space-y-1">
                 <h3 className="text-xl font-bold text-success">Documento Assinado</h3>
-                <p className="text-sm text-muted-foreground">Este Pedido de Inserção foi assinado eletronicamente.</p>
+                <p className="text-sm text-muted-foreground">
+                  Este Pedido de Inserção foi assinado eletronicamente.
+                </p>
               </div>
               {assinatura.assinatura_signed_url && (
                 <div className="mx-auto max-w-xs bg-white rounded-md border p-2">
-                  <img src={assinatura.assinatura_signed_url} alt="Assinatura do cliente" className="w-full h-auto" />
+                  <img
+                    src={assinatura.assinatura_signed_url}
+                    alt="Assinatura do cliente"
+                    className="w-full h-auto"
+                  />
                 </div>
               )}
               <div className="pt-4 mt-4 border-t border-success/10 text-sm">
                 <div className="font-medium">{assinatura.nome_assinante}</div>
-                <div className="text-xs text-muted-foreground">CPF: {formatarCpf(assinatura.cpf)}</div>
+                <div className="text-xs text-muted-foreground">
+                  CPF: {formatarCpf(assinatura.cpf)}
+                </div>
                 <div className="text-xs text-muted-foreground mt-1">
                   Assinado em {new Date(assinatura.assinado_em).toLocaleString("pt-BR")}
                 </div>
@@ -233,16 +275,16 @@ function AssinarPi() {
                 <div className="space-y-1.5">
                   <Label htmlFor="cpf">Seu CPF *</Label>
                   <div className="relative">
-                    <Input 
+                    <Input
                       id="cpf"
-                      value={cpf} 
+                      value={cpf}
                       onChange={(e) => {
                         const v = formatarCpf(e.target.value);
                         setCpf(v);
                         if (v.replace(/\D/g, "").length === 11) {
                           consultarCpf(v.replace(/\D/g, ""));
                         }
-                      }} 
+                      }}
                       placeholder="000.000.000-00"
                       maxLength={14}
                     />
@@ -250,24 +292,26 @@ function AssinarPi() {
                       <Loader2 className="size-4 absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
                     )}
                   </div>
-                  <p className="text-[10px] text-muted-foreground italic">Seus dados serão preenchidos automaticamente após o CPF</p>
+                  <p className="text-[10px] text-muted-foreground italic">
+                    Seus dados serão preenchidos automaticamente após o CPF
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="nome">Nome completo *</Label>
-                  <Input 
+                  <Input
                     id="nome"
-                    value={nome} 
-                    onChange={(e) => setNome(e.target.value)} 
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
                     placeholder="Nome como consta no documento"
                   />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="email">E-mail para confirmação</Label>
-                  <Input 
+                  <Input
                     id="email"
-                    type="email" 
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
                   />
                 </div>
@@ -280,25 +324,24 @@ function AssinarPi() {
                 </Label>
                 <SignaturePad ref={padRef} height={180} />
                 <p className="text-[11px] text-muted-foreground">
-                  Desenhe sua assinatura no quadro acima usando o mouse, caneta ou dedo (em dispositivos touch).
+                  Desenhe sua assinatura no quadro acima usando o mouse, caneta ou dedo (em
+                  dispositivos touch).
                 </p>
               </div>
 
-
-
-
               <div className="rounded-lg bg-muted/50 p-4 border border-dashed">
                 <label className="flex items-start gap-3 text-sm cursor-pointer group">
-                  <Checkbox 
+                  <Checkbox
                     id="termos"
-                    checked={aceito} 
-                    onCheckedChange={(v) => setAceito(!!v)} 
+                    checked={aceito}
+                    onCheckedChange={(v) => setAceito(!!v)}
                     className="mt-1"
                   />
                   <span className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors">
-                    Declaro que li e concordo integralmente com o conteúdo deste Pedido de Inserção e o assino
-                    eletronicamente, com validade jurídica nos termos da MP 2.200-2/2001. Serão registrados meu
-                    nome, CPF, endereço IP e data/hora desta assinatura para fins de auditoria.
+                    Declaro que li e concordo integralmente com o conteúdo deste Pedido de Inserção
+                    e o assino eletronicamente, com validade jurídica nos termos da MP 2.200-2/2001.
+                    Serão registrados meu nome, CPF, endereço IP e data/hora desta assinatura para
+                    fins de auditoria.
                   </span>
                 </label>
               </div>
@@ -306,7 +349,9 @@ function AssinarPi() {
               <Button
                 className="w-full h-12 text-lg shadow-lg shadow-primary/20"
                 size="lg"
-                disabled={!nome.trim() || cpf.replace(/\D/g, "").length < 11 || !aceito || assinar.isPending}
+                disabled={
+                  !nome.trim() || cpf.replace(/\D/g, "").length < 11 || !aceito || assinar.isPending
+                }
                 onClick={() => assinar.mutate()}
               >
                 {assinar.isPending ? (

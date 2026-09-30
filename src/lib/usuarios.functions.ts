@@ -3,7 +3,16 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const RoleEnum = z.enum(["admin", "executivo", "opec", "financeiro", "diretoria", "producao", "parceiro_comercial", "teste"]);
+const RoleEnum = z.enum([
+  "admin",
+  "executivo",
+  "opec",
+  "financeiro",
+  "diretoria",
+  "producao",
+  "parceiro_comercial",
+  "teste",
+]);
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data: userAuth } = await supabase.auth.getUser();
@@ -51,7 +60,11 @@ async function getActor(supabase: any, userId: string) {
 }
 
 async function getTargetEmail(targetId: string) {
-  const { data } = await supabaseAdmin.from("profiles").select("email").eq("id", targetId).maybeSingle();
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("email")
+    .eq("id", targetId)
+    .maybeSingle();
   return (data?.email as string) ?? null;
 }
 
@@ -102,8 +115,10 @@ export const setUserRole = createServerFn({ method: "POST" })
 
     const { data: userAuth } = await supabase.auth.getUser();
     const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
-    if (data.role === "super_admin" as any && !isSuper) {
-      throw new Error("Apenas o proprietário da plataforma (rafaelrodrigo.as@gmail.com) pode gerenciar a função super_admin");
+    if (data.role === ("super_admin" as any) && !isSuper) {
+      throw new Error(
+        "Apenas o proprietário da plataforma (rafaelrodrigo.as@gmail.com) pode gerenciar a função super_admin",
+      );
     }
 
     if (data.enabled) {
@@ -291,7 +306,11 @@ export const updateUsuarioPerfil = createServerFn({ method: "POST" })
       isAdmin = true;
     } else {
       const { data: r } = await supabase
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
       isAdmin = !!r;
     }
 

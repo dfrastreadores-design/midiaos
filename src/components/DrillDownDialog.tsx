@@ -1,13 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { getPisDrillDown, type DrillFilter } from "@/lib/dashboard.functions";
 
 const formatBRL = (n: number) =>
-  (n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  (n || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  });
 
 export type DrillDownState = {
   open: boolean;
@@ -39,18 +49,26 @@ export function DrillDownDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {state.title}
-            <Badge variant="secondary" className="font-normal">{rows.length} PI{rows.length !== 1 ? "s" : ""}</Badge>
+            <Badge variant="secondary" className="font-normal">
+              {rows.length} PI{rows.length !== 1 ? "s" : ""}
+            </Badge>
           </DialogTitle>
           {state.subtitle && <DialogDescription>{state.subtitle}</DialogDescription>}
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-3 py-2 shrink-0">
           <div className="rounded-lg border bg-muted/30 p-3">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Bruto</div>
-            <div className="text-lg font-display font-bold tabular-nums">{formatBRL(totalBruto)}</div>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+              Bruto
+            </div>
+            <div className="text-lg font-display font-bold tabular-nums">
+              {formatBRL(totalBruto)}
+            </div>
           </div>
           <div className="rounded-lg border bg-muted/30 p-3">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Líquido</div>
+            <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+              Líquido
+            </div>
             <div className="text-lg font-display font-bold tabular-nums">{formatBRL(totalLiq)}</div>
           </div>
         </div>
@@ -61,7 +79,9 @@ export function DrillDownDialog({
               <Loader2 className="size-5 animate-spin mr-2" /> Carregando…
             </div>
           ) : rows.length === 0 ? (
-            <div className="text-center py-10 text-sm text-muted-foreground">Nenhum PI encontrado com esses critérios.</div>
+            <div className="text-center py-10 text-sm text-muted-foreground">
+              Nenhum PI encontrado com esses critérios.
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="text-[11px] uppercase text-muted-foreground sticky top-0 bg-background z-10">
@@ -80,10 +100,20 @@ export function DrillDownDialog({
                   <tr key={p.id} className="border-b last:border-0 hover:bg-muted/40">
                     <td className="py-2 font-mono text-xs">{p.numero_pi || p.id.slice(0, 6)}</td>
                     <td className="py-2 truncate max-w-[180px]">{p.cliente}</td>
-                    <td className="py-2 hidden md:table-cell text-muted-foreground text-xs">{p.executivo}</td>
-                    <td className="py-2"><Badge variant="outline" className="text-[10px] capitalize">{p.status}</Badge></td>
-                    <td className="py-2 text-right tabular-nums font-medium">{formatBRL(p.valor_bruto)}</td>
-                    <td className="py-2 text-right tabular-nums text-muted-foreground hidden sm:table-cell">{formatBRL(p.valor_liquido)}</td>
+                    <td className="py-2 hidden md:table-cell text-muted-foreground text-xs">
+                      {p.executivo}
+                    </td>
+                    <td className="py-2">
+                      <Badge variant="outline" className="text-[10px] capitalize">
+                        {p.status}
+                      </Badge>
+                    </td>
+                    <td className="py-2 text-right tabular-nums font-medium">
+                      {formatBRL(p.valor_bruto)}
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-muted-foreground hidden sm:table-cell">
+                      {formatBRL(p.valor_liquido)}
+                    </td>
                     <td className="py-2 text-right">
                       <Button asChild size="sm" variant="ghost" className="h-7 px-2">
                         <Link to="/pi" onClick={() => onOpenChange(false)}>

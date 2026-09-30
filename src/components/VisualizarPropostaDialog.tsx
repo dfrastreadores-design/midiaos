@@ -1,13 +1,31 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Loader2, History, Clock, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { getProposta, listProposalHistory } from "@/lib/propostas.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { gerarPptxProposta, gerarPdfProposta, gerarPdfPropostaSimplificada } from "@/lib/proposta-presentation";
+import {
+  gerarPptxProposta,
+  gerarPdfProposta,
+  gerarPdfPropostaSimplificada,
+} from "@/lib/proposta-presentation";
 import type { PropostaApresentacao } from "@/lib/proposta-presentation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,42 +33,54 @@ import { PropostaAnexosSection } from "@/components/PropostaAnexosSection";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; propostaId: string | null };
 
-
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
-const fmtData = (s?: string | null) =>
-  s ? new Date(s).toLocaleDateString("pt-BR") : "—";
+const fmtData = (s?: string | null) => (s ? new Date(s).toLocaleDateString("pt-BR") : "—");
 
 export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Props) {
-  const [p, setP] = useState<(PropostaApresentacao & { numero: string; status?: string }) | null>(null);
+  const [p, setP] = useState<(PropostaApresentacao & { numero: string; status?: string }) | null>(
+    null,
+  );
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [layoutModelo, setLayoutModelo] = useState<"padrao" | "simplificado">("padrao");
-  const [modoApresentacao, setModoApresentacao] = useState<"detalhado" | "pacote_midia">("detalhado");
+  const [modoApresentacao, setModoApresentacao] = useState<"detalhado" | "pacote_midia">(
+    "detalhado",
+  );
   const [mostrarEndereco, setMostrarEndereco] = useState(true);
   const [mostrarFotos, setMostrarFotos] = useState(true);
 
   useEffect(() => {
-    if (!open || !propostaId) { 
-      setP(null); 
+    if (!open || !propostaId) {
+      setP(null);
       setHistory([]);
-      return; 
+      return;
     }
-    
+
     setLoading(true);
     getProposta({ data: { id: propostaId } })
       .then(async (p: any) => {
         if (!p) throw new Error("Proposta não encontrada");
-        setP(p as unknown as PropostaApresentacao & { numero: string; status?: string; tenant_id?: string });
-        
+        setP(
+          p as unknown as PropostaApresentacao & {
+            numero: string;
+            status?: string;
+            tenant_id?: string;
+          },
+        );
+
         if (p.modo_apresentacao) setModoApresentacao(p.modo_apresentacao);
         if (typeof p.mostrar_endereco === "boolean") setMostrarEndereco(p.mostrar_endereco);
         if (typeof p.mostrar_fotos === "boolean") setMostrarFotos(p.mostrar_fotos);
 
         // Buscar o layout padrão do inquilino se disponível
         if (p.tenant_id) {
-          const { data: tenant } = await supabase.from('tenants').select('proposta_layout_padrao').eq('id', p.tenant_id).single();
+          const { data: tenant } = await supabase
+            .from("tenants")
+            .select("proposta_layout_padrao")
+            .eq("id", p.tenant_id)
+            .single();
           if (tenant?.proposta_layout_padrao) {
             setLayoutModelo(tenant.proposta_layout_padrao as "padrao" | "simplificado");
           }
@@ -69,8 +99,13 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
       .finally(() => setLoadingHistory(false));
   }, [open, propostaId]);
 
-  const cliente = p?.cliente?.nome_fantasia || p?.cliente?.razao_social || p?.agencia?.nome_fantasia || p?.agencia?.razao_social || p?.cliente_avulso || "—";
-
+  const cliente =
+    p?.cliente?.nome_fantasia ||
+    p?.cliente?.razao_social ||
+    p?.agencia?.nome_fantasia ||
+    p?.agencia?.razao_social ||
+    p?.cliente_avulso ||
+    "—";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,25 +132,35 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                   <History className="size-4" /> Histórico
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="detalhes" className="space-y-4 pt-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <Info label="Cliente" value={cliente} />
                   <Info label="Campanha" value={p.campanha} />
-                  <Info label="Status" value={<Badge variant="secondary">{p.status ?? "—"}</Badge>} />
+                  <Info
+                    label="Status"
+                    value={<Badge variant="secondary">{p.status ?? "—"}</Badge>}
+                  />
                   <Info label="Validade" value={fmtData(p.validade)} />
                   <Info label="Criado em" value={fmtData(p.created_at)} />
                   <Info label="Total de inserções" value={String(p.total_insercoes)} />
                   <Info label="Valor de tabela" value={fmtBRL(p.valor_tabela)} />
-                  <Info 
-                    label="Desconto" 
+                  <Info
+                    label="Desconto"
                     value={
-                      p.valor_tabela > 0 
+                      p.valor_tabela > 0
                         ? `${fmtBRL(p.valor_desconto)} (${((p.valor_desconto / p.valor_tabela) * 100).toFixed(0)}%)`
                         : fmtBRL(p.valor_desconto)
-                    } 
+                    }
                   />
-                  <Info label="Valor negociado" value={<span className="font-semibold text-primary">{fmtBRL(p.valor_negociado)}</span>} />
+                  <Info
+                    label="Valor negociado"
+                    value={
+                      <span className="font-semibold text-primary">
+                        {fmtBRL(p.valor_negociado)}
+                      </span>
+                    }
+                  />
                 </div>
 
                 {p.observacao && (
@@ -145,7 +190,14 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                       </TableHeader>
                       <TableBody>
                         {(p.itens ?? []).length === 0 && (
-                          <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">Sem itens.</TableCell></TableRow>
+                          <TableRow>
+                            <TableCell
+                              colSpan={10}
+                              className="text-center text-muted-foreground py-6"
+                            >
+                              Sem itens.
+                            </TableCell>
+                          </TableRow>
                         )}
                         {(p.itens ?? []).map((it, i) => (
                           <TableRow key={i}>
@@ -179,7 +231,9 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                         <Loader2 className="size-6 animate-spin text-muted-foreground" />
                       </div>
                     ) : history.length === 0 ? (
-                      <p className="text-center py-8 text-muted-foreground text-sm">Nenhum histórico encontrado para esta proposta.</p>
+                      <p className="text-center py-8 text-muted-foreground text-sm">
+                        Nenhum histórico encontrado para esta proposta.
+                      </p>
                     ) : (
                       <div className="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-muted">
                         {history.map((h) => (
@@ -188,30 +242,41 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-semibold text-sm capitalize">
-                                  {h.action_type === 'create' ? 'Proposta Criada' : 
-                                   h.action_type === 'status_change' ? 'Alteração de Status' : 'Modificação'}
+                                  {h.action_type === "create"
+                                    ? "Proposta Criada"
+                                    : h.action_type === "status_change"
+                                      ? "Alteração de Status"
+                                      : "Modificação"}
                                 </span>
                                 <Badge variant="outline" className="text-[10px] py-0">
                                   <Clock className="size-3 mr-1" />
-                                  {new Date(h.created_at).toLocaleString('pt-BR')}
+                                  {new Date(h.created_at).toLocaleString("pt-BR")}
                                 </Badge>
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                Por: {h.profiles?.nome || h.profiles?.email || 'Sistema'}
+                                Por: {h.profiles?.nome || h.profiles?.email || "Sistema"}
                               </div>
                               {h.changes && (
                                 <div className="mt-2 text-xs bg-muted/50 rounded p-2 border">
-                                  {h.action_type === 'create' ? (
+                                  {h.action_type === "create" ? (
                                     <p>Proposta inicial gerada.</p>
                                   ) : (
                                     <ul className="space-y-1">
-                                      {Object.entries(h.changes).map(([field, val]: [string, any]) => (
-                                        <li key={field} className="flex flex-wrap gap-x-2">
-                                          <span className="font-medium uppercase text-[10px] text-muted-foreground">{field}:</span>
-                                          <span className="line-through text-red-500">{String(val.old)}</span>
-                                          <span className="text-green-600 font-medium">→ {String(val.new)}</span>
-                                        </li>
-                                      ))}
+                                      {Object.entries(h.changes).map(
+                                        ([field, val]: [string, any]) => (
+                                          <li key={field} className="flex flex-wrap gap-x-2">
+                                            <span className="font-medium uppercase text-[10px] text-muted-foreground">
+                                              {field}:
+                                            </span>
+                                            <span className="line-through text-red-500">
+                                              {String(val.old)}
+                                            </span>
+                                            <span className="text-green-600 font-medium">
+                                              → {String(val.new)}
+                                            </span>
+                                          </li>
+                                        ),
+                                      )}
                                     </ul>
                                   )}
                                 </div>
@@ -230,15 +295,14 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
               </TabsContent>
             </Tabs>
           </div>
-
         )}
 
         <DialogFooter className="flex flex-col sm:flex-row gap-3 items-center justify-between w-full">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-medium text-muted-foreground">Modelo:</span>
-              <select 
-                value={layoutModelo} 
+              <select
+                value={layoutModelo}
                 onChange={(e) => setLayoutModelo(e.target.value as any)}
                 className="text-xs border rounded-md px-2 py-1 bg-background"
               >
@@ -249,8 +313,8 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
 
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-medium text-muted-foreground">Formato:</span>
-              <select 
-                value={modoApresentacao} 
+              <select
+                value={modoApresentacao}
                 onChange={(e) => setModoApresentacao(e.target.value as any)}
                 className="text-xs border rounded-md px-2 py-1 bg-background font-medium"
               >
@@ -261,9 +325,11 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
-            <Button 
-              variant="default" 
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
+            <Button
+              variant="default"
               className="bg-primary hover:bg-primary/90 rounded-full px-6"
               onClick={async () => {
                 if (!p) return;

@@ -7,12 +7,29 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Copy, ExternalLink, Pencil, Plus, Trash2, Wand2 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listLandingPages, upsertLandingPage, deleteLandingPage, generateLandingFromCliente } from "@/lib/landing-pages.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  listLandingPages,
+  upsertLandingPage,
+  deleteLandingPage,
+  generateLandingFromCliente,
+} from "@/lib/landing-pages.functions";
 import { listClientes } from "@/lib/clientes.functions";
 
 export const Route = createFileRoute("/landing-pages")({
@@ -21,7 +38,10 @@ export const Route = createFileRoute("/landing-pages")({
       { title: "Landing Pages — mídia.OS" },
       { name: "description", content: "Crie páginas de captação com formulário integrado ao CRM." },
       { property: "og:title", content: "Landing Pages — mídia.OS" },
-      { property: "og:description", content: "Crie páginas de captação com formulário integrado ao CRM." },
+      {
+        property: "og:description",
+        content: "Crie páginas de captação com formulário integrado ao CRM.",
+      },
     ],
   }),
   component: LandingPagesRoute,
@@ -56,7 +76,10 @@ function LandingPagesList() {
   const genFn = useServerFn(generateLandingFromCliente);
   const listClientesFn = useServerFn(listClientes);
   const { data, isLoading } = useQuery({ queryKey: ["landing-pages"], queryFn: () => listFn() });
-  const { data: clientes } = useQuery({ queryKey: ["landing-pages:clientes"], queryFn: () => listClientesFn() });
+  const { data: clientes } = useQuery({
+    queryKey: ["landing-pages:clientes"],
+    queryFn: () => listClientesFn(),
+  });
   const [open, setOpen] = useState(false);
   const [genOpen, setGenOpen] = useState(false);
   const [clienteId, setClienteId] = useState<string>("");
@@ -83,7 +106,13 @@ function LandingPagesList() {
           slug: slug || slugify(titulo),
           status: "rascunho",
           sections: [
-            { type: "hero", title: titulo, subtitle: "Fale com nosso time", ctaLabel: "Quero saber mais", ctaAnchor: "#form" },
+            {
+              type: "hero",
+              title: titulo,
+              subtitle: "Fale com nosso time",
+              ctaLabel: "Quero saber mais",
+              ctaAnchor: "#form",
+            },
             {
               type: "features",
               title: "Por que escolher a gente",
@@ -159,7 +188,8 @@ function LandingPagesList() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {(data ?? []).map((p: any) => {
-            const url = typeof window !== "undefined" ? `${window.location.origin}/${p.slug}` : `/${p.slug}`;
+            const url =
+              typeof window !== "undefined" ? `${window.location.origin}/${p.slug}` : `/${p.slug}`;
             return (
               <div key={p.id} className="rounded-lg border p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
@@ -167,7 +197,9 @@ function LandingPagesList() {
                     <div className="font-semibold truncate">{p.titulo}</div>
                     <div className="text-xs text-muted-foreground truncate">/{p.slug}</div>
                   </div>
-                  <Badge variant={p.status === "publicada" ? "default" : "secondary"}>{p.status}</Badge>
+                  <Badge variant={p.status === "publicada" ? "default" : "secondary"}>
+                    {p.status}
+                  </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground flex gap-3">
                   <span>{p.views_count ?? 0} views</span>
@@ -230,7 +262,11 @@ function LandingPagesList() {
             </div>
             <div>
               <Label>Slug (URL)</Label>
-              <Input value={slug} onChange={(e) => setSlug(slugify(e.target.value))} placeholder="campanha-natal-2026" />
+              <Input
+                value={slug}
+                onChange={(e) => setSlug(slugify(e.target.value))}
+                placeholder="campanha-natal-2026"
+              />
               <p className="text-xs text-muted-foreground mt-1">Ficará em /{slug || "seu-slug"}</p>
             </div>
           </div>
@@ -252,13 +288,15 @@ function LandingPagesList() {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              A landing usará a logo do cliente e exibirá os produtos cadastrados como vitrine (sem preços) com o botão
-              "Consultar disponibilidade".
+              A landing usará a logo do cliente e exibirá os produtos cadastrados como vitrine (sem
+              preços) com o botão "Consultar disponibilidade".
             </p>
             <div>
               <Label>Cliente</Label>
               <Select value={clienteId} onValueChange={setClienteId}>
-                <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
                 <SelectContent>
                   {(clientes ?? []).map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>
@@ -270,7 +308,9 @@ function LandingPagesList() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGenOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setGenOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={() => genMut.mutate()} disabled={!clienteId || genMut.isPending}>
               {genMut.isPending ? "Gerando…" : "Gerar landing"}
             </Button>

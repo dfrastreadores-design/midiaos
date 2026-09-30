@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useUserRoles } from "@/hooks/use-roles";
@@ -26,7 +32,13 @@ import {
 } from "@/lib/system-announcements.functions";
 import { Textarea } from "@/components/ui/textarea";
 import { Megaphone, Trash2, Pencil, Plus, Building2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { listEmissoras, saveEmissora, excluirEmissora } from "@/lib/emissoras.functions";
 import { fetchCnpj } from "@/lib/cnpj";
@@ -35,7 +47,17 @@ import { getLogoSignedUrl } from "@/lib/logo-url";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
 import { getMeuTenantPerfil, updateMeuTenantPerfil } from "@/lib/tenants.functions";
 
-const ROLES: { key: "admin" | "executivo" | "opec" | "financeiro" | "producao" | "diretoria" | "parceiro_comercial"; label: string }[] = [
+const ROLES: {
+  key:
+    | "admin"
+    | "executivo"
+    | "opec"
+    | "financeiro"
+    | "producao"
+    | "diretoria"
+    | "parceiro_comercial";
+  label: string;
+}[] = [
   { key: "admin", label: "Admin" },
   { key: "executivo", label: "Executivo" },
   { key: "opec", label: "OPEC" },
@@ -51,9 +73,23 @@ export const Route = createFileRoute("/configuracoes")({
 
 function ConfiguracoesPage() {
   const { isAdmin, isSuperAdmin, loading } = useUserRoles();
-  if (loading) return <AppShell><div className="p-6 text-sm text-muted-foreground">Carregando…</div></AppShell>;
-  if (!isAdmin) return <AppShell><div className="p-6 text-sm">Acesso restrito a administradores.</div></AppShell>;
-  return <AppShell><Inner isSuperAdmin={isSuperAdmin} /></AppShell>;
+  if (loading)
+    return (
+      <AppShell>
+        <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
+      </AppShell>
+    );
+  if (!isAdmin)
+    return (
+      <AppShell>
+        <div className="p-6 text-sm">Acesso restrito a administradores.</div>
+      </AppShell>
+    );
+  return (
+    <AppShell>
+      <Inner isSuperAdmin={isSuperAdmin} />
+    </AppShell>
+  );
 }
 
 function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
@@ -65,10 +101,14 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const { data } = useQuery({ queryKey: ["notif-config"], queryFn: () => fetchCfg() });
 
   const [form, setForm] = useState({
-    ativo_inicio: true, dias_antes_inicio: 7,
-    ativo_fim: true, dias_antes_fim: 7,
-    ativo_progresso: true, marcos_percentual: "50,75,90",
-    ativo_validade: true, dias_antes_validade: 7,
+    ativo_inicio: true,
+    dias_antes_inicio: 7,
+    ativo_fim: true,
+    dias_antes_fim: 7,
+    ativo_progresso: true,
+    marcos_percentual: "50,75,90",
+    ativo_validade: true,
+    dias_antes_validade: 7,
   });
 
   useEffect(() => {
@@ -86,25 +126,33 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   }, [data]);
 
   const save = useMutation({
-    mutationFn: async () => saveCfg({
-      data: {
-        ativo_inicio: form.ativo_inicio,
-        dias_antes_inicio: Number(form.dias_antes_inicio) || 0,
-        ativo_fim: form.ativo_fim,
-        dias_antes_fim: Number(form.dias_antes_fim) || 0,
-        ativo_progresso: form.ativo_progresso,
-        marcos_percentual: form.marcos_percentual.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => n > 0 && n <= 100),
-        ativo_validade: form.ativo_validade,
-        dias_antes_validade: Number(form.dias_antes_validade) || 0,
-      },
-    }),
-    onSuccess: () => { toast.success("Configuração salva"); qc.invalidateQueries({ queryKey: ["notif-config"] }); },
+    mutationFn: async () =>
+      saveCfg({
+        data: {
+          ativo_inicio: form.ativo_inicio,
+          dias_antes_inicio: Number(form.dias_antes_inicio) || 0,
+          ativo_fim: form.ativo_fim,
+          dias_antes_fim: Number(form.dias_antes_fim) || 0,
+          ativo_progresso: form.ativo_progresso,
+          marcos_percentual: form.marcos_percentual
+            .split(",")
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => n > 0 && n <= 100),
+          ativo_validade: form.ativo_validade,
+          dias_antes_validade: Number(form.dias_antes_validade) || 0,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Configuração salva");
+      qc.invalidateQueries({ queryKey: ["notif-config"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const run = useMutation({
     mutationFn: async () => runNow({ data: undefined as never }),
-    onSuccess: (r: { inserted: number }) => toast.success(`Job executado: ${r.inserted} notificação(ões) geradas`),
+    onSuccess: (r: { inserted: number }) =>
+      toast.success(`Job executado: ${r.inserted} notificação(ões) geradas`),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -112,7 +160,9 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-display font-semibold">Configurações da Empresa</h1>
-        <p className="text-sm text-muted-foreground">Perfil da empresa vinculada, CNPJs emissores, permissões e notificações.</p>
+        <p className="text-sm text-muted-foreground">
+          Perfil da empresa vinculada, CNPJs emissores, permissões e notificações.
+        </p>
       </div>
 
       <PerfilEmpresaCard />
@@ -120,7 +170,9 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       <Card>
         <CardHeader>
           <CardTitle>Notificações de campanhas e propostas</CardTitle>
-          <CardDescription>O agendador roda diariamente e avisa o executivo responsável + administradores.</CardDescription>
+          <CardDescription>
+            O agendador roda diariamente e avisa o executivo responsável + administradores.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <Bloco
@@ -129,9 +181,16 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
             onAtivo={(v) => setForm((f) => ({ ...f, ativo_inicio: v }))}
           >
             <Label className="text-xs">Dias de antecedência</Label>
-            <Input type="number" min={0} max={60} value={form.dias_antes_inicio}
-              onChange={(e) => setForm((f) => ({ ...f, dias_antes_inicio: Number(e.target.value) }))}
-              className="w-28" />
+            <Input
+              type="number"
+              min={0}
+              max={60}
+              value={form.dias_antes_inicio}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, dias_antes_inicio: Number(e.target.value) }))
+              }
+              className="w-28"
+            />
           </Bloco>
 
           <Separator />
@@ -142,9 +201,14 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
             onAtivo={(v) => setForm((f) => ({ ...f, ativo_fim: v }))}
           >
             <Label className="text-xs">Dias de antecedência</Label>
-            <Input type="number" min={0} max={60} value={form.dias_antes_fim}
+            <Input
+              type="number"
+              min={0}
+              max={60}
+              value={form.dias_antes_fim}
               onChange={(e) => setForm((f) => ({ ...f, dias_antes_fim: Number(e.target.value) }))}
-              className="w-28" />
+              className="w-28"
+            />
           </Bloco>
 
           <Separator />
@@ -155,9 +219,11 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
             onAtivo={(v) => setForm((f) => ({ ...f, ativo_progresso: v }))}
           >
             <Label className="text-xs">Marcos (separados por vírgula, ex: 50,75,90)</Label>
-            <Input value={form.marcos_percentual}
+            <Input
+              value={form.marcos_percentual}
               onChange={(e) => setForm((f) => ({ ...f, marcos_percentual: e.target.value }))}
-              className="w-64" />
+              className="w-64"
+            />
           </Bloco>
 
           <Separator />
@@ -168,17 +234,28 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
             onAtivo={(v) => setForm((f) => ({ ...f, ativo_validade: v }))}
           >
             <Label className="text-xs">Dias de antecedência</Label>
-            <Input type="number" min={0} max={60} value={form.dias_antes_validade}
-              onChange={(e) => setForm((f) => ({ ...f, dias_antes_validade: Number(e.target.value) }))}
-              className="w-28" />
+            <Input
+              type="number"
+              min={0}
+              max={60}
+              value={form.dias_antes_validade}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, dias_antes_validade: Number(e.target.value) }))
+              }
+              className="w-28"
+            />
           </Bloco>
 
           <div className="flex gap-3 pt-2">
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar configuração</Button>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              Salvar configuração
+            </Button>
             <Button variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
               {run.isPending ? "Executando…" : "Executar agora"}
             </Button>
-            <Button asChild variant="ghost"><Link to="/">Voltar</Link></Button>
+            <Button asChild variant="ghost">
+              <Link to="/">Voltar</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -199,8 +276,18 @@ function PermissoesCard() {
   const { data, isLoading } = useQuery({ queryKey: ["perms-config"], queryFn: () => fetchPerms() });
 
   const toggle = useMutation({
-    mutationFn: async (vars: { role: "admin" | "executivo" | "opec" | "financeiro" | "producao" | "diretoria" | "parceiro_comercial"; permission_key: string; enabled: boolean }) =>
-      savePerm({ data: vars }),
+    mutationFn: async (vars: {
+      role:
+        | "admin"
+        | "executivo"
+        | "opec"
+        | "financeiro"
+        | "producao"
+        | "diretoria"
+        | "parceiro_comercial";
+      permission_key: string;
+      enabled: boolean;
+    }) => savePerm({ data: vars }),
     onSuccess: () => {
       toast.success("Permissão atualizada");
       qc.invalidateQueries({ queryKey: ["perms-config"] });
@@ -216,8 +303,9 @@ function PermissoesCard() {
       <CardHeader>
         <CardTitle>Permissões por perfil</CardTitle>
         <CardDescription>
-          Defina quais módulos e ações cada perfil pode acessar. O perfil <strong>Admin</strong> sempre tem acesso total.
-          Os módulos <strong>Usuários</strong> e <strong>Configurações</strong> são exclusivos do admin.
+          Defina quais módulos e ações cada perfil pode acessar. O perfil <strong>Admin</strong>{" "}
+          sempre tem acesso total. Os módulos <strong>Usuários</strong> e{" "}
+          <strong>Configurações</strong> são exclusivos do admin.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -230,7 +318,9 @@ function PermissoesCard() {
                 <tr className="border-b">
                   <th className="text-left py-2 pr-4 font-medium">Permissão</th>
                   {ROLES.map((r) => (
-                    <th key={r.key} className="text-center py-2 px-3 font-medium w-28">{r.label}</th>
+                    <th key={r.key} className="text-center py-2 px-3 font-medium w-28">
+                      {r.label}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -239,7 +329,9 @@ function PermissoesCard() {
                   <tr key={p.key} className="border-b last:border-0">
                     <td className="py-2 pr-4">
                       <div className="font-medium">{p.label}</div>
-                      {p.description && <div className="text-xs text-muted-foreground">{p.description}</div>}
+                      {p.description && (
+                        <div className="text-xs text-muted-foreground">{p.description}</div>
+                      )}
                     </td>
                     {ROLES.map((r) => {
                       const enabled = has(r.key, p.key);
@@ -265,7 +357,17 @@ function PermissoesCard() {
   );
 }
 
-function Bloco({ title, ativo, onAtivo, children }: { title: string; ativo: boolean; onAtivo: (v: boolean) => void; children: React.ReactNode }) {
+function Bloco({
+  title,
+  ativo,
+  onAtivo,
+  children,
+}: {
+  title: string;
+  ativo: boolean;
+  onAtivo: (v: boolean) => void;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -282,10 +384,19 @@ function AnnouncementsCard() {
   const fetchAll = useServerFn(listTodasAnnouncements);
   const save = useServerFn(salvarAnnouncement);
   const del = useServerFn(excluirAnnouncement);
-  const { data, isLoading } = useQuery({ queryKey: ["system-announcements-all"], queryFn: () => fetchAll() });
+  const { data, isLoading } = useQuery({
+    queryKey: ["system-announcements-all"],
+    queryFn: () => fetchAll(),
+  });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SystemAnnouncement | null>(null);
-  const [form, setForm] = useState({ titulo: "", mensagem: "", emoji: "✨", versao: "", ativo: true });
+  const [form, setForm] = useState({
+    titulo: "",
+    mensagem: "",
+    emoji: "✨",
+    versao: "",
+    ativo: true,
+  });
 
   function openNew() {
     setEditing(null);
@@ -344,11 +455,13 @@ function AnnouncementsCard() {
               <Megaphone className="h-5 w-5" /> Avisos de atualização do sistema
             </CardTitle>
             <CardDescription>
-              Publique uma mensagem humanizada que aparecerá como um pop-up para todos os inquilinos no próximo acesso.
-              Cada usuário vê o aviso apenas uma vez.
+              Publique uma mensagem humanizada que aparecerá como um pop-up para todos os inquilinos
+              no próximo acesso. Cada usuário vê o aviso apenas uma vez.
             </CardDescription>
           </div>
-          <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Novo aviso</Button>
+          <Button onClick={openNew}>
+            <Plus className="h-4 w-4 mr-1" /> Novo aviso
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -367,12 +480,24 @@ function AnnouncementsCard() {
                     {a.versao && <Badge variant="secondary">v{a.versao}</Badge>}
                     {a.ativo ? <Badge>Ativo</Badge> : <Badge variant="outline">Inativo</Badge>}
                   </div>
-                  <div className="text-sm text-muted-foreground whitespace-pre-wrap mt-1 line-clamp-3">{a.mensagem}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{new Date(a.created_at).toLocaleString("pt-BR")}</div>
+                  <div className="text-sm text-muted-foreground whitespace-pre-wrap mt-1 line-clamp-3">
+                    {a.mensagem}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {new Date(a.created_at).toLocaleString("pt-BR")}
+                  </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(a)}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir este aviso?")) delMut.mutate(a.id); }}>
+                  <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (confirm("Excluir este aviso?")) delMut.mutate(a.id);
+                    }}
+                  >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
@@ -391,15 +516,27 @@ function AnnouncementsCard() {
             <div className="grid grid-cols-[80px_1fr_120px] gap-2">
               <div>
                 <Label className="text-xs">Emoji</Label>
-                <Input value={form.emoji} onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))} maxLength={4} />
+                <Input
+                  value={form.emoji}
+                  onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))}
+                  maxLength={4}
+                />
               </div>
               <div>
                 <Label className="text-xs">Título</Label>
-                <Input value={form.titulo} onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))} placeholder="Ex: Novo módulo de Relatórios Fiscais!" />
+                <Input
+                  value={form.titulo}
+                  onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))}
+                  placeholder="Ex: Novo módulo de Relatórios Fiscais!"
+                />
               </div>
               <div>
                 <Label className="text-xs">Versão</Label>
-                <Input value={form.versao} onChange={(e) => setForm((f) => ({ ...f, versao: e.target.value }))} placeholder="1.4.0" />
+                <Input
+                  value={form.versao}
+                  onChange={(e) => setForm((f) => ({ ...f, versao: e.target.value }))}
+                  placeholder="1.4.0"
+                />
               </div>
             </div>
             <div>
@@ -412,12 +549,17 @@ function AnnouncementsCard() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
+              <Switch
+                checked={form.ativo}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))}
+              />
               <Label className="text-sm">Ativo (exibir para os inquilinos)</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
             <Button
               onClick={() => saveMut.mutate()}
               disabled={saveMut.isPending || !form.titulo.trim() || !form.mensagem.trim()}
@@ -461,13 +603,45 @@ function EmissorasCard() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Emissora | null>(null);
   const empty = {
-    nome: "", razao_social: "", nome_fantasia: "", cnpj: "",
-    cpf: "", pessoa_tipo: "pj" as "pj" | "cpf", nome_artistico: "",
-    tipo_midia: "" as "" | "tv" | "radio" | "portal" | "ooh" | "dooh" | "influencer" | "redes_sociais" | "agencia_publicidade" | "produtora" | "grafica" | "estudio" | "assessoria_imprensa" | "marketing_digital" | "evento" | "editora" | "outros",
+    nome: "",
+    razao_social: "",
+    nome_fantasia: "",
+    cnpj: "",
+    cpf: "",
+    pessoa_tipo: "pj" as "pj" | "cpf",
+    nome_artistico: "",
+    tipo_midia: "" as
+      | ""
+      | "tv"
+      | "radio"
+      | "portal"
+      | "ooh"
+      | "dooh"
+      | "influencer"
+      | "redes_sociais"
+      | "agencia_publicidade"
+      | "produtora"
+      | "grafica"
+      | "estudio"
+      | "assessoria_imprensa"
+      | "marketing_digital"
+      | "evento"
+      | "editora"
+      | "outros",
     comissao_padrao_pct: "" as string | number,
-    inscricao_estadual: "", inscricao_municipal: "",
-    endereco: "", cidade: "", uf: "", cep: "",
-    telefone: "", email: "", logo_url: "", observacoes: "", entrega_material: "", padrao: false, ativo: true,
+    inscricao_estadual: "",
+    inscricao_municipal: "",
+    endereco: "",
+    cidade: "",
+    uf: "",
+    cep: "",
+    telefone: "",
+    email: "",
+    logo_url: "",
+    observacoes: "",
+    entrega_material: "",
+    padrao: false,
+    ativo: true,
   };
   const [form, setForm] = useState(empty);
   const [cnpjLoading, setCnpjLoading] = useState(false);
@@ -477,11 +651,16 @@ function EmissorasCard() {
   useEffect(() => {
     let cancel = false;
     (async () => {
-      if (!form.logo_url) { setLogoPreview(null); return; }
+      if (!form.logo_url) {
+        setLogoPreview(null);
+        return;
+      }
       const url = await getLogoSignedUrl(form.logo_url);
       if (!cancel) setLogoPreview(url);
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [form.logo_url]);
 
   async function handleLogoUpload(file: File) {
@@ -489,7 +668,9 @@ function EmissorasCard() {
       setLogoUploading(true);
       const ext = file.name.split(".").pop() || "png";
       const path = `emissora-${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("client-logos").upload(path, file, { upsert: true, contentType: file.type });
+      const { error } = await supabase.storage
+        .from("client-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
       setForm((f) => ({ ...f, logo_url: path }));
       toast.success("Logo enviada");
@@ -535,14 +716,18 @@ function EmissorasCard() {
   }
 
   const saveMut = useMutation({
-    mutationFn: async () => save({ data: {
-      ...form,
-      id: editing?.id,
-      tipo_midia: form.tipo_midia ? form.tipo_midia : null,
-      comissao_padrao_pct: form.comissao_padrao_pct === "" || form.comissao_padrao_pct === null
-        ? null
-        : Number(form.comissao_padrao_pct),
-    } as any }),
+    mutationFn: async () =>
+      save({
+        data: {
+          ...form,
+          id: editing?.id,
+          tipo_midia: form.tipo_midia ? form.tipo_midia : null,
+          comissao_padrao_pct:
+            form.comissao_padrao_pct === "" || form.comissao_padrao_pct === null
+              ? null
+              : Number(form.comissao_padrao_pct),
+        } as any,
+      }),
     onSuccess: () => {
       toast.success(editing ? "Emissora atualizada" : "Emissora cadastrada");
       setOpen(false);
@@ -569,7 +754,8 @@ function EmissorasCard() {
               <Building2 className="h-5 w-5" /> Emissoras (CNPJs emissores do PI)
             </CardTitle>
             <CardDescription>
-              Cadastre os CNPJs da sua empresa que podem emitir Pedidos de Inserção. No momento de criar um PI, o usuário escolhe qual CNPJ aparecerá no documento.
+              Cadastre os CNPJs da sua empresa que podem emitir Pedidos de Inserção. No momento de
+              criar um PI, o usuário escolhe qual CNPJ aparecerá no documento.
             </CardDescription>
           </div>
           <NovaEmissoraGate count={(data ?? []).length} onNew={openNew} />
@@ -579,7 +765,9 @@ function EmissorasCard() {
         {isLoading ? (
           <div className="text-sm text-muted-foreground">Carregando…</div>
         ) : (data ?? []).length === 0 ? (
-          <div className="text-sm text-muted-foreground">Nenhuma emissora cadastrada. Cadastre ao menos uma para emitir PIs com o CNPJ correto.</div>
+          <div className="text-sm text-muted-foreground">
+            Nenhuma emissora cadastrada. Cadastre ao menos uma para emitir PIs com o CNPJ correto.
+          </div>
         ) : (
           <div className="space-y-2">
             {((data ?? []) as Emissora[]).map((e) => (
@@ -591,12 +779,26 @@ function EmissorasCard() {
                     {!e.ativo && <Badge variant="outline">Inativa</Badge>}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {[e.razao_social, e.cnpj && `CNPJ ${e.cnpj}`, [e.cidade, e.uf].filter(Boolean).join("/")].filter(Boolean).join(" • ")}
+                    {[
+                      e.razao_social,
+                      e.cnpj && `CNPJ ${e.cnpj}`,
+                      [e.cidade, e.uf].filter(Boolean).join("/"),
+                    ]
+                      .filter(Boolean)
+                      .join(" • ")}
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(e)}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => { if (confirm("Excluir esta emissora?")) delMut.mutate(e.id); }}>
+                  <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (confirm("Excluir esta emissora?")) delMut.mutate(e.id);
+                    }}
+                  >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
@@ -614,12 +816,21 @@ function EmissorasCard() {
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Label className="text-xs">Apelido / Nome curto *</Label>
-              <Input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Ex: TV Brasília — Matriz / João Silva (Influencer)" />
+              <Input
+                value={form.nome}
+                onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
+                placeholder="Ex: TV Brasília — Matriz / João Silva (Influencer)"
+              />
             </div>
             <div>
               <Label className="text-xs">Tipo de pessoa</Label>
-              <Select value={form.pessoa_tipo} onValueChange={(v) => setForm((f) => ({ ...f, pessoa_tipo: v as "pj" | "cpf" }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={form.pessoa_tipo}
+                onValueChange={(v) => setForm((f) => ({ ...f, pessoa_tipo: v as "pj" | "cpf" }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pj">PJ (CNPJ)</SelectItem>
                   <SelectItem value="cpf">Pessoa Física (CPF)</SelectItem>
@@ -628,8 +839,15 @@ function EmissorasCard() {
             </div>
             <div>
               <Label className="text-xs">Tipo de fornecedor / mídia</Label>
-              <Select value={form.tipo_midia || "none"} onValueChange={(v) => setForm((f) => ({ ...f, tipo_midia: (v === "none" ? "" : v) as any }))}>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+              <Select
+                value={form.tipo_midia || "none"}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, tipo_midia: (v === "none" ? "" : v) as any }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— não informado —</SelectItem>
                   <SelectItem value="tv">TV</SelectItem>
@@ -656,26 +874,38 @@ function EmissorasCard() {
               <>
                 <div>
                   <Label className="text-xs">CPF</Label>
-                  <Input value={form.cpf} onChange={(e) => setForm((f) => ({ ...f, cpf: e.target.value }))} />
+                  <Input
+                    value={form.cpf}
+                    onChange={(e) => setForm((f) => ({ ...f, cpf: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Nome artístico</Label>
-                  <Input value={form.nome_artistico} onChange={(e) => setForm((f) => ({ ...f, nome_artistico: e.target.value }))} />
+                  <Input
+                    value={form.nome_artistico}
+                    onChange={(e) => setForm((f) => ({ ...f, nome_artistico: e.target.value }))}
+                  />
                 </div>
               </>
             )}
             <div>
               <Label className="text-xs">Comissão padrão (%)</Label>
-              <Input type="number" step="0.01" min="0" max="100"
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
                 value={form.comissao_padrao_pct as any}
                 onChange={(e) => setForm((f) => ({ ...f, comissao_padrao_pct: e.target.value }))}
-                placeholder="Ex: 15" />
+                placeholder="Ex: 15"
+              />
             </div>
-            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
-
             <div>
-              <Label className="text-xs">CNPJ {cnpjLoading && <span className="text-muted-foreground">(buscando…)</span>}</Label>
+              <Label className="text-xs">
+                CNPJ {cnpjLoading && <span className="text-muted-foreground">(buscando…)</span>}
+              </Label>
               <Input
                 value={form.cnpj}
                 onChange={(e) => setForm((f) => ({ ...f, cnpj: e.target.value }))}
@@ -691,8 +921,14 @@ function EmissorasCard() {
                       cnpj: digits,
                       razao_social: d.razaoSocial || f.razao_social,
                       nome_fantasia: d.nomeFantasia || f.nome_fantasia,
-                      inscricao_estadual: d.inscricaoEstadual && d.inscricaoEstadual !== "ISENTA" ? d.inscricaoEstadual : f.inscricao_estadual,
-                      inscricao_municipal: d.inscricaoMunicipal && d.inscricaoMunicipal !== "ISENTA" ? d.inscricaoMunicipal : f.inscricao_municipal,
+                      inscricao_estadual:
+                        d.inscricaoEstadual && d.inscricaoEstadual !== "ISENTA"
+                          ? d.inscricaoEstadual
+                          : f.inscricao_estadual,
+                      inscricao_municipal:
+                        d.inscricaoMunicipal && d.inscricaoMunicipal !== "ISENTA"
+                          ? d.inscricaoMunicipal
+                          : f.inscricao_municipal,
                       endereco: endereco || f.endereco,
                       cidade: d.cidade || f.cidade,
                       uf: d.estado || f.uf,
@@ -711,63 +947,109 @@ function EmissorasCard() {
             </div>
             <div>
               <Label className="text-xs">Razão social</Label>
-              <Input value={form.razao_social} onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))} />
+              <Input
+                value={form.razao_social}
+                onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))}
+              />
             </div>
             <div>
               <Label className="text-xs">Nome fantasia</Label>
-              <Input value={form.nome_fantasia} onChange={(e) => setForm((f) => ({ ...f, nome_fantasia: e.target.value }))} />
+              <Input
+                value={form.nome_fantasia}
+                onChange={(e) => setForm((f) => ({ ...f, nome_fantasia: e.target.value }))}
+              />
             </div>
             <div>
               <Label className="text-xs">Inscrição estadual</Label>
-              <Input value={form.inscricao_estadual} onChange={(e) => setForm((f) => ({ ...f, inscricao_estadual: e.target.value }))} />
+              <Input
+                value={form.inscricao_estadual}
+                onChange={(e) => setForm((f) => ({ ...f, inscricao_estadual: e.target.value }))}
+              />
             </div>
             <div>
               <Label className="text-xs">Inscrição municipal</Label>
-              <Input value={form.inscricao_municipal} onChange={(e) => setForm((f) => ({ ...f, inscricao_municipal: e.target.value }))} />
+              <Input
+                value={form.inscricao_municipal}
+                onChange={(e) => setForm((f) => ({ ...f, inscricao_municipal: e.target.value }))}
+              />
             </div>
             <div className="col-span-2">
               <Label className="text-xs">Endereço</Label>
-              <Input value={form.endereco} onChange={(e) => setForm((f) => ({ ...f, endereco: e.target.value }))} />
+              <Input
+                value={form.endereco}
+                onChange={(e) => setForm((f) => ({ ...f, endereco: e.target.value }))}
+              />
             </div>
             <div>
               <Label className="text-xs">Cidade</Label>
-              <Input value={form.cidade} onChange={(e) => setForm((f) => ({ ...f, cidade: e.target.value }))} />
+              <Input
+                value={form.cidade}
+                onChange={(e) => setForm((f) => ({ ...f, cidade: e.target.value }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs">UF</Label>
-                <Input maxLength={2} value={form.uf} onChange={(e) => setForm((f) => ({ ...f, uf: e.target.value.toUpperCase() }))} />
+                <Input
+                  maxLength={2}
+                  value={form.uf}
+                  onChange={(e) => setForm((f) => ({ ...f, uf: e.target.value.toUpperCase() }))}
+                />
               </div>
               <div>
                 <Label className="text-xs">CEP</Label>
-                <Input value={form.cep} onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value }))} />
+                <Input
+                  value={form.cep}
+                  onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value }))}
+                />
               </div>
             </div>
             <div>
               <Label className="text-xs">Telefone</Label>
-              <Input value={form.telefone} onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))} />
+              <Input
+                value={form.telefone}
+                onChange={(e) => setForm((f) => ({ ...f, telefone: e.target.value }))}
+              />
             </div>
             <div>
               <Label className="text-xs">E-mail</Label>
-              <Input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              <Input
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
             </div>
             <div className="col-span-2">
               <Label className="text-xs">Logo da emissora (aparece no PDF do PI)</Label>
               <div className="flex items-center gap-3 mt-1">
                 {logoPreview ? (
-                  <img src={logoPreview} alt="Logo" className="h-14 w-auto max-w-[140px] object-contain border rounded bg-white p-1" />
+                  <img
+                    src={logoPreview}
+                    alt="Logo"
+                    className="h-14 w-auto max-w-[140px] object-contain border rounded bg-white p-1"
+                  />
                 ) : (
-                  <div className="h-14 w-24 border border-dashed rounded flex items-center justify-center text-[10px] text-muted-foreground">sem logo</div>
+                  <div className="h-14 w-24 border border-dashed rounded flex items-center justify-center text-[10px] text-muted-foreground">
+                    sem logo
+                  </div>
                 )}
                 <div className="flex flex-col gap-1">
                   <Input
                     type="file"
                     accept="image/png,image/jpeg,image/svg+xml"
                     disabled={logoUploading}
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleLogoUpload(f);
+                    }}
                   />
                   {form.logo_url && (
-                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs w-fit" onClick={() => setForm((f) => ({ ...f, logo_url: "" }))}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs w-fit"
+                      onClick={() => setForm((f) => ({ ...f, logo_url: "" }))}
+                    >
                       Remover logo
                     </Button>
                   )}
@@ -794,17 +1076,25 @@ function EmissorasCard() {
             </div>
             <div className="col-span-2 flex items-center gap-4 pt-1">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <Switch checked={form.padrao} onCheckedChange={(v) => setForm((f) => ({ ...f, padrao: v }))} />
+                <Switch
+                  checked={form.padrao}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, padrao: v }))}
+                />
                 Emissora padrão (selecionada automaticamente no novo PI)
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <Switch checked={form.ativo} onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))} />
+                <Switch
+                  checked={form.ativo}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))}
+                />
                 Ativa
               </label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
             <Button
               onClick={() => saveMut.mutate()}
               disabled={saveMut.isPending || !form.nome.trim()}
@@ -821,14 +1111,21 @@ function EmissorasCard() {
 function NovaEmissoraGate({ count, onNew }: { count: number; onNew: () => void }) {
   const { isAdmin } = useUserRoles();
   if (!isAdmin) return null;
-  return <Button onClick={onNew}><Plus className="h-4 w-4 mr-1" /> Nova emissora</Button>;
+  return (
+    <Button onClick={onNew}>
+      <Plus className="h-4 w-4 mr-1" /> Nova emissora
+    </Button>
+  );
 }
 
 function PerfilEmpresaCard() {
   const qc = useQueryClient();
   const fetchTenant = useServerFn(getMeuTenantPerfil);
   const saveTenant = useServerFn(updateMeuTenantPerfil);
-  const { data: tenant, isLoading } = useQuery({ queryKey: ["meu-tenant-perfil"], queryFn: () => fetchTenant() });
+  const { data: tenant, isLoading } = useQuery({
+    queryKey: ["meu-tenant-perfil"],
+    queryFn: () => fetchTenant(),
+  });
 
   const [form, setForm] = useState({
     razao_social: "",
@@ -872,7 +1169,9 @@ function PerfilEmpresaCard() {
     getLogoSignedUrl(form.logo_url).then((url) => {
       if (!cancel) setLogoPreview(url);
     });
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [form.logo_url]);
 
   const saveMut = useMutation({
@@ -890,7 +1189,9 @@ function PerfilEmpresaCard() {
       setLogoUploading(true);
       const ext = file.name.split(".").pop();
       const path = `tenant-logos/${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("logos").upload(path, file, { upsert: true });
+      const { error: upErr } = await supabase.storage
+        .from("logos")
+        .upload(path, file, { upsert: true });
       if (upErr) throw upErr;
       setForm((f) => ({ ...f, logo_url: path }));
       toast.success("Logotipo enviado com sucesso");
@@ -918,7 +1219,10 @@ function PerfilEmpresaCard() {
           <Building2 className="h-6 w-6 shrink-0 text-amber-600" />
           <div>
             <div className="font-semibold text-sm">Nenhuma empresa vinculada</div>
-            <p className="text-xs text-amber-700">Seu usuário ainda não foi associado a um perfil de empresa. Entre em contato com o suporte ou proprietário do sistema.</p>
+            <p className="text-xs text-amber-700">
+              Seu usuário ainda não foi associado a um perfil de empresa. Entre em contato com o
+              suporte ou proprietário do sistema.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -934,12 +1238,17 @@ function PerfilEmpresaCard() {
               <Building2 className="h-5 w-5 text-primary" /> Perfil da Empresa Vinculada
             </CardTitle>
             <CardDescription>
-              Dados cadastrais da sua empresa. Apenas os colaboradores desta organização têm acesso a essas informações.
+              Dados cadastrais da sua empresa. Apenas os colaboradores desta organização têm acesso
+              a essas informações.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="font-semibold">Plano: {tenant.plano?.toUpperCase() || "ATIVO"}</Badge>
-            <Badge className="bg-emerald-600 text-white">Status: {tenant.status?.toUpperCase() || "ATIVO"}</Badge>
+            <Badge variant="outline" className="font-semibold">
+              Plano: {tenant.plano?.toUpperCase() || "ATIVO"}
+            </Badge>
+            <Badge className="bg-emerald-600 text-white">
+              Status: {tenant.status?.toUpperCase() || "ATIVO"}
+            </Badge>
           </div>
         </div>
       </CardHeader>
@@ -963,7 +1272,8 @@ function PerfilEmpresaCard() {
           </div>
           <div>
             <Label className="text-xs font-semibold">
-              CNPJ da Empresa {cnpjLoading && <span className="text-muted-foreground">(consultando Receita…)</span>}
+              CNPJ da Empresa{" "}
+              {cnpjLoading && <span className="text-muted-foreground">(consultando Receita…)</span>}
             </Label>
             <Input
               value={form.cnpj}
@@ -1018,7 +1328,9 @@ function PerfilEmpresaCard() {
             />
           </div>
           <div className="sm:col-span-2">
-            <Label className="text-xs font-semibold">Logotipo da Empresa (exibido na interface e PDFs)</Label>
+            <Label className="text-xs font-semibold">
+              Logotipo da Empresa (exibido na interface e PDFs)
+            </Label>
             <div className="flex items-center gap-4 mt-1.5 flex-wrap">
               {logoPreview ? (
                 <img

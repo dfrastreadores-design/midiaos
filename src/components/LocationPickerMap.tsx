@@ -78,9 +78,7 @@ export function LocationPickerMap({ latitude, longitude, onChange, height = 280 
     async function initMap() {
       if (!containerRef.current) return;
       const initial =
-        latitude != null && longitude != null
-          ? { lat: latitude, lng: longitude }
-          : DEFAULT_CENTER;
+        latitude != null && longitude != null ? { lat: latitude, lng: longitude } : DEFAULT_CENTER;
 
       // 1. Tenta inicializar Google Maps se a chave estiver configurada
       if (hasGmap) {

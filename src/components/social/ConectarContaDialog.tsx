@@ -18,11 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import {
-  PLATAFORMAS_CONFIG,
-  PlataformaSocial,
-  SocialConta,
-} from "@/lib/social-media.functions";
+import { PLATAFORMAS_CONFIG, PlataformaSocial, SocialConta } from "@/lib/social-media.functions";
 import { Link2, Loader2, ShieldCheck } from "lucide-react";
 
 interface ConectarContaDialogProps {
@@ -31,11 +27,7 @@ interface ConectarContaDialogProps {
   onConnect: (conta: Partial<SocialConta>) => Promise<void>;
 }
 
-export function ConectarContaDialog({
-  open,
-  onOpenChange,
-  onConnect,
-}: ConectarContaDialogProps) {
+export function ConectarContaDialog({ open, onOpenChange, onConnect }: ConectarContaDialogProps) {
   const [plataforma, setPlataforma] = useState<PlataformaSocial>("instagram");
   const [nomeConta, setNomeConta] = useState("");
   const [username, setUsername] = useState("");
@@ -90,23 +82,23 @@ export function ConectarContaDialog({
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground">
-              Vincule contas corporativas ou perfis de tráfego para agendamento automático e sincronização de métricas.
+              Vincule contas corporativas ou perfis de tráfego para agendamento automático e
+              sincronização de métricas.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Rede ou Plataforma</Label>
-              <Select
-                value={plataforma}
-                onValueChange={(val: any) => setPlataforma(val)}
-              >
+              <Select value={plataforma} onValueChange={(val: any) => setPlataforma(val)}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="instagram">Instagram Profissional / Creator</SelectItem>
-                  <SelectItem value="meta_ads">Meta Ads (Gerenciador de Anúncios Facebook/IG)</SelectItem>
+                  <SelectItem value="meta_ads">
+                    Meta Ads (Gerenciador de Anúncios Facebook/IG)
+                  </SelectItem>
                   <SelectItem value="facebook">Facebook Página Comercial</SelectItem>
                   <SelectItem value="tiktok">TikTok Business / Creator</SelectItem>
                   <SelectItem value="linkedin">LinkedIn Company Page</SelectItem>
@@ -128,7 +120,9 @@ export function ConectarContaDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Username / Identificador (@handle ou ID da Conta)</Label>
+              <Label className="text-xs font-semibold">
+                Username / Identificador (@handle ou ID da Conta)
+              </Label>
               <Input
                 placeholder="Ex: @nexomidia.oficial ou act_12345678"
                 value={username}
@@ -151,7 +145,8 @@ export function ConectarContaDialog({
             <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground flex items-center gap-2">
               <ShieldCheck className="size-5 text-emerald-500 shrink-0" />
               <span>
-                Conexão segura via API oficial criptografada com permissões de publicação e leitura de métricas de alcance.
+                Conexão segura via API oficial criptografada com permissões de publicação e leitura
+                de métricas de alcance.
               </span>
             </div>
           </div>

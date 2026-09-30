@@ -8,8 +8,21 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, Pencil, Trash2, ArrowRight, ArrowLeft, Calendar, Flag, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { listTarefas, upsertTarefa, moveTarefa, deleteTarefa } from "@/lib/tarefas.functions";
@@ -61,7 +74,8 @@ const PRIO_COLORS: Record<Prioridade, string> = {
 
 const PRIO_LABEL: Record<Prioridade, string> = { baixa: "Baixa", media: "Média", alta: "Alta" };
 
-const fmtDate = (s?: string | null) => (s ? new Date(s + "T00:00:00").toLocaleDateString("pt-BR") : null);
+const fmtDate = (s?: string | null) =>
+  s ? new Date(s + "T00:00:00").toLocaleDateString("pt-BR") : null;
 
 function TarefasPage() {
   const qc = useQueryClient();
@@ -82,7 +96,10 @@ function TarefasPage() {
 
   const del = useMutation({
     mutationFn: (id: string) => deleteTarefa({ data: { id } }),
-    onSuccess: () => { toast.success("Tarefa removida"); qc.invalidateQueries({ queryKey: ["tarefas"] }); },
+    onSuccess: () => {
+      toast.success("Tarefa removida");
+      qc.invalidateQueries({ queryKey: ["tarefas"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -96,10 +113,20 @@ function TarefasPage() {
     <AppShell>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">Minhas Tarefas</h1>
-          <p className="text-muted-foreground text-sm mt-1">Organize seu trabalho em um quadro pessoal estilo Kanban.</p>
+          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+            Minhas Tarefas
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Organize seu trabalho em um quadro pessoal estilo Kanban.
+          </p>
         </div>
-        <Button onClick={() => { setEditing(null); setDefaultStatus("a_fazer"); setFormOpen(true); }}>
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setDefaultStatus("a_fazer");
+            setFormOpen(true);
+          }}
+        >
           <Plus className="size-4 mr-2" /> Nova tarefa
         </Button>
       </div>
@@ -116,7 +143,15 @@ function TarefasPage() {
                     <Badge className={col.tone}>{col.label}</Badge>
                     <span className="text-xs text-muted-foreground">{grouped[col.id].length}</span>
                   </div>
-                  <Button size="sm" variant="ghost" onClick={() => { setEditing(null); setDefaultStatus(col.id); setFormOpen(true); }}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditing(null);
+                      setDefaultStatus(col.id);
+                      setFormOpen(true);
+                    }}
+                  >
                     <Plus className="size-4" />
                   </Button>
                 </div>
@@ -128,46 +163,80 @@ function TarefasPage() {
                   )}
                   {grouped[col.id].map((t) => {
                     const vinculo =
-                      t.cliente?.nome_fantasia || t.cliente?.razao_social ||
-                      t.agencia?.nome_fantasia || t.agencia?.razao_social ||
+                      t.cliente?.nome_fantasia ||
+                      t.cliente?.razao_social ||
+                      t.agencia?.nome_fantasia ||
+                      t.agencia?.razao_social ||
                       (t.pi?.numero ? `PI ${t.pi.numero}` : null) ||
                       (t.proposta?.numero ? `Prop ${t.proposta.numero}` : null) ||
-                      t.projeto?.nome || null;
+                      t.projeto?.nome ||
+                      null;
                     const prazo = fmtDate(t.prazo);
-                    const atrasada = t.prazo && t.status !== "concluido" && new Date(t.prazo + "T23:59:59") < new Date();
+                    const atrasada =
+                      t.prazo &&
+                      t.status !== "concluido" &&
+                      new Date(t.prazo + "T23:59:59") < new Date();
                     const idx = COLUNAS.findIndex((c) => c.id === col.id);
                     const prev = idx > 0 ? COLUNAS[idx - 1] : null;
                     const next = idx < COLUNAS.length - 1 ? COLUNAS[idx + 1] : null;
                     return (
-                      <div key={t.id} className="rounded-md border bg-background p-3 shadow-sm space-y-2">
+                      <div
+                        key={t.id}
+                        className="rounded-md border bg-background p-3 shadow-sm space-y-2"
+                      >
                         <div className="flex items-start justify-between gap-2">
                           <button
                             className="font-medium text-sm text-left hover:underline flex-1"
-                            onClick={() => { setEditing(t); setFormOpen(true); }}
+                            onClick={() => {
+                              setEditing(t);
+                              setFormOpen(true);
+                            }}
                           >
                             {t.titulo}
                           </button>
                           <div className="flex gap-0.5 shrink-0">
-                            <Button size="icon" variant="ghost" className="size-7" title="Editar"
-                              onClick={() => { setEditing(t); setFormOpen(true); }}>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-7"
+                              title="Editar"
+                              onClick={() => {
+                                setEditing(t);
+                                setFormOpen(true);
+                              }}
+                            >
                               <Pencil className="size-3.5" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="size-7" title="Excluir"
-                              onClick={() => { if (confirm("Excluir tarefa?")) del.mutate(t.id); }}>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-7"
+                              title="Excluir"
+                              onClick={() => {
+                                if (confirm("Excluir tarefa?")) del.mutate(t.id);
+                              }}
+                            >
                               <Trash2 className="size-3.5 text-destructive" />
                             </Button>
                           </div>
                         </div>
                         {t.descricao && (
-                          <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-3">{t.descricao}</p>
+                          <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-3">
+                            {t.descricao}
+                          </p>
                         )}
                         <div className="flex flex-wrap items-center gap-1.5">
                           <Badge className={PRIO_COLORS[t.prioridade]} variant="secondary">
-                            <Flag className="size-3 mr-1" />{PRIO_LABEL[t.prioridade]}
+                            <Flag className="size-3 mr-1" />
+                            {PRIO_LABEL[t.prioridade]}
                           </Badge>
                           {prazo && (
-                            <Badge variant="outline" className={atrasada ? "border-destructive text-destructive" : ""}>
-                              <Calendar className="size-3 mr-1" />{prazo}
+                            <Badge
+                              variant="outline"
+                              className={atrasada ? "border-destructive text-destructive" : ""}
+                            >
+                              <Calendar className="size-3 mr-1" />
+                              {prazo}
                             </Badge>
                           )}
                           {t.responsavel && <Badge variant="outline">{t.responsavel}</Badge>}
@@ -180,17 +249,31 @@ function TarefasPage() {
                         </div>
                         <div className="flex items-center justify-between pt-1 border-t">
                           {prev ? (
-                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs"
-                              onClick={() => move.mutate({ id: t.id, status: prev.id })}>
-                              <ArrowLeft className="size-3 mr-1" />{prev.label}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => move.mutate({ id: t.id, status: prev.id })}
+                            >
+                              <ArrowLeft className="size-3 mr-1" />
+                              {prev.label}
                             </Button>
-                          ) : <span />}
+                          ) : (
+                            <span />
+                          )}
                           {next ? (
-                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs ml-auto"
-                              onClick={() => move.mutate({ id: t.id, status: next.id })}>
-                              {next.label}<ArrowRight className="size-3 ml-1" />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs ml-auto"
+                              onClick={() => move.mutate({ id: t.id, status: next.id })}
+                            >
+                              {next.label}
+                              <ArrowRight className="size-3 ml-1" />
                             </Button>
-                          ) : <span />}
+                          ) : (
+                            <span />
+                          )}
                         </div>
                       </div>
                     );
@@ -214,7 +297,11 @@ function TarefasPage() {
 }
 
 function TarefaFormDialog({
-  open, onOpenChange, initial, defaultStatus, onSaved,
+  open,
+  onOpenChange,
+  initial,
+  defaultStatus,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -228,7 +315,9 @@ function TarefaFormDialog({
   const [prioridade, setPrioridade] = useState<Prioridade>("media");
   const [prazo, setPrazo] = useState("");
   const [responsavel, setResponsavel] = useState("");
-  const [vinculoTipo, setVinculoTipo] = useState<"nenhum" | "cliente" | "agencia" | "pi" | "proposta" | "projeto">("nenhum");
+  const [vinculoTipo, setVinculoTipo] = useState<
+    "nenhum" | "cliente" | "agencia" | "pi" | "proposta" | "projeto"
+  >("nenhum");
   const [vinculoId, setVinculoId] = useState<string>("");
 
   useEffect(() => {
@@ -239,19 +328,52 @@ function TarefaFormDialog({
     setPrioridade(initial?.prioridade ?? "media");
     setPrazo(initial?.prazo ?? "");
     setResponsavel(initial?.responsavel ?? "");
-    if (initial?.cliente_id) { setVinculoTipo("cliente"); setVinculoId(initial.cliente_id); }
-    else if (initial?.agencia_id) { setVinculoTipo("agencia"); setVinculoId(initial.agencia_id); }
-    else if (initial?.pi_id) { setVinculoTipo("pi"); setVinculoId(initial.pi_id); }
-    else if (initial?.proposta_id) { setVinculoTipo("proposta"); setVinculoId(initial.proposta_id); }
-    else if (initial?.projeto_id) { setVinculoTipo("projeto"); setVinculoId(initial.projeto_id); }
-    else { setVinculoTipo("nenhum"); setVinculoId(""); }
+    if (initial?.cliente_id) {
+      setVinculoTipo("cliente");
+      setVinculoId(initial.cliente_id);
+    } else if (initial?.agencia_id) {
+      setVinculoTipo("agencia");
+      setVinculoId(initial.agencia_id);
+    } else if (initial?.pi_id) {
+      setVinculoTipo("pi");
+      setVinculoId(initial.pi_id);
+    } else if (initial?.proposta_id) {
+      setVinculoTipo("proposta");
+      setVinculoId(initial.proposta_id);
+    } else if (initial?.projeto_id) {
+      setVinculoTipo("projeto");
+      setVinculoId(initial.projeto_id);
+    } else {
+      setVinculoTipo("nenhum");
+      setVinculoId("");
+    }
   }, [open, initial, defaultStatus]);
 
-  const { data: clientes = [] } = useQuery({ queryKey: ["clientes"], queryFn: () => listClientes(), enabled: vinculoTipo === "cliente" });
-  const { data: agencias = [] } = useQuery({ queryKey: ["agencias"], queryFn: () => listAgencias(), enabled: vinculoTipo === "agencia" });
-  const { data: pis = [] } = useQuery({ queryKey: ["pis"], queryFn: () => listPis(), enabled: vinculoTipo === "pi" });
-  const { data: propostas = [] } = useQuery({ queryKey: ["propostas"], queryFn: () => listPropostas(), enabled: vinculoTipo === "proposta" });
-  const { data: projetos = [] } = useQuery({ queryKey: ["projetos"], queryFn: () => listProjetos(), enabled: vinculoTipo === "projeto" });
+  const { data: clientes = [] } = useQuery({
+    queryKey: ["clientes"],
+    queryFn: () => listClientes(),
+    enabled: vinculoTipo === "cliente",
+  });
+  const { data: agencias = [] } = useQuery({
+    queryKey: ["agencias"],
+    queryFn: () => listAgencias(),
+    enabled: vinculoTipo === "agencia",
+  });
+  const { data: pis = [] } = useQuery({
+    queryKey: ["pis"],
+    queryFn: () => listPis(),
+    enabled: vinculoTipo === "pi",
+  });
+  const { data: propostas = [] } = useQuery({
+    queryKey: ["propostas"],
+    queryFn: () => listPropostas(),
+    enabled: vinculoTipo === "proposta",
+  });
+  const { data: projetos = [] } = useQuery({
+    queryKey: ["projetos"],
+    queryFn: () => listProjetos(),
+    enabled: vinculoTipo === "projeto",
+  });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -273,7 +395,11 @@ function TarefaFormDialog({
         },
       });
     },
-    onSuccess: () => { toast.success("Tarefa salva"); onSaved(); onOpenChange(false); },
+    onSuccess: () => {
+      toast.success("Tarefa salva");
+      onSaved();
+      onOpenChange(false);
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -292,22 +418,35 @@ function TarefaFormDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Descrição</Label>
-            <Textarea rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} maxLength={4000} />
+            <Textarea
+              rows={3}
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              maxLength={4000}
+            />
           </div>
           <div className="grid sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Lista</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {COLUNAS.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                  {COLUNAS.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Prioridade</Label>
               <Select value={prioridade} onValueChange={(v) => setPrioridade(v as Prioridade)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="baixa">Baixa</SelectItem>
                   <SelectItem value="media">Média</SelectItem>
@@ -322,14 +461,27 @@ function TarefaFormDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Responsável</Label>
-            <Input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} placeholder="Nome ou apelido" maxLength={120} />
+            <Input
+              value={responsavel}
+              onChange={(e) => setResponsavel(e.target.value)}
+              placeholder="Nome ou apelido"
+              maxLength={120}
+            />
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Vínculo</Label>
-              <Select value={vinculoTipo} onValueChange={(v) => { setVinculoTipo(v as typeof vinculoTipo); setVinculoId(""); }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select
+                value={vinculoTipo}
+                onValueChange={(v) => {
+                  setVinculoTipo(v as typeof vinculoTipo);
+                  setVinculoId("");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="nenhum">— Sem vínculo —</SelectItem>
                   <SelectItem value="cliente">Cliente</SelectItem>
@@ -343,25 +495,45 @@ function TarefaFormDialog({
             {vinculoTipo !== "nenhum" && (
               <div className="space-y-1.5">
                 <Label>Registro</Label>
-                <Select value={vinculoId || "none"} onValueChange={(v) => setVinculoId(v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <Select
+                  value={vinculoId || "none"}
+                  onValueChange={(v) => setVinculoId(v === "none" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Selecione —</SelectItem>
-                    {vinculoTipo === "cliente" && (clientes as any[]).map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social}</SelectItem>
-                    ))}
-                    {vinculoTipo === "agencia" && (agencias as any[]).map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.nome_fantasia || a.razao_social}</SelectItem>
-                    ))}
-                    {vinculoTipo === "pi" && (pis as any[]).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.numero}</SelectItem>
-                    ))}
-                    {vinculoTipo === "proposta" && (propostas as any[]).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.numero} · {p.campanha}</SelectItem>
-                    ))}
-                    {vinculoTipo === "projeto" && (projetos as any[]).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                    ))}
+                    {vinculoTipo === "cliente" &&
+                      (clientes as any[]).map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.nome_fantasia || c.razao_social}
+                        </SelectItem>
+                      ))}
+                    {vinculoTipo === "agencia" &&
+                      (agencias as any[]).map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.nome_fantasia || a.razao_social}
+                        </SelectItem>
+                      ))}
+                    {vinculoTipo === "pi" &&
+                      (pis as any[]).map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.numero}
+                        </SelectItem>
+                      ))}
+                    {vinculoTipo === "proposta" &&
+                      (propostas as any[]).map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.numero} · {p.campanha}
+                        </SelectItem>
+                      ))}
+                    {vinculoTipo === "projeto" &&
+                      (projetos as any[]).map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.nome}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -370,8 +542,12 @@ function TarefaFormDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            Salvar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

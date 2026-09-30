@@ -32,7 +32,12 @@ export type CrmCard = {
 };
 
 const STAGE_RANK: Record<FunnelStage, number> = {
-  prospeccao: 0, negociacao: 1, proposta: 2, aprovacao: 3, faturamento: 4, finalizado: 5,
+  prospeccao: 0,
+  negociacao: 1,
+  proposta: 2,
+  aprovacao: 3,
+  faturamento: 4,
+  finalizado: 5,
 };
 
 export const getFunilCrm = createServerFn({ method: "GET" })
@@ -46,8 +51,12 @@ export const getFunilCrm = createServerFn({ method: "GET" })
       { data: profiles, error: pfErr },
     ] = await Promise.all([
       supabase.from("clientes").select("id, razao_social, nome_fantasia, executivo_id, updated_at"),
-      supabase.from("propostas").select("id, cliente_id, status, campanha, valor_negociado, updated_at"),
-      supabase.from("pis").select("id, cliente_id, status, campanha, valor_negociado, periodo_fim, updated_at"),
+      supabase
+        .from("propostas")
+        .select("id, cliente_id, status, campanha, valor_negociado, updated_at"),
+      supabase
+        .from("pis")
+        .select("id, cliente_id, status, campanha, valor_negociado, periodo_fim, updated_at"),
       supabase.from("profiles").select("id, nome"),
     ]);
     if (cErr) throw new Error(cErr.message);
@@ -69,22 +78,36 @@ export const getFunilCrm = createServerFn({ method: "GET" })
       let proximo = "Sem oportunidade aberta";
       let updated = c.updated_at;
 
-      const pick = (s: FunnelStage, novo: { campanha: string; valor: number; passo: string; updated: string }) => {
+      const pick = (
+        s: FunnelStage,
+        novo: { campanha: string; valor: number; passo: string; updated: string },
+      ) => {
         if (STAGE_RANK[s] >= STAGE_RANK[stage]) {
-          stage = s; campanha = novo.campanha; valor = Number(novo.valor) || 0;
-          proximo = novo.passo; updated = novo.updated;
+          stage = s;
+          campanha = novo.campanha;
+          valor = Number(novo.valor) || 0;
+          proximo = novo.passo;
+          updated = novo.updated;
         }
       };
 
       // Propostas → negociação / proposta
       for (const p of minhasPropostas) {
         if (p.status === "rascunho") {
-          pick("negociacao", { campanha: p.campanha, valor: p.valor_negociado, passo: "Finalizar proposta", updated: p.updated_at });
+          pick("negociacao", {
+            campanha: p.campanha,
+            valor: p.valor_negociado,
+            passo: "Finalizar proposta",
+            updated: p.updated_at,
+          });
         } else if (p.status === "enviada" || p.status === "aprovada" || p.status === "convertida") {
           pick("proposta", {
             campanha: p.campanha,
             valor: p.valor_negociado,
-            passo: p.status === "enviada" ? "Aguardar retorno do cliente" : "Proposta aprovada — emitir PI",
+            passo:
+              p.status === "enviada"
+                ? "Aguardar retorno do cliente"
+                : "Proposta aprovada — emitir PI",
             updated: p.updated_at,
           });
         }
@@ -102,12 +125,27 @@ export const getFunilCrm = createServerFn({ method: "GET" })
         } else if (p.status === "aprovado") {
           const encerrado = p.periodo_fim && p.periodo_fim < today;
           if (encerrado) {
-            pick("finalizado", { campanha: p.campanha, valor: p.valor_negociado, passo: "Veiculação concluída — renovar", updated: p.updated_at });
+            pick("finalizado", {
+              campanha: p.campanha,
+              valor: p.valor_negociado,
+              passo: "Veiculação concluída — renovar",
+              updated: p.updated_at,
+            });
           } else {
-            pick("faturamento", { campanha: p.campanha, valor: p.valor_negociado, passo: "Em veiculação — faturar", updated: p.updated_at });
+            pick("faturamento", {
+              campanha: p.campanha,
+              valor: p.valor_negociado,
+              passo: "Em veiculação — faturar",
+              updated: p.updated_at,
+            });
           }
         } else if (p.status === "faturado") {
-          pick("finalizado", { campanha: p.campanha, valor: p.valor_negociado, passo: "PI faturado", updated: p.updated_at });
+          pick("finalizado", {
+            campanha: p.campanha,
+            valor: p.valor_negociado,
+            passo: "PI faturado",
+            updated: p.updated_at,
+          });
         }
       }
 
@@ -115,7 +153,9 @@ export const getFunilCrm = createServerFn({ method: "GET" })
       let alerta: CrmCard["alerta"];
       let alerta_msg: string | undefined;
 
-      const diasParado = Math.floor((Date.now() - new Date(updated).getTime()) / (1000 * 60 * 60 * 24));
+      const diasParado = Math.floor(
+        (Date.now() - new Date(updated).getTime()) / (1000 * 60 * 60 * 24),
+      );
 
       if (stage === ("prospeccao" as FunnelStage) && diasParado > 15) {
         alerta = "atencao";
@@ -131,8 +171,6 @@ export const getFunilCrm = createServerFn({ method: "GET" })
         alerta_msg = "Aguardando faturamento há 10 dias";
       }
 
-
-
       return {
         cliente_id: c.id,
         cliente_nome: c.nome_fantasia || c.razao_social,
@@ -140,7 +178,7 @@ export const getFunilCrm = createServerFn({ method: "GET" })
         valor,
         campanha,
         proximoPasso: proximo,
-        executivo: c.executivo_id ? nomeExec.get(c.executivo_id) ?? null : null,
+        executivo: c.executivo_id ? (nomeExec.get(c.executivo_id) ?? null) : null,
         atualizado_em: updated,
         alerta,
         alerta_msg,

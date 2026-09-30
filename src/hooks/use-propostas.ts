@@ -25,11 +25,13 @@ export function usePropostas() {
   const filteredPropostas = useMemo(() => {
     const s = search.toLowerCase();
     return propostas.filter((p) => {
-      return !s || 
-        p.numero.toLowerCase().includes(s) || 
+      return (
+        !s ||
+        p.numero.toLowerCase().includes(s) ||
         p.campanha.toLowerCase().includes(s) ||
         p.cliente?.razao_social?.toLowerCase().includes(s) ||
-        p.cliente_avulso?.toLowerCase().includes(s);
+        p.cliente_avulso?.toLowerCase().includes(s)
+      );
     });
   }, [propostas, search]);
 

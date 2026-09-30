@@ -84,7 +84,11 @@ export function BriefingAnexosSection({ briefingId }: { briefingId?: string | nu
   };
 
   if (!briefingId) {
-    return <p className="text-sm text-muted-foreground">Salve o briefing primeiro para anexar arquivos.</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        Salve o briefing primeiro para anexar arquivos.
+      </p>
+    );
   }
 
   return (
@@ -105,7 +109,11 @@ export function BriefingAnexosSection({ briefingId }: { briefingId?: string | nu
           />
           <Button type="button" asChild disabled={uploading}>
             <span>
-              {uploading ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}
+              {uploading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Paperclip className="size-4" />
+              )}
               Anexar
             </span>
           </Button>

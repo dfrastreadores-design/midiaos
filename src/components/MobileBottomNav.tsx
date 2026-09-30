@@ -24,7 +24,9 @@ export function MobileBottomNav({ onOpenMobileMenu, onOpenInstallDialog }: Mobil
     <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/90 backdrop-blur-xl border-t border-border/50 pb-safe shadow-lg">
       <nav className="flex items-center justify-around h-15 px-2">
         {items.map((item) => {
-          const active = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+          const active =
+            location.pathname === item.to ||
+            (item.to !== "/" && location.pathname.startsWith(item.to));
           const Icon = item.icon;
           return (
             <Link
@@ -32,7 +34,7 @@ export function MobileBottomNav({ onOpenMobileMenu, onOpenInstallDialog }: Mobil
               to={item.to}
               className={cn(
                 "flex flex-col items-center justify-center flex-1 py-1 transition-colors relative",
-                active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+                active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground",
               )}
             >
               {active && (

@@ -15,24 +15,35 @@ export const notificarPiReemitidoParaExecutivo = createServerFn({ method: "POST"
     const request = getRequest();
 
     const { data: isAdmin } = await supabase
-      .from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle();
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
     if (!isAdmin) throw new Error("Apenas administradores podem notificar reemissão");
 
     const { data: pi, error } = await supabase
       .from("pis")
-      .select("id, numero, campanha, executivo_id, cliente:cliente_id(razao_social), agencia:agencia_id(razao_social)")
+      .select(
+        "id, numero, campanha, executivo_id, cliente:cliente_id(razao_social), agencia:agencia_id(razao_social)",
+      )
       .eq("id", data.pi_id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!pi?.executivo_id) return { ok: false, reason: "sem_executivo" as const };
 
     const [{ data: exec }, { data: admin }] = await Promise.all([
-      supabase.from("profiles").select("nome, email, whatsapp, telefone").eq("id", pi.executivo_id).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("nome, email, whatsapp, telefone")
+        .eq("id", pi.executivo_id)
+        .maybeSingle(),
       supabase.from("profiles").select("nome").eq("id", userId).maybeSingle(),
     ]);
     if (!exec) return { ok: false, reason: "executivo_nao_encontrado" as const };
 
-    const clienteNome = (pi.cliente as any)?.razao_social || (pi.agencia as any)?.razao_social || "N/A";
+    const clienteNome =
+      (pi.cliente as any)?.razao_social || (pi.agencia as any)?.razao_social || "N/A";
     const origin = request ? new URL(request.url).origin : "https://midiaos.online";
     const linkPi = `${origin}/pi?id=${pi.id}`;
 

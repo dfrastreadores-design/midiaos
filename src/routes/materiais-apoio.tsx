@@ -9,8 +9,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FolderOpen, Plus, Download, Trash2, Search, FileText, Link as LinkIcon, ExternalLink, Pencil, Eye } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  FolderOpen,
+  Plus,
+  Download,
+  Trash2,
+  Search,
+  FileText,
+  Link as LinkIcon,
+  ExternalLink,
+  Pencil,
+  Eye,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-roles";
@@ -50,7 +68,10 @@ function formatBytes(n: number | null) {
   const u = ["B", "KB", "MB", "GB"];
   let i = 0;
   let v = n;
-  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
   return `${v.toFixed(1)} ${u[i]}`;
 }
 
@@ -95,7 +116,10 @@ function MateriaisApoio() {
       const { error } = await supabase.from("materiais_apoio").delete().eq("id", row.id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Material removido"); qc.invalidateQueries({ queryKey: ["materiais-apoio"] }); },
+    onSuccess: () => {
+      toast.success("Material removido");
+      qc.invalidateQueries({ queryKey: ["materiais-apoio"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -104,7 +128,10 @@ function MateriaisApoio() {
       const { error } = await supabase.from("links_uteis").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Link removido"); qc.invalidateQueries({ queryKey: ["links-uteis"] }); },
+    onSuccess: () => {
+      toast.success("Link removido");
+      qc.invalidateQueries({ queryKey: ["links-uteis"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -112,7 +139,10 @@ function MateriaisApoio() {
     const { data, error } = await supabase.storage
       .from("materiais-apoio")
       .createSignedUrl(row.arquivo_path, 60, { download: row.arquivo_nome });
-    if (error || !data?.signedUrl) { toast.error("Erro ao gerar link de download"); return; }
+    if (error || !data?.signedUrl) {
+      toast.error("Erro ao gerar link de download");
+      return;
+    }
     window.open(data.signedUrl, "_blank");
   }
 
@@ -120,14 +150,20 @@ function MateriaisApoio() {
     const { data, error } = await supabase.storage
       .from("materiais-apoio")
       .createSignedUrl(row.arquivo_path, 300);
-    if (error || !data?.signedUrl) { toast.error("Erro ao gerar link de visualização"); return; }
+    if (error || !data?.signedUrl) {
+      toast.error("Erro ao gerar link de visualização");
+      return;
+    }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
   const categorias = Array.from(new Set(rows.map((r) => r.categoria).filter(Boolean))) as string[];
-  const categoriasLinks = Array.from(new Set(links.map((r) => r.categoria).filter(Boolean))) as string[];
+  const categoriasLinks = Array.from(
+    new Set(links.map((r) => r.categoria).filter(Boolean)),
+  ) as string[];
   const filtered = rows.filter((r) => {
-    const matchBusca = !busca ||
+    const matchBusca =
+      !busca ||
       r.titulo.toLowerCase().includes(busca.toLowerCase()) ||
       (r.descricao ?? "").toLowerCase().includes(busca.toLowerCase()) ||
       r.arquivo_nome.toLowerCase().includes(busca.toLowerCase());
@@ -135,7 +171,8 @@ function MateriaisApoio() {
     return matchBusca && matchCat;
   });
   const filteredLinks = links.filter((r) => {
-    const matchBusca = !busca ||
+    const matchBusca =
+      !busca ||
       r.titulo.toLowerCase().includes(busca.toLowerCase()) ||
       (r.descricao ?? "").toLowerCase().includes(busca.toLowerCase()) ||
       r.url.toLowerCase().includes(busca.toLowerCase());
@@ -159,37 +196,82 @@ function MateriaisApoio() {
         {tab === "arquivos" ? (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button><Plus className="size-4 mr-1" /> Novo material</Button>
+              <Button>
+                <Plus className="size-4 mr-1" /> Novo material
+              </Button>
             </DialogTrigger>
             <UploadDialog onClose={() => setOpen(false)} />
           </Dialog>
         ) : (
-          <Dialog open={linkOpen} onOpenChange={(o) => { setLinkOpen(o); if (!o) setEditingLink(null); }}>
+          <Dialog
+            open={linkOpen}
+            onOpenChange={(o) => {
+              setLinkOpen(o);
+              if (!o) setEditingLink(null);
+            }}
+          >
             <DialogTrigger asChild>
-              <Button onClick={() => setEditingLink(null)}><Plus className="size-4 mr-1" /> Novo link</Button>
+              <Button onClick={() => setEditingLink(null)}>
+                <Plus className="size-4 mr-1" /> Novo link
+              </Button>
             </DialogTrigger>
-            <LinkDialog onClose={() => { setLinkOpen(false); setEditingLink(null); }} link={editingLink} />
+            <LinkDialog
+              onClose={() => {
+                setLinkOpen(false);
+                setEditingLink(null);
+              }}
+              link={editingLink}
+            />
           </Dialog>
         )}
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => { setTab(v); setCategoriaFiltro(""); }} className="space-y-4">
+      <Tabs
+        value={tab}
+        onValueChange={(v) => {
+          setTab(v);
+          setCategoriaFiltro("");
+        }}
+        className="space-y-4"
+      >
         <TabsList>
-          <TabsTrigger value="arquivos"><FileText className="size-4 mr-1" /> Arquivos</TabsTrigger>
-          <TabsTrigger value="links"><LinkIcon className="size-4 mr-1" /> Links úteis</TabsTrigger>
+          <TabsTrigger value="arquivos">
+            <FileText className="size-4 mr-1" /> Arquivos
+          </TabsTrigger>
+          <TabsTrigger value="links">
+            <LinkIcon className="size-4 mr-1" /> Links úteis
+          </TabsTrigger>
         </TabsList>
 
         <Card>
           <CardContent className="p-4 flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[240px]">
               <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar..." className="pl-9" value={busca} onChange={(e) => setBusca(e.target.value)} />
+              <Input
+                placeholder="Buscar..."
+                className="pl-9"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
             </div>
             {catsToShow.length > 0 && (
               <div className="flex gap-1 flex-wrap">
-                <Button size="sm" variant={categoriaFiltro === "" ? "default" : "outline"} onClick={() => setCategoriaFiltro("")}>Todas</Button>
+                <Button
+                  size="sm"
+                  variant={categoriaFiltro === "" ? "default" : "outline"}
+                  onClick={() => setCategoriaFiltro("")}
+                >
+                  Todas
+                </Button>
                 {catsToShow.map((c) => (
-                  <Button key={c} size="sm" variant={categoriaFiltro === c ? "default" : "outline"} onClick={() => setCategoriaFiltro(c)}>{c}</Button>
+                  <Button
+                    key={c}
+                    size="sm"
+                    variant={categoriaFiltro === c ? "default" : "outline"}
+                    onClick={() => setCategoriaFiltro(c)}
+                  >
+                    {c}
+                  </Button>
                 ))}
               </div>
             )}
@@ -200,10 +282,13 @@ function MateriaisApoio() {
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Carregando...</p>
           ) : filtered.length === 0 ? (
-            <Card><CardContent className="p-12 text-center text-muted-foreground">
-              <FolderOpen className="size-12 mx-auto mb-3 opacity-40" />
-              Nenhum material disponível. Clique em "Novo material" para enviar o primeiro arquivo.
-            </CardContent></Card>
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                <FolderOpen className="size-12 mx-auto mb-3 opacity-40" />
+                Nenhum material disponível. Clique em "Novo material" para enviar o primeiro
+                arquivo.
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((row) => {
@@ -216,11 +301,22 @@ function MateriaisApoio() {
                           <FileText className="size-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-medium leading-tight truncate" title={row.titulo}>{row.titulo}</h3>
-                          <p className="text-xs text-muted-foreground truncate" title={row.arquivo_nome}>{row.arquivo_nome}</p>
+                          <h3 className="font-medium leading-tight truncate" title={row.titulo}>
+                            {row.titulo}
+                          </h3>
+                          <p
+                            className="text-xs text-muted-foreground truncate"
+                            title={row.arquivo_nome}
+                          >
+                            {row.arquivo_nome}
+                          </p>
                         </div>
                       </div>
-                      {row.descricao && <p className="text-sm text-muted-foreground line-clamp-2">{row.descricao}</p>}
+                      {row.descricao && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {row.descricao}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
                         {row.categoria && <Badge variant="secondary">{row.categoria}</Badge>}
                         <span>{formatBytes(row.arquivo_tamanho)}</span>
@@ -228,15 +324,31 @@ function MateriaisApoio() {
                         <span>{new Date(row.created_at).toLocaleDateString("pt-BR")}</span>
                       </div>
                       <div className="flex gap-2 pt-1">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => handleVisualizar(row)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleVisualizar(row)}
+                        >
                           <Eye className="size-4 mr-1" /> Visualizar
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDownload(row)} title="Baixar">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownload(row)}
+                          title="Baixar"
+                        >
                           <Download className="size-4" />
                         </Button>
                         {canDelete && (
-                          <Button size="sm" variant="ghost" className="text-destructive"
-                            onClick={() => { if (confirm("Remover este material?")) del.mutate(row); }}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => {
+                              if (confirm("Remover este material?")) del.mutate(row);
+                            }}
+                          >
                             <Trash2 className="size-4" />
                           </Button>
                         )}
@@ -253,10 +365,12 @@ function MateriaisApoio() {
           {loadingLinks ? (
             <p className="text-sm text-muted-foreground">Carregando...</p>
           ) : filteredLinks.length === 0 ? (
-            <Card><CardContent className="p-12 text-center text-muted-foreground">
-              <LinkIcon className="size-12 mx-auto mb-3 opacity-40" />
-              Nenhum link cadastrado. Clique em "Novo link" para adicionar o primeiro.
-            </CardContent></Card>
+            <Card>
+              <CardContent className="p-12 text-center text-muted-foreground">
+                <LinkIcon className="size-12 mx-auto mb-3 opacity-40" />
+                Nenhum link cadastrado. Clique em "Novo link" para adicionar o primeiro.
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {filteredLinks.map((row) => {
@@ -269,11 +383,19 @@ function MateriaisApoio() {
                           <LinkIcon className="size-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-medium leading-tight truncate" title={row.titulo}>{row.titulo}</h3>
-                          <p className="text-xs text-muted-foreground truncate" title={row.url}>{row.url}</p>
+                          <h3 className="font-medium leading-tight truncate" title={row.titulo}>
+                            {row.titulo}
+                          </h3>
+                          <p className="text-xs text-muted-foreground truncate" title={row.url}>
+                            {row.url}
+                          </p>
                         </div>
                       </div>
-                      {row.descricao && <p className="text-sm text-muted-foreground line-clamp-2">{row.descricao}</p>}
+                      {row.descricao && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {row.descricao}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
                         {row.categoria && <Badge variant="secondary">{row.categoria}</Badge>}
                         <span>{new Date(row.created_at).toLocaleDateString("pt-BR")}</span>
@@ -286,12 +408,24 @@ function MateriaisApoio() {
                         </Button>
                         {canEdit && (
                           <>
-                            <Button size="sm" variant="ghost"
-                              onClick={() => { setEditingLink(row); setLinkOpen(true); }}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingLink(row);
+                                setLinkOpen(true);
+                              }}
+                            >
                               <Pencil className="size-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" className="text-destructive"
-                              onClick={() => { if (confirm("Remover este link?")) delLink.mutate(row.id); }}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => {
+                                if (confirm("Remover este link?")) delLink.mutate(row.id);
+                              }}
+                            >
                               <Trash2 className="size-4" />
                             </Button>
                           </>
@@ -359,7 +493,9 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <DialogContent>
-      <DialogHeader><DialogTitle>Novo material de apoio</DialogTitle></DialogHeader>
+      <DialogHeader>
+        <DialogTitle>Novo material de apoio</DialogTitle>
+      </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="titulo">Título *</Label>
@@ -367,20 +503,43 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="categoria">Categoria</Label>
-          <Input id="categoria" placeholder="Ex.: Tabela de preços, Apresentação, Contrato..." value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+          <Input
+            id="categoria"
+            placeholder="Ex.: Tabela de preços, Apresentação, Contrato..."
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="descricao">Descrição</Label>
-          <Textarea id="descricao" rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} />
+          <Textarea
+            id="descricao"
+            rows={3}
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="arquivo">Arquivo *</Label>
-          <Input id="arquivo" type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} required />
-          {file && <p className="text-xs text-muted-foreground">{file.name} — {formatBytes(file.size)}</p>}
+          <Input
+            id="arquivo"
+            type="file"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            required
+          />
+          {file && (
+            <p className="text-xs text-muted-foreground">
+              {file.name} — {formatBytes(file.size)}
+            </p>
+          )}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={uploading}>Cancelar</Button>
-          <Button type="submit" disabled={uploading}>{uploading ? "Enviando..." : "Enviar"}</Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={uploading}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={uploading}>
+            {uploading ? "Enviando..." : "Enviar"}
+          </Button>
         </DialogFooter>
       </form>
     </DialogContent>
@@ -408,12 +567,15 @@ function LinkDialog({ onClose, link }: { onClose: () => void; link: LinkRow | nu
     setSaving(true);
     try {
       if (link) {
-        const { error } = await supabase.from("links_uteis").update({
-          titulo: titulo.trim(),
-          url: finalUrl,
-          descricao: descricao.trim() || null,
-          categoria: categoria.trim() || null,
-        }).eq("id", link.id);
+        const { error } = await supabase
+          .from("links_uteis")
+          .update({
+            titulo: titulo.trim(),
+            url: finalUrl,
+            descricao: descricao.trim() || null,
+            categoria: categoria.trim() || null,
+          })
+          .eq("id", link.id);
         if (error) throw error;
         toast.success("Link atualizado");
       } else {
@@ -438,27 +600,55 @@ function LinkDialog({ onClose, link }: { onClose: () => void; link: LinkRow | nu
 
   return (
     <DialogContent>
-      <DialogHeader><DialogTitle>{link ? "Editar link" : "Novo link útil"}</DialogTitle></DialogHeader>
+      <DialogHeader>
+        <DialogTitle>{link ? "Editar link" : "Novo link útil"}</DialogTitle>
+      </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="link-titulo">Título *</Label>
-          <Input id="link-titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} required />
+          <Input
+            id="link-titulo"
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            required
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="link-url">URL *</Label>
-          <Input id="link-url" type="url" placeholder="https://..." value={url} onChange={(e) => setUrl(e.target.value)} required />
+          <Input
+            id="link-url"
+            type="url"
+            placeholder="https://..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            required
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="link-categoria">Categoria</Label>
-          <Input id="link-categoria" placeholder="Ex.: Ferramenta, Documentação, Portal..." value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+          <Input
+            id="link-categoria"
+            placeholder="Ex.: Ferramenta, Documentação, Portal..."
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="link-descricao">Descrição</Label>
-          <Textarea id="link-descricao" rows={3} value={descricao} onChange={(e) => setDescricao(e.target.value)} />
+          <Textarea
+            id="link-descricao"
+            rows={3}
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+          />
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancelar</Button>
-          <Button type="submit" disabled={saving}>{saving ? "Salvando..." : link ? "Salvar" : "Adicionar"}</Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? "Salvando..." : link ? "Salvar" : "Adicionar"}
+          </Button>
         </DialogFooter>
       </form>
     </DialogContent>

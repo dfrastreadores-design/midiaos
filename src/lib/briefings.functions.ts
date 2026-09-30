@@ -10,7 +10,13 @@ export const BriefingSchema = z.object({
   nome_fantasia: z.string().max(255).optional().nullable(),
   cnpj: z.string().max(20).optional().nullable(),
   contato_nome: z.string().max(255).optional().nullable(),
-  contato_email: z.string().email().max(255).optional().nullable().or(z.literal("").transform(() => null)),
+  contato_email: z
+    .string()
+    .email()
+    .max(255)
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)),
   contato_telefone: z.string().max(40).optional().nullable(),
   campanha: z.string().min(1).max(255),
   objetivo: z.string().max(5000).optional().nullable(),
@@ -100,11 +106,13 @@ export const deleteBriefing = createServerFn({ method: "POST" })
 export const updateBriefingStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      id: z.string().uuid(),
-      status: z.enum(["novo", "em_analise", "em_proposta", "concluido", "recusado"]),
-      motivo_recusa: z.string().max(2000).optional().nullable(),
-    }).parse(d),
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["novo", "em_analise", "em_proposta", "concluido", "recusado"]),
+        motivo_recusa: z.string().max(2000).optional().nullable(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const payload: any = { status: data.status };

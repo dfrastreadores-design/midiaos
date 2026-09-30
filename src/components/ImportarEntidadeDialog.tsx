@@ -1,12 +1,40 @@
 import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, Loader2, Search } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Download,
+  Upload,
+  FileSpreadsheet,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Search,
+} from "lucide-react";
 import { toast } from "sonner";
 import { listClientes, upsertCliente } from "@/lib/clientes.functions";
 import { importAgenciasBulk, listAgencias, upsertAgencia } from "@/lib/agencias.functions";
@@ -16,53 +44,146 @@ import { onlyDigits, fetchCnpj } from "@/lib/cnpj";
 type Tipo = "cliente" | "agencia";
 
 const COLUNAS_BASE = [
-  "razao_social", "nome_fantasia", "cnpj",
-  "inscricao_estadual", "inscricao_municipal", "cnae", "situacao_cadastral",
-  "endereco", "cidade", "uf", "cep", "segmento",
-  "website", "instagram", "linkedin", "facebook",
-  "nome_contato", "cargo_contato", "email_contato", "telefone_contato",
-  "data_aniversario", "atendimento", "observacao",
+  "razao_social",
+  "nome_fantasia",
+  "cnpj",
+  "inscricao_estadual",
+  "inscricao_municipal",
+  "cnae",
+  "situacao_cadastral",
+  "endereco",
+  "cidade",
+  "uf",
+  "cep",
+  "segmento",
+  "website",
+  "instagram",
+  "linkedin",
+  "facebook",
+  "nome_contato",
+  "cargo_contato",
+  "email_contato",
+  "telefone_contato",
+  "data_aniversario",
+  "atendimento",
+  "observacao",
 ] as const;
 
 const colunasFor = (tipo: Tipo) =>
   tipo === "cliente" ? ([...COLUNAS_BASE, "agencia_cnpj"] as const) : COLUNAS_BASE;
 
 type Col = (typeof COLUNAS_BASE)[number] | "agencia_cnpj";
-type ContatoExtra = { nome: string; cargo: string; email: string; telefone: string; aniversario: string };
+type ContatoExtra = {
+  nome: string;
+  cargo: string;
+  email: string;
+  telefone: string;
+  aniversario: string;
+};
 type Raw = Partial<Record<Col, string>> & { extra_contatos?: ContatoExtra[] };
 
 // Mapeia cabeçalhos da planilha (normalizados) para a coluna canônica.
 const HEADER_ALIASES: Record<string, Col> = {
-  "razao_social": "razao_social", "razao social": "razao_social", "razão social": "razao_social", "agencia": "razao_social", "agência": "razao_social", "cliente": "razao_social", "empresa": "razao_social",
-  "nome_fantasia": "nome_fantasia", "nome fantasia": "nome_fantasia", "fantasia": "nome_fantasia",
-  "cnpj": "cnpj",
-  "inscricao_estadual": "inscricao_estadual", "inscricao estadual": "inscricao_estadual", "inscrição estadual": "inscricao_estadual", "ie": "inscricao_estadual",
-  "inscricao_municipal": "inscricao_municipal", "inscricao municipal": "inscricao_municipal", "inscrição municipal": "inscricao_municipal", "im": "inscricao_municipal",
-  "cnae": "cnae", "cnae principal": "cnae", "atividade": "cnae",
-  "situacao_cadastral": "situacao_cadastral", "situacao cadastral": "situacao_cadastral", "situação cadastral": "situacao_cadastral", "situacao": "situacao_cadastral",
-  "endereco": "endereco", "endereço": "endereco", "endereco completo": "endereco", "endereço completo": "endereco", "logradouro": "endereco",
-  "cidade": "cidade", "municipio": "cidade", "município": "cidade",
-  "uf": "uf", "estado": "uf",
-  "cep": "cep",
-  "segmento": "segmento", "ramo": "segmento",
-  "website": "website", "site": "website", "url": "website",
-  "instagram": "instagram", "insta": "instagram",
-  "linkedin": "linkedin",
-  "facebook": "facebook", "face": "facebook",
-  "nome_contato": "nome_contato", "nome contato": "nome_contato", "nome completo": "nome_contato", "contato": "nome_contato", "nome": "nome_contato",
-  "cargo_contato": "cargo_contato", "cargo": "cargo_contato",
-  "email_contato": "email_contato", "email": "email_contato", "e-mail": "email_contato", "e mail": "email_contato",
-  "telefone_contato": "telefone_contato", "telefone": "telefone_contato", "telefone fixo / celular": "telefone_contato", "telefone fixo": "telefone_contato", "celular": "telefone_contato", "fone": "telefone_contato", "whatsapp": "telefone_contato",
-  "data_aniversario": "data_aniversario", "data aniversario": "data_aniversario", "data de aniversario": "data_aniversario", "data de aniversário": "data_aniversario", "aniversario": "data_aniversario", "aniversário": "data_aniversario", "aniv": "data_aniversario", "aniv.": "data_aniversario", "nascimento": "data_aniversario",
-  "atendimento": "atendimento", "executivo": "atendimento", "atendente": "atendimento",
-  "agencia_cnpj": "agencia_cnpj", "cnpj agencia": "agencia_cnpj", "cnpj agência": "agencia_cnpj", "cnpj da agencia": "agencia_cnpj",
-  "observacao": "observacao", "observação": "observacao", "obs": "observacao", "observacoes": "observacao", "observações": "observacao", "principais clientes": "observacao", "clientes": "observacao", "notas": "observacao",
+  razao_social: "razao_social",
+  "razao social": "razao_social",
+  "razão social": "razao_social",
+  agencia: "razao_social",
+  agência: "razao_social",
+  cliente: "razao_social",
+  empresa: "razao_social",
+  nome_fantasia: "nome_fantasia",
+  "nome fantasia": "nome_fantasia",
+  fantasia: "nome_fantasia",
+  cnpj: "cnpj",
+  inscricao_estadual: "inscricao_estadual",
+  "inscricao estadual": "inscricao_estadual",
+  "inscrição estadual": "inscricao_estadual",
+  ie: "inscricao_estadual",
+  inscricao_municipal: "inscricao_municipal",
+  "inscricao municipal": "inscricao_municipal",
+  "inscrição municipal": "inscricao_municipal",
+  im: "inscricao_municipal",
+  cnae: "cnae",
+  "cnae principal": "cnae",
+  atividade: "cnae",
+  situacao_cadastral: "situacao_cadastral",
+  "situacao cadastral": "situacao_cadastral",
+  "situação cadastral": "situacao_cadastral",
+  situacao: "situacao_cadastral",
+  endereco: "endereco",
+  endereço: "endereco",
+  "endereco completo": "endereco",
+  "endereço completo": "endereco",
+  logradouro: "endereco",
+  cidade: "cidade",
+  municipio: "cidade",
+  município: "cidade",
+  uf: "uf",
+  estado: "uf",
+  cep: "cep",
+  segmento: "segmento",
+  ramo: "segmento",
+  website: "website",
+  site: "website",
+  url: "website",
+  instagram: "instagram",
+  insta: "instagram",
+  linkedin: "linkedin",
+  facebook: "facebook",
+  face: "facebook",
+  nome_contato: "nome_contato",
+  "nome contato": "nome_contato",
+  "nome completo": "nome_contato",
+  contato: "nome_contato",
+  nome: "nome_contato",
+  cargo_contato: "cargo_contato",
+  cargo: "cargo_contato",
+  email_contato: "email_contato",
+  email: "email_contato",
+  "e-mail": "email_contato",
+  "e mail": "email_contato",
+  telefone_contato: "telefone_contato",
+  telefone: "telefone_contato",
+  "telefone fixo / celular": "telefone_contato",
+  "telefone fixo": "telefone_contato",
+  celular: "telefone_contato",
+  fone: "telefone_contato",
+  whatsapp: "telefone_contato",
+  data_aniversario: "data_aniversario",
+  "data aniversario": "data_aniversario",
+  "data de aniversario": "data_aniversario",
+  "data de aniversário": "data_aniversario",
+  aniversario: "data_aniversario",
+  aniversário: "data_aniversario",
+  aniv: "data_aniversario",
+  "aniv.": "data_aniversario",
+  nascimento: "data_aniversario",
+  atendimento: "atendimento",
+  executivo: "atendimento",
+  atendente: "atendimento",
+  agencia_cnpj: "agencia_cnpj",
+  "cnpj agencia": "agencia_cnpj",
+  "cnpj agência": "agencia_cnpj",
+  "cnpj da agencia": "agencia_cnpj",
+  observacao: "observacao",
+  observação: "observacao",
+  obs: "observacao",
+  observacoes: "observacao",
+  observações: "observacao",
+  "principais clientes": "observacao",
+  clientes: "observacao",
+  notas: "observacao",
 };
 
 const normalizeHeader = (s: unknown) =>
-  String(s ?? "").trim().toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[._-]+/g, " ").replace(/\s+/g, " ").trim();
+  String(s ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[._-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const cellValue = (ws: XLSX.WorkSheet, row: number, col: number) =>
   ws[XLSX.utils.encode_cell({ r: row, c: col })]?.v;
@@ -72,23 +193,30 @@ const isFilled = (v: unknown) => v !== null && v !== undefined && String(v).trim
 function parseDataAniv(input: unknown): string | null {
   if (input === null || input === undefined || input === "") return null;
   if (input instanceof Date && !isNaN(input.getTime())) {
-    return `${String(input.getDate()).padStart(2,"0")}/${String(input.getMonth()+1).padStart(2,"0")}`;
+    return `${String(input.getDate()).padStart(2, "0")}/${String(input.getMonth() + 1).padStart(2, "0")}`;
   }
   if (typeof input === "number") {
     const d = XLSX.SSF ? XLSX.SSF.parse_date_code(input) : null;
-    if (d) return `${String(d.d).padStart(2,"0")}/${String(d.m).padStart(2,"0")}`;
+    if (d) return `${String(d.d).padStart(2, "0")}/${String(d.m).padStart(2, "0")}`;
   }
   const s = String(input).trim();
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return `${m[3]}/${m[2]}`;
   m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-]\d{2,4}/);
-  if (m) return `${m[1].padStart(2,"0")}/${m[2].padStart(2,"0")}`;
+  if (m) return `${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}`;
   m = s.match(/^(\d{1,2})\/(\d{1,2})$/);
-  if (m) return `${m[1].padStart(2,"0")}/${m[2].padStart(2,"0")}`;
+  if (m) return `${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}`;
   return null;
 }
 
-type ContatoBanco = { nome?: string; cargo?: string; funcao?: string; email?: string; telefone?: string; aniversario?: string };
+type ContatoBanco = {
+  nome?: string;
+  cargo?: string;
+  funcao?: string;
+  email?: string;
+  telefone?: string;
+  aniversario?: string;
+};
 type Existing = {
   id: string;
   razao_social: string;
@@ -123,16 +251,34 @@ type Row = {
   fuzzy?: string[];
 };
 
-const normNome = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+const normNome = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 
 // Mescla payload novo (planilha) com registro existente: mantém o que já existe
 // e adiciona apenas campos vazios. Concatena contatos novos (por nome) sem duplicar.
 function mergeWithExisting(novo: ReturnType<typeof buildImportPayload>, atual: Existing) {
   const out: Record<string, unknown> = { ...novo };
   const camposPreservar: (keyof Existing)[] = [
-    "razao_social", "nome_fantasia", "endereco", "cidade", "uf", "cep", "observacao",
-    "inscricao_estadual", "inscricao_municipal", "cnae", "situacao_cadastral",
-    "website", "instagram", "linkedin", "facebook", "data_aniversario",
+    "razao_social",
+    "nome_fantasia",
+    "endereco",
+    "cidade",
+    "uf",
+    "cep",
+    "observacao",
+    "inscricao_estadual",
+    "inscricao_municipal",
+    "cnae",
+    "situacao_cadastral",
+    "website",
+    "instagram",
+    "linkedin",
+    "facebook",
+    "data_aniversario",
   ];
   for (const k of camposPreservar) {
     const atualVal = atual[k];
@@ -156,10 +302,24 @@ function mergeWithExisting(novo: ReturnType<typeof buildImportPayload>, atual: E
 
 function buildImportPayload(r: Raw, executivoId: string | null) {
   const principal = r.nome_contato
-    ? [{ nome: r.nome_contato, cargo: r.cargo_contato || "", funcao: "", email: r.email_contato || "", telefone: r.telefone_contato || "", aniversario: r.data_aniversario || "" }]
+    ? [
+        {
+          nome: r.nome_contato,
+          cargo: r.cargo_contato || "",
+          funcao: "",
+          email: r.email_contato || "",
+          telefone: r.telefone_contato || "",
+          aniversario: r.data_aniversario || "",
+        },
+      ]
     : [];
   const extras = (r.extra_contatos ?? []).map((c) => ({
-    nome: c.nome, cargo: c.cargo, funcao: "", email: c.email, telefone: c.telefone, aniversario: c.aniversario,
+    nome: c.nome,
+    cargo: c.cargo,
+    funcao: "",
+    email: c.email,
+    telefone: c.telefone,
+    aniversario: c.aniversario,
   }));
 
   return {
@@ -186,8 +346,14 @@ function buildImportPayload(r: Raw, executivoId: string | null) {
 }
 
 export function ImportarEntidadeDialog({
-  open, onOpenChange, tipo,
-}: { open: boolean; onOpenChange: (v: boolean) => void; tipo: Tipo }) {
+  open,
+  onOpenChange,
+  tipo,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  tipo: Tipo;
+}) {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -200,13 +366,15 @@ export function ImportarEntidadeDialog({
 
   const { data: existentes = [] } = useQuery({
     queryKey: [queryKey],
-    queryFn: () => (tipo === "cliente" ? listClientes() : listAgencias()) as unknown as Promise<Existing[]>,
+    queryFn: () =>
+      (tipo === "cliente" ? listClientes() : listAgencias()) as unknown as Promise<Existing[]>,
     enabled: open,
   });
 
   const { data: executivos = [] } = useQuery({
     queryKey: ["executivos-atendimento"],
-    queryFn: () => listExecutivos() as unknown as Promise<{ id: string; nome: string; email: string }[]>,
+    queryFn: () =>
+      listExecutivos() as unknown as Promise<{ id: string; nome: string; email: string }[]>,
     enabled: open,
   });
 
@@ -264,10 +432,7 @@ export function ImportarEntidadeDialog({
       observacao: "",
       agencia_cnpj: "",
     };
-    const ws = XLSX.utils.aoa_to_sheet([
-      [...colunas],
-      colunas.map((c) => exemplo[c] ?? ""),
-    ]);
+    const ws = XLSX.utils.aoa_to_sheet([[...colunas], colunas.map((c) => exemplo[c] ?? "")]);
     ws["!cols"] = colunas.map(() => ({ wch: 22 }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, tipo === "cliente" ? "Clientes" : "Agencias");
@@ -280,22 +445,46 @@ export function ImportarEntidadeDialog({
 
   // Cruza linha sem CNPJ contra todos os existentes. Retorna match e quais campos bateram.
   const findFuzzyMatch = (r: Raw): { match: Existing | null; campos: string[] } => {
-    const checks: { campo: string; val: string; getExist: (e: Existing & Record<string, unknown>) => string }[] = [
+    const checks: {
+      campo: string;
+      val: string;
+      getExist: (e: Existing & Record<string, unknown>) => string;
+    }[] = [
       { campo: "razao_social", val: norm(r.razao_social), getExist: (e) => norm(e.razao_social) },
-      { campo: "nome_fantasia", val: norm(r.nome_fantasia), getExist: (e) => norm(e.nome_fantasia) },
+      {
+        campo: "nome_fantasia",
+        val: norm(r.nome_fantasia),
+        getExist: (e) => norm(e.nome_fantasia),
+      },
       { campo: "endereco", val: norm(r.endereco), getExist: (e) => norm(e.endereco) },
-      { campo: "cep", val: onlyDigits(r.cep ?? ""), getExist: (e) => onlyDigits(String(e.cep ?? "")) },
-      { campo: "cidade+uf", val: norm((r.cidade ?? "") + (r.uf ?? "")), getExist: (e) => norm(String(e.cidade ?? "") + String(e.uf ?? "")) },
+      {
+        campo: "cep",
+        val: onlyDigits(r.cep ?? ""),
+        getExist: (e) => onlyDigits(String(e.cep ?? "")),
+      },
+      {
+        campo: "cidade+uf",
+        val: norm((r.cidade ?? "") + (r.uf ?? "")),
+        getExist: (e) => norm(String(e.cidade ?? "") + String(e.uf ?? "")),
+      },
       { campo: "website", val: norm(r.website), getExist: (e) => norm(e.website) },
       { campo: "instagram", val: norm(r.instagram), getExist: (e) => norm(e.instagram) },
-      { campo: "email_contato", val: norm(r.email_contato), getExist: (e) => {
+      {
+        campo: "email_contato",
+        val: norm(r.email_contato),
+        getExist: (e) => {
           const cts = Array.isArray(e.contatos) ? (e.contatos as ContatoBanco[]) : [];
           return cts.map((c) => norm(c?.email)).find((x) => x) ?? "";
-        } },
-      { campo: "telefone_contato", val: normTel(r.telefone_contato), getExist: (e) => {
+        },
+      },
+      {
+        campo: "telefone_contato",
+        val: normTel(r.telefone_contato),
+        getExist: (e) => {
           const cts = Array.isArray(e.contatos) ? (e.contatos as ContatoBanco[]) : [];
           return cts.map((c) => normTel(c?.telefone)).find((x) => x) ?? "";
-        } },
+        },
+      },
     ];
     let best: { match: Existing; campos: string[] } | null = null;
     for (const ex of existentes) {
@@ -319,7 +508,7 @@ export function ImportarEntidadeDialog({
     if (r.uf && r.uf.length !== 2) errors.push("UF deve ter 2 letras");
     const cnpjDigits = onlyDigits(r.cnpj || "");
     if (r.cnpj && cnpjDigits.length !== 14) errors.push("CNPJ inválido");
-    let existing = cnpjDigits ? mapaCnpj.get(cnpjDigits) ?? null : null;
+    let existing = cnpjDigits ? (mapaCnpj.get(cnpjDigits) ?? null) : null;
     let fuzzy: string[] | undefined;
     if (!existing && !cnpjDigits) {
       // 1) tenta match exato por razão social / nome fantasia normalizado
@@ -329,7 +518,10 @@ export function ImportarEntidadeDialog({
       // 2) fallback: cruzamento por múltiplos campos
       if (!existing) {
         const { match, campos } = findFuzzyMatch(r);
-        if (match) { existing = match; fuzzy = campos; }
+        if (match) {
+          existing = match;
+          fuzzy = campos;
+        }
       }
     }
     return { errors, existing, fuzzy };
@@ -342,16 +534,29 @@ export function ImportarEntidadeDialog({
     const ws = wb.Sheets[wb.SheetNames[0]];
     const usedCells = Object.keys(ws).filter((key) => key[0] !== "!" && isFilled(ws[key]?.v));
     const headerCells = usedCells
-      .map((key) => ({ key, pos: XLSX.utils.decode_cell(key), col: HEADER_ALIASES[normalizeHeader(ws[key]?.v)] ?? null }))
+      .map((key) => ({
+        key,
+        pos: XLSX.utils.decode_cell(key),
+        col: HEADER_ALIASES[normalizeHeader(ws[key]?.v)] ?? null,
+      }))
       .filter((cell) => cell.col);
 
-    if (!headerCells.length) { setRows([]); return; }
+    if (!headerCells.length) {
+      setRows([]);
+      return;
+    }
 
     const headerRowIndex = Math.min(...headerCells.map((cell) => cell.pos.r));
-    const lastColIndex = Math.max(...headerCells.filter((cell) => cell.pos.r === headerRowIndex).map((cell) => cell.pos.c));
-    const headerRow = Array.from({ length: lastColIndex + 1 }, (_, c) => cellValue(ws, headerRowIndex, c));
+    const lastColIndex = Math.max(
+      ...headerCells.filter((cell) => cell.pos.r === headerRowIndex).map((cell) => cell.pos.c),
+    );
+    const headerRow = Array.from({ length: lastColIndex + 1 }, (_, c) =>
+      cellValue(ws, headerRowIndex, c),
+    );
     const colMap: (Col | null)[] = headerRow.map((h) => HEADER_ALIASES[normalizeHeader(h)] ?? null);
-    const mappedCols = new Set(colMap.map((col, index) => (col ? index : -1)).filter((index) => index >= 0));
+    const mappedCols = new Set(
+      colMap.map((col, index) => (col ? index : -1)).filter((index) => index >= 0),
+    );
     const dataRows = usedCells
       .map((key) => XLSX.utils.decode_cell(key))
       .filter((pos) => pos.r > headerRowIndex && mappedCols.has(pos.c))
@@ -370,10 +575,16 @@ export function ImportarEntidadeDialog({
         if (!isFilled(val)) continue;
         if (col === "data_aniversario") {
           const p = parseDataAniv(val);
-          if (p) { r.data_aniversario = p; temAlgo = true; }
+          if (p) {
+            r.data_aniversario = p;
+            temAlgo = true;
+          }
         } else {
           const s = String(val).trim();
-          if (s) { r[col] = s; temAlgo = true; }
+          if (s) {
+            r[col] = s;
+            temAlgo = true;
+          }
         }
       }
       if (temAlgo) linhas.push(r);
@@ -428,7 +639,9 @@ export function ImportarEntidadeDialog({
         // contato principal vira extra se diferente
         if (r.nome_contato) {
           prev.extra_contatos = prev.extra_contatos || [];
-          const existeNome = (prev.extra_contatos.some((c) => normNome(c.nome) === normNome(r.nome_contato || ""))) || normNome(prev.nome_contato || "") === normNome(r.nome_contato || "");
+          const existeNome =
+            prev.extra_contatos.some((c) => normNome(c.nome) === normNome(r.nome_contato || "")) ||
+            normNome(prev.nome_contato || "") === normNome(r.nome_contato || "");
           if (!existeNome) {
             prev.extra_contatos.push({
               nome: r.nome_contato || "",
@@ -485,24 +698,37 @@ export function ImportarEntidadeDialog({
     }
     try {
       const d = await fetchCnpj(cnpj);
-      setRows((cur) => cur?.map((r, idx) => {
-        if (idx !== i) return r;
-        const merged: Raw = { ...r.raw };
-        const fill = (k: Col, v: string) => { if (!merged[k] && v) merged[k] = v; };
-        fill("razao_social", d.razaoSocial);
-        fill("nome_fantasia", d.nomeFantasia);
-        fill("cnpj", d.cnpj);
-        fill("inscricao_estadual", d.inscricaoEstadual);
-        fill("endereco", [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", "));
-        fill("cidade", d.cidade);
-        fill("uf", d.estado);
-        fill("cep", d.cep);
-        fill("email_contato", d.email);
-        fill("telefone_contato", d.telefone);
-        const v = validate(merged);
-        const action: Action = v.existing ? (v.fuzzy ? "skip" : "update") : "create";
-        return { ...r, raw: merged, errors: v.errors, existing: v.existing, fuzzy: v.fuzzy, action, buscando: false };
-      }) ?? null);
+      setRows(
+        (cur) =>
+          cur?.map((r, idx) => {
+            if (idx !== i) return r;
+            const merged: Raw = { ...r.raw };
+            const fill = (k: Col, v: string) => {
+              if (!merged[k] && v) merged[k] = v;
+            };
+            fill("razao_social", d.razaoSocial);
+            fill("nome_fantasia", d.nomeFantasia);
+            fill("cnpj", d.cnpj);
+            fill("inscricao_estadual", d.inscricaoEstadual);
+            fill("endereco", [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", "));
+            fill("cidade", d.cidade);
+            fill("uf", d.estado);
+            fill("cep", d.cep);
+            fill("email_contato", d.email);
+            fill("telefone_contato", d.telefone);
+            const v = validate(merged);
+            const action: Action = v.existing ? (v.fuzzy ? "skip" : "update") : "create";
+            return {
+              ...r,
+              raw: merged,
+              errors: v.errors,
+              existing: v.existing,
+              fuzzy: v.fuzzy,
+              action,
+              buscando: false,
+            };
+          }) ?? null,
+      );
       if (notify) toast.success("Dados do CNPJ carregados");
     } catch (e) {
       setRows((cur) => cur?.map((r, idx) => (idx === i ? { ...r, buscando: false } : r)) ?? null);
@@ -528,7 +754,8 @@ export function ImportarEntidadeDialog({
   const importar = async () => {
     if (!rows) return;
     setImporting(true);
-    let ok = 0, fail = 0;
+    let ok = 0,
+      fail = 0;
     if (tipo === "agencia") {
       const agencias = rows
         .filter((row) => row.errors.length === 0 && row.action !== "skip")
@@ -552,7 +779,9 @@ export function ImportarEntidadeDialog({
       qc.invalidateQueries({ queryKey: [queryKey] });
       toast.success(`${ok} importado(s)${fail ? `, ${fail} falha(s)` : ""}`);
       if (fail === 0) {
-        setRows(null); setFileName(""); onOpenChange(false);
+        setRows(null);
+        setFileName("");
+        onOpenChange(false);
       }
       return;
     }
@@ -561,9 +790,10 @@ export function ImportarEntidadeDialog({
       if (row.errors.length > 0 || row.action === "skip") continue;
       const id = row.action === "update" ? row.existing?.id : undefined;
       const baseRaw = buildPayload(row.raw);
-      const base = row.action === "update" && row.existing
-        ? mergeWithExisting(baseRaw, row.existing)
-        : baseRaw;
+      const base =
+        row.action === "update" && row.existing
+          ? mergeWithExisting(baseRaw, row.existing)
+          : baseRaw;
       try {
         if (tipo === "cliente") {
           const segmentoFinal =
@@ -586,19 +816,33 @@ export function ImportarEntidadeDialog({
     qc.invalidateQueries({ queryKey: [queryKey] });
     toast.success(`${ok} importado(s)${fail ? `, ${fail} falha(s)` : ""}`);
     if (fail === 0) {
-      setRows(null); setFileName(""); onOpenChange(false);
+      setRows(null);
+      setFileName("");
+      onOpenChange(false);
     }
   };
 
-  const reset = () => { setRows(null); setFileName(""); if (fileRef.current) fileRef.current.value = ""; };
+  const reset = () => {
+    setRows(null);
+    setFileName("");
+    if (fileRef.current) fileRef.current.value = "";
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Importar {titulo} de planilha</DialogTitle>
           <DialogDescription>
-            Baixe o modelo, preencha e suba o arquivo. Você revisa cada linha antes de importar. O CNPJ não é obrigatório — quando preenchido, clique em <strong>Buscar</strong> para puxar os dados da Receita.
+            Baixe o modelo, preencha e suba o arquivo. Você revisa cada linha antes de importar. O
+            CNPJ não é obrigatório — quando preenchido, clique em <strong>Buscar</strong> para puxar
+            os dados da Receita.
           </DialogDescription>
         </DialogHeader>
 
@@ -616,13 +860,21 @@ export function ImportarEntidadeDialog({
                 type="file"
                 accept=".xlsx,.xls,.csv"
                 className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) onFile(f);
+                }}
               />
             </div>
             <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-2">
-              <p className="font-medium flex items-center gap-2"><FileSpreadsheet className="size-4" />Colunas aceitas</p>
+              <p className="font-medium flex items-center gap-2">
+                <FileSpreadsheet className="size-4" />
+                Colunas aceitas
+              </p>
               <p className="text-muted-foreground text-xs leading-relaxed">{colunas.join(" · ")}</p>
-              <p className="text-xs text-muted-foreground">Obrigatório apenas: <strong>razao_social</strong>.</p>
+              <p className="text-xs text-muted-foreground">
+                Obrigatório apenas: <strong>razao_social</strong>.
+              </p>
             </div>
           </div>
         )}
@@ -636,7 +888,9 @@ export function ImportarEntidadeDialog({
               <Badge className="bg-amber-600">{stats.atualizar} atualizar</Badge>
               <Badge variant="secondary">{stats.pular} pular</Badge>
               {stats.erro > 0 && <Badge variant="destructive">{stats.erro} com erro</Badge>}
-              <Button variant="ghost" size="sm" className="ml-auto" onClick={reset}>Trocar arquivo</Button>
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={reset}>
+                Trocar arquivo
+              </Button>
             </div>
             <div className="rounded-md border">
               <Table>
@@ -652,11 +906,20 @@ export function ImportarEntidadeDialog({
                 </TableHeader>
                 <TableBody>
                   {rows.map((r, i) => (
-                    <TableRow key={i} className={r.errors.length ? "bg-destructive/5" : r.existing ? "bg-amber-500/5" : ""}>
+                    <TableRow
+                      key={i}
+                      className={
+                        r.errors.length ? "bg-destructive/5" : r.existing ? "bg-amber-500/5" : ""
+                      }
+                    >
                       <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
                       <TableCell>
-                        <div className="font-medium">{r.raw.razao_social || <span className="text-destructive">(vazio)</span>}</div>
-                        {r.raw.nome_fantasia && <div className="text-xs text-muted-foreground">{r.raw.nome_fantasia}</div>}
+                        <div className="font-medium">
+                          {r.raw.razao_social || <span className="text-destructive">(vazio)</span>}
+                        </div>
+                        {r.raw.nome_fantasia && (
+                          <div className="text-xs text-muted-foreground">{r.raw.nome_fantasia}</div>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs">
                         <div className="flex items-center gap-1">
@@ -670,12 +933,18 @@ export function ImportarEntidadeDialog({
                               disabled={r.buscando}
                               title="Buscar dados na Receita"
                             >
-                              {r.buscando ? <Loader2 className="size-3 animate-spin" /> : <Search className="size-3" />}
+                              {r.buscando ? (
+                                <Loader2 className="size-3 animate-spin" />
+                              ) : (
+                                <Search className="size-3" />
+                              )}
                             </Button>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs">{[r.raw.cidade, r.raw.uf].filter(Boolean).join("/") || "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        {[r.raw.cidade, r.raw.uf].filter(Boolean).join("/") || "—"}
+                      </TableCell>
                       <TableCell>
                         {r.errors.length > 0 && (
                           <div className="text-xs text-destructive flex items-start gap-1">
@@ -685,7 +954,8 @@ export function ImportarEntidadeDialog({
                         )}
                         {r.errors.length === 0 && r.existing && !r.fuzzy && (
                           <div className="text-xs text-amber-700 dark:text-amber-400">
-                            CNPJ já existe: <strong>{r.existing.nome_fantasia || r.existing.razao_social}</strong>
+                            CNPJ já existe:{" "}
+                            <strong>{r.existing.nome_fantasia || r.existing.razao_social}</strong>
                           </div>
                         )}
                         {r.errors.length === 0 && r.existing && r.fuzzy && (
@@ -693,7 +963,11 @@ export function ImportarEntidadeDialog({
                             <div className="flex items-start gap-1">
                               <AlertTriangle className="size-3 mt-0.5 shrink-0" />
                               <span>
-                                Possível duplicata de <strong>{r.existing.nome_fantasia || r.existing.razao_social}</strong> — {r.fuzzy.length} campo(s) iguais: {r.fuzzy.join(", ")}
+                                Possível duplicata de{" "}
+                                <strong>
+                                  {r.existing.nome_fantasia || r.existing.razao_social}
+                                </strong>{" "}
+                                — {r.fuzzy.length} campo(s) iguais: {r.fuzzy.join(", ")}
                               </span>
                             </div>
                           </div>
@@ -705,11 +979,19 @@ export function ImportarEntidadeDialog({
                         )}
                       </TableCell>
                       <TableCell>
-                        <Select value={r.action} onValueChange={(v) => setAction(i, v as Action)} disabled={r.errors.length > 0}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <Select
+                          value={r.action}
+                          onValueChange={(v) => setAction(i, v as Action)}
+                          disabled={r.errors.length > 0}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent>
                             {!r.existing && <SelectItem value="create">Criar novo</SelectItem>}
-                            {r.existing && <SelectItem value="update">Atualizar existente</SelectItem>}
+                            {r.existing && (
+                              <SelectItem value="update">Atualizar existente</SelectItem>
+                            )}
                             {r.existing && <SelectItem value="create">Criar como novo</SelectItem>}
                             <SelectItem value="skip">Pular linha</SelectItem>
                           </SelectContent>
@@ -724,7 +1006,9 @@ export function ImportarEntidadeDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>
+            Cancelar
+          </Button>
           {rows && (
             <Button onClick={importar} disabled={importing || stats.criar + stats.atualizar === 0}>
               {importing && <Loader2 className="size-4 mr-2 animate-spin" />}

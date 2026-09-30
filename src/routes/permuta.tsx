@@ -3,13 +3,31 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, Eye, ArrowUpDown, RefreshCw, WalletCards } from "lucide-react";
-import { listPermutaSaldos, getPermutaDetalhes, createPermutaRecebimento, deletePermutaRecebimento } from "@/lib/permuta.functions";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  listPermutaSaldos,
+  getPermutaDetalhes,
+  createPermutaRecebimento,
+  deletePermutaRecebimento,
+} from "@/lib/permuta.functions";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -27,9 +45,15 @@ function formatBRL(v: number) {
 function PermutaPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
-  const [selectedEntidade, setSelectedEntidade] = useState<{ id: string; nome: string } | null>(null);
+  const [selectedEntidade, setSelectedEntidade] = useState<{ id: string; nome: string } | null>(
+    null,
+  );
   const [addOpen, setAddOpen] = useState(false);
-  const [form, setForm] = useState({ descricao: "", valor: "", data: new Date().toISOString().split("T")[0] });
+  const [form, setForm] = useState({
+    descricao: "",
+    valor: "",
+    data: new Date().toISOString().split("T")[0],
+  });
 
   const { data: saldos = [], isLoading } = useQuery({
     queryKey: ["permuta-saldos"],
@@ -64,7 +88,7 @@ function PermutaPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const filteredSaldos = saldos.filter(s => {
+  const filteredSaldos = saldos.filter((s) => {
     const temPermuta = Number(s.total_pi ?? 0) > 0 || Number(s.total_recebido ?? 0) > 0;
     if (!temPermuta) return false;
     return s.razao_social?.toLowerCase().includes(search.toLowerCase());
@@ -75,7 +99,9 @@ function PermutaPage() {
       <div className="mb-6">
         <div className="flex items-center gap-2">
           <WalletCards className="size-6" />
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">Controle de Permuta</h1>
+          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+            Controle de Permuta
+          </h1>
         </div>
         <p className="text-muted-foreground text-sm mt-1">
           Acompanhe o saldo entre PIs de permuta e produtos/serviços recebidos.
@@ -88,9 +114,9 @@ function PermutaPage() {
           <CardHeader>
             <CardTitle className="text-base">Saldos por Cliente/Agência</CardTitle>
             <div className="pt-2">
-              <Input 
-                placeholder="Filtrar entidade…" 
-                value={search} 
+              <Input
+                placeholder="Filtrar entidade…"
+                value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-8"
               />
@@ -107,27 +133,55 @@ function PermutaPage() {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={2} className="text-center py-4">Carregando…</TableCell></TableRow>
-                  ) : filteredSaldos.length === 0 ? (
-                    <TableRow><TableCell colSpan={2} className="text-center py-4">Nenhum saldo.</TableCell></TableRow>
-                    ) : filteredSaldos.map((s) => (
-                    <TableRow 
-                      key={s.entidade_id} 
-                      className={cn(
-                        "cursor-pointer hover:bg-muted/50 transition-colors",
-                        selectedEntidade?.id === s.entidade_id && "bg-muted"
-                      )}
-                      onClick={() => setSelectedEntidade({ id: s.entidade_id, nome: s.razao_social || "Entidade sem nome" })}
-                    >
-                      <TableCell>
-                        <div className="font-medium text-xs truncate max-w-[150px]">{s.razao_social}</div>
-                        <div className="text-[10px] text-muted-foreground uppercase">{s.tipo}</div>
-                      </TableCell>
-                      <TableCell className={cn("text-right font-semibold text-xs", (s.saldo ?? 0) > 0 ? "text-destructive" : (s.saldo ?? 0) < 0 ? "text-success" : "")}>
-                        {formatBRL(s.saldo ?? 0)}
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center py-4">
+                        Carregando…
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : filteredSaldos.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center py-4">
+                        Nenhum saldo.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredSaldos.map((s) => (
+                      <TableRow
+                        key={s.entidade_id}
+                        className={cn(
+                          "cursor-pointer hover:bg-muted/50 transition-colors",
+                          selectedEntidade?.id === s.entidade_id && "bg-muted",
+                        )}
+                        onClick={() =>
+                          setSelectedEntidade({
+                            id: s.entidade_id,
+                            nome: s.razao_social || "Entidade sem nome",
+                          })
+                        }
+                      >
+                        <TableCell>
+                          <div className="font-medium text-xs truncate max-w-[150px]">
+                            {s.razao_social}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground uppercase">
+                            {s.tipo}
+                          </div>
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-right font-semibold text-xs",
+                            (s.saldo ?? 0) > 0
+                              ? "text-destructive"
+                              : (s.saldo ?? 0) < 0
+                                ? "text-success"
+                                : "",
+                          )}
+                        >
+                          {formatBRL(s.saldo ?? 0)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -140,7 +194,9 @@ function PermutaPage() {
             <Card className="h-full flex items-center justify-center border-dashed">
               <div className="text-center p-10">
                 <WalletCards className="size-10 mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-muted-foreground">Selecione um cliente ou agência para ver o extrato.</p>
+                <p className="text-muted-foreground">
+                  Selecione um cliente ou agência para ver o extrato.
+                </p>
               </div>
             </Card>
           ) : (
@@ -159,21 +215,42 @@ function PermutaPage() {
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="p-3 bg-muted/30 rounded-lg">
-                      <div className="text-[10px] text-muted-foreground uppercase font-bold">Total em PIs</div>
+                      <div className="text-[10px] text-muted-foreground uppercase font-bold">
+                        Total em PIs
+                      </div>
                       <div className="text-lg font-display font-semibold">
-                        {formatBRL(saldos.find(s => s.entidade_id === selectedEntidade.id)?.total_pi || 0)}
+                        {formatBRL(
+                          saldos.find((s) => s.entidade_id === selectedEntidade.id)?.total_pi || 0,
+                        )}
                       </div>
                     </div>
                     <div className="p-3 bg-muted/30 rounded-lg">
-                      <div className="text-[10px] text-muted-foreground uppercase font-bold">Total Recebido</div>
+                      <div className="text-[10px] text-muted-foreground uppercase font-bold">
+                        Total Recebido
+                      </div>
                       <div className="text-lg font-display font-semibold text-success">
-                        {formatBRL(saldos.find(s => s.entidade_id === selectedEntidade.id)?.total_recebido || 0)}
+                        {formatBRL(
+                          saldos.find((s) => s.entidade_id === selectedEntidade.id)
+                            ?.total_recebido || 0,
+                        )}
                       </div>
                     </div>
                     <div className="p-3 bg-muted/30 rounded-lg">
-                      <div className="text-[10px] text-muted-foreground uppercase font-bold">Saldo Devedor</div>
-                      <div className={cn("text-lg font-display font-semibold", (saldos.find(s => s.entidade_id === selectedEntidade.id)?.saldo || 0) > 0 ? "text-destructive" : "")}>
-                        {formatBRL(saldos.find(s => s.entidade_id === selectedEntidade.id)?.saldo || 0)}
+                      <div className="text-[10px] text-muted-foreground uppercase font-bold">
+                        Saldo Devedor
+                      </div>
+                      <div
+                        className={cn(
+                          "text-lg font-display font-semibold",
+                          (saldos.find((s) => s.entidade_id === selectedEntidade.id)?.saldo || 0) >
+                            0
+                            ? "text-destructive"
+                            : "",
+                        )}
+                      >
+                        {formatBRL(
+                          saldos.find((s) => s.entidade_id === selectedEntidade.id)?.saldo || 0,
+                        )}
                       </div>
                     </div>
                   </div>
@@ -183,7 +260,9 @@ function PermutaPage() {
               {/* Tabelas de Detalhes */}
               <div className="grid gap-6">
                 <Card>
-                  <CardHeader><CardTitle className="text-sm">PIs de Permuta</CardTitle></CardHeader>
+                  <CardHeader>
+                    <CardTitle className="text-sm">PIs de Permuta</CardTitle>
+                  </CardHeader>
                   <CardContent className="p-0">
                     <Table>
                       <TableHeader>
@@ -196,24 +275,40 @@ function PermutaPage() {
                       </TableHeader>
                       <TableBody>
                         {loadingDetalhes ? (
-                          <TableRow><TableCell colSpan={4} className="text-center py-4">Carregando…</TableCell></TableRow>
-                        ) : detalhes?.pis.length === 0 ? (
-                          <TableRow><TableCell colSpan={4} className="text-center py-4">Nenhum PI encontrado.</TableCell></TableRow>
-                        ) : detalhes?.pis.map(pi => (
-                          <TableRow key={pi.id}>
-                            <TableCell className="font-mono text-xs">{pi.numero}</TableCell>
-                            <TableCell className="text-xs">{pi.campanha}</TableCell>
-                            <TableCell className="text-xs">{new Date(pi.created_at).toLocaleDateString("pt-BR")}</TableCell>
-                            <TableCell className="text-right text-xs font-medium">{formatBRL(pi.valor_negociado)}</TableCell>
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-4">
+                              Carregando…
+                            </TableCell>
                           </TableRow>
-                        ))}
+                        ) : detalhes?.pis.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-4">
+                              Nenhum PI encontrado.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          detalhes?.pis.map((pi) => (
+                            <TableRow key={pi.id}>
+                              <TableCell className="font-mono text-xs">{pi.numero}</TableCell>
+                              <TableCell className="text-xs">{pi.campanha}</TableCell>
+                              <TableCell className="text-xs">
+                                {new Date(pi.created_at).toLocaleDateString("pt-BR")}
+                              </TableCell>
+                              <TableCell className="text-right text-xs font-medium">
+                                {formatBRL(pi.valor_negociado)}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </CardContent>
                 </Card>
 
                 <Card>
-                  <CardHeader><CardTitle className="text-sm">Recebimentos Registrados</CardTitle></CardHeader>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Recebimentos Registrados</CardTitle>
+                  </CardHeader>
                   <CardContent className="p-0">
                     <Table>
                       <TableHeader>
@@ -226,26 +321,42 @@ function PermutaPage() {
                       </TableHeader>
                       <TableBody>
                         {loadingDetalhes ? (
-                          <TableRow><TableCell colSpan={4} className="text-center py-4">Carregando…</TableCell></TableRow>
-                        ) : detalhes?.recebimentos.length === 0 ? (
-                          <TableRow><TableCell colSpan={4} className="text-center py-4">Nenhum recebimento registrado.</TableCell></TableRow>
-                        ) : detalhes?.recebimentos.map(rec => (
-                          <TableRow key={rec.id}>
-                            <TableCell className="text-xs">{new Date(rec.data_recebimento).toLocaleDateString("pt-BR")}</TableCell>
-                            <TableCell className="text-xs">{rec.descricao}</TableCell>
-                            <TableCell className="text-right text-xs font-medium text-success">{formatBRL(rec.valor)}</TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className="size-7"
-                                onClick={() => { if(confirm("Remover este recebimento?")) delMut.mutate(rec.id); }}
-                              >
-                                <Trash2 className="size-3 text-destructive" />
-                              </Button>
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-4">
+                              Carregando…
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : detalhes?.recebimentos.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-4">
+                              Nenhum recebimento registrado.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          detalhes?.recebimentos.map((rec) => (
+                            <TableRow key={rec.id}>
+                              <TableCell className="text-xs">
+                                {new Date(rec.data_recebimento).toLocaleDateString("pt-BR")}
+                              </TableCell>
+                              <TableCell className="text-xs">{rec.descricao}</TableCell>
+                              <TableCell className="text-right text-xs font-medium text-success">
+                                {formatBRL(rec.valor)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="size-7"
+                                  onClick={() => {
+                                    if (confirm("Remover este recebimento?")) delMut.mutate(rec.id);
+                                  }}
+                                >
+                                  <Trash2 className="size-3 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </CardContent>
@@ -259,45 +370,49 @@ function PermutaPage() {
       {/* Dialog para Novo Recebimento */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Registrar Recebimento de Permuta</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Registrar Recebimento de Permuta</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Descrição do produto/serviço</Label>
-              <Textarea 
-                placeholder="Ex: 10 diárias de hotel, 50 almoços executivos..." 
+              <Textarea
+                placeholder="Ex: 10 diárias de hotel, 50 almoços executivos..."
                 value={form.descricao}
-                onChange={(e) => setForm({...form, descricao: e.target.value})}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Valor estimado</Label>
-                <Input 
-                  type="number" 
-                  step="0.01" 
+                <Input
+                  type="number"
+                  step="0.01"
                   value={form.valor}
-                  onChange={(e) => setForm({...form, valor: e.target.value})}
+                  onChange={(e) => setForm({ ...form, valor: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Data do recebimento</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={form.data}
-                  onChange={(e) => setForm({...form, data: e.target.value})}
+                  onChange={(e) => setForm({ ...form, data: e.target.value })}
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancelar</Button>
-            <Button 
+            <Button variant="outline" onClick={() => setAddOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
               disabled={createMut.isPending || !form.descricao || !form.valor}
               onClick={() => {
-                const s = saldos.find(x => x.entidade_id === selectedEntidade?.id);
+                const s = saldos.find((x) => x.entidade_id === selectedEntidade?.id);
                 createMut.mutate({
-                  cliente_id: s?.tipo === 'cliente' ? s.entidade_id : null,
-                  agencia_id: s?.tipo === 'agencia' ? s.entidade_id : null,
+                  cliente_id: s?.tipo === "cliente" ? s.entidade_id : null,
+                  agencia_id: s?.tipo === "agencia" ? s.entidade_id : null,
                   descricao: form.descricao,
                   valor: Number(form.valor),
                   data_recebimento: form.data,

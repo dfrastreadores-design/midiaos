@@ -24,7 +24,9 @@ export function useTenantBranding() {
     getLogoSignedUrl(data.logo_url).then((url) => {
       if (!cancelled) setLogoSrc(url);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [data?.logo_url]);
 
   // Marca o modo "teste" para que PDFs gerados recebam a tarja de documento sem valor.
@@ -61,8 +63,6 @@ export function useTenantBranding() {
     }
   }, [logoSrc]);
 
-
-
   const produtoMarca = (data?.produto_marca || "midiaos") as "midiaos" | "connect";
   const produtoNome = produtoMarca === "connect" ? "MidiaOS Connect" : "Mídia.OS";
 
@@ -74,4 +74,3 @@ export function useTenantBranding() {
     isConnect: produtoMarca === "connect",
   };
 }
-

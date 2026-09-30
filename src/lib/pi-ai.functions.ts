@@ -42,7 +42,6 @@ export type PiExtraido = {
   }>;
 };
 
-
 export const extrairPiDePdf = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => InputSchema.parse(d))
@@ -105,7 +104,6 @@ TEXTO DO PI:
 ${data.texto}
 """`;
 
-
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -122,8 +120,10 @@ ${data.texto}
       }),
     });
 
-    if (res.status === 429) throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
-    if (res.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos em Configurações.");
+    if (res.status === 429)
+      throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
+    if (res.status === 402)
+      throw new Error("Créditos de IA esgotados. Adicione créditos em Configurações.");
     if (!res.ok) throw new Error(`Falha na IA: ${res.status} ${await res.text()}`);
 
     const json = await res.json();

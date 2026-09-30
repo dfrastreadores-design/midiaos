@@ -30,7 +30,10 @@ export function applyTrialWatermark(doc: jsPDF) {
 
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
-    const anyDoc = doc as unknown as { GState?: new (o: { opacity: number }) => unknown; setGState?: (g: unknown) => void };
+    const anyDoc = doc as unknown as {
+      GState?: new (o: { opacity: number }) => unknown;
+      setGState?: (g: unknown) => void;
+    };
     const gState = anyDoc.GState ? new anyDoc.GState({ opacity: 0.18 }) : null;
     if (gState && anyDoc.setGState) anyDoc.setGState(gState);
 

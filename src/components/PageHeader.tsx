@@ -48,14 +48,16 @@ interface PageSectionProps {
   contentClassName?: string;
 }
 
-export function PageSection({ title, description, actions, children, className, contentClassName }: PageSectionProps) {
+export function PageSection({
+  title,
+  description,
+  actions,
+  children,
+  className,
+  contentClassName,
+}: PageSectionProps) {
   return (
-    <section
-      className={cn(
-        "rounded-2xl border border-border/50 bg-card shadow-sm",
-        className,
-      )}
-    >
+    <section className={cn("rounded-2xl border border-border/50 bg-card shadow-sm", className)}>
       {(title || actions) && (
         <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6 py-4 border-b border-border/50">
           <div className="min-w-0">
@@ -64,9 +66,13 @@ export function PageSection({ title, description, actions, children, className, 
                 {title}
               </h2>
             )}
-            {description && <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{description}</p>}
+            {description && (
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{description}</p>
+            )}
           </div>
-          {actions && <div className="flex flex-wrap items-center gap-2 justify-end">{actions}</div>}
+          {actions && (
+            <div className="flex flex-wrap items-center gap-2 justify-end">{actions}</div>
+          )}
         </header>
       )}
       <div className={cn("p-4 sm:p-6", contentClassName)}>{children}</div>

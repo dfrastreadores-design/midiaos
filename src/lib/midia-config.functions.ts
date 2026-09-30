@@ -25,10 +25,7 @@ const ConfigSchema = z.object({
 export const listMidiaConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("midia_config")
-      .select("*")
-      .order("midia");
+    const { data, error } = await context.supabase.from("midia_config").select("*").order("midia");
     if (error) throw new Error(error.message);
     return data ?? [];
   });

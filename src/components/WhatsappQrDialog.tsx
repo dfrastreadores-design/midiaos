@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -41,7 +47,10 @@ function formatBrPhone(sanitized: string): string {
   if (sanitized.startsWith("55") && (sanitized.length === 12 || sanitized.length === 13)) {
     const ddd = sanitized.slice(2, 4);
     const rest = sanitized.slice(4);
-    const mid = rest.length === 9 ? `${rest.slice(0, 5)}-${rest.slice(5)}` : `${rest.slice(0, 4)}-${rest.slice(4)}`;
+    const mid =
+      rest.length === 9
+        ? `${rest.slice(0, 5)}-${rest.slice(5)}`
+        : `${rest.slice(0, 4)}-${rest.slice(4)}`;
     return `+55 (${ddd}) ${mid}`;
   }
   return `+${sanitized}`;
@@ -218,7 +227,13 @@ export function WhatsappQrDialog({
             {restoredFromStorage && (
               <div className="flex items-center justify-between gap-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                 <span>Restauramos o último envio para agilizar o reenvio.</span>
-                <Button type="button" size="sm" variant="ghost" className="h-6 px-2" onClick={clearRestored}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2"
+                  onClick={clearRestored}
+                >
                   Limpar
                 </Button>
               </div>
@@ -240,7 +255,12 @@ export function WhatsappQrDialog({
                   onBlur={() => phoneDraft && addPhone(phoneDraft)}
                   placeholder="Digite e pressione Enter (aceita vários separados por vírgula)"
                 />
-                <Button type="button" variant="outline" onClick={() => addPhone(phoneDraft)} disabled={!phoneDraft.trim()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => addPhone(phoneDraft)}
+                  disabled={!phoneDraft.trim()}
+                >
                   Adicionar
                 </Button>
               </div>
@@ -272,7 +292,8 @@ export function WhatsappQrDialog({
                   <>
                     <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
                     <span className="text-destructive">
-                      {invalidCount} telefone(s) inválido(s). Corrija removendo e adicionando novamente.
+                      {invalidCount} telefone(s) inválido(s). Corrija removendo e adicionando
+                      novamente.
                     </span>
                   </>
                 ) : phoneRows.length > 0 ? (
@@ -321,7 +342,11 @@ export function WhatsappQrDialog({
                     aria-keyshortcuts="Control+Shift+C Meta+Shift+C"
                     title="Copiar (Ctrl/⌘ + Shift + C)"
                   >
-                    {copied ? <Check className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5 mr-1" aria-hidden="true" />}
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+                    )}
                     {copied ? "Copiado" : "Copiar"}
                   </Button>
                 </div>
@@ -381,11 +406,16 @@ export function WhatsappQrDialog({
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <img src={active.qr} alt="QR Code WhatsApp" className="h-[320px] w-[320px] rounded-md border" />
+              <img
+                src={active.qr}
+                alt="QR Code WhatsApp"
+                className="h-[320px] w-[320px] rounded-md border"
+              />
             )}
 
             <div className="text-xs text-muted-foreground text-center">
-              {active?.clean ? formatBrPhone(active.clean) : "Link genérico"} · {cleanedMessage.length} caracteres
+              {active?.clean ? formatBrPhone(active.clean) : "Link genérico"} ·{" "}
+              {cleanedMessage.length} caracteres
             </div>
 
             <div className="flex gap-2 w-full flex-wrap">
@@ -397,7 +427,10 @@ export function WhatsappQrDialog({
                   <Download className="h-4 w-4 mr-2" /> Baixar
                 </a>
               </Button>
-              <Button className="flex-1" onClick={() => active && openWhatsapp(active.clean, cleanedMessage)}>
+              <Button
+                className="flex-1"
+                onClick={() => active && openWhatsapp(active.clean, cleanedMessage)}
+              >
                 <ExternalLink className="h-4 w-4 mr-2" /> Abrir
               </Button>
             </div>

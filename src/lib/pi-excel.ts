@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 
-const MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
+const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
 type Item = {
   tipo: string;
@@ -17,7 +17,11 @@ type Item = {
   valor_tabela: number;
   valor_negociado: number;
 };
-type Entidade = { razao_social?: string | null; nome_fantasia?: string | null; cnpj?: string | null } | null;
+type Entidade = {
+  razao_social?: string | null;
+  nome_fantasia?: string | null;
+  cnpj?: string | null;
+} | null;
 type Pi = {
   numero: string;
   campanha: string;
@@ -53,8 +57,14 @@ export function exportarPiExcel(pi: Pi) {
     ["Agência", ag],
     ["CNPJ Agência", pi.agencia?.cnpj || ""],
     ["Veiculação", `${MESES[pi.mes_veiculacao - 1]}/${pi.ano_veiculacao}`],
-    ["Período", pi.periodo_inicio && pi.periodo_fim ? `${pi.periodo_inicio} a ${pi.periodo_fim}` : ""],
-    ["Faturamento", `${pi.faturamento_tipo ?? "bruto"} contra ${pi.faturamento_contra ?? "cliente"}`],
+    [
+      "Período",
+      pi.periodo_inicio && pi.periodo_fim ? `${pi.periodo_inicio} a ${pi.periodo_fim}` : "",
+    ],
+    [
+      "Faturamento",
+      `${pi.faturamento_tipo ?? "bruto"} contra ${pi.faturamento_contra ?? "cliente"}`,
+    ],
     ["Total inserções", pi.total_insercoes],
     ["Valor tabela", pi.valor_tabela],
     ["Valor desconto", pi.valor_desconto],
@@ -67,9 +77,18 @@ export function exportarPiExcel(pi: Pi) {
 
   // Aba 2 — Itens
   const header = [
-    "Tipo", "Programa", "Formato", "Mês/Ano", "Inserções/dia",
-    "Dias da semana", "Dias do mês", "Total inserções",
-    "Valor unit.", "Desconto %", "Valor tabela", "Valor negociado",
+    "Tipo",
+    "Programa",
+    "Formato",
+    "Mês/Ano",
+    "Inserções/dia",
+    "Dias da semana",
+    "Dias do mês",
+    "Total inserções",
+    "Valor unit.",
+    "Desconto %",
+    "Valor tabela",
+    "Valor negociado",
   ];
   const rows = (pi.itens ?? []).map((it) => [
     it.tipo,
@@ -87,9 +106,17 @@ export function exportarPiExcel(pi: Pi) {
   ]);
   const ws2 = XLSX.utils.aoa_to_sheet([header, ...rows]);
   ws2["!cols"] = [
-    { wch: 8 }, { wch: 24 }, { wch: 14 }, { wch: 10 },
-    { wch: 24 }, { wch: 30 }, { wch: 12 },
-    { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
+    { wch: 8 },
+    { wch: 24 },
+    { wch: 14 },
+    { wch: 10 },
+    { wch: 24 },
+    { wch: 30 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 10 },
+    { wch: 14 },
+    { wch: 16 },
   ];
   XLSX.utils.book_append_sheet(wb, ws2, "Itens");
 
@@ -107,7 +134,9 @@ export function exportarPiExcel(pi: Pi) {
   }
   if (grupos.size === 0) {
     grupos.set(`${pi.ano_veiculacao}-${pi.mes_veiculacao}`, {
-      ano: pi.ano_veiculacao, mes: pi.mes_veiculacao, itens: [],
+      ano: pi.ano_veiculacao,
+      mes: pi.mes_veiculacao,
+      itens: [],
     });
   }
 

@@ -4,8 +4,18 @@ import { Label } from "@/components/ui/label";
 import type { CalcItemOut } from "@/components/PriceCalculator";
 
 const MESES = [
-  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
-  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 
 const fmtBRL = (v: number) =>
@@ -26,7 +36,13 @@ type Props = {
   onChange: (v: Record<string, string>) => void;
 };
 
-export function InvestimentoMensalSection({ items, defaultMes, defaultAno, values, onChange }: Props) {
+export function InvestimentoMensalSection({
+  items,
+  defaultMes,
+  defaultAno,
+  values,
+  onChange,
+}: Props) {
   const months = useMemo(() => {
     const map = new Map<string, { key: string; mes: number; ano: number; auto: number }>();
     for (const it of items || []) {
@@ -47,9 +63,12 @@ export function InvestimentoMensalSection({ items, defaultMes, defaultAno, value
   return (
     <div className="mt-4 rounded-lg border bg-muted/30 p-3 space-y-2">
       <div>
-        <Label className="text-sm font-semibold">Investimento mensal do cliente (rodapé do mapa)</Label>
+        <Label className="text-sm font-semibold">
+          Investimento mensal do cliente (rodapé do mapa)
+        </Label>
         <p className="text-xs text-muted-foreground">
-          Contrato cobre {months.length} meses. Preencha para sobrescrever manualmente ou deixe em branco para usar a soma automática da entrega de cada mês.
+          Contrato cobre {months.length} meses. Preencha para sobrescrever manualmente ou deixe em
+          branco para usar a soma automática da entrega de cada mês.
         </p>
       </div>
       <div className="grid sm:grid-cols-2 gap-2">
@@ -77,7 +96,9 @@ export function InvestimentoMensalSection({ items, defaultMes, defaultAno, value
   );
 }
 
-export function serializeInvestimentosMensais(values: Record<string, string>): Record<string, number> {
+export function serializeInvestimentosMensais(
+  values: Record<string, string>,
+): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [k, v] of Object.entries(values || {})) {
     const n = parseBRL(v);

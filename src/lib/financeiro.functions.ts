@@ -19,6 +19,7 @@ export const CATEGORIAS_SAIDA = [
   "Comissões de Executivos",
   "Repasses a Parceiros de Mídia",
   "Folha de Pagamento / Pró-labore",
+  "Benefícios e Alimentação",
   "Impostos e Tributos (DAS/ISS)",
   "Operação e Veiculação",
   "Aluguel e Condomínio",
@@ -26,8 +27,11 @@ export const CATEGORIAS_SAIDA = [
   "Sistemas e Licenças de Software",
   "Marketing e Vendas",
   "Manutenção e Infraestrutura",
+  "Veículos e Logística",
+  "Material de Escritório / Administrativo",
+  "Serviços Prestados por Terceiros",
   "Tarifas Bancárias e Juros",
-  "Outras Despesas",
+  "Outras Despesas Operacionais",
 ] as const;
 
 export const FORMAS_PAGAMENTO = [
@@ -96,12 +100,14 @@ export const listTransacoesFinanceiras = createServerFn({ method: "GET" })
     try {
       let query = context.supabase
         .from("financeiro_transacoes")
-        .select(`
+        .select(
+          `
           *,
           cliente:cliente_id (razao_social, nome_fantasia),
           parceiro:parceiro_id (razao_social, nome_fantasia),
           pi:pi_id (numero, campanha)
-        `)
+        `,
+        )
         .order("data_vencimento", { ascending: false });
 
       if (tenantId) {
@@ -139,7 +145,12 @@ export const upsertTransacaoFinanceira = createServerFn({ method: "POST" })
     };
 
     let q = data.id
-      ? context.supabase.from("financeiro_transacoes").update(payload).eq("id", data.id).select().single()
+      ? context.supabase
+          .from("financeiro_transacoes")
+          .update(payload)
+          .eq("id", data.id)
+          .select()
+          .single()
       : context.supabase.from("financeiro_transacoes").insert(payload).select().single();
 
     const { data: row, error } = await q;
@@ -183,7 +194,9 @@ export const getDicasFinanceiras = createServerFn({ method: "GET" })
     if (tenantId) qTrans = qTrans.eq("tenant_id", tenantId);
     const { data: transacoes = [] } = await qTrans;
 
-    let qPis = context.supabase.from("pi_financeiro").select("*, pi:pi_id(numero, valor_negociado)");
+    let qPis = context.supabase
+      .from("pi_financeiro")
+      .select("*, pi:pi_id(numero, valor_negociado)");
     const { data: piFin = [] } = await qPis;
 
     const items = transacoes || [];
@@ -212,7 +225,8 @@ export const getDicasFinanceiras = createServerFn({ method: "GET" })
     );
 
     const pisVencidos = (piFin || []).filter(
-      (f: any) => f.status_pagamento !== "pago" && f.vencimento_boleto && f.vencimento_boleto < hoje,
+      (f: any) =>
+        f.status_pagamento !== "pago" && f.vencimento_boleto && f.vencimento_boleto < hoje,
     );
 
     const totalPisVencidos = pisVencidos.reduce(
@@ -233,7 +247,8 @@ export const getDicasFinanceiras = createServerFn({ method: "GET" })
           titulo: "Atenção ao Saldo de Cobertura nos Próximos 7 Dias",
           descricao: `Existem R$ ${valorSaidas7Dias.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} em contas a pagar nos próximos 7 dias. Seu saldo atual em caixa requer antecipação ou cobrança ativa para garantir a liquidez sem recorrer a cheque especial.`,
           impacto: "Prevenção de juros e encargos bancários",
-          acaoRecomendada: "Priorize cobrança de clientes com vencimento imediato e antecipe recebíveis com menor taxa.",
+          acaoRecomendada:
+            "Priorize cobrança de clientes com vencimento imediato e antecipe recebíveis com menor taxa.",
         });
       } else {
         dicas.push({
@@ -242,7 +257,8 @@ export const getDicasFinanceiras = createServerFn({ method: "GET" })
           titulo: "Caixa Seguro para os Próximos 7 Dias",
           descricao: `As saídas previstas para a próxima semana somam R$ ${valorSaidas7Dias.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, e seu saldo atual cobre com folga essas obrigações.`,
           impacto: "Saúde financeira estável no curto prazo",
-          acaoRecomendada: "Considere aplicar o excedente de caixa em fundos de liquidez diária (CDI 100%).",
+          acaoRecomendada:
+            "Considere aplicar o excedente de caixa em fundos de liquidez diária (CDI 100%).",
         });
       }
     }
@@ -255,23 +271,33 @@ export const getDicasFinanceiras = createServerFn({ method: "GET" })
         titulo: `R$ ${totalPisVencidos.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} em Boletos Vencidos`,
         descricao: `Foram identificados ${pisVencidos.length} PIs com boletos vencidos sem confirmação de liquidação. A média do mercado aponta que cobranças realizadas até o 5º dia de atraso recuperam 92% do valor sem litígio.`,
         impacto: "Aumento imediato do fluxo de caixa disponível",
-        acaoRecomendada: "Dispare notificações amigáveis de 2ª via de boleto via WhatsApp ou e-mail com link PIX.",
+        acaoRecomendada:
+          "Dispare notificações amigáveis de 2ª via de boleto via WhatsApp ou e-mail com link PIX.",
       });
     }
 
     // Dica 3: Ponto de Equilíbrio Operacional (Break-Even)
     const custosFixos = saidas.filter((t: any) =>
-      ["Aluguel e Condomínio", "Energia e Conectividade", "Folha de Pagamento / Pró-labore", "Sistemas e Licenças de Software"].includes(t.categoria),
+      [
+        "Aluguel e Condomínio",
+        "Energia e Conectividade",
+        "Folha de Pagamento / Pró-labore",
+        "Sistemas e Licenças de Software",
+      ].includes(t.categoria),
     );
-    const totalCustosFixos = custosFixos.reduce((acc: number, t: any) => acc + Number(t.valor || 0), 0);
+    const totalCustosFixos = custosFixos.reduce(
+      (acc: number, t: any) => acc + Number(t.valor || 0),
+      0,
+    );
 
     dicas.push({
       id: "ponto-equilibrio",
       tipo: "estrategia",
       titulo: "Ponto de Equilíbrio Operacional (Break-Even)",
-      descricao: `Seus custos fixos essenciais somam aproximadamente R$ ${(totalCustosFixos || 15000).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/mês. Para cobrir esses custos com margem líquida média de 40%, o faturamento mensal mínimo recomendado é de R$ ${(((totalCustosFixos || 15000) / 0.4)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`,
+      descricao: `Seus custos fixos essenciais somam aproximadamente R$ ${(totalCustosFixos || 15000).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/mês. Para cobrir esses custos com margem líquida média de 40%, o faturamento mensal mínimo recomendado é de R$ ${((totalCustosFixos || 15000) / 0.4).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`,
       impacto: "Segurança operacional e meta mínima de vendas",
-      acaoRecomendada: "Alinhe as metas da equipe comercial para bater 100% dos custos fixos até a 2ª semana de cada mês.",
+      acaoRecomendada:
+        "Alinhe as metas da equipe comercial para bater 100% dos custos fixos até a 2ª semana de cada mês.",
     });
 
     // Dica 4: Rentabilidade de Mídia e Comissões
@@ -279,9 +305,11 @@ export const getDicasFinanceiras = createServerFn({ method: "GET" })
       id: "rentabilidade-midia",
       tipo: "otimizacao",
       titulo: "Maximização de Margem em Mídias Digitais e DOOH",
-      descricao: "Produtos de DOOH e Painéis Digitais possuem custo marginal de veiculação próximo de zero uma vez instalados. Priorizar a venda de pacotes combinados (TV/Rádio + DOOH) eleva o ticket médio da proposta em até 35% sem elevar custos fixos.",
+      descricao:
+        "Produtos de DOOH e Painéis Digitais possuem custo marginal de veiculação próximo de zero uma vez instalados. Priorizar a venda de pacotes combinados (TV/Rádio + DOOH) eleva o ticket médio da proposta em até 35% sem elevar custos fixos.",
       impacto: "Elevação da margem de lucro líquido por contrato",
-      acaoRecomendada: "Ofereça bônus de telas DOOH como contrapartida estratégica para fechar PIs de maior valor.",
+      acaoRecomendada:
+        "Ofereça bônus de telas DOOH como contrapartida estratégica para fechar PIs de maior valor.",
     });
 
     // Dica 5: Reserva de Contingência
@@ -289,9 +317,11 @@ export const getDicasFinanceiras = createServerFn({ method: "GET" })
       id: "reserva-contingencia",
       tipo: "estrategia",
       titulo: "Construção da Reserva de Emergência Empresarial",
-      descricao: "Empresas do setor de comunicação e publicidade devem manter entre 2 a 3 meses de despesas fixas em reserva de emergência para enfrentar sazonalidades pós-eleitorais ou recessão no varejo.",
+      descricao:
+        "Empresas do setor de comunicação e publicidade devem manter entre 2 a 3 meses de despesas fixas em reserva de emergência para enfrentar sazonalidades pós-eleitorais ou recessão no varejo.",
       impacto: "Tranquilidade e poder de negociação com fornecedores",
-      acaoRecomendada: "Destine automaticamente 5% de cada PI recebido para uma conta poupança/CDI de reserva.",
+      acaoRecomendada:
+        "Destine automaticamente 5% de cada PI recebido para uma conta poupança/CDI de reserva.",
     });
 
     return dicas;

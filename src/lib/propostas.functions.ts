@@ -148,8 +148,9 @@ export const getProposta = createServerFn({ method: "POST" })
     // Enriquecer itens com dados de produtos (endereço, latitude, longitude, fotos) caso não estejam preenchidos no item
     if (prop?.itens && Array.isArray(prop.itens) && prop.itens.length > 0) {
       try {
-        const { data: prods } = await (context.supabase.from("produtos") as any)
-          .select("id, nome, programa, tipo, endereco_ponto, latitude, longitude, fotos");
+        const { data: prods } = await (context.supabase.from("produtos") as any).select(
+          "id, nome, programa, tipo, endereco_ponto, latitude, longitude, fotos",
+        );
         if (prods && prods.length > 0) {
           const prodsMap = new Map<string, any>();
           const prodsByNome = new Map<string, any>();
@@ -160,7 +161,8 @@ export const getProposta = createServerFn({ method: "POST" })
           }
 
           prop.itens = prop.itens.map((it: any) => {
-            const matched = (it.produto_id ? prodsMap.get(it.produto_id) : null) ||
+            const matched =
+              (it.produto_id ? prodsMap.get(it.produto_id) : null) ||
               (it.programa ? prodsByNome.get(it.programa.trim().toLowerCase()) : null) ||
               (it.tipo ? prodsByNome.get(it.tipo.trim().toLowerCase()) : null);
 
@@ -168,7 +170,11 @@ export const getProposta = createServerFn({ method: "POST" })
             if (fotos.length === 0 && matched?.fotos) {
               if (Array.isArray(matched.fotos)) fotos = matched.fotos;
               else if (typeof matched.fotos === "string") {
-                try { fotos = JSON.parse(matched.fotos); } catch { /* ignore */ }
+                try {
+                  fotos = JSON.parse(matched.fotos);
+                } catch {
+                  /* ignore */
+                }
               }
             }
 

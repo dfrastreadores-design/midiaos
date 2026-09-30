@@ -14,10 +14,7 @@ type ProdutoLike = {
  * itens selecionados. Atualmente as observações de produtos não são mais
  * incluídas automaticamente em propostas/PIs.
  */
-export function buildProdutoObservacoes(
-  items: CalcItemOut[],
-  produtos: ProdutoLike[],
-): string {
+export function buildProdutoObservacoes(items: CalcItemOut[], produtos: ProdutoLike[]): string {
   return "";
 }
 
