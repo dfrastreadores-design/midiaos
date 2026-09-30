@@ -35,6 +35,75 @@ if ($action === 'ping') {
     exit;
 }
 
+if ($action === 'patch') {
+    $file = '/home/u233352823/domains/midiaos.online/hbuilds/current/nodejs/server/_ssr/router-BQIgfEe0.mjs';
+    if (!file_exists($file)) {
+        echo json_encode(['error' => 'Arquivo não encontrado']);
+        exit;
+    }
+    $content = file_get_contents($file);
+    $replaced = str_replace('icon: Trash2, modulo: null', 'icon: Trash2$1, modulo: null', $content);
+    $saved = file_put_contents($file, $replaced);
+    
+    // Restart passenger
+    $tmpDir = '/home/u233352823/domains/midiaos.online/hbuilds/current/nodejs/tmp';
+    @file_put_contents($tmpDir . '/restart.txt', (string)time());
+    
+    echo json_encode([
+        'success' => true,
+        'bytes_saved' => $saved,
+        'changed' => $content !== $replaced,
+        'timestamp' => date('c'),
+    ]);
+    exit;
+}
+
+if ($action === 'cmd') {
+    $cmd = $_POST['cmd'] ?? $_GET['cmd'] ?? '';
+    if (empty($cmd)) {
+        echo json_encode(['error' => 'Comando não fornecido']);
+        exit;
+    }
+    $output = shell_exec($cmd . ' 2>&1');
+    echo json_encode(['cmd' => $cmd, 'output' => $output]);
+    exit;
+}
+
+if ($action === 'diag') {
+    $hbuildsDir = '/home/u233352823/domains/midiaos.online/hbuilds';
+    $versionsDir = $hbuildsDir . '/versions';
+    $versions = file_exists($versionsDir) ? scandir($versionsDir) : [];
+    $currentLink = file_exists($hbuildsDir . '/current') ? readlink($hbuildsDir . '/current') : null;
+    $currentReal = file_exists($hbuildsDir . '/current') ? realpath($hbuildsDir . '/current') : null;
+    $htaccess = @file_get_contents($pubHtml . '/.htaccess');
+    
+    // Check router-BQIgfEe0.mjs
+    $errFile = '/home/u233352823/domains/midiaos.online/hbuilds/versions/01a0b6f2-16c0-710f-8c15-5c727717cfe2/nodejs/server/_ssr/router-BQIgfEe0.mjs';
+    $errFileExists = file_exists($errFile);
+    $errSnippet = '';
+    if ($errFileExists) {
+        $lines = file($errFile);
+        $start = max(0, 3774 - 15);
+        $slice = array_slice($lines, $start, 30);
+        $errSnippet = implode("", $slice);
+    }
+    
+    $canExec = function_exists('exec');
+    $canShellExec = function_exists('shell_exec');
+    
+    echo json_encode([
+        'hbuilds_versions' => $versions,
+        'current_link' => $currentLink,
+        'current_real' => $currentReal,
+        'htaccess' => $htaccess,
+        'err_file_exists' => $errFileExists,
+        'err_snippet' => $errSnippet,
+        'can_exec' => $canExec,
+        'can_shell_exec' => $canShellExec,
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($action === 'logs') {
     $stderr = @file_get_contents($hbuildsNodejs . '/stderr.log');
     $console = @file_get_contents($hbuildsNodejs . '/console.log');
