@@ -36,25 +36,72 @@ if ($action === 'ping') {
 }
 
 if ($action === 'patch') {
-    $file = '/home/u233352823/domains/midiaos.online/hbuilds/current/nodejs/server/_ssr/router-BQIgfEe0.mjs';
-    if (!file_exists($file)) {
-        echo json_encode(['error' => 'Arquivo não encontrado']);
-        exit;
+    $patchedFiles = [];
+
+    // 1. Corrige bundle SSR
+    $ssrFile = $hbuildsNodejs . '/server/_ssr/router-BQIgfEe0.mjs';
+    if (file_exists($ssrFile)) {
+        $c = file_get_contents($ssrFile);
+        $r = str_replace('icon: Trash2, modulo: null', 'icon: Trash2$1, modulo: null', $c);
+        if ($c !== $r) {
+            file_put_contents($ssrFile, $r);
+            $patchedFiles[] = $ssrFile;
+        }
     }
-    $content = file_get_contents($file);
-    $replaced = str_replace('icon: Trash2, modulo: null', 'icon: Trash2$1, modulo: null', $content);
-    $saved = file_put_contents($file, $replaced);
-    
-    // Restart passenger
-    $tmpDir = '/home/u233352823/domains/midiaos.online/hbuilds/current/nodejs/tmp';
+
+    // 2. Corrige bundle client-side (index-9YO_f6Z8.js)
+    $clientFiles = [
+        $pubHtml . '/assets/index-9YO_f6Z8.js',
+        $pubHtml . '/public/assets/index-9YO_f6Z8.js',
+        $pubHtml . '/.output/public/assets/index-9YO_f6Z8.js',
+        $hbuildsNodejs . '/public/assets/index-9YO_f6Z8.js',
+    ];
+
+    // Encontra qualquer outra cópia em versions
+    $versionsDir = dirname(dirname($hbuildsNodejs)) . '/versions';
+    if (file_exists($versionsDir)) {
+        foreach (scandir($versionsDir) as $v) {
+            if ($v === '.' || $v === '..') continue;
+            $candidate = $versionsDir . '/' . $v . '/nodejs/public/assets/index-9YO_f6Z8.js';
+            if (file_exists($candidate) && !in_array($candidate, $clientFiles)) {
+                $clientFiles[] = $candidate;
+            }
+        }
+    }
+
+    foreach ($clientFiles as $f) {
+        if (file_exists($f)) {
+            $c = file_get_contents($f);
+            $r = str_replace('icon:Trash2,modulo:null', 'icon:LO,modulo:null', $c);
+            if ($c !== $r) {
+                file_put_contents($f, $r);
+                $patchedFiles[] = $f;
+            }
+        }
+    }
+
+    // 3. Garante que os assets de public/ estejam diretamente em public_html/
+    if (file_exists($pubHtml . '/public/assets') && !file_exists($pubHtml . '/assets')) {
+        @mkdir($pubHtml . '/assets', 0755, true);
+    }
+    if (file_exists($pubHtml . '/public/assets')) {
+        foreach (scandir($pubHtml . '/public/assets') as $a) {
+            if ($a === '.' || $a === '..') continue;
+            @copy($pubHtml . '/public/assets/' . $a, $pubHtml . '/assets/' . $a);
+        }
+    }
+
+    // 4. Reinicia passenger
+    $tmpDir = $hbuildsNodejs . '/tmp';
+    if (!file_exists($tmpDir)) @mkdir($tmpDir, 0755, true);
     @file_put_contents($tmpDir . '/restart.txt', (string)time());
-    
+
     echo json_encode([
         'success' => true,
-        'bytes_saved' => $saved,
-        'changed' => $content !== $replaced,
+        'patched_count' => count($patchedFiles),
+        'patched_files' => $patchedFiles,
         'timestamp' => date('c'),
-    ]);
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     exit;
 }
 

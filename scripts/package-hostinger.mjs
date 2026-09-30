@@ -33,6 +33,9 @@ fs.mkdirSync(stagingDir, { recursive: true });
 try {
   console.log("  -> Copiando arquivos do servidor SSR e assets...");
   fs.cpSync("./.output", stagingDir, { recursive: true });
+  if (fs.existsSync("./.output/public")) {
+    fs.cpSync("./.output/public", stagingDir, { recursive: true });
+  }
 
   // Arquivos adicionais na raiz do pacote
   if (fs.existsSync("./hostinger.mjs")) {
