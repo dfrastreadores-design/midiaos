@@ -14,6 +14,8 @@ export type Plano = {
 };
 
 export const MODULOS_DISPONIVEIS: { key: string; label: string }[] = [
+  { key: "centralizadores", label: "Centralizadores & Planejadores" },
+  { key: "assinaturas", label: "Central de Assinaturas" },
   { key: "pi", label: "Pedidos de Inserção" },
   { key: "propostas", label: "Propostas" },
   { key: "briefings", label: "Briefings" },

@@ -59,6 +59,7 @@ import {
   ShieldAlert,
   FileSignature,
   Sparkles,
+  Compass,
 } from "lucide-react";
 import { LogoImg } from "@/components/LogoImg";
 import { supabase } from "@/integrations/supabase/client";
@@ -1408,12 +1409,13 @@ function TenantPlanoEditor({ tenant, usuariosCount }: { tenant: any; usuariosCou
             const liberado = usarOverrideMods
               ? modsOverride.includes(m.key)
               : (planoSelecionado?.modulos ?? []).includes(m.key);
+            const isDestaque = m.key === "centralizadores" || m.key === "assinaturas";
             return (
               <label
                 key={m.key}
-                className={`flex items-center gap-2 rounded border p-2 text-sm ${
+                className={`flex items-center gap-2 rounded border p-2 text-sm transition-colors ${
                   usarOverrideMods ? "cursor-pointer" : "opacity-70"
-                }`}
+                } ${isDestaque && liberado ? "bg-primary/5 border-primary/40 font-medium" : ""}`}
               >
                 <Checkbox
                   checked={liberado}
@@ -1425,7 +1427,15 @@ function TenantPlanoEditor({ tenant, usuariosCount }: { tenant: any; usuariosCou
                     );
                   }}
                 />
-                <span>{m.label}</span>
+                <span className={isDestaque ? "font-medium text-foreground" : ""}>{m.label}</span>
+                {isDestaque && (
+                  <Badge
+                    variant="default"
+                    className="text-[9px] px-1.5 py-0 h-4 ml-auto bg-primary text-primary-foreground font-semibold"
+                  >
+                    Novo
+                  </Badge>
+                )}
               </label>
             );
           })}
@@ -1479,7 +1489,27 @@ function TenantDialog({ editing, onSaved }: { editing: any | null; onSaved: () =
       ? editing.categorias_servicos
       : [],
     proposta_layout_padrao: editing?.proposta_layout_padrao ?? "padrao",
+    modulos_override: Array.isArray(editing?.modulos_override)
+      ? editing.modulos_override
+      : MODULOS_DISPONIVEIS.map((m) => m.key),
   }));
+
+  const toggleModulo = (modKey: string) => {
+    setForm((f) => {
+      const current = Array.isArray(f.modulos_override) ? [...f.modulos_override] : [];
+      const exists = current.includes(modKey);
+      const next = exists ? current.filter((k) => k !== modKey) : [...current, modKey];
+      return { ...f, modulos_override: next };
+    });
+  };
+
+  const marcarTodosModulos = () => {
+    setForm((f) => ({ ...f, modulos_override: MODULOS_DISPONIVEIS.map((m) => m.key) }));
+  };
+
+  const desmarcarTodosModulos = () => {
+    setForm((f) => ({ ...f, modulos_override: [] }));
+  };
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -1733,6 +1763,90 @@ function TenantDialog({ editing, onSaved }: { editing: any | null; onSaved: () =
             Este modelo será sugerido por padrão ao visualizar propostas para este inquilino.
           </p>
         </F>
+      </div>
+
+      {/* Módulos do Sistema Liberados (com Centralizadores & Planejadores e Central de Assinaturas) */}
+      <div className="mt-4 rounded-lg border bg-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border-b bg-muted/40 gap-2">
+          <div>
+            <div className="text-sm font-semibold flex items-center gap-2 text-foreground">
+              <Compass className="size-4 text-primary" />
+              Módulos do Sistema Liberados
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              Marque quais módulos este cliente poderá acessar no Mídia OS. Selecionados:{" "}
+              <span className="font-semibold text-foreground">
+                {(form.modulos_override ?? []).length} de {MODULOS_DISPONIVEIS.length}
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-2 self-end sm:self-auto">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={desmarcarTodosModulos}
+            >
+              Desmarcar todos
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={marcarTodosModulos}
+            >
+              Marcar todos
+            </Button>
+          </div>
+        </div>
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
+          {MODULOS_DISPONIVEIS.map((mod) => {
+            const isChecked = (form.modulos_override ?? []).includes(mod.key);
+            const isDestaque = mod.key === "centralizadores" || mod.key === "assinaturas";
+            return (
+              <label
+                key={mod.key}
+                className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
+                  isChecked
+                    ? isDestaque
+                      ? "bg-primary/10 border-primary/50 shadow-sm ring-1 ring-primary/20"
+                      : "bg-muted/40 border-border"
+                    : "opacity-60 hover:opacity-100 border-border/50 bg-background"
+                }`}
+              >
+                <Checkbox
+                  checked={isChecked}
+                  onCheckedChange={() => toggleModulo(mod.key)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span
+                      className={`text-sm font-medium leading-none ${
+                        isDestaque ? "text-primary font-semibold" : ""
+                      }`}
+                    >
+                      {mod.label}
+                    </span>
+                    {isDestaque && (
+                      <Badge
+                        variant="default"
+                        className="text-[9px] px-1.5 py-0 h-4 bg-primary text-primary-foreground font-semibold"
+                      >
+                        Novo
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground block mt-1 font-mono">
+                    id: {mod.key}
+                  </span>
+                </div>
+              </label>
+            );
+          })}
+        </div>
       </div>
 
       <div className="mt-4 rounded-lg border">

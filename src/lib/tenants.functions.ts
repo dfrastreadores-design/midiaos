@@ -31,6 +31,9 @@ export type TenantInput = {
   logo_url?: string | null;
   categorias_servicos?: string[];
   proposta_layout_padrao?: string;
+  plano_id?: string | null;
+  modulos_override?: string[] | null;
+  max_usuarios_override?: number | null;
 };
 
 export const listTenants = createServerFn({ method: "GET" })

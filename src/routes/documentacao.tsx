@@ -40,6 +40,7 @@ import {
   GitBranch,
   Trash2,
   UserCog,
+  Compass,
 } from "lucide-react";
 
 export const Route = createFileRoute("/documentacao")({
@@ -95,6 +96,46 @@ const MODULOS: ModuloDoc[] = [
       "Clique em qualquer KPI para drill-down até o detalhe.",
     ],
     dica: "Configure metas em Metas para que o Dashboard exiba progresso e ranking automaticamente.",
+  },
+  {
+    icon: Compass,
+    titulo: "Centralizadores & Planejadores",
+    rota: "/centralizadores",
+    modulo: "centralizadores",
+    resumo:
+      "Hub estratégico de inteligência comercial: centralizador de campanhas integradas, planejador de grade e mapas de concorrência.",
+    recursos: [
+      "Planejamento tático de campanhas cross-media",
+      "Visão centralizada de veiculações e inventário",
+      "Métricas consolidadas de alcance e frequência",
+      "Exportação de cronogramas e grades",
+    ],
+    passos: [
+      "Acesse Centralizadores no menu lateral.",
+      "Crie ou selecione um planejamento para organizar os canais e datas.",
+      "Ajuste as cotas e gere o plano executivo integrado.",
+    ],
+    dica: "Utilize o centralizador para estruturar pacotes integrados com múltiplos veículos e parceiros.",
+  },
+  {
+    icon: FileSignature,
+    titulo: "Central de Assinaturas",
+    rota: "/assinaturas",
+    modulo: "assinaturas",
+    resumo:
+      "Central unificada para coleta de assinaturas digitais, aprovações de minutas de contratos e pedidos de inserção (PIs).",
+    recursos: [
+      "Envio de documentos para assinatura com link seguro",
+      "Assinatura na tela via touch/mouse com carimbo de data, IP e hash criptográfico",
+      "Status em tempo real (Pendente, Assinado, Recusado)",
+      "Download de certificado de conformidade digital",
+    ],
+    passos: [
+      "Acesse a Central de Assinaturas ou envie direto da tela de Contratos/PIs.",
+      "O signatário recebe o link e assina no celular ou computador.",
+      "O documento assinado é arquivado automaticamente com validade jurídica.",
+    ],
+    dica: "Todos os contratos gerados pelo sistema possuem gatilho direto para coleta de assinatura digital.",
   },
   {
     icon: KanbanSquare,
