@@ -35,6 +35,30 @@ if ($action === 'ping') {
     exit;
 }
 
+if ($action === 'upload') {
+    if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+        $dest = $pubHtml . '/hostinger_deploy.zip';
+        if (move_uploaded_file($_FILES['file']['tmp_name'], $dest)) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'hostinger_deploy.zip recebido com sucesso via HTTP POST!',
+                'size' => filesize($dest),
+                'timestamp' => date('c'),
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            exit;
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Falha ao mover arquivo enviado']);
+            exit;
+        }
+    } else {
+        http_response_code(400);
+        $err = $_FILES['file']['error'] ?? 'Nenhum arquivo recebido no campo file';
+        echo json_encode(['error' => 'Erro no upload: ' . $err]);
+        exit;
+    }
+}
+
 if ($action === 'patch') {
     $patchedFiles = [];
 

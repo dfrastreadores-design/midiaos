@@ -18,7 +18,11 @@ if (!skipBuild) {
 console.log("\n📦 [2/2] Gerando pacote ultra-rápido hostinger_deploy.zip...");
 const startTime = Date.now();
 
-if (!fs.existsSync("./.output")) {
+let outputDir = "./.output";
+if (fs.existsSync("D:\\midiaos_build\\.output")) {
+  outputDir = "D:\\midiaos_build\\.output";
+  console.log("⚡ Usando .output de alta velocidade diretamente de D:\\midiaos_build\\.output");
+} else if (!fs.existsSync(outputDir)) {
   console.error("❌ Erro: Diretório .output não encontrado! Execute npm run build antes.");
   process.exit(1);
 }
@@ -32,9 +36,10 @@ fs.mkdirSync(stagingDir, { recursive: true });
 
 try {
   console.log("  -> Copiando arquivos do servidor SSR e assets...");
-  fs.cpSync("./.output", stagingDir, { recursive: true });
-  if (fs.existsSync("./.output/public")) {
-    fs.cpSync("./.output/public", stagingDir, { recursive: true });
+  fs.cpSync(outputDir, stagingDir, { recursive: true });
+  const pubDir = path.join(outputDir, "public");
+  if (fs.existsSync(pubDir)) {
+    fs.cpSync(pubDir, stagingDir, { recursive: true });
   }
 
   // Arquivos adicionais na raiz do pacote

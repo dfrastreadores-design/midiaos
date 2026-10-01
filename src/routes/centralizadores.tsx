@@ -41,6 +41,8 @@ import {
   validarRegrasCalculoFinanceiro,
 } from "@/lib/centralizadores.functions";
 import { calcularRepasseParceiro } from "@/lib/calculo-financeiro-midia";
+import { PlanejadorEstrategicoIa } from "@/components/centralizadores/PlanejadorEstrategicoIa";
+import { ParceirosMetricasManager } from "@/components/centralizadores/ParceirosMetricasManager";
 
 export const Route = createFileRoute("/centralizadores")({
   head: () => ({ meta: [{ title: "Centralizadores e Planejadores — Mídia.OS" }] }),
@@ -56,7 +58,9 @@ export function CentralizadoresPage() {
   const detectarInconsistenciasFn = useServerFn(detectarInconsistenciasSistema);
   const validarCalculoFn = useServerFn(validarRegrasCalculoFinanceiro);
 
-  const [tab, setTab] = useState<"esteira" | "calculadora" | "inconsistencias" | "modelos">("esteira");
+  const [tab, setTab] = useState<
+    "planejador_ia" | "metricas_parceiros" | "esteira" | "calculadora" | "inconsistencias" | "modelos"
+  >("planejador_ia");
 
   // Estado da Calculadora Interativa da Regra Fundamental
   const [calcBruto, setCalcBruto] = useState<number>(100000);
@@ -121,6 +125,14 @@ export function CentralizadoresPage() {
 
           <div className="flex items-center gap-2">
             <Button
+              size="sm"
+              onClick={() => setTab("planejador_ia")}
+              className="text-xs gap-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-primary text-white shadow-sm"
+            >
+              <Sparkles className="h-4 w-4" />
+              Planejador com IA
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={() => validarTesteMutation.mutate()}
@@ -135,7 +147,18 @@ export function CentralizadoresPage() {
 
         {/* Abas */}
         <Tabs value={tab} onValueChange={(v: any) => setTab(v)} className="w-full">
-          <TabsList className="bg-muted/60 p-1 mb-4">
+          <TabsList className="bg-muted/60 p-1 mb-4 flex-wrap h-auto">
+            <TabsTrigger
+              value="planejador_ia"
+              className="gap-1.5 text-xs sm:text-sm font-semibold text-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <Sparkles className="h-4 w-4" />
+              Estratégia de Mídia com IA
+            </TabsTrigger>
+            <TabsTrigger value="metricas_parceiros" className="gap-1.5 text-xs sm:text-sm">
+              <BarChart3 className="h-4 w-4" />
+              Números & Defesa de Mídia dos Parceiros
+            </TabsTrigger>
             <TabsTrigger value="esteira" className="gap-1.5 text-xs sm:text-sm">
               <Layers className="h-4 w-4" />
               Esteira Operacional Master
@@ -153,6 +176,16 @@ export function CentralizadoresPage() {
               Inconsistências ({inconsistencias.length})
             </TabsTrigger>
           </TabsList>
+
+          {/* ABA 0: ESTRATÉGIA DE MÍDIA COM IA */}
+          <TabsContent value="planejador_ia" className="space-y-6">
+            <PlanejadorEstrategicoIa />
+          </TabsContent>
+
+          {/* ABA 0.5: NÚMEROS & DEFESA DE MÍDIA DOS PARCEIROS */}
+          <TabsContent value="metricas_parceiros" className="space-y-6">
+            <ParceirosMetricasManager />
+          </TabsContent>
 
           {/* ABA 1: ESTEIRA OPERACIONAL MASTER */}
           <TabsContent value="esteira" className="space-y-6">

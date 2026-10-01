@@ -46,8 +46,10 @@ import {
   Tv,
   MessageSquare,
   Download,
+  Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
+import { UniversalAnexosModal } from "@/components/anexos/UniversalAnexosModal";
 import {
   listParceiros,
   deleteParceiro,
@@ -82,6 +84,7 @@ export function ParceirosPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [importParceiroId, setImportParceiroId] = useState<string | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<Parceiro | null>(null);
+  const [anexoParceiro, setAnexoParceiro] = useState<Parceiro | null>(null);
 
   // Queries
   const { data: parceiros = [], isLoading } = useQuery<Parceiro[]>({
@@ -455,6 +458,10 @@ export function ParceirosPage() {
                                 <FileSpreadsheet className="size-3.5 mr-2 text-purple-600" />
                                 Importar Planilha de Produtos
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setAnexoParceiro(parceiro)}>
+                                <Paperclip className="size-3.5 mr-2 text-blue-600" />
+                                Anexar Documentos / Mídia Kit
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
@@ -579,6 +586,17 @@ export function ParceirosPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setAnexoParceiro(parceiro)}
+                          title="Anexar ou visualizar documentos, mídia kit e contratos"
+                        >
+                          <Paperclip className="size-3.5 mr-1" />
+                          Anexos
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="h-7 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/40"
                           onClick={() => handleOpenImport(parceiro.id)}
                           title="Importar planilha de produtos para este parceiro"
@@ -602,6 +620,18 @@ export function ParceirosPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Universal de Anexos do Parceiro */}
+      {anexoParceiro && (
+        <UniversalAnexosModal
+          open={!!anexoParceiro}
+          onOpenChange={(open) => !open && setAnexoParceiro(null)}
+          entidadeTipo="parceiro"
+          entidadeId={anexoParceiro.id}
+          titulo={`Documentos & Mídia Kit — ${anexoParceiro.nome_fantasia || anexoParceiro.razao_social}`}
+          descricao="Gerencie Mídia Kits em PDF, tabelas de preço, propostas, contratos assinados e materiais técnicos deste parceiro."
+        />
+      )}
 
       {/* Dialog de Criação / Edição de Parceiro */}
       <ParceiroFormDialog
