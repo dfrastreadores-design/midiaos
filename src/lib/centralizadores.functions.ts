@@ -74,61 +74,108 @@ export interface InconsistenciaSistema {
 export const getPainelCentralizadores = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
 
-    const [
-      { data: clientes },
-      { data: parceiros },
-      { data: produtos },
-      { data: propostas },
-      { data: pis },
-      { data: contratos },
-      { data: transacoes },
-      { data: comprovantes },
-    ] = await Promise.all([
-      supabase.from("clientes").select("id, status", { count: "exact" }),
-      supabase.from("parceiros").select("id, status", { count: "exact" }),
-      supabase.from("produtos").select("id, status, preco, parceiro_id", { count: "exact" }),
-      supabase.from("propostas").select("id, status, valor_total", { count: "exact" }),
-      supabase.from("pis").select("id, status, valor_bruto, valor_liquido", { count: "exact" }),
-      supabase.from("contratos").select("id, status, valor", { count: "exact" }),
-      supabase.from("transacoes_financeiras").select("id, tipo, status, valor", { count: "exact" }),
-      supabase.from("comprovantes_execucao").select("id, validado", { count: "exact" }),
-    ]);
+    try {
+      // Obter tenant do usuário
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", userId)
+        .maybeSingle();
+      const tenantId = prof?.tenant_id;
 
-    // Métricas agregadas do funil
-    const totalClientes = clientes?.length || 0;
-    const totalParceiros = parceiros?.length || 0;
-    const totalProdutos = produtos?.length || 0;
-    const totalPropostas = propostas?.length || 0;
-    const totalPis = pis?.length || 0;
-    const totalContratos = contratos?.length || 0;
-    const totalComprovantes = comprovantes?.length || 0;
+      // Consultas seguras ao banco de dados com schema real
+      let qClientes = supabase.from("clientes").select("id", { count: "exact" });
+      let qParceiros = supabase.from("parceiros").select("id", { count: "exact" });
+      let qProdutos = supabase.from("produtos").select("id, ativo, valor_unit, parceiro_id", { count: "exact" });
+      let qPropostas = supabase.from("propostas").select("id, status, valor_total", { count: "exact" });
+      let qPis = supabase.from("pis").select("id, status, valor_negociado", { count: "exact" });
+      let qContratos = supabase.from("contratos").select("id, status", { count: "exact" });
+      let qTransacoes = supabase.from("financeiro_transacoes").select("id, tipo, status, valor", { count: "exact" });
+      let qComprovantes = supabase.from("pos_venda_anexos").select("id", { count: "exact" });
 
-    // Métricas financeiras
-    const totalEntradasPendentes = (transacoes || [])
-      .filter((t) => t.tipo === "entrada" && t.status === "pendente")
-      .reduce((acc, cur) => acc + (Number(cur.valor) || 0), 0);
+      if (tenantId) {
+        qClientes = qClientes.eq("tenant_id", tenantId);
+        qParceiros = qParceiros.eq("tenant_id", tenantId);
+        qProdutos = qProdutos.eq("tenant_id", tenantId);
+        qPropostas = qPropostas.eq("tenant_id", tenantId);
+        qPis = qPis.eq("tenant_id", tenantId);
+        qContratos = qContratos.eq("tenant_id", tenantId);
+        qTransacoes = qTransacoes.eq("tenant_id", tenantId);
+      }
 
-    const totalRepassesPendentes = (transacoes || [])
-      .filter((t) => t.tipo === "saida" && t.status === "pendente")
-      .reduce((acc, cur) => acc + (Number(cur.valor) || 0), 0);
+      const [
+        resClientes,
+        resParceiros,
+        resProdutos,
+        resPropostas,
+        resPis,
+        resContratos,
+        resTransacoes,
+        resComprovantes,
+      ] = await Promise.all([
+        qClientes,
+        qParceiros,
+        qProdutos,
+        qPropostas,
+        qPis,
+        qContratos,
+        qTransacoes,
+        qComprovantes,
+      ]);
 
-    return {
-      funil: {
-        clientes: totalClientes,
-        parceiros: totalParceiros,
-        produtos: totalProdutos,
-        propostas: totalPropostas,
-        pis: totalPis,
-        contratos: totalContratos,
-        comprovantes: totalComprovantes,
-      },
-      financeiro: {
-        aReceber: totalEntradasPendentes,
-        aRepassar: totalRepassesPendentes,
-      },
-    };
+      const clientes = resClientes.data || [];
+      const parceiros = resParceiros.data || [];
+      const produtos = resProdutos.data || [];
+      const propostas = resPropostas.data || [];
+      const pis = resPis.data || [];
+      const contratos = resContratos.data || [];
+      const transacoes = resTransacoes.data || [];
+      const comprovantes = resComprovantes.data || [];
+
+      // Métricas financeiras seguras
+      const totalEntradasPendentes = (transacoes || [])
+        .filter((t: any) => t.tipo === "entrada" && t.status === "pendente")
+        .reduce((acc: number, cur: any) => acc + (Number(cur.valor) || 0), 0);
+
+      const totalRepassesPendentes = (transacoes || [])
+        .filter((t: any) => t.tipo === "saida" && t.status === "pendente")
+        .reduce((acc: number, cur: any) => acc + (Number(cur.valor) || 0), 0);
+
+      return {
+        funil: {
+          clientes: clientes.length,
+          parceiros: parceiros.length,
+          produtos: produtos.length,
+          propostas: propostas.length,
+          pis: pis.length,
+          contratos: contratos.length,
+          comprovantes: comprovantes.length,
+        },
+        financeiro: {
+          aReceber: totalEntradasPendentes,
+          aRepassar: totalRepassesPendentes,
+        },
+      };
+    } catch (err) {
+      console.warn("Aviso ao carregar painel centralizadores:", err);
+      return {
+        funil: {
+          clientes: 0,
+          parceiros: 0,
+          produtos: 0,
+          propostas: 0,
+          pis: 0,
+          contratos: 0,
+          comprovantes: 0,
+        },
+        financeiro: {
+          aReceber: 0,
+          aRepassar: 0,
+        },
+      };
+    }
   });
 
 /**
@@ -137,79 +184,94 @@ export const getPainelCentralizadores = createServerFn({ method: "GET" })
 export const detectarInconsistenciasSistema = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const inconsistencias: InconsistenciaSistema[] = [];
 
-    // 1. Produtos sem preço ou sem parceiro
-    const { data: prods } = await supabase
-      .from("produtos")
-      .select("id, nome, preco, parceiro_id")
-      .eq("status", "ativo")
-      .limit(50);
+    try {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", userId)
+        .maybeSingle();
+      const tenantId = prof?.tenant_id;
 
-    for (const p of prods || []) {
-      if (!p.preco || Number(p.preco) <= 0) {
-        inconsistencias.push({
-          tipo: "produto_sem_preco",
-          gravidade: "alta",
-          titulo: `Produto sem preço de tabela: "${p.nome}"`,
-          descricao: "O produto está ativo no catálogo mas não possui valor parametrizado.",
-          entidade_tipo: "produtos",
-          entidade_id: p.id,
-          link: `/produtos?id=${p.id}`,
-        });
+      // 1. Produtos sem preço ou sem parceiro
+      let qProds = supabase
+        .from("produtos")
+        .select("id, nome, valor_unit, parceiro_id")
+        .eq("ativo", true)
+        .limit(50);
+      if (tenantId) qProds = qProds.eq("tenant_id", tenantId);
+      const { data: prods } = await qProds;
+
+      for (const p of prods || []) {
+        if (!p.valor_unit || Number(p.valor_unit) <= 0) {
+          inconsistencias.push({
+            tipo: "produto_sem_preco",
+            gravidade: "alta",
+            titulo: `Produto sem preço de tabela: "${p.nome}"`,
+            descricao: "O produto está ativo no catálogo mas não possui valor parametrizado.",
+            entidade_tipo: "produtos",
+            entidade_id: p.id,
+            link: `/produtos?id=${p.id}`,
+          });
+        }
+        if (!p.parceiro_id) {
+          inconsistencias.push({
+            tipo: "produto_sem_parceiro",
+            gravidade: "media",
+            titulo: `Produto sem parceiro vinculado: "${p.nome}"`,
+            descricao: "Produto comercializado sem identificar o veículo de mídia responsável.",
+            entidade_tipo: "produtos",
+            entidade_id: p.id,
+            link: `/produtos?id=${p.id}`,
+          });
+        }
       }
-      if (!p.parceiro_id) {
-        inconsistencias.push({
-          tipo: "produto_sem_parceiro",
-          gravidade: "media",
-          titulo: `Produto sem parceiro vinculado: "${p.nome}"`,
-          descricao: "Produto comercializado sem identificar o veículo de mídia responsável.",
-          entidade_tipo: "produtos",
-          entidade_id: p.id,
-          link: `/produtos?id=${p.id}`,
-        });
-      }
-    }
 
-    // 2. PIs aprovados sem documento de assinatura
-    const { data: pisPendentes } = await supabase
-      .from("pis")
-      .select("id, numero, campanha, status, status_assinatura")
-      .in("status", ["aguardando_assinatura", "enviar_opec"])
-      .limit(30);
+      // 2. PIs em fluxo de assinatura pendente
+      let qPis = supabase
+        .from("pis")
+        .select("id, numero, campanha, status")
+        .in("status", ["aguardando_assinatura", "enviar_opec"])
+        .limit(30);
+      if (tenantId) qPis = qPis.eq("tenant_id", tenantId);
+      const { data: pisPendentes } = await qPis;
 
-    for (const pi of pisPendentes || []) {
-      if (!pi.status_assinatura || pi.status_assinatura === "aguardando_definicao") {
+      for (const pi of pisPendentes || []) {
         inconsistencias.push({
           tipo: "pi_sem_assinatura",
           gravidade: "alta",
-          titulo: `PI ${pi.numero} sem fluxo de assinatura concluído`,
+          titulo: `PI ${pi.numero || "S/N"} pendente de assinatura`,
           descricao: `A campanha "${pi.campanha}" está aguardando assinatura formal ou liberação OPEC.`,
           entidade_tipo: "pis",
           entidade_id: pi.id,
           link: `/pi?id=${pi.id}`,
         });
       }
-    }
 
-    // 3. Contratos ativos sem assinatura
-    const { data: contratosPendentes } = await supabase
-      .from("contratos")
-      .select("id, numero, titulo, status")
-      .eq("status", "aguardando_assinatura")
-      .limit(20);
+      // 3. Contratos ativos sem assinatura
+      let qContratos = supabase
+        .from("contratos")
+        .select("id, numero, titulo, status")
+        .eq("status", "aguardando_assinatura")
+        .limit(20);
+      if (tenantId) qContratos = qContratos.eq("tenant_id", tenantId);
+      const { data: contratosPendentes } = await qContratos;
 
-    for (const c of contratosPendentes || []) {
-      inconsistencias.push({
-        tipo: "contrato_sem_assinatura",
-        gravidade: "alta",
-        titulo: `Contrato ${c.numero} aguardando assinatura`,
-        descricao: `Documento "${c.titulo}" pendente de coleta digital ou manual de assinaturas.`,
-        entidade_tipo: "contratos",
-        entidade_id: c.id,
-        link: `/contratos?id=${c.id}`,
-      });
+      for (const c of contratosPendentes || []) {
+        inconsistencias.push({
+          tipo: "contrato_sem_assinatura",
+          gravidade: "alta",
+          titulo: `Contrato ${c.numero || "S/N"} aguardando assinatura`,
+          descricao: `Documento "${c.titulo || "Contrato"}" pendente de coleta de assinaturas.`,
+          entidade_tipo: "contratos",
+          entidade_id: c.id,
+          link: `/contratos?id=${c.id}`,
+        });
+      }
+    } catch (err) {
+      console.warn("Aviso ao detectar inconsistências:", err);
     }
 
     return inconsistencias;
@@ -256,13 +318,17 @@ export const gerarEstrategiaMidiaIA = createServerFn({ method: "POST" })
       .maybeSingle();
     const tenantId = prof?.tenant_id;
 
-    // 2. Buscar produtos e parceiros ativos para enriquecer o contexto da IA
+    // 2. Buscar produtos e parceiros ativos para enriquecer o contexto da IA com o inventário real
     let queryProdutos = supabase
       .from("produtos")
-      .select("id, nome, midia, tipo, formato, faixa, preco, valor_unit")
-      .eq("status", "ativo");
+      .select(
+        "id, nome, midia, tipo, formato, faixa, valor_unit, duracao_segundos, insercoes_padrao, endereco_ponto, quantidade_telas, parceiro_nome, ativo",
+      )
+      .or("ativo.eq.true,ativo.is.null");
     if (tenantId) queryProdutos = queryProdutos.eq("tenant_id", tenantId);
-    const { data: produtosDb } = await queryProdutos.limit(20);
+    const { data: produtosDb } = await queryProdutos.limit(100);
+
+    const catalogoReal = produtosDb || [];
 
     // 3. Tentar chamada à IA (Lovable Gateway / Gemini / OpenAI)
     const apiKey =
@@ -270,19 +336,22 @@ export const gerarEstrategiaMidiaIA = createServerFn({ method: "POST" })
 
     if (apiKey) {
       try {
-        const catalogoSimplificado = (produtosDb || []).map((p) => ({
+        const catalogoSimplificado = catalogoReal.map((p) => ({
+          id: p.id,
           nome: p.nome,
           midia: p.midia,
           tipo: p.tipo,
           faixa: p.faixa,
           formato: p.formato,
-          preco: p.valor_unit || p.preco,
+          preco_unit: p.valor_unit,
+          endereco_ponto: p.endereco_ponto,
+          parceiro: p.parceiro_nome,
         }));
 
         const systemPrompt = `Você é o Diretor de Planejamento de Mídia e Inteligência Estratégica do sistema Mídia.OS.
 Sua missão é criar uma Estratégia de Mídia de altíssimo nível, convincente, assertiva e customizada para o cliente e cenário fornecidos.
-Considere as particularidades de cada veículo (TV, Rádio, DOOH/Painéis, Portais e Digital), proponha um mix percentual equilibrado que totalize 100%, 
-cronograma em fases, métricas estimadas (alcance, impactos, frequência) e argumentos matadores para que o executivo de contas apresente ao decisor do cliente.
+REGRA CRÍTICA: Você DEVE utilizar os produtos e pontos REAIS do inventário do inquilino listados abaixo para compor o plano e preencher o array "itens_inventario".
+Cada item alocado em "itens_inventario" deve mapear para um produto_id real do inventário com nome, mídia, valor unitário, quantidade de inserções e justificativa estratégica.
 Retorne SEMPRE um JSON válido estritamente no formato solicitado.`;
 
         const userPrompt = `DADOS DO CLIENTE E CENÁRIO ESTRATÉGICO:
@@ -298,7 +367,7 @@ Retorne SEMPRE um JSON válido estritamente no formato solicitado.`;
 - Diferenciais do Cliente: ${data.diferenciais_cliente || "Qualidade e atendimento"}
 - Tom de Comunicação: ${data.tom_comunicacao}
 
-PRODUTOS / FORMATOS DO CATÁLOGO DO TENANT (REFERÊNCIA):
+INVENTÁRIO REAL DE PRODUTOS E PONTOS DO INQUILINO (OBRIGATÓRIO ALOCAR NESTE PLANO):
 ${JSON.stringify(catalogoSimplificado, null, 2)}
 
 FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
@@ -314,6 +383,21 @@ FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
       "papel_tatico": "string (papel desse canal no plano)",
       "frequencia_sugerida": "string (ex: 3 inserções/dia)",
       "formatos_indicados": ["string", "string"]
+    }
+  ],
+  "itens_inventario": [
+    {
+      "produto_id": "string (id exato do produto do inventário)",
+      "nome": "string (nome do produto ou tela)",
+      "midia": "string (ex: DOOH, TV, Radio)",
+      "tipo": "string",
+      "formato": "string",
+      "parceiro_nome": "string",
+      "endereco_ponto": "string",
+      "valor_unit": number,
+      "insercoes_sugeridas": number,
+      "subtotal": number,
+      "justificativa": "string (por que este item do inventário foi alocado estrategicamente)"
     }
   ],
   "cronograma_fases": [
@@ -381,11 +465,14 @@ FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
           }
         }
       } catch (err) {
-        console.warn("[gerarEstrategiaMidiaIA] Falha na chamada da API de IA, ativando motor heurístico:", err);
+        console.warn(
+          "[gerarEstrategiaMidiaIA] Falha na chamada da API de IA, ativando motor heurístico:",
+          err,
+        );
       }
     }
 
-    // Fallback de alta precisão estratégica
-    return montarEstrategiaHeuristicaAvancada(data, produtosDb || []);
+    // Fallback de alta precisão estratégica utilizando o inventário real
+    return montarEstrategiaHeuristicaAvancada(data, catalogoReal);
   });
 

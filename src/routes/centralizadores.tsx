@@ -33,6 +33,7 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
+  BarChart,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -47,6 +48,23 @@ import { ParceirosMetricasManager } from "@/components/centralizadores/Parceiros
 export const Route = createFileRoute("/centralizadores")({
   head: () => ({ meta: [{ title: "Centralizadores e Planejadores — Mídia.OS" }] }),
   component: CentralizadoresPage,
+  errorComponent: ({ error, reset }) => (
+    <AppShell>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
+        <div className="p-4 rounded-full bg-destructive/10 text-destructive mb-4">
+          <AlertTriangle className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold mb-2">Erro ao carregar o Centralizador</h2>
+        <p className="text-sm text-muted-foreground max-w-md mb-6">
+          {error?.message || "Ocorreu uma instabilidade momentânea ao carregar os indicadores do sistema."}
+        </p>
+        <div className="flex gap-3">
+          <Button onClick={() => reset()} variant="default">Tentar novamente</Button>
+          <Button onClick={() => window.location.href = "/"} variant="outline">Voltar ao Início</Button>
+        </div>
+      </div>
+    </AppShell>
+  ),
 });
 
 function formatBRL(v: number) {
@@ -93,15 +111,15 @@ export function CentralizadoresPage() {
 
   // Etapas da esteira completa do Centralizador (Prompt Mestre Seção 70)
   const etapasMaster = [
-    { id: "prospeccao", label: "Prospecção & CRM", rota: "/crm", count: painel?.funil.clientes ?? 0, icon: KanbanSquare, cor: "bg-blue-500" },
-    { id: "produtos", label: "Catálogo de Produtos", rota: "/produtos", count: painel?.funil.produtos ?? 0, icon: Package, cor: "bg-indigo-500" },
-    { id: "parceiros", label: "Veículos & Parceiros", rota: "/parceiros", count: painel?.funil.parceiros ?? 0, icon: Handshake, cor: "bg-violet-500" },
-    { id: "propostas", label: "Propostas Comerciais", rota: "/propostas", count: painel?.funil.propostas ?? 0, icon: FileText, cor: "bg-sky-500" },
-    { id: "contratos", label: "Contratos de Mídia", rota: "/contratos", count: painel?.funil.contratos ?? 0, icon: FileSignature, cor: "bg-amber-500" },
+    { id: "prospeccao", label: "Prospecção & CRM", rota: "/crm", count: painel?.funil?.clientes ?? 0, icon: KanbanSquare, cor: "bg-blue-500" },
+    { id: "produtos", label: "Catálogo de Produtos", rota: "/produtos", count: painel?.funil?.produtos ?? 0, icon: Package, cor: "bg-indigo-500" },
+    { id: "parceiros", label: "Veículos & Parceiros", rota: "/parceiros", count: painel?.funil?.parceiros ?? 0, icon: Handshake, cor: "bg-violet-500" },
+    { id: "propostas", label: "Propostas Comerciais", rota: "/propostas", count: painel?.funil?.propostas ?? 0, icon: FileText, cor: "bg-sky-500" },
+    { id: "contratos", label: "Contratos de Mídia", rota: "/contratos", count: painel?.funil?.contratos ?? 0, icon: FileSignature, cor: "bg-amber-500" },
     { id: "assinaturas", label: "Módulo de Assinaturas", rota: "/assinaturas", count: "Universal", icon: FileSignature, cor: "bg-emerald-500" },
-    { id: "pis", label: "Ordens de Inserção (PI)", rota: "/pi", count: painel?.funil.pis ?? 0, icon: FileText, cor: "bg-teal-500" },
-    { id: "veiculacao", label: "Comprovantes & Veiculação", rota: "/historico-veiculacao", count: painel?.funil.comprovantes ?? 0, icon: Radio, cor: "bg-orange-500" },
-    { id: "financeiro", label: "Financeiro & Repasses", rota: "/financeiro", count: formatBRL(painel?.financeiro.aRepassar ?? 0), icon: Calculator, cor: "bg-rose-500" },
+    { id: "pis", label: "Ordens de Inserção (PI)", rota: "/pi", count: painel?.funil?.pis ?? 0, icon: FileText, cor: "bg-teal-500" },
+    { id: "veiculacao", label: "Comprovantes & Veiculação", rota: "/historico-veiculacao", count: painel?.funil?.comprovantes ?? 0, icon: Radio, cor: "bg-orange-500" },
+    { id: "financeiro", label: "Financeiro & Repasses", rota: "/financeiro", count: formatBRL(painel?.financeiro?.aRepassar ?? 0), icon: Calculator, cor: "bg-rose-500" },
   ];
 
   return (
@@ -156,7 +174,7 @@ export function CentralizadoresPage() {
               Estratégia de Mídia com IA
             </TabsTrigger>
             <TabsTrigger value="metricas_parceiros" className="gap-1.5 text-xs sm:text-sm">
-              <BarChart3 className="h-4 w-4" />
+              <BarChart className="h-4 w-4" />
               Números & Defesa de Mídia dos Parceiros
             </TabsTrigger>
             <TabsTrigger value="esteira" className="gap-1.5 text-xs sm:text-sm">

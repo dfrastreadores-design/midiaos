@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -7,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ParceiroFormDialog } from "@/components/ParceiroFormDialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -44,6 +46,7 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
   const { isAdmin, isDiretoria } = useUserRoles();
   const canAssignCollaborator = isAdmin || isDiretoria;
   const { state, save, isSaving, hasError } = usePropostaForm(open ? initial : null, onOpenChange);
+  const [cadastrarParceiroOpen, setCadastrarParceiroOpen] = useState(false);
 
   const { data: clientes = [] } = useQuery({
     queryKey: ["clientes"],
@@ -210,12 +213,24 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
                   <Label>Executivo Parceiro (Briefing)</Label>
                   <Select
                     value={state.executivoParceiroId || "none"}
-                    onValueChange={(v) => state.setExecutivoParceiroId(v === "none" ? "" : v)}
+                    onValueChange={(v) => {
+                      if (v === "__novo_parceiro__") {
+                        setCadastrarParceiroOpen(true);
+                        return;
+                      }
+                      state.setExecutivoParceiroId(v === "none" ? "" : v);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o parceiro" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem
+                        value="__novo_parceiro__"
+                        className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"
+                      >
+                        ➕ Cadastrar Novo Parceiro...
+                      </SelectItem>
                       <SelectItem value="none">— Nenhum —</SelectItem>
                       {parceiros.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
@@ -227,6 +242,13 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
                   <p className="text-xs text-muted-foreground">
                     Vincula a proposta a um parceiro comercial que originou a solicitação.
                   </p>
+                  <ParceiroFormDialog
+                    open={cadastrarParceiroOpen}
+                    onOpenChange={setCadastrarParceiroOpen}
+                    onSuccess={(p) => {
+                      if (p?.id) state.setExecutivoParceiroId(p.id);
+                    }}
+                  />
                 </div>
               )}
               <div className="space-y-1.5 sm:col-span-2" data-field="campanha">

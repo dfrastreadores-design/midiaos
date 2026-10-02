@@ -42,6 +42,7 @@ import { toast } from "sonner";
 import { importProdutosBulk } from "@/lib/produtos.functions";
 import { listParceiros, type Parceiro } from "@/lib/parceiros.functions";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
+import { ParceiroFormDialog } from "@/components/ParceiroFormDialog";
 
 type Midia = "TV" | "Radio" | "DOOH";
 
@@ -266,6 +267,7 @@ export function ImportarProdutosDialog({
   const [selectedParceiroId, setSelectedParceiroId] = useState<string>(
     parceiroPadraoId || "nenhum",
   );
+  const [cadastrarParceiroOpen, setCadastrarParceiroOpen] = useState(false);
   const [lendo, setLendo] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
@@ -471,11 +473,26 @@ export function ImportarProdutosDialog({
               <Handshake className="size-3.5 text-purple-600" />
               Vincular ao Parceiro Comercial
             </label>
-            <Select value={selectedParceiroId} onValueChange={setSelectedParceiroId}>
+            <Select
+              value={selectedParceiroId}
+              onValueChange={(v) => {
+                if (v === "__novo_parceiro__") {
+                  setCadastrarParceiroOpen(true);
+                  return;
+                }
+                setSelectedParceiroId(v);
+              }}
+            >
               <SelectTrigger className="h-9 bg-background">
                 <SelectValue placeholder="Selecione um parceiro ou mantenha da planilha" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem
+                  value="__novo_parceiro__"
+                  className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"
+                >
+                  ➕ Cadastrar Novo Parceiro...
+                </SelectItem>
                 <SelectItem value="nenhum">
                   <span className="font-medium text-muted-foreground">
                     🏢 Nenhum / Definido na Planilha / Próprio
@@ -496,6 +513,14 @@ export function ImportarProdutosDialog({
                 ))}
               </SelectContent>
             </Select>
+
+            <ParceiroFormDialog
+              open={cadastrarParceiroOpen}
+              onOpenChange={setCadastrarParceiroOpen}
+              onSuccess={(p) => {
+                if (p?.id) setSelectedParceiroId(p.id);
+              }}
+            />
           </div>
 
           {/* Mídia Padrão Fallback */}

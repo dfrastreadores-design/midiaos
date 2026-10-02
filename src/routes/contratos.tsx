@@ -68,6 +68,7 @@ import { gerarPdfContrato } from "@/lib/contratos-pdf";
 import { useTenantBranding } from "@/hooks/use-tenant-branding";
 import { listClientes } from "@/lib/clientes.functions";
 import { listAgencias } from "@/lib/agencias.functions";
+import { listParceiros } from "@/lib/parceiros.functions";
 import { listPis } from "@/lib/pi.functions";
 import {
   UniversalAssinaturaModal,

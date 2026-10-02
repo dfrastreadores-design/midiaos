@@ -53,7 +53,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { LogoImg } from "@/components/LogoImg";
 import { PisAnexosSection } from "@/components/PisAnexosSection";
 import { listClientes } from "@/lib/clientes.functions";
-import { listAgencias } from "@/lib/agencias.functions";
+import { listAgencias, upsertAgencia } from "@/lib/agencias.functions";
+import { listIndicadores } from "@/lib/indicadores.functions";
+import { IndicadorFormDialog } from "@/components/indicadores/IndicadorFormDialog";
+import { traduzirErro } from "@/lib/error-translator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Building2 } from "lucide-react";
 
@@ -125,6 +128,8 @@ export type EntityFormData = {
   facebook?: string | null;
   data_aniversario?: string | null;
   status: string;
+  indicador_id?: string | null;
+  comissao_indicacao_pct?: number | null;
 };
 
 type ImportResult = {
@@ -167,6 +172,7 @@ type Props = {
   onSubmit: (data: EntityFormData) => Promise<unknown>;
   queryKey: string;
   tipo: "cliente" | "agencia";
+  onSuccess?: (savedData: any) => void;
 };
 
 export function EntityFormDialog({
@@ -179,9 +185,15 @@ export function EntityFormDialog({
   onSubmit,
   queryKey,
   tipo,
+  onSuccess,
 }: Props) {
   const { isAdmin } = useUserRoles();
   const { user } = useAuth();
+  const [cadastrarAgenciaOpen, setCadastrarAgenciaOpen] = useState(false);
+  const [cadastrarIndicadorOpen, setCadastrarIndicadorOpen] = useState(false);
+  const [novaAgenciaNome, setNovaAgenciaNome] = useState("");
+  const [novaAgenciaCnpj, setNovaAgenciaCnpj] = useState("");
+  const [salvandoNovaAgencia, setSalvandoNovaAgencia] = useState(false);
   const { data: executivos = [] } = useQuery({
     queryKey: ["executivos-atendimento"],
     queryFn: () =>
@@ -225,6 +237,8 @@ export function EntityFormDialog({
     facebook: "",
     data_aniversario: null,
     status: "ativo",
+    indicador_id: null,
+    comissao_indicacao_pct: null,
     contatos: initial?.id ? [] : [{ nome: "", funcao: "", email: "", telefone: "" }],
   });
   const [segmentoCustom, setSegmentoCustom] = useState("");
@@ -269,6 +283,12 @@ export function EntityFormDialog({
   });
   const agenciasList = agencias ?? agenciasFetched;
 
+  const { data: indicadoresList = [] } = useQuery({
+    queryKey: ["indicadores-para-vincular"],
+    queryFn: () => listIndicadores(),
+    enabled: open && tipo === "cliente",
+  });
+
   useEffect(() => {
     if (!open) return;
     setDuplicate(null);
@@ -301,6 +321,8 @@ export function EntityFormDialog({
       facebook: initial?.facebook ?? "",
       data_aniversario: initial?.data_aniversario ?? null,
       status: initial?.status ?? "ativo",
+      indicador_id: (initial as any)?.indicador_id ?? null,
+      comissao_indicacao_pct: (initial as any)?.comissao_indicacao_pct ?? null,
       contatos:
         initial?.contatos && initial.contatos.length > 0
           ? initial.contatos
@@ -715,15 +737,16 @@ export function EntityFormDialog({
       }
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       toast.success("Salvo com sucesso");
       qc.invalidateQueries({ queryKey: [queryKey] });
       qc.invalidateQueries({ queryKey: ["clientes"] });
       qc.invalidateQueries({ queryKey: ["agencias"] });
       qc.invalidateQueries({ queryKey: ["clientes-para-vincular"] });
       onOpenChange(false);
+      if (onSuccess) onSuccess(res);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(traduzirErro(e)),
   });
 
   const updateContato = (i: number, patch: Partial<Contato>) =>
@@ -914,14 +937,24 @@ export function EntityFormDialog({
                 </Label>
                 <Select
                   value={form.agencia_id ?? "__none"}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, agencia_id: v === "__none" ? null : v }))
-                  }
+                  onValueChange={(v) => {
+                    if (v === "__nova_agencia__") {
+                      setCadastrarAgenciaOpen(true);
+                      return;
+                    }
+                    setForm((f) => ({ ...f, agencia_id: v === "__none" ? null : v }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a agência (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem
+                      value="__nova_agencia__"
+                      className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"
+                    >
+                      ➕ Cadastrar Nova Agência...
+                    </SelectItem>
                     <SelectItem value="__none">Sem agência (cliente direto)</SelectItem>
                     {agenciasList.map((a) => (
                       <SelectItem key={a.id} value={a.id}>
@@ -932,6 +965,82 @@ export function EntityFormDialog({
                 </Select>
                 <p className="text-[11px] text-muted-foreground">
                   Vincule este cliente a uma agência de publicidade.
+                </p>
+              </div>
+            )}
+
+            {tipo === "cliente" && (
+              <div className="space-y-2 p-3.5 rounded-xl border bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-1.5 text-xs font-semibold">
+                    <UserCheck className="size-4 text-emerald-600" />
+                    Indicado por (Pessoa que indicou / Representação)
+                  </Label>
+                  {form.indicador_id && (
+                    <Badge variant="outline" className="text-[10px] text-emerald-700 bg-emerald-50 border-emerald-200 font-bold">
+                      Comissão: {form.comissao_indicacao_pct ?? 5}%
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-2">
+                    <Select
+                      value={form.indicador_id ?? "__none"}
+                      onValueChange={(v) => {
+                        if (v === "__novo_indicador__") {
+                          setCadastrarIndicadorOpen(true);
+                          return;
+                        }
+                        const indId = v === "__none" ? null : v;
+                        const indSel = (indicadoresList as any[]).find((i: any) => i.id === indId);
+                        setForm((f) => ({
+                          ...f,
+                          indicador_id: indId,
+                          comissao_indicacao_pct: indSel ? indSel.percentual_comissao_padrao : null,
+                        }));
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Selecione quem indicou (opcional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          value="__novo_indicador__"
+                          className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"
+                        >
+                          ➕ Cadastrar Novo Indicador...
+                        </SelectItem>
+                        <SelectItem value="__none">Nenhuma indicação (Cliente Direto / Próprio)</SelectItem>
+                        {(indicadoresList as any[]).map((ind: any) => (
+                          <SelectItem key={ind.id} value={ind.id}>
+                            {ind.nome} ({ind.percentual_comissao_padrao}% padrão)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {form.indicador_id && (
+                    <div>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        placeholder="% Comissão"
+                        className="h-8 text-xs font-semibold"
+                        value={form.comissao_indicacao_pct ?? 5}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            comissao_indicacao_pct: Number(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Quando este cliente fechar contrato e pagar, a pessoa que indicou receberá esta porcentagem de remuneração.
                 </p>
               </div>
             )}
@@ -1415,6 +1524,97 @@ export function EntityFormDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={cadastrarAgenciaOpen} onOpenChange={setCadastrarAgenciaOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="size-5 text-primary" />
+              Cadastrar Nova Agência
+            </DialogTitle>
+            <DialogDescription>
+              Informe os dados da agência parceira para vincular a este cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs">CNPJ da Agência (opcional)</Label>
+              <Input
+                placeholder="00.000.000/0000-00"
+                value={novaAgenciaCnpj}
+                onChange={(e) => setNovaAgenciaCnpj(formatCNPJ(e.target.value))}
+                className="mt-1 font-mono text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Razão Social / Nome da Agência *</Label>
+              <Input
+                placeholder="Nome da agência"
+                value={novaAgenciaNome}
+                onChange={(e) => setNovaAgenciaNome(e.target.value)}
+                className="mt-1 text-xs"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCadastrarAgenciaOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={salvandoNovaAgencia || !novaAgenciaNome.trim()}
+              onClick={async () => {
+                if (!novaAgenciaNome.trim()) return;
+                setSalvandoNovaAgencia(true);
+                try {
+                  const res = await upsertAgencia({
+                    data: {
+                      razao_social: novaAgenciaNome.trim(),
+                      cnpj: novaAgenciaCnpj.trim() || null,
+                      status: "ativo",
+                      contatos: [],
+                    },
+                  });
+                  qc.invalidateQueries({ queryKey: ["agencias"] });
+                  if (res?.id) {
+                    setForm((f) => ({ ...f, agencia_id: res.id }));
+                  }
+                  toast.success(`Agência "${novaAgenciaNome.trim()}" cadastrada!`);
+                  setCadastrarAgenciaOpen(false);
+                  setNovaAgenciaNome("");
+                  setNovaAgenciaCnpj("");
+                } catch (e: any) {
+                  toast.error(traduzirErro(e) || "Erro ao cadastrar agência");
+                } finally {
+                  setSalvandoNovaAgencia(false);
+                }
+              }}
+            >
+              {salvandoNovaAgencia ? (
+                <Loader2 className="size-3 animate-spin mr-1" />
+              ) : (
+                <Plus className="size-3 mr-1" />
+              )}
+              Salvar e Vincular
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <IndicadorFormDialog
+        open={cadastrarIndicadorOpen}
+        onOpenChange={setCadastrarIndicadorOpen}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["indicadores"] });
+        }}
+      />
+
       <ImportReportDialog
         open={!!importResults}
         results={importResults || []}

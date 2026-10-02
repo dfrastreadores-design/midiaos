@@ -819,7 +819,7 @@ function EmissorasCard() {
               <Input
                 value={form.nome}
                 onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                placeholder="Ex: TV Brasília — Matriz / João Silva (Influencer)"
+                placeholder="Ex: Mídia.OS Matriz / Emissora Parceira / João Silva"
               />
             </div>
             <div>

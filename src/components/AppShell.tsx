@@ -40,12 +40,15 @@ import {
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { InstallAppDialog } from "@/components/InstallAppDialog";
+import { AppDownloadBanner } from "@/components/AppDownloadBanner";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { NotificacoesBell } from "@/components/NotificacoesBell";
+import { AcessoNegadoScreen } from "@/components/AcessoNegadoScreen";
 import { TarefasVencendoPopup } from "@/components/TarefasVencendoPopup";
 import { CampanhasRenovacaoPopup } from "@/components/CampanhasRenovacaoPopup";
 import { SystemUpdatePopup } from "@/components/SystemUpdatePopup";
 import { TenantAlertBanner } from "@/components/TenantAlertBanner";
+import { PushNotificationBanner } from "@/components/PushNotificationBanner";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -221,23 +224,32 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Promo card: Celular e Tablet */}
-        <div className="mx-4 mb-4 p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-600">
-            <Smartphone className="size-4 text-amber-500" />
-            <span>Celular & Tablet</span>
+        {/* Promo card: App Mobile Android & iOS */}
+        <div className="mx-4 mb-4 p-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+              <Smartphone className="size-4 text-emerald-600 animate-pulse" />
+              <span>App Móvel Mídia.OS</span>
+            </div>
+            <div className="flex gap-1 text-[9px] font-bold">
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono">
+                Android
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-800 dark:text-sky-300 font-mono">
+                iOS
+              </span>
+            </div>
           </div>
-          <p className="text-[11px] text-sidebar-foreground/70 leading-tight">
-            Use o Mídia.OS como app na tela inicial do celular ou tablet.
+          <p className="text-[11px] text-sidebar-foreground/80 leading-tight">
+            Use no seu <strong>celular Android</strong> ou <strong>iPhone (iOS)</strong> com alertas em tempo real.
           </p>
           <Button
             type="button"
-            variant="outline"
             size="sm"
             onClick={() => setInstallDialogOpen(true)}
-            className="w-full h-7 text-[11px] font-bold rounded-lg border-amber-500/30 bg-white/70 hover:bg-amber-500/15 text-amber-700 shadow-sm"
+            className="w-full h-8 text-[11px] font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm gap-1.5"
           >
-            <Download className="size-3 mr-1.5" /> Baixar no Dispositivo
+            <Download className="size-3.5" /> Instalar no Celular
           </Button>
         </div>
 
@@ -487,12 +499,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               variant="outline"
               size="sm"
               onClick={() => setInstallDialogOpen(true)}
-              className="h-9 px-2.5 sm:px-3 rounded-xl border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all shrink-0"
-              title="Baixar Mídia.OS no celular, tablet ou computador"
+              className="h-9 px-2.5 sm:px-3 rounded-xl border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+              title="Instalar App Mídia.OS no Android ou iOS (iPhone)"
             >
-              <Download className="size-3.5 text-amber-500" />
-              <span className="hidden sm:inline">Baixar App</span>
-              <span className="sm:hidden text-[11px]">App</span>
+              <Smartphone className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="hidden sm:inline">App Android & iOS</span>
+              <span className="sm:hidden text-[11px] font-bold">App</span>
+              <span className="hidden md:inline-flex text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-extrabold uppercase tracking-wider">
+                Instalar
+              </span>
             </Button>
 
             <NotificacoesBell />
@@ -524,9 +539,18 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                   <p className="text-sm italic text-muted-foreground leading-relaxed">
                     {inicioData?.frase ?? "Carregando…"}
                   </p>
-                  <div className="pt-2 border-t border-border/40">
-                    <div className="text-xs font-semibold truncate">{displayName}</div>
-                    <div className="text-[10px] text-muted-foreground truncate">{user?.email}</div>
+                  <div className="pt-2 border-t border-border/40 space-y-2">
+                    <div>
+                      <div className="text-xs font-semibold truncate">{displayName}</div>
+                      <div className="text-[10px] text-muted-foreground truncate">{user?.email}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setInstallDialogOpen(true)}
+                      className="w-full text-left text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5 py-1 px-1.5 rounded-lg hover:bg-emerald-500/10 transition-colors"
+                    >
+                      <Smartphone className="size-3.5" /> Baixar App no Android / iOS
+                    </button>
                   </div>
                 </div>
               </HoverCardContent>
@@ -555,27 +579,17 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         )}
         <ImpersonateDialog open={impersonateOpen} onOpenChange={setImpersonateOpen} />
 
-        <main className="flex-1 px-3 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-12 pb-24 lg:pb-12 max-w-[1600px] w-full mx-auto animate-fade-up min-w-0">
+        <main className="flex-1 px-3 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-12 pb-24 lg:pb-12 max-w-[1600px] w-full mx-auto animate-fade-up min-w-0 space-y-6">
+          <PushNotificationBanner />
           {blocked ? (
-            <div className="max-w-md mx-auto mt-32 text-center space-y-6">
-              <div className="size-20 bg-destructive/5 rounded-3xl flex items-center justify-center mx-auto ring-8 ring-destructive/1">
-                <ShieldCheck className="size-10 text-destructive/40" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Módulo Restrito</h1>
-                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                  Sua conta atual não possui privilégios de acesso para este setor. Entre em contato
-                  com a diretoria para solicitar autorização.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => window.history.back()}
-                className="rounded-xl px-8"
-              >
-                Voltar ao Início
-              </Button>
-            </div>
+            <AcessoNegadoScreen
+              recurso={matchedNavItem?.label || location.pathname}
+              motivo={
+                matchedNavItem && matchedNavItem.modulo != null && !hasModulo(matchedNavItem.modulo)
+                  ? `O módulo "${matchedNavItem.label}" não está habilitado no plano atual da sua empresa. Entre em contato com a administração para ativação.`
+                  : "Seu usuário não possui permissão concedida para acessar esta funcionalidade. Solicite acesso ao administrador da conta."
+              }
+            />
           ) : (
             children
           )}

@@ -32,30 +32,55 @@ export const provisionarTenantDemo = createServerFn({ method: "POST" })
     let tenantId = existingTenant?.id;
 
     if (!tenantId) {
-      const { data: newTenant, error: tErr } = await supabase
+      const fullTenantPayload = {
+        razao_social: "Central Brasil Comunicação e Mídia Ltda (DEMO)",
+        nome_fantasia: "Central Mídia (DEMO)",
+        cnpj: "12.345.678/0001-90",
+        subdominio: demoSubdominio,
+        plano: "demo",
+        status: "ativo",
+        prefixo_pi: "DEMO-PI",
+        prefixo_proposta: "DEMO-PROP",
+        cor_primaria: "#2563eb",
+        cor_secundaria: "#06b6d4",
+        is_demo: true,
+        contato_nome: "Demonstração Mídia OS",
+        contato_email: "demo@midiaos.online",
+        contato_whatsapp: "(61) 99999-0000",
+        observacoes: "Ambiente demonstrativo oficial do Mídia OS com fluxo ponta a ponta.",
+      };
+
+      let { data: newTenant, error: tErr } = await supabase
         .from("tenants")
-        .insert({
-          razao_social: "Central Brasil Comunicação e Mídia Ltda (DEMO)",
-          nome_fantasia: "Central Mídia (DEMO)",
-          cnpj: "12.345.678/0001-90",
-          subdominio: demoSubdominio,
-          plano: "demo",
-          status: "ativo",
-          prefixo_pi: "DEMO-PI",
-          prefixo_proposta: "DEMO-PROP",
-          cor_primaria: "#2563eb",
-          cor_secundaria: "#06b6d4",
-          is_demo: true,
-          contato_nome: "Demonstração Mídia OS",
-          contato_email: "demo@midiaos.online",
-          contato_whatsapp: "(61) 99999-0000",
-          observacoes: "Ambiente demonstrativo oficial do Mídia OS com fluxo ponta a ponta.",
-        })
+        .insert(fullTenantPayload)
         .select("id")
         .single();
 
+      // Fallback defensivo: se colunas opcionais (ex: cor_secundaria, subdominio) não existirem no schema cache
+      if (tErr && (tErr.message?.includes("schema cache") || tErr.message?.includes("column"))) {
+        console.warn("Aviso: Tentando criação do Tenant Demo com campos essenciais devido a schema cache:", tErr.message);
+        const safePayload = {
+          razao_social: fullTenantPayload.razao_social,
+          nome_fantasia: fullTenantPayload.nome_fantasia,
+          cnpj: fullTenantPayload.cnpj,
+          plano: fullTenantPayload.plano,
+          status: fullTenantPayload.status,
+          contato_nome: fullTenantPayload.contato_nome,
+          contato_email: fullTenantPayload.contato_email,
+          contato_whatsapp: fullTenantPayload.contato_whatsapp,
+          observacoes: fullTenantPayload.observacoes,
+        };
+        const retry = await supabase
+          .from("tenants")
+          .insert(safePayload)
+          .select("id")
+          .single();
+        newTenant = retry.data;
+        tErr = retry.error;
+      }
+
       if (tErr) throw new Error(`Falha ao criar Tenant Demo: ${tErr.message}`);
-      tenantId = newTenant.id;
+      tenantId = newTenant?.id;
     }
 
     // 2. Cliente Demo

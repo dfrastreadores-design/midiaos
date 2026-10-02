@@ -155,6 +155,48 @@ export const upsertTransacaoFinanceira = createServerFn({ method: "POST" })
 
     const { data: row, error } = await q;
     if (error) throw new Error(error.message);
+
+    // Quando uma receita do cliente for paga, calcula e gera a comissão do indicador caso exista
+    if (row && row.tipo === "entrada" && row.status === "pago" && row.cliente_id && tenantId) {
+      try {
+        const { data: cli } = await context.supabase
+          .from("clientes")
+          .select("id, indicador_id, comissao_indicacao_pct, indicador:indicador_id(id, percentual_comissao_padrao)")
+          .eq("id", row.cliente_id)
+          .single();
+
+        if (cli?.indicador_id) {
+          const pct = Number(cli.comissao_indicacao_pct || cli.indicador?.percentual_comissao_padrao || 5);
+          const valorBase = Number(row.valor || 0);
+          const valorComissao = (valorBase * pct) / 100;
+
+          // Verifica se já não foi gerada comissão para esta transação
+          const { data: existente } = await context.supabase
+            .from("comissoes_indicacao")
+            .select("id")
+            .eq("transacao_id", row.id)
+            .maybeSingle();
+
+          if (!existente && valorComissao > 0) {
+            await context.supabase.from("comissoes_indicacao").insert({
+              tenant_id: tenantId,
+              indicador_id: cli.indicador_id,
+              cliente_id: row.cliente_id,
+              pi_id: row.pi_id || null,
+              transacao_id: row.id,
+              valor_base: valorBase,
+              percentual: pct,
+              valor_comissao: valorComissao,
+              status: "pendente",
+              observacoes: `Comissão gerada automaticamente pelo pagamento de: ${row.descricao}`,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Aviso ao registrar comissão de indicação:", err);
+      }
+    }
+
     return row;
   });
 

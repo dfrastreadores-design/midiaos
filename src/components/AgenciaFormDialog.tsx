@@ -5,10 +5,12 @@ export function AgenciaFormDialog({
   open,
   onOpenChange,
   initial,
+  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: Partial<EntityFormData> | null;
+  onSuccess?: (saved: any) => void;
 }) {
   return (
     <EntityFormDialog
@@ -19,6 +21,7 @@ export function AgenciaFormDialog({
       queryKey="agencias"
       tipo="agencia"
       showLogo={true}
+      onSuccess={onSuccess}
       onSubmit={(d) =>
         upsertAgencia({
           data: {

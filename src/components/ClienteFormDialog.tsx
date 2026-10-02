@@ -6,11 +6,13 @@ export function ClienteFormDialog({
   onOpenChange,
   initial,
   agencias,
+  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: Partial<EntityFormData> | null;
   agencias: { id: string; nome: string }[];
+  onSuccess?: (saved: any) => void;
 }) {
   return (
     <EntityFormDialog
@@ -22,6 +24,7 @@ export function ClienteFormDialog({
       showLogo
       queryKey="clientes"
       tipo="cliente"
+      onSuccess={onSuccess}
       onSubmit={(d) =>
         upsertCliente({
           data: {
@@ -49,6 +52,8 @@ export function ClienteFormDialog({
             facebook: d.facebook || null,
             data_aniversario: d.data_aniversario || null,
             status: d.status,
+            indicador_id: d.indicador_id || null,
+            comissao_indicacao_pct: d.comissao_indicacao_pct ?? null,
             contatos: d.contatos,
           },
         })

@@ -28,7 +28,7 @@ import {
   Download,
   Plus,
   FileText,
-  BarChart3,
+  BarChart,
   Tv,
   Radio,
   Share2,

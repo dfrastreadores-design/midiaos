@@ -35,7 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Percent, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Percent, DollarSign, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
   listComissoesRegras,
@@ -45,9 +45,10 @@ import {
   updateApuracaoStatus,
 } from "@/lib/comissoes.functions";
 import { listEmissoras } from "@/lib/emissoras.functions";
+import { IndicadoresTab } from "@/components/indicadores/IndicadoresTab";
 
 export const Route = createFileRoute("/comissoes")({
-  head: () => ({ meta: [{ title: "Comissões — MidiaOS Connect" }] }),
+  head: () => ({ meta: [{ title: "Comissões & Indicadores — Mídia.OS" }] }),
   component: ComissoesPage,
 });
 
@@ -73,23 +74,23 @@ const TIPOS_MIDIA = [
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function ComissoesPage() {
-  const { isSuperAdmin, loading } = useUserRoles();
+  const { isSuperAdmin, isAdmin, loading } = useUserRoles();
   if (loading)
     return (
       <AppShell>
         <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
       </AppShell>
     );
-  if (!isSuperAdmin) {
+  if (!isSuperAdmin && !isAdmin) {
     return (
       <AppShell>
         <PageHeader
-          title="Comissões"
-          description="Módulo MidiaOS Connect disponível apenas no Painel do Proprietário."
+          title="Comissões & Representação"
+          description="Gestão de regras de comissões comerciais e parceiros indicadores."
           icon={<Percent className="h-5 w-5" />}
         />
         <div className="mt-6 rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Acesso restrito. Entre em contato com o proprietário do sistema para liberar este módulo.
+          Acesso restrito à diretoria e administradores comerciais.
         </div>
       </AppShell>
     );
@@ -97,21 +98,27 @@ function ComissoesPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Comissões"
-        description="Configure regras de comissão por fornecedor, cliente, tipo de mídia ou campanha e acompanhe a apuração mês a mês."
+        title="Comissões & Representação"
+        description="Acompanhe apurações de vendas, regras contratuais e gerencie as pessoas que indicam clientes com remuneração por PIX."
         icon={<Percent className="h-5 w-5" />}
       />
       <Tabs defaultValue="apuracao" className="mt-6">
-        <TabsList>
+        <TabsList className="grid grid-cols-3 max-w-xl">
           <TabsTrigger value="apuracao">
             <DollarSign className="h-4 w-4 mr-1.5" /> Apuração
           </TabsTrigger>
+          <TabsTrigger value="indicadores">
+            <UserCheck className="h-4 w-4 mr-1.5" /> Quem Indica (Afiliados)
+          </TabsTrigger>
           <TabsTrigger value="regras">
-            <Percent className="h-4 w-4 mr-1.5" /> Regras
+            <Percent className="h-4 w-4 mr-1.5" /> Regras Comerciais
           </TabsTrigger>
         </TabsList>
         <TabsContent value="apuracao" className="mt-4">
           <ApuracaoTab />
+        </TabsContent>
+        <TabsContent value="indicadores" className="mt-4">
+          <IndicadoresTab />
         </TabsContent>
         <TabsContent value="regras" className="mt-4">
           <RegrasTab />

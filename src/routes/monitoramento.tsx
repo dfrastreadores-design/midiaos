@@ -18,6 +18,7 @@ import { useUserRoles } from "@/hooks/use-roles";
 import { getMonitoramentoSummary } from "@/lib/monitoramento.functions";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
+import { AcessoNegadoScreen } from "@/components/AcessoNegadoScreen";
 
 export const Route = createFileRoute("/monitoramento")({
   component: MonitoramentoPage,
@@ -78,20 +79,10 @@ function MonitoramentoPage() {
   if (!isSuperAdmin) {
     return (
       <AppShell>
-        <div className="p-8">
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <AlertTriangle className="mx-auto h-10 w-10 text-amber-500 mb-3" />
-              <p className="font-semibold">Acesso restrito</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Apenas administradores podem visualizar o monitoramento.
-              </p>
-              <Link to="/" className="text-primary text-sm underline mt-3 inline-block">
-                Voltar ao Dashboard
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
+        <AcessoNegadoScreen
+          recurso="Monitoramento Técnico da Infraestrutura"
+          motivo="Apenas o Super Administrador da plataforma tem permissão para visualizar o monitoramento de logs e filas."
+        />
       </AppShell>
     );
   }

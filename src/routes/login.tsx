@@ -14,6 +14,7 @@ import {
   Zap,
   BarChart3,
   Loader2,
+  Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { translateError } from "@/lib/translate-error";
@@ -228,6 +229,17 @@ function LoginPage() {
               Teste grátis por 48h
             </Link>
           </p>
+
+          {/* Destaque do Aplicativo Mobile Android & iOS */}
+          <div className="mt-6 p-3.5 rounded-xl border border-white/10 lg:border-slate-200 bg-white/[0.03] lg:bg-slate-50 text-center space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-400 lg:text-emerald-700">
+              <Smartphone className="size-3.5" />
+              <span>Disponível como App no seu Celular</span>
+            </div>
+            <p className="text-[11px] text-white/60 lg:text-slate-500">
+              Funciona nativamente em <strong>Android</strong> e <strong>iPhone (iOS)</strong>. Adicione à tela inicial para acesso instantâneo com um toque.
+            </p>
+          </div>
         </div>
       </main>
     </div>

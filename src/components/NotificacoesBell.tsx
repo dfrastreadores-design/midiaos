@@ -10,12 +10,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { listMinhasNotificacoes, marcarNotificacaoLida } from "@/lib/notificacoes.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
+import { PushNotificationManager } from "@/components/PushNotificationManager";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export function NotificacoesBell() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { showLocalPush } = usePushNotifications();
   const fetchList = useServerFn(listMinhasNotificacoes);
   const markRead = useServerFn(marcarNotificacaoLida);
   const { data: items = [] } = useQuery({
@@ -38,6 +41,8 @@ export function NotificacoesBell() {
         },
         (payload) => {
           const n = payload.new as { titulo: string; mensagem: string | null; link: string | null };
+          
+          // Toast in-app
           toast(n.titulo, {
             description: n.mensagem ?? undefined,
             action: n.link
@@ -49,6 +54,13 @@ export function NotificacoesBell() {
                 }
               : undefined,
           });
+
+          // Push nativo no Desktop (Windows/Mac) e App (Android/iOS)
+          showLocalPush(n.titulo, {
+            body: n.mensagem ?? undefined,
+            url: n.link ?? "/",
+          });
+
           qc.invalidateQueries({ queryKey: ["minhas-notificacoes"] });
         },
       )
@@ -56,7 +68,7 @@ export function NotificacoesBell() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, qc]);
+  }, [user?.id, qc, showLocalPush]);
 
   const naoLidas = items.filter((i) => !i.lida).length;
 
@@ -91,6 +103,9 @@ export function NotificacoesBell() {
           >
             <Check className="size-3.5 mr-1" /> Marcar todas
           </Button>
+        </div>
+        <div className="p-2 border-b bg-muted/20">
+          <PushNotificationManager compact />
         </div>
         <div className="max-h-[28rem] overflow-y-auto divide-y">
           {items.length === 0 && (

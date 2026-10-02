@@ -38,6 +38,9 @@ import {
   Loader2,
   ShieldCheck,
   Paperclip,
+  MapPin,
+  Package,
+  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -46,8 +49,10 @@ import {
   type EstrategiaMidiaOutput,
 } from "@/lib/centralizadores.functions";
 import { listClientes } from "@/lib/clientes.functions";
+import { listProdutos, type Produto } from "@/lib/produtos.functions";
 import { listParceirosMetricas } from "@/lib/parceiros-metricas.functions";
 import { UniversalAnexosModal } from "@/components/anexos/UniversalAnexosModal";
+import { ClienteFormDialog } from "@/components/ClienteFormDialog";
 
 const PRESETS_CENARIOS = [
   {
@@ -115,6 +120,7 @@ export function PlanejadorEstrategicoIa() {
   const gerarEstrategiaFn = useServerFn(gerarEstrategiaMidiaIA);
   const listClientesFn = useServerFn(listClientes);
   const listMetricasFn = useServerFn(listParceirosMetricas);
+  const listProdutosFn = useServerFn(listProdutos);
 
   const { data: clientes = [] } = useQuery({
     queryKey: ["clientes-lista-planejador"],
@@ -125,6 +131,14 @@ export function PlanejadorEstrategicoIa() {
     queryKey: ["parceiros-metricas-planejador"],
     queryFn: () => listMetricasFn(),
   });
+
+  const { data: produtos = [] } = useQuery<Produto[]>({
+    queryKey: ["produtos-inventario-planejador"],
+    queryFn: () => listProdutosFn(),
+  });
+
+  const [usarTodoInventario, setUsarTodoInventario] = useState(true);
+  const [modalNovoClienteOpen, setModalNovoClienteOpen] = useState(false);
 
   const [form, setForm] = useState<EstrategiaMidiaInput>({
     cliente_id: null,
@@ -139,6 +153,7 @@ export function PlanejadorEstrategicoIa() {
     veiculos_preferenciais: ["TV Aberta", "Painéis DOOH", "Rádio FM", "Digital / Redes"],
     diferenciais_cliente: "Tradição de mercado, excelência no atendimento e facilidade de pagamento",
     tom_comunicacao: "Persuasivo & Confiável",
+    produtos_selecionados_ids: [],
   });
 
   const [resultado, setResultado] = useState<EstrategiaMidiaOutput | null>(null);
@@ -335,13 +350,25 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                 </div>
                 <Select
                   value={form.cliente_id || "novo"}
-                  onValueChange={selecionarClienteExistente}
+                  onValueChange={(val) => {
+                    if (val === "__novo_cliente__") {
+                      setModalNovoClienteOpen(true);
+                      return;
+                    }
+                    selecionarClienteExistente(val);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um cliente ou digite novo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="novo">+ Cliente Novo / Prospect Avulso</SelectItem>
+                    <SelectItem
+                      value="__novo_cliente__"
+                      className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"
+                    >
+                      ➕ Cadastrar Novo Cliente...
+                    </SelectItem>
+                    <SelectItem value="novo">✍️ Cliente Novo / Prospect Avulso</SelectItem>
                     {clientes.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.nome_fantasia || c.razao_social} {c.segmento ? `(${c.segmento})` : ""}
@@ -443,6 +470,91 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Inventário Real do Inquilino Integrado */}
+              <div className="rounded-xl border p-3 bg-muted/20 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Package className="size-3.5 text-primary" />
+                    Inventário Real do Sistema
+                  </Label>
+                  <Badge variant="outline" className="text-[10px] bg-background">
+                    {produtos.length} produto(s) ativo(s)
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-tight">
+                  A inteligência artificial selecionará e alocará os pontos, telas de LED, programas e formatos reais do seu catálogo para atingir a meta deste cliente.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={usarTodoInventario ? "default" : "outline"}
+                    className="h-7 text-[11px] gap-1"
+                    onClick={() => {
+                      setUsarTodoInventario(true);
+                      setForm((prev) => ({ ...prev, produtos_selecionados_ids: [] }));
+                    }}
+                  >
+                    <CheckCircle2 className="size-3" />
+                    Todo o Inventário ({produtos.length})
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!usarTodoInventario ? "default" : "outline"}
+                    className="h-7 text-[11px] gap-1"
+                    onClick={() => setUsarTodoInventario(false)}
+                  >
+                    <Filter className="size-3" />
+                    Filtrar Itens ({form.produtos_selecionados_ids?.length || 0})
+                  </Button>
+                </div>
+
+                {!usarTodoInventario && (
+                  <div className="space-y-1.5 pt-1.5">
+                    <div className="max-h-44 overflow-y-auto space-y-1 pr-1 border rounded p-1.5 bg-background">
+                      {produtos.map((prod: any) => {
+                        const selected = (form.produtos_selecionados_ids || []).includes(prod.id);
+                        return (
+                          <div
+                            key={prod.id}
+                            onClick={() => {
+                              const curr = form.produtos_selecionados_ids || [];
+                              const next = selected
+                                ? curr.filter((id) => id !== prod.id)
+                                : [...curr, prod.id];
+                              setForm({ ...form, produtos_selecionados_ids: next });
+                            }}
+                            className={`p-1.5 rounded text-[11px] flex items-center justify-between cursor-pointer transition-colors ${
+                              selected
+                                ? "bg-primary/10 border border-primary/40 font-medium text-primary"
+                                : "hover:bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            <div className="truncate mr-2">
+                              <span className="font-semibold text-foreground">{prod.nome}</span>
+                              {prod.endereco_ponto && (
+                                <span className="text-[10px] text-muted-foreground block truncate">
+                                  📍 {prod.endereco_ponto}
+                                </span>
+                              )}
+                            </div>
+                            <div className="shrink-0 flex items-center gap-1.5">
+                              <Badge variant="secondary" className="text-[9px] py-0">
+                                {prod.midia}
+                              </Badge>
+                              <span className="font-mono text-[10px] font-semibold text-foreground">
+                                {formatBRL(prod.valor_unit)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Diferenciais e Tom */}
@@ -677,6 +789,100 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                 </CardContent>
               </Card>
 
+              {/* Pontos & Produtos do Inventário Alocados pela IA */}
+              {resultado.itens_inventario && resultado.itens_inventario.length > 0 && (
+                <Card className="border-indigo-500/30 bg-indigo-50/10 dark:bg-indigo-950/10 shadow-xs">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                        <Package className="size-4 text-indigo-600" />
+                        Itens do Seu Inventário Alocados no Planejamento ({resultado.itens_inventario.length})
+                      </CardTitle>
+                      <Badge className="bg-indigo-600 text-white text-[11px]">
+                        {resultado.itens_inventario.reduce((acc, it) => acc + (it.insercoes_sugeridas || 0), 0)} inserções totais
+                      </Badge>
+                    </div>
+                    <CardDescription className="text-xs">
+                      A inteligência artificial selecionou os seguintes ativos do seu catálogo para cumprir as metas desta campanha.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {resultado.itens_inventario.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-lg border bg-background space-y-1.5 shadow-2xs hover:border-indigo-400 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
+                                {item.midia === "TV" ? (
+                                  <Tv className="size-3.5 text-blue-600 shrink-0" />
+                                ) : item.midia === "Radio" || item.midia === "Rádio" ? (
+                                  <Radio className="size-3.5 text-amber-600 shrink-0" />
+                                ) : (
+                                  <Building2 className="size-3.5 text-purple-600 shrink-0" />
+                                )}
+                                <span className="truncate">{item.nome}</span>
+                              </div>
+                              {item.endereco_ponto && (
+                                <div className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
+                                  <MapPin className="size-3 shrink-0 text-red-500" />
+                                  <span className="truncate">{item.endereco_ponto}</span>
+                                </div>
+                              )}
+                            </div>
+                            <Badge variant="outline" className="text-[10px] shrink-0 font-medium">
+                              {item.midia}
+                            </Badge>
+                          </div>
+
+                          <div className="flex items-center justify-between text-xs pt-1 border-t font-mono">
+                            <span className="text-[11px] text-muted-foreground">
+                              {item.insercoes_sugeridas}x de {formatBRL(item.valor_unit)}
+                            </span>
+                            <span className="font-bold text-primary">{formatBRL(item.subtotal)}</span>
+                          </div>
+
+                          {item.justificativa && (
+                            <p className="text-[10px] text-muted-foreground italic leading-tight pt-0.5">
+                              💡 {item.justificativa}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200/50 flex items-center justify-between flex-wrap gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="size-4 text-emerald-600" />
+                        <span className="font-medium text-foreground">
+                          Total alocado no seu inventário:
+                        </span>
+                        <strong className="font-mono text-emerald-700 dark:text-emerald-400">
+                          {formatBRL(
+                            resultado.itens_inventario.reduce((acc, it) => acc + (it.subtotal || 0), 0),
+                          )}
+                        </strong>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          window.location.href = `/propostas?cliente=${encodeURIComponent(
+                            form.cliente_nome,
+                          )}&valor=${form.budget_estimado}&campanha=${encodeURIComponent(
+                            resultado.titulo_estrategia,
+                          )}`;
+                        }}
+                        className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1"
+                      >
+                        Gerar Proposta com estes Itens <ArrowRight className="size-3" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Diagnóstico & Racional Estratégico */}
               <Card>
                 <CardHeader className="pb-2">
@@ -801,6 +1007,23 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
         entidadeId={form.cliente_id || "prospect"}
         entidadeNome={form.cliente_nome || "Cliente"}
         tituloCustomizado={`Documentos & Briefing — ${form.cliente_nome || "Cliente"}`}
+      />
+
+      <ClienteFormDialog
+        open={modalNovoClienteOpen}
+        onOpenChange={setModalNovoClienteOpen}
+        agencias={[]}
+        onSuccess={(saved) => {
+          if (saved?.id) {
+            setForm((prev) => ({
+              ...prev,
+              cliente_id: saved.id,
+              cliente_nome: saved.nome_fantasia || saved.razao_social,
+              segmento: saved.segmento || prev.segmento,
+            }));
+            toast.success("Cliente cadastrado e selecionado no planejador!");
+          }
+        }}
       />
     </div>
   );

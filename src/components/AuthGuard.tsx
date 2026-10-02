@@ -16,7 +16,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      nav({ to: "/site" });
+      nav({ to: "/login" });
       return;
     }
     let cancelled = false;

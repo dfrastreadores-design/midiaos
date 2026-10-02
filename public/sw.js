@@ -72,3 +72,91 @@ self.addEventListener("fetch", (event) => {
   // Padrão: rede com fallback para cache
   event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
+
+// ============================================================================
+// 🔔 SISTEMA DE PUSH NOTIFICATIONS (DESKTOP & MOBILE / ANDROID & IOS)
+// ============================================================================
+
+// Listener de eventos Push do Servidor (Web Push Protocol)
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "Mídia.OS",
+    body: "Você possui uma nova notificação no Mídia.OS.",
+    icon: "/favicon.png",
+    badge: "/favicon.png",
+    data: { url: "/" },
+  };
+
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      payload = { ...payload, ...parsed };
+    } catch {
+      payload.body = event.data.text() || payload.body;
+    }
+  }
+
+  const title = payload.title || "Mídia.OS";
+  const options = {
+    body: payload.body,
+    icon: payload.icon || "/favicon.png",
+    badge: payload.badge || "/favicon.png",
+    vibrate: [150, 75, 150],
+    data: payload.data || { url: "/" },
+    tag: payload.tag || "midiaos-notificacao",
+    renotify: true,
+    requireInteraction: false,
+    actions: payload.actions || [
+      { action: "open", title: "Abrir no Mídia.OS" },
+    ],
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Listener de Mensagens Internas enviadas pela aplicação React
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SHOW_LOCAL_PUSH") {
+    const { title, options } = event.data;
+    const notificationOptions = {
+      body: options?.body || "",
+      icon: options?.icon || "/favicon.png",
+      badge: options?.badge || "/favicon.png",
+      vibrate: [150, 75, 150],
+      data: options?.data || { url: "/" },
+      tag: options?.tag || `midiaos-local-${Date.now()}`,
+      renotify: true,
+      requireInteraction: false,
+    };
+    event.waitUntil(self.registration.showNotification(title || "Mídia.OS", notificationOptions));
+  }
+});
+
+// Listener de Clique na Notificação Push (Desktop & Mobile)
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        // Se já existe uma aba ou janela aberta, dá foco nela e redireciona
+        for (const client of clientList) {
+          if (client.url && client.url.includes(self.location.origin) && "focus" in client) {
+            client.focus();
+            if ("navigate" in client && targetUrl && targetUrl !== "/") {
+              client.navigate(targetUrl);
+            }
+            return;
+          }
+        }
+        // Se não houver janela aberta do Mídia.OS, abre uma nova
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
+      }),
+  );
+});
+

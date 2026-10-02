@@ -1,4 +1,20 @@
-import { Toaster as Sonner } from "sonner";
+import { Toaster as Sonner, toast } from "sonner";
+import { traduzirErro } from "@/lib/error-translator";
+
+// Intercepta toast.error para traduzir automaticamente mensagens técnicas de erro (PostgREST, Supabase, etc.) para Português
+if (typeof window !== "undefined") {
+  const originalError = toast.error;
+  if (typeof originalError === "function" && !(toast as any).__translated) {
+    (toast as any).__translated = true;
+    toast.error = (message: any, data?: any) => {
+      const translated = traduzirErro(message);
+      if (data && typeof data.description === "string") {
+        data = { ...data, description: traduzirErro(data.description) };
+      }
+      return originalError(translated, data);
+    };
+  }
+}
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 

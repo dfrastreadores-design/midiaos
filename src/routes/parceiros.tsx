@@ -47,6 +47,11 @@ import {
   MessageSquare,
   Download,
   Paperclip,
+  Sparkles,
+  Globe,
+  Instagram,
+  Linkedin,
+  Facebook,
 } from "lucide-react";
 import { toast } from "sonner";
 import { UniversalAnexosModal } from "@/components/anexos/UniversalAnexosModal";
@@ -58,6 +63,7 @@ import {
 } from "@/lib/parceiros.functions";
 import { ParceiroFormDialog } from "@/components/ParceiroFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
+import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
 import { useUserRoles } from "@/hooks/use-roles";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
 
@@ -85,6 +91,8 @@ export function ParceirosPage() {
   const [importParceiroId, setImportParceiroId] = useState<string | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<Parceiro | null>(null);
   const [anexoParceiro, setAnexoParceiro] = useState<Parceiro | null>(null);
+  const [midiaKitOpen, setMidiaKitOpen] = useState(false);
+  const [midiaKitParceiroId, setMidiaKitParceiroId] = useState<string | undefined>(undefined);
 
   // Queries
   const { data: parceiros = [], isLoading } = useQuery<Parceiro[]>({
@@ -195,6 +203,18 @@ export function ParceirosPage() {
               >
                 <FileSpreadsheet className="size-4 text-purple-600" />
                 Importar Planilha
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 shadow-xs"
+                onClick={() => {
+                  setMidiaKitParceiroId(undefined);
+                  setMidiaKitOpen(true);
+                }}
+                title="Fazer leitura de Mídia Kit, apresentação e tabela de preços com IA"
+              >
+                <Sparkles className="size-4 text-indigo-600" />
+                Importar Mídia Kit (IA)
               </Button>
               <Button
                 className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
@@ -458,6 +478,16 @@ export function ParceirosPage() {
                                 <FileSpreadsheet className="size-3.5 mr-2 text-purple-600" />
                                 Importar Planilha de Produtos
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setMidiaKitParceiroId(parceiro.id);
+                                  setMidiaKitOpen(true);
+                                }}
+                                className="text-indigo-600 dark:text-indigo-400 font-medium"
+                              >
+                                <Sparkles className="size-3.5 mr-2 text-indigo-600" />
+                                Ler Mídia Kit & Preços com IA
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => setAnexoParceiro(parceiro)}>
                                 <Paperclip className="size-3.5 mr-2 text-blue-600" />
                                 Anexar Documentos / Mídia Kit
@@ -571,6 +601,85 @@ export function ParceirosPage() {
                           </span>
                         </div>
                       )}
+
+                      {/* Presença Digital & Redes Sociais */}
+                      {Boolean(
+                        parceiro.site ||
+                          parceiro.instagram ||
+                          parceiro.linkedin ||
+                          parceiro.facebook,
+                      ) && (
+                        <div className="flex flex-wrap items-center gap-2 pt-1.5 border-t border-border/40 mt-1">
+                          {parceiro.site && (
+                            <a
+                              href={
+                                parceiro.site.startsWith("http")
+                                  ? parceiro.site
+                                  : `https://${parceiro.site}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-medium"
+                              title="Visitar site oficial"
+                            >
+                              <Globe className="size-3" />
+                              <span>Site</span>
+                            </a>
+                          )}
+                          {parceiro.instagram && (
+                            <a
+                              href={
+                                parceiro.instagram.startsWith("http")
+                                  ? parceiro.instagram
+                                  : `https://instagram.com/${parceiro.instagram.replace(/^@/, "")}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] text-pink-600 hover:underline font-medium"
+                              title="Perfil no Instagram"
+                            >
+                              <Instagram className="size-3" />
+                              <span>
+                                {parceiro.instagram.startsWith("@")
+                                  ? parceiro.instagram
+                                  : `@${parceiro.instagram.replace(/.*instagram\.com\//, "").replace(/\/$/, "")}`}
+                              </span>
+                            </a>
+                          )}
+                          {parceiro.linkedin && (
+                            <a
+                              href={
+                                parceiro.linkedin.startsWith("http")
+                                  ? parceiro.linkedin
+                                  : `https://${parceiro.linkedin}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline font-medium"
+                              title="Perfil no LinkedIn"
+                            >
+                              <Linkedin className="size-3" />
+                              <span>LinkedIn</span>
+                            </a>
+                          )}
+                          {parceiro.facebook && (
+                            <a
+                              href={
+                                parceiro.facebook.startsWith("http")
+                                  ? parceiro.facebook
+                                  : `https://${parceiro.facebook}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] text-blue-700 hover:underline font-medium"
+                              title="Página no Facebook"
+                            >
+                              <Facebook className="size-3" />
+                              <span>Facebook</span>
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Inventário e Ações de Rodapé */}
@@ -649,6 +758,17 @@ export function ParceirosPage() {
         onOpenChange={setImportOpen}
         midiaPadrao="DOOH"
         parceiroPadraoId={importParceiroId}
+      />
+
+      {/* Dialog de Leitura Inteligente de Mídia Kit, Apresentação & Tabela de Preços (IA) */}
+      <ImportarMidiaKitDialog
+        open={midiaKitOpen}
+        onOpenChange={setMidiaKitOpen}
+        parceiroInicialId={midiaKitParceiroId}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ["parceiros"] });
+          qc.invalidateQueries({ queryKey: ["produtos"] });
+        }}
       />
 
       {/* Dialog de Confirmação de Exclusão */}

@@ -39,11 +39,14 @@ import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as DocumentacaoRouteImport } from './routes/documentacao'
 import { Route as CrmRouteImport } from './routes/crm'
+import { Route as ContratosRouteImport } from './routes/contratos'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ComissoesRouteImport } from './routes/comissoes'
 import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as CentralizadoresRouteImport } from './routes/centralizadores'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as BriefingsRouteImport } from './routes/briefings'
+import { Route as AssinaturasRouteImport } from './routes/assinaturas'
 import { Route as AgenciasRouteImport } from './routes/agencias'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as IndexRouteImport } from './routes/index'
@@ -218,6 +221,11 @@ const CrmRoute = CrmRouteImport.update({
   path: '/crm',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContratosRoute = ContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
@@ -233,6 +241,11 @@ const ClientesRoute = ClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CentralizadoresRoute = CentralizadoresRouteImport.update({
+  id: '/centralizadores',
+  path: '/centralizadores',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CalendarioRoute = CalendarioRouteImport.update({
   id: '/calendario',
   path: '/calendario',
@@ -241,6 +254,11 @@ const CalendarioRoute = CalendarioRouteImport.update({
 const BriefingsRoute = BriefingsRouteImport.update({
   id: '/briefings',
   path: '/briefings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssinaturasRoute = AssinaturasRouteImport.update({
+  id: '/assinaturas',
+  path: '/assinaturas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgenciasRoute = AgenciasRouteImport.update({
@@ -367,11 +385,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
   '/agencias': typeof AgenciasRoute
+  '/assinaturas': typeof AssinaturasRoute
   '/briefings': typeof BriefingsRoute
   '/calendario': typeof CalendarioRoute
+  '/centralizadores': typeof CentralizadoresRoute
   '/clientes': typeof ClientesRoute
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/contratos': typeof ContratosRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
@@ -427,11 +448,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
   '/agencias': typeof AgenciasRoute
+  '/assinaturas': typeof AssinaturasRoute
   '/briefings': typeof BriefingsRoute
   '/calendario': typeof CalendarioRoute
+  '/centralizadores': typeof CentralizadoresRoute
   '/clientes': typeof ClientesRoute
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/contratos': typeof ContratosRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
@@ -487,11 +511,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
   '/agencias': typeof AgenciasRoute
+  '/assinaturas': typeof AssinaturasRoute
   '/briefings': typeof BriefingsRoute
   '/calendario': typeof CalendarioRoute
+  '/centralizadores': typeof CentralizadoresRoute
   '/clientes': typeof ClientesRoute
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/contratos': typeof ContratosRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
@@ -549,11 +576,14 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/agencias'
+    | '/assinaturas'
     | '/briefings'
     | '/calendario'
+    | '/centralizadores'
     | '/clientes'
     | '/comissoes'
     | '/configuracoes'
+    | '/contratos'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
@@ -609,11 +639,14 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/agencias'
+    | '/assinaturas'
     | '/briefings'
     | '/calendario'
+    | '/centralizadores'
     | '/clientes'
     | '/comissoes'
     | '/configuracoes'
+    | '/contratos'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
@@ -668,11 +701,14 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/agencias'
+    | '/assinaturas'
     | '/briefings'
     | '/calendario'
+    | '/centralizadores'
     | '/clientes'
     | '/comissoes'
     | '/configuracoes'
+    | '/contratos'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
@@ -729,11 +765,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SlugRoute: typeof SlugRoute
   AgenciasRoute: typeof AgenciasRoute
+  AssinaturasRoute: typeof AssinaturasRoute
   BriefingsRoute: typeof BriefingsRoute
   CalendarioRoute: typeof CalendarioRoute
+  CentralizadoresRoute: typeof CentralizadoresRoute
   ClientesRoute: typeof ClientesRoute
   ComissoesRoute: typeof ComissoesRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  ContratosRoute: typeof ContratosRoute
   CrmRoute: typeof CrmRoute
   DocumentacaoRoute: typeof DocumentacaoRoute
   FinanceiroRoute: typeof FinanceiroRoute
@@ -990,6 +1029,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CrmRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contratos': {
+      id: '/contratos'
+      path: '/contratos'
+      fullPath: '/contratos'
+      preLoaderRoute: typeof ContratosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/configuracoes': {
       id: '/configuracoes'
       path: '/configuracoes'
@@ -1011,6 +1057,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/centralizadores': {
+      id: '/centralizadores'
+      path: '/centralizadores'
+      fullPath: '/centralizadores'
+      preLoaderRoute: typeof CentralizadoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/calendario': {
       id: '/calendario'
       path: '/calendario'
@@ -1023,6 +1076,13 @@ declare module '@tanstack/react-router' {
       path: '/briefings'
       fullPath: '/briefings'
       preLoaderRoute: typeof BriefingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assinaturas': {
+      id: '/assinaturas'
+      path: '/assinaturas'
+      fullPath: '/assinaturas'
+      preLoaderRoute: typeof AssinaturasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agencias': {
@@ -1227,11 +1287,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRoute,
   AgenciasRoute: AgenciasRoute,
+  AssinaturasRoute: AssinaturasRoute,
   BriefingsRoute: BriefingsRoute,
   CalendarioRoute: CalendarioRoute,
+  CentralizadoresRoute: CentralizadoresRoute,
   ClientesRoute: ClientesRoute,
   ComissoesRoute: ComissoesRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  ContratosRoute: ContratosRoute,
   CrmRoute: CrmRoute,
   DocumentacaoRoute: DocumentacaoRoute,
   FinanceiroRoute: FinanceiroRoute,

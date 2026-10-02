@@ -393,11 +393,26 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
                         : "Importar Modelo Próprio"}
                     </button>
                   </div>
-                  <Select value={selectedLayoutId} onValueChange={setSelectedLayoutId}>
+                  <Select
+                    value={selectedLayoutId}
+                    onValueChange={(v) => {
+                      if (v === "__novo_modelo__") {
+                        setImportarModeloOpen(true);
+                        return;
+                      }
+                      setSelectedLayoutId(v);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um layout" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem
+                        value="__novo_modelo__"
+                        className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"
+                      >
+                        ➕ Importar / Cadastrar Novo Modelo...
+                      </SelectItem>
                       <SelectItem value="default">Layout Padrão TVB</SelectItem>
                       {layouts.map((l: any) => (
                         <SelectItem key={l.id} value={l.id}>

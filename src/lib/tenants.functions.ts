@@ -34,6 +34,7 @@ export type TenantInput = {
   plano_id?: string | null;
   modulos_override?: string[] | null;
   max_usuarios_override?: number | null;
+  modelos_proposta?: any[];
 };
 
 export const listTenants = createServerFn({ method: "GET" })
@@ -280,12 +281,26 @@ export const upsertTenant = createServerFn({ method: "POST" })
     await assertSuperAdmin(context);
     const payload: any = { ...data };
     if (!data.id) payload.created_by = context.userId;
-    const q = data.id
-      ? context.supabase.from("tenants").update(payload).eq("id", data.id).select().single()
-      : context.supabase.from("tenants").insert(payload).select().single();
-    const { data: row, error } = await q;
-    if (error) throw new Error(error.message);
-    return row;
+
+    let res = data.id
+      ? await context.supabase.from("tenants").update(payload).eq("id", data.id).select().single()
+      : await context.supabase.from("tenants").insert(payload).select().single();
+
+    // Se alguma coluna nova ainda não existe no cache do Supabase
+    if (res.error && (res.error.message.includes("schema cache") || res.error.message.includes("column") || res.error.message.includes("modelos_proposta"))) {
+      console.warn("Aviso: coluna não encontrada no schema cache ao salvar tenant:", res.error.message);
+      delete payload.modelos_proposta;
+      delete payload.modulos_override;
+      delete payload.max_usuarios_override;
+      delete payload.categorias_servicos;
+      delete payload.proposta_layout_padrao;
+      res = data.id
+        ? await context.supabase.from("tenants").update(payload).eq("id", data.id).select().single()
+        : await context.supabase.from("tenants").insert(payload).select().single();
+    }
+
+    if (res.error) throw new Error(res.error.message);
+    return res.data;
   });
 
 export const deleteTenant = createServerFn({ method: "POST" })
@@ -607,13 +622,25 @@ export const getMeuTenantPerfil = createServerFn({ method: "GET" })
       .eq("id", context.userId)
       .single();
     if (!prof?.tenant_id) return null;
-    const { data: t, error } = await context.supabase
+    let { data: t, error } = await context.supabase
       .from("tenants")
       .select(
         "id, razao_social, nome_fantasia, cnpj, contato_nome, contato_email, contato_whatsapp, logo_url, favicon_url, cor_primaria, cor_secundaria, produto_marca, status, plano, proximo_vencimento, subdominio, dominio_proprio, prefixo_pi, prefixo_proposta, comissao_padrao_pct, created_at",
       )
       .eq("id", prof.tenant_id)
       .maybeSingle();
+
+    if (error && (error.message?.includes("schema cache") || error.message?.includes("column"))) {
+      console.warn("Aviso: Falha ao consultar colunas específicas do tenant, fallback para select(*):", error.message);
+      const fallback = await context.supabase
+        .from("tenants")
+        .select("*")
+        .eq("id", prof.tenant_id)
+        .maybeSingle();
+      t = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) throw new Error(error.message);
     return t;
   });
@@ -680,10 +707,28 @@ export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
       comissao_padrao_pct: data.comissao_padrao_pct !== undefined ? Number(data.comissao_padrao_pct) : 20,
     };
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from("tenants")
       .update(updatePayload)
       .eq("id", prof.tenant_id);
+
+    // Fallback defensivo: se colunas opcionais (white-label) ainda não existem na tabela
+    if (error && (error.message?.includes("schema cache") || error.message?.includes("column"))) {
+      console.warn("Aviso ao atualizar perfil do tenant (schema cache), fallback para campos essenciais:", error.message);
+      const safePayload = {
+        razao_social: updatePayload.razao_social,
+        nome_fantasia: updatePayload.nome_fantasia,
+        cnpj: updatePayload.cnpj,
+        contato_nome: updatePayload.contato_nome,
+        contato_email: updatePayload.contato_email,
+        contato_whatsapp: updatePayload.contato_whatsapp,
+      };
+      const retry = await supabase
+        .from("tenants")
+        .update(safePayload)
+        .eq("id", prof.tenant_id);
+      error = retry.error;
+    }
 
     if (error) throw new Error(error.message);
     return { ok: true };

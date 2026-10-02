@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -8,6 +9,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { NovoClienteButton, NovaAgenciaButton } from "@/components/QuickCadastroButtons";
+import { ClienteFormDialog } from "@/components/ClienteFormDialog";
+import { AgenciaFormDialog } from "@/components/AgenciaFormDialog";
 import { errorInputClass } from "@/lib/form-errors";
 
 type CustomerSelectorProps = {
@@ -33,6 +36,9 @@ export function CustomerSelector({
   agencias,
   hasError = false,
 }: CustomerSelectorProps) {
+  const [modalClienteOpen, setModalClienteOpen] = useState(false);
+  const [modalAgenciaOpen, setModalAgenciaOpen] = useState(false);
+
   return (
     <div className="grid sm:grid-cols-2 gap-3">
       <div className="space-y-1.5">
@@ -42,12 +48,24 @@ export function CustomerSelector({
         <div className="flex gap-2">
           <Select
             value={clienteId || "none"}
-            onValueChange={(v) => setClienteId(v === "none" ? "" : v)}
+            onValueChange={(v) => {
+              if (v === "__novo_cliente__") {
+                setModalClienteOpen(true);
+                return;
+              }
+              setClienteId(v === "none" ? "" : v);
+            }}
           >
             <SelectTrigger className={errorInputClass(hasError)}>
-              <SelectValue placeholder="Selecione" />
+              <SelectValue placeholder="Selecione o cliente" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem
+                value="__novo_cliente__"
+                className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"
+              >
+                ➕ Cadastrar Novo Cliente...
+              </SelectItem>
               <SelectItem value="none">— Sem cliente —</SelectItem>
               {clientes.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
@@ -56,7 +74,11 @@ export function CustomerSelector({
               ))}
             </SelectContent>
           </Select>
-          <NovoClienteButton />
+          <NovoClienteButton
+            onCreated={(c) => {
+              if (c?.id) setClienteId(c.id);
+            }}
+          />
         </div>
       </div>
       <div className="space-y-1.5">
@@ -64,13 +86,25 @@ export function CustomerSelector({
         <div className="flex gap-2">
           <Select
             value={agenciaId || "none"}
-            onValueChange={(v) => setAgenciaId(v === "none" ? "" : v)}
+            onValueChange={(v) => {
+              if (v === "__nova_agencia__") {
+                setModalAgenciaOpen(true);
+                return;
+              }
+              setAgenciaId(v === "none" ? "" : v);
+            }}
           >
             <SelectTrigger className={errorInputClass(hasError)}>
-              <SelectValue placeholder="Selecione" />
+              <SelectValue placeholder="Selecione a agência" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">— Direto —</SelectItem>
+              <SelectItem
+                value="__nova_agencia__"
+                className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"
+              >
+                ➕ Cadastrar Nova Agência...
+              </SelectItem>
+              <SelectItem value="none">— Direto (Sem agência) —</SelectItem>
               {agencias.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
                   {a.nome_fantasia || a.razao_social}
@@ -78,9 +112,33 @@ export function CustomerSelector({
               ))}
             </SelectContent>
           </Select>
-          <NovaAgenciaButton />
+          <NovaAgenciaButton
+            onCreated={(a) => {
+              if (a?.id) setAgenciaId(a.id);
+            }}
+          />
         </div>
       </div>
+
+      <ClienteFormDialog
+        open={modalClienteOpen}
+        onOpenChange={setModalClienteOpen}
+        agencias={agencias.map((a) => ({
+          id: a.id,
+          nome: a.nome_fantasia || a.razao_social,
+        }))}
+        onSuccess={(saved) => {
+          if (saved?.id) setClienteId(saved.id);
+        }}
+      />
+
+      <AgenciaFormDialog
+        open={modalAgenciaOpen}
+        onOpenChange={setModalAgenciaOpen}
+        onSuccess={(saved) => {
+          if (saved?.id) setAgenciaId(saved.id);
+        }}
+      />
       <div className="space-y-1.5 sm:col-span-2">
         <Label>Cliente / Agência (avulso)</Label>
         <Input

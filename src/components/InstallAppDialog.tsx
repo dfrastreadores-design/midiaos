@@ -29,14 +29,21 @@ import { toast } from "sonner";
 interface InstallAppDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialTab?: "android" | "ios" | "desktop";
 }
 
-export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) {
+export function InstallAppDialog({ open, onOpenChange, initialTab }: InstallAppDialogProps) {
   const { platform, canPromptNative, promptInstall, isStandalone } = usePwaInstall();
   const [activeTab, setActiveTab] = useState<string>(
-    platform === "ios" ? "ios" : platform === "android" ? "android" : "desktop",
+    initialTab || (platform === "ios" ? "ios" : platform === "android" ? "android" : "android"),
   );
   const [installing, setInstalling] = useState(false);
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, open]);
 
   const handleNativeInstall = async () => {
     setInstalling(true);
@@ -64,11 +71,14 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
               <Download className="size-6 text-amber-400 animate-pulse" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold font-display text-white">
-                Baixar Mídia.OS no Dispositivo
+              <DialogTitle className="text-xl font-bold font-display text-white flex items-center gap-2">
+                <span>App Mídia.OS Mobile</span>
+                <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px] font-bold">
+                  Android & iOS
+                </Badge>
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-300">
-                Acesse como aplicativo nativo no celular, tablet ou computador
+                Instale o aplicativo oficial no seu celular Android ou iPhone (iOS)
               </DialogDescription>
             </div>
           </div>
@@ -76,21 +86,21 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
           <div className="flex flex-wrap items-center gap-2 mt-4 text-[11px]">
             <Badge
               variant="outline"
-              className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5"
+              className="bg-emerald-500/10 border-emerald-500/30 text-emerald-300 gap-1 py-0.5 font-semibold"
             >
-              <Zap className="size-3 text-amber-400" /> Ultra Rápido (&lt; 3MB)
+              <Smartphone className="size-3 text-emerald-400" /> Android (Samsung, Motorola, Xiaomi)
+            </Badge>
+            <Badge
+              variant="outline"
+              className="bg-sky-500/10 border-sky-500/30 text-sky-300 gap-1 py-0.5 font-semibold"
+            >
+              <Smartphone className="size-3 text-sky-400" /> Apple iOS (iPhone & iPad)
             </Badge>
             <Badge
               variant="outline"
               className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5"
             >
-              <Sparkles className="size-3 text-emerald-400" /> Tela Cheia sem Abas
-            </Badge>
-            <Badge
-              variant="outline"
-              className="bg-white/5 border-white/20 text-slate-200 gap-1 py-0.5"
-            >
-              <BellRing className="size-3 text-sky-400" /> Alertas de Renovação
+              <BellRing className="size-3 text-amber-400" /> Notificações de Vendas
             </Badge>
           </div>
         </div>
@@ -105,19 +115,19 @@ export function InstallAppDialog({ open, onOpenChange }: InstallAppDialogProps) 
               <h3 className="font-bold text-base text-foreground">Aplicativo já instalado!</h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                 Você já está utilizando o Mídia.OS em modo aplicativo independente. Todos os
-                recursos e notificações estão ativos.
+                recursos, alertas e notificações estão ativos.
               </p>
             </div>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-3 mb-5">
-                <TabsTrigger value="android" className="flex items-center gap-1.5 text-xs">
+              <TabsList className="grid grid-cols-3 mb-5 h-11 bg-muted/70 p-1">
+                <TabsTrigger value="android" className="flex items-center gap-1.5 text-xs font-bold data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
                   <Smartphone className="size-3.5" /> Android
                 </TabsTrigger>
-                <TabsTrigger value="ios" className="flex items-center gap-1.5 text-xs">
-                  <Smartphone className="size-3.5" /> iPhone / iPad
+                <TabsTrigger value="ios" className="flex items-center gap-1.5 text-xs font-bold data-[state=active]:bg-sky-600 data-[state=active]:text-white">
+                  <Smartphone className="size-3.5" /> iPhone (iOS)
                 </TabsTrigger>
-                <TabsTrigger value="desktop" className="flex items-center gap-1.5 text-xs">
+                <TabsTrigger value="desktop" className="flex items-center gap-1.5 text-xs font-bold">
                   <Monitor className="size-3.5" /> Computador
                 </TabsTrigger>
               </TabsList>

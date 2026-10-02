@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { traduzirErro } from "./error-translator";
 
 export const SEGMENTOS_MIDIA = [
   "DOOH",
@@ -47,6 +48,11 @@ export const ParceiroSchema = z.object({
   razao_social: z.string().min(1, "Razão Social é obrigatória").max(200),
   nome_fantasia: z.string().max(200).optional().nullable(),
   cnpj: z.string().max(30).optional().nullable(),
+  site: z.string().max(300).optional().nullable().or(z.literal("").transform(() => null)),
+  instagram: z.string().max(150).optional().nullable().or(z.literal("").transform(() => null)),
+  linkedin: z.string().max(300).optional().nullable().or(z.literal("").transform(() => null)),
+  facebook: z.string().max(300).optional().nullable().or(z.literal("").transform(() => null)),
+  redes_sociais: z.record(z.any()).optional().nullable(),
   segmentos: z.array(z.string().max(100)).default([]),
   modelo_remuneracao: z.string().default("comissao_percentual"),
   comissao_padrao_pct: z.number().min(0).max(100).default(20.0),
@@ -183,7 +189,7 @@ export const upsertParceiro = createServerFn({ method: "POST" })
       : supabase.from("parceiros").insert(payload).select().single();
 
     const res = await q;
-    if (res.error) throw new Error(res.error.message);
+    if (res.error) throw new Error(traduzirErro(res.error.message));
 
     // Se o parceiro tiver CNPJ ou Razão Social atualizada, atualiza vínculos de produtos
     if (res.data?.id && (res.data.cnpj || res.data.razao_social)) {
@@ -222,6 +228,6 @@ export const deleteParceiro = createServerFn({ method: "POST" })
     }
 
     const { error } = await supabase.from("parceiros").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(traduzirErro(error.message));
     return { ok: true };
   });

@@ -12,6 +12,7 @@ export const gerarResumoIA = createServerFn({ method: "POST" })
         valor_negociado: z.number(),
         total_insercoes: z.number().int(),
         itens_resumo: z.string().max(4000),
+        veiculo_nome: z.string().max(300).optional(),
         observacao: z.string().max(2000).nullable().optional(),
       })
       .parse(d),
@@ -20,7 +21,8 @@ export const gerarResumoIA = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY ausente");
 
-    const prompt = `Você é redator comercial da TV Brasília. Escreva uma proposta resumida e persuasiva em português para apresentação ao cliente, em texto corrido com no máximo 6 parágrafos curtos. Use linguagem profissional, destaque alcance, força da grade e oportunidade de marca. NÃO use markdown, asteriscos ou listas. NÃO mencione descontos. Foque em valor entregue.
+    const nomeVeiculo = data.veiculo_nome?.trim() || "Mídia.OS";
+    const prompt = `Você é redator comercial sênior e estrategista de mídia de ${nomeVeiculo}. Escreva uma proposta resumida e persuasiva em português para apresentação ao cliente anunciante, em texto corrido com no máximo 6 parágrafos curtos. Use linguagem profissional, destaque alcance de audiência, força da grade e oportunidade de posicionamento da marca. NÃO use markdown, asteriscos ou listas. NÃO mencione descontos. Foque em valor entregue e retorno do investimento.
 
 Dados:
 - Cliente: ${data.cliente}
@@ -32,7 +34,7 @@ ${data.itens_resumo}
 ${data.observacao ? `- Observações do executivo: ${data.observacao}` : ""}
 
 Estrutura sugerida:
-1) Apresentação da oportunidade e contexto da TV Brasília
+1) Apresentação da oportunidade estratégica e contexto do veículo (${nomeVeiculo})
 2) Estratégia de mídia proposta (formatos e programas)
 3) Resultados esperados (alcance, frequência, valor de marca)
 4) Considerações finais e convite à parceria`;
@@ -43,7 +45,7 @@ Estrutura sugerida:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Você é redator comercial sênior de uma emissora de TV." },
+          { role: "system", content: `Você é redator comercial sênior de ${nomeVeiculo}.` },
           { role: "user", content: prompt },
         ],
       }),

@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Building2, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { getMeuTenantPerfil } from "@/lib/tenants.functions";
 import { useUserRoles } from "@/hooks/use-roles";
+import { PushNotificationManager } from "@/components/PushNotificationManager";
 
 export const Route = createFileRoute("/minha-conta")({
   head: () => ({ meta: [{ title: "Minha Conta — Mídia.OS" }] }),
@@ -234,6 +235,8 @@ function MinhaConta() {
               </div>
             </CardContent>
           </Card>
+
+          <PushNotificationManager />
 
           <EmpresaVinculadaCard />
 

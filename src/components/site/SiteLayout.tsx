@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles, LogIn, ArrowRight } from "lucide-react";
 import { useState } from "react";
 
 const nav = [
@@ -13,69 +13,118 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--m-border)] backdrop-blur-xl bg-[#0a0a1a]/80">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
-        <Link to="/site" className="flex items-center gap-2 font-display font-bold text-lg">
-          <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
-          </span>
-          <span>
-            mídia<span className="midia-grad-text">.OS</span>
-          </span>
+    <>
+      {/* Top Banner de Acesso Rápido ao Sistema */}
+      <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-purple-950 text-white text-xs py-2 px-4 text-center border-b border-indigo-500/20 flex items-center justify-center gap-2">
+        <span className="inline-block size-2 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="text-white/80">Já é cliente ou usuário Mídia.OS?</span>
+        <Link
+          to="/login"
+          className="font-bold text-amber-300 hover:text-white underline inline-flex items-center gap-1 transition-colors"
+        >
+          Acessar o Sistema (Login) <ArrowRight className="size-3" />
         </Link>
-        <nav className="hidden md:flex items-center gap-1">
-          {nav.map((n) => {
-            const active =
-              loc.pathname === n.to || (n.to !== "/site" && loc.pathname.startsWith(n.to));
-            return (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={`px-4 py-2 rounded-md text-sm transition-colors ${
-                  active ? "text-white bg-white/5" : "text-[var(--m-muted)] hover:text-white"
-                }`}
-              >
-                {n.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="hidden md:flex items-center gap-2">
-          <Link
-            to="/login"
-            className="px-4 py-2 text-sm text-[var(--m-muted)] hover:text-white transition-colors"
-          >
-            Entrar
-          </Link>
-          <Link
-            to="/site/demo"
-            className="px-5 py-2.5 text-sm font-bold rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:shadow-lg hover:shadow-indigo-500/40 transition-all hover:-translate-y-0.5"
-          >
-            Teste grátis 48h
-          </Link>
-        </div>
-        <button className="md:hidden text-white" onClick={() => setOpen(!open)} aria-label="Menu">
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
       </div>
-      {open && (
-        <div className="md:hidden border-t border-[var(--m-border)] px-4 sm:px-6 py-4 space-y-2">
-          {nav.map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              onClick={() => setOpen(false)}
-              className="block py-2 text-sm text-[var(--m-muted)] hover:text-white"
-            >
-              {n.label}
-            </Link>
-          ))}
-          <Link to="/site/demo" className="block py-2 text-sm font-medium text-indigo-300">
-            Teste grátis 48h →
+
+      <header className="sticky top-0 z-50 border-b border-[var(--m-border)] backdrop-blur-xl bg-[#0a0a1a]/90">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 h-18 flex items-center justify-between gap-3">
+          <Link to="/site" className="flex items-center gap-2.5 font-display font-bold text-xl">
+            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+              <Sparkles className="w-5 h-5 text-white" />
+            </span>
+            <span className="tracking-tight text-white">
+              mídia<span className="midia-grad-text">.OS</span>
+            </span>
           </Link>
+
+          <nav className="hidden md:flex items-center gap-1">
+            {nav.map((n) => {
+              const active =
+                loc.pathname === n.to || (n.to !== "/site" && loc.pathname.startsWith(n.to));
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    active ? "text-white bg-white/10" : "text-[var(--m-muted)] hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {n.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="hidden md:flex items-center gap-3">
+            {/* BOTÃO NÍTIDO DE ACESSO AO SISTEMA */}
+            <Link
+              to="/login"
+              className="px-4 py-2 text-xs uppercase tracking-wider font-extrabold rounded-xl border border-indigo-400/50 bg-indigo-500/20 hover:bg-indigo-500/30 text-white transition-all shadow-md flex items-center gap-2 hover:border-indigo-400"
+            >
+              <LogIn className="w-4 h-4 text-amber-400" />
+              <span>Acessar Sistema</span>
+            </Link>
+
+            <Link
+              to="/site/demo"
+              className="px-5 py-2 text-xs uppercase tracking-wider font-extrabold rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:shadow-lg hover:shadow-indigo-500/40 transition-all hover:-translate-y-0.5"
+            >
+              Teste Grátis 48h
+            </Link>
+          </div>
+
+          <div className="flex md:hidden items-center gap-2">
+            <Link
+              to="/login"
+              className="px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 text-white flex items-center gap-1 shadow-sm"
+            >
+              <LogIn className="size-3.5" /> Entrar
+            </Link>
+            <button
+              className="text-white p-1.5 rounded-lg hover:bg-white/10"
+              onClick={() => setOpen(!open)}
+              aria-label="Menu"
+            >
+              {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
-      )}
-    </header>
+
+        {open && (
+          <div className="md:hidden border-t border-[var(--m-border)] px-4 sm:px-6 py-5 space-y-3 bg-[#0a0a1a]">
+            {/* BOTÃO MOBILE DE DESTAQUE MÁXIMO */}
+            <Link
+              to="/login"
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-center gap-2 w-full py-3.5 text-sm font-extrabold rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 text-white shadow-xl border border-indigo-400/30"
+            >
+              <LogIn className="w-4 h-4 text-amber-300" />
+              <span>ACESSAR O SISTEMA (LOGIN)</span>
+            </Link>
+
+            <div className="pt-2 border-t border-white/10 space-y-1">
+              {nav.map((n) => (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  onClick={() => setOpen(false)}
+                  className="block py-2.5 px-2 text-sm text-[var(--m-muted)] hover:text-white rounded-lg hover:bg-white/5"
+                >
+                  {n.label}
+                </Link>
+              ))}
+              <Link
+                to="/site/demo"
+                onClick={() => setOpen(false)}
+                className="block py-2.5 px-2 text-sm font-semibold text-indigo-300 hover:text-white"
+              >
+                Solicitar Demonstração Grátis →
+              </Link>
+            </div>
+          </div>
+        )}
+      </header>
+    </>
   );
 }
 

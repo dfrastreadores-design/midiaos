@@ -306,7 +306,7 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                 onChange={(e) => setLayoutModelo(e.target.value as any)}
                 className="text-xs border rounded-md px-2 py-1 bg-background"
               >
-                <option value="padrao">Padrão (TV Brasília)</option>
+                <option value="padrao">Padrão Mídia.OS (Executivo)</option>
                 <option value="simplificado">Simplificado (Estratégico DOOH)</option>
               </select>
             </div>

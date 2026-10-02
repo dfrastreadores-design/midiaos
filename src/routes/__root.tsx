@@ -16,16 +16,22 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Página não encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          A página que você está procurando não existe, foi movida ou sua URL foi alterada.
         </p>
-        <div className="mt-6">
+        <div className="mt-6 flex justify-center gap-3">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            Voltar ao Início
+          </Link>
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Acessar Sistema
           </Link>
         </div>
       </div>
@@ -34,7 +40,7 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+  console.error("Erro capturado no Root Error Boundary:", error);
   const router = useRouter();
 
   // Stale chunk after a new deploy — auto-reload once to fetch the new bundle.
@@ -48,18 +54,47 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     if (sessionStorage.getItem(KEY) !== "1") {
       sessionStorage.setItem(KEY, "1");
       window.location.reload();
+      return null;
     }
   }
 
+  const isForbidden =
+    /forbidden|acesso negado|permissão|403/i.test(String(error?.message ?? ""));
+
+  const isAuthError =
+    !isForbidden &&
+    /unauthorized|não autorizado|jwt|auth|sessão expirada/i.test(String(error?.message ?? ""));
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+      <div className="max-w-lg text-center p-6 rounded-2xl border bg-card shadow-sm">
+        <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto mb-4 font-bold text-xl">
+          !
+        </div>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">
+          {isForbidden
+            ? "Acesso Negado"
+            : isAuthError
+            ? "Sessão Expirada ou Não Autorizada"
+            : "Esta página encontrou uma instabilidade"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          {isForbidden
+            ? "Você não tem permissão para acessar este recurso no Mídia.OS. Solicite autorização ao administrador."
+            : isAuthError
+            ? "Sua sessão de acesso expirou. Faça login novamente para continuar utilizando o Mídia.OS."
+            : "Ocorreu um erro inesperado ao carregar os dados desta tela. Você pode tentar recarregar ou retornar ao início."}
         </p>
+
+        {error?.message && !isAuthError && (
+          <details className="mt-4 text-left p-3 rounded-lg bg-muted text-xs font-mono text-muted-foreground overflow-auto max-h-32">
+            <summary className="cursor-pointer font-semibold mb-1 text-foreground">
+              Detalhes técnicos do erro
+            </summary>
+            {error.message}
+          </details>
+        )}
+
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -68,13 +103,19 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Tentar novamente
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            Voltar ao Início
+          </a>
+          <a
+            href="/login"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-muted px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Fazer Login
           </a>
         </div>
       </div>

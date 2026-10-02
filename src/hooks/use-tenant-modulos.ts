@@ -18,7 +18,16 @@ export function useTenantModulos() {
     modulos,
     userLimit: data?.user_limit ?? null,
     userCount: data?.user_count ?? 0,
-    hasModulo: (key: string) => modulos.length === 0 || modulos.includes(key),
+    hasModulo: (key: string) => {
+      if (modulos.length === 0) return true;
+      if (modulos.includes(key)) return true;
+      // Compatibilidade retroativa com módulos unificados
+      if (key === "briefings" || key === "projetos") return modulos.includes("propostas");
+      if (key === "permuta") return modulos.includes("financeiro");
+      if (key === "metas") return modulos.includes("relatorios");
+      if (key === "calendario") return modulos.includes("crm") || modulos.includes("pi");
+      return false;
+    },
     loaded: !!data,
   };
 }

@@ -18,6 +18,9 @@ import {
   FileText,
   Bell,
   Star,
+  LogIn,
+  Smartphone,
+  Download,
 } from "lucide-react";
 
 export const Route = createFileRoute("/site/")({
@@ -134,23 +137,54 @@ function Home() {
                 faturamento. CRM, propostas automáticas, PI digital e dashboards financeiros feitos
                 sob medida.
               </p>
-              <div className="mt-10 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                {/* BOTÃO ULTRA NÍTIDO DE ACESSO AO SISTEMA */}
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-2.5 px-7 py-4 rounded-xl bg-gradient-to-r from-indigo-500 via-violet-600 to-indigo-600 text-white font-extrabold text-base shadow-2xl shadow-indigo-500/50 hover:shadow-indigo-500/70 transition-all hover:-translate-y-0.5 border border-indigo-300/40"
+                >
+                  <LogIn className="w-5 h-5 text-amber-300" />
+                  <span>Acessar o Sistema (Login)</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+
                 <a
                   href="https://wa.me/5561984746857"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/30"
+                  className="inline-flex items-center gap-2 px-6 py-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 font-bold hover:bg-emerald-500/20 transition-all"
                 >
-                  Falar com especialista <ArrowRight className="w-4 h-4" />
+                  Falar no WhatsApp
                 </a>
+              </div>
+
+              {/* CARD DESTAQUE: APP DISPONÍVEL NO ANDROID E IOS */}
+              <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-4 max-w-xl">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <Smartphone className="size-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-2">
+                      <span>App Mobile Mídia.OS</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+                        Android & iOS
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-[var(--m-muted)] mt-0.5">
+                      Instale no seu smartphone para aprovar PIs e receber alertas instantâneos.
+                    </div>
+                  </div>
+                </div>
                 <Link
-                  to="/site/recursos"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-lg border border-[var(--m-border)] text-white hover:bg-white/5 transition-colors"
+                  to="/login"
+                  className="shrink-0 text-xs font-bold text-indigo-300 hover:text-white underline"
                 >
-                  Ver recursos
+                  Acessar App →
                 </Link>
               </div>
-              <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-sm text-[var(--m-muted)]">
+
+              <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 text-sm text-[var(--m-muted)]">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-indigo-400" /> Implantação em até 7 dias
                 </div>

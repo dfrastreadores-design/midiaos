@@ -62,6 +62,9 @@ import {
   Compass,
 } from "lucide-react";
 import { LogoImg } from "@/components/LogoImg";
+import { ModelosPropostaManager } from "@/components/owner/ModelosPropostaManager";
+import { type ModeloPropostaCliente } from "@/types/modelo-proposta";
+import { AcessoNegadoScreen } from "@/components/AcessoNegadoScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useRef } from "react";
 import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
@@ -131,13 +134,10 @@ function OwnerInner() {
   if (loading) return <div className="p-8 text-muted-foreground">Carregando…</div>;
   if (!isSuperAdmin) {
     return (
-      <div className="p-8">
-        <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            Esta área é restrita ao proprietário da plataforma.
-          </CardContent>
-        </Card>
-      </div>
+      <AcessoNegadoScreen
+        recurso="Painel Global do Proprietário (SaaS Master)"
+        motivo="Esta área é de acesso exclusivo do proprietário e gestor da plataforma Mídia.OS."
+      />
     );
   }
   return <OwnerDashboard />;
@@ -1492,6 +1492,9 @@ function TenantDialog({ editing, onSaved }: { editing: any | null; onSaved: () =
     modulos_override: Array.isArray(editing?.modulos_override)
       ? editing.modulos_override
       : MODULOS_DISPONIVEIS.map((m) => m.key),
+    modelos_proposta: Array.isArray(editing?.modelos_proposta)
+      ? editing.modelos_proposta
+      : [],
   }));
 
   const toggleModulo = (modKey: string) => {
@@ -1755,7 +1758,7 @@ function TenantDialog({ editing, onSaved }: { editing: any | null; onSaved: () =
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="padrao">Padrão (TV Brasília)</SelectItem>
+              <SelectItem value="padrao">Padrão Mídia.OS (Executivo)</SelectItem>
               <SelectItem value="simplificado">Simplificado (Estratégico DOOH)</SelectItem>
             </SelectContent>
           </Select>
@@ -1839,9 +1842,11 @@ function TenantDialog({ editing, onSaved }: { editing: any | null; onSaved: () =
                       </Badge>
                     )}
                   </div>
-                  <span className="text-[10px] text-muted-foreground block mt-1 font-mono">
-                    id: {mod.key}
-                  </span>
+                  {mod.desc && (
+                    <span className="text-[11px] text-muted-foreground block mt-1 leading-snug">
+                      {mod.desc}
+                    </span>
+                  )}
                 </div>
               </label>
             );
@@ -1951,6 +1956,15 @@ function TenantDialog({ editing, onSaved }: { editing: any | null; onSaved: () =
             );
           })}
         </div>
+      </div>
+
+      {/* Modelos de Proposta Personalizados do Cliente (até 3 PDFs com direcionamento de valores, produtos e defesa) */}
+      <div className="mt-4 rounded-lg border bg-card p-4">
+        <ModelosPropostaManager
+          tenantId={editing?.id}
+          modelos={(form.modelos_proposta as ModeloPropostaCliente[]) ?? []}
+          onChange={(novos) => set("modelos_proposta" as any, novos)}
+        />
       </div>
 
       <DialogFooter className="flex-col sm:flex-row gap-2">

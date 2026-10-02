@@ -22,7 +22,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Search, Loader2, DollarSign, Handshake, Plus, X } from "lucide-react";
+import {
+  Building2,
+  Search,
+  Loader2,
+  DollarSign,
+  Handshake,
+  Plus,
+  X,
+  Globe,
+  Instagram,
+  Linkedin,
+  Facebook,
+  Copy,
+  Check,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   upsertParceiro,
@@ -32,6 +47,8 @@ import {
 } from "@/lib/parceiros.functions";
 import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
 import { lookupCep, formatCEP } from "@/lib/geocode.functions";
+import { traduzirErro } from "@/lib/error-translator";
+import { SQL_PARCEIROS_SETUP } from "@/lib/parceiros-sql-setup";
 
 type Props = {
   open: boolean;
@@ -53,6 +70,10 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
     razao_social: "",
     nome_fantasia: "",
     cnpj: "",
+    site: "",
+    instagram: "",
+    linkedin: "",
+    facebook: "",
     segmentos: [],
     modelo_remuneracao: "comissao_percentual",
     comissao_padrao_pct: 20.0,
@@ -71,13 +92,28 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
     ativo: true,
   });
 
+  const [missingTableError, setMissingTableError] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SQL_PARCEIROS_SETUP);
+    setCopiedSql(true);
+    toast.success("Script SQL copiado com sucesso! Cole no SQL Editor do Supabase.");
+    setTimeout(() => setCopiedSql(false), 3000);
+  };
+
   useEffect(() => {
     if (open) {
+      setMissingTableError(false);
       setForm(
         initial || {
           razao_social: "",
           nome_fantasia: "",
           cnpj: "",
+          site: "",
+          instagram: "",
+          linkedin: "",
+          facebook: "",
           segmentos: [],
           modelo_remuneracao: "comissao_percentual",
           comissao_padrao_pct: 20.0,
@@ -141,7 +177,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
       });
       toast.success("Dados da empresa carregados da Receita Federal!");
     } catch (err: any) {
-      toast.error(err.message || "Erro ao consultar CNPJ na Receita Federal.");
+      toast.error(traduzirErro(err) || "Erro ao consultar CNPJ na Receita Federal.");
     } finally {
       setSearchingCnpj(false);
     }
@@ -168,7 +204,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
         toast.error(res.error || "CEP não encontrado.");
       }
     } catch (err: any) {
-      toast.error(err.message || "Erro ao buscar CEP.");
+      toast.error(traduzirErro(err) || "Erro ao buscar CEP.");
     } finally {
       setSearchingCep(false);
     }
@@ -185,7 +221,13 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
       onOpenChange(false);
       if (onSuccess) onSuccess(saved);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      const msg = traduzirErro(e);
+      if (msg.includes("tabela de Parceiros") || msg.includes("não está criada")) {
+        setMissingTableError(true);
+      }
+      toast.error(msg);
+    },
   });
 
   return (
@@ -213,6 +255,44 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
           }}
           className="space-y-4 pt-2"
         >
+          {missingTableError && (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 space-y-2">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
+                <div className="text-xs space-y-1">
+                  <p className="font-semibold text-destructive">
+                    A tabela de Parceiros ainda precisa ser criada no banco de dados Supabase.
+                  </p>
+                  <p className="text-muted-foreground text-[11px]">
+                    Para ativar o cadastro de parceiros, copie o script de migração abaixo, abra o{" "}
+                    <strong>SQL Editor</strong> do Supabase e clique em <strong>RUN</strong>. Em
+                    seguida, clique em "Cadastrar Parceiro" novamente.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="default"
+                  className="h-8 text-xs gap-1.5 bg-destructive hover:bg-destructive/90 text-white"
+                  onClick={handleCopySql}
+                >
+                  {copiedSql ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                  {copiedSql ? "Script Copiado!" : "Copiar Script SQL do Supabase"}
+                </Button>
+                <a
+                  href="https://supabase.com/dashboard/project/odgowgvhjhvpeazglsly/sql/new"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs underline text-destructive hover:opacity-80"
+                >
+                  Abrir SQL Editor do Supabase ↗
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Identificação e CNPJ */}
           <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
             <Label className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
@@ -485,6 +565,73 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                   value={form.dados_bancarios ?? ""}
                   onChange={(e) => set({ dados_bancarios: e.target.value })}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Website & Redes Sociais do Parceiro (Opcional) */}
+          <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
+                <Globe className="size-3.5 text-primary" />
+                Website & Redes Sociais (Opcional)
+              </Label>
+              <Badge variant="outline" className="text-[10px]">
+                Opcional
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Site Oficial / Portal</Label>
+                <div className="relative mt-1">
+                  <Globe className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9 text-xs"
+                    placeholder="https://www.parceiro.com.br"
+                    value={form.site ?? ""}
+                    onChange={(e) => set({ site: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Instagram</Label>
+                <div className="relative mt-1">
+                  <Instagram className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-pink-600" />
+                  <Input
+                    className="pl-9 text-xs"
+                    placeholder="@parceiro ou link do perfil"
+                    value={form.instagram ?? ""}
+                    onChange={(e) => set({ instagram: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">LinkedIn</Label>
+                <div className="relative mt-1">
+                  <Linkedin className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-blue-600" />
+                  <Input
+                    className="pl-9 text-xs"
+                    placeholder="linkedin.com/company/parceiro"
+                    value={form.linkedin ?? ""}
+                    onChange={(e) => set({ linkedin: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Facebook</Label>
+                <div className="relative mt-1">
+                  <Facebook className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-blue-700" />
+                  <Input
+                    className="pl-9 text-xs"
+                    placeholder="facebook.com/parceiro"
+                    value={form.facebook ?? ""}
+                    onChange={(e) => set({ facebook: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
           </div>

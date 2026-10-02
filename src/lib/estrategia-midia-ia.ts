@@ -16,6 +16,7 @@ export const EstrategiaMidiaInputSchema = z.object({
     .default(["TV Aberta", "Painéis DOOH", "Rádio FM", "Digital / Redes"]),
   diferenciais_cliente: z.string().optional().default(""),
   tom_comunicacao: z.string().optional().default("Persuasivo & Confiável"),
+  produtos_selecionados_ids: z.array(z.string()).optional().default([]),
 });
 
 export type EstrategiaMidiaInput = z.infer<typeof EstrategiaMidiaInputSchema>;
@@ -45,6 +46,20 @@ export interface MetricasProjetadas {
   justificativa_roi: string;
 }
 
+export interface ItemInventarioSugerido {
+  produto_id?: string;
+  nome: string;
+  midia: string;
+  tipo?: string | null;
+  formato?: string | null;
+  parceiro_nome?: string | null;
+  endereco_ponto?: string | null;
+  valor_unit: number;
+  insercoes_sugeridas: number;
+  subtotal: number;
+  justificativa: string;
+}
+
 export interface EstrategiaMidiaOutput {
   titulo_estrategia: string;
   diagnostico_cenario: string;
@@ -55,6 +70,7 @@ export interface EstrategiaMidiaOutput {
   argumentos_venda_decisor: string[];
   acoes_diferenciais: string[];
   observacoes_veiculacao: string;
+  itens_inventario?: ItemInventarioSugerido[];
 }
 
 function round2(n: number) {
@@ -261,6 +277,40 @@ export function montarEstrategiaHeuristicaAvancada(
     `Gatilho de Urgência no Fim de Semana: Veiculações de TV programadas estrategicamente nas sextas e sábados para acelerar a tomada de decisão no fim de semana.`,
   ];
 
+  // Alocar produtos reais do inventário do inquilino no planejamento
+  const itensInventario: ItemInventarioSugerido[] = [];
+  if (Array.isArray(produtosCatalogo) && produtosCatalogo.length > 0) {
+    const selecionadosIds = new Set(data.produtos_selecionados_ids || []);
+    const pool =
+      selecionadosIds.size > 0
+        ? produtosCatalogo.filter((p) => selecionadosIds.has(p.id))
+        : produtosCatalogo;
+    const catalogoUso = pool.length > 0 ? pool : produtosCatalogo;
+
+    const maxItens = Math.min(catalogoUso.length, 8);
+    const parcelaBudget = budget / maxItens;
+
+    catalogoUso.slice(0, maxItens).forEach((prod) => {
+      const precoUnit = Number(prod.valor_unit || prod.preco || 250);
+      const insercoes = Math.max(1, Math.floor(parcelaBudget / Math.max(precoUnit, 10)));
+      const subtotal = round2(insercoes * precoUnit);
+
+      itensInventario.push({
+        produto_id: prod.id,
+        nome: prod.nome,
+        midia: prod.midia || "DOOH",
+        tipo: prod.tipo || prod.formato || null,
+        formato: prod.formato || null,
+        parceiro_nome: prod.parceiro_nome || null,
+        endereco_ponto: prod.endereco_ponto || null,
+        valor_unit: precoUnit,
+        insercoes_sugeridas: insercoes,
+        subtotal: subtotal,
+        justificativa: `Ponto/formato de alta tração urbana para o público de ${segmento}, ampliando alcance e frequência planejada.`,
+      });
+    });
+  }
+
   return {
     titulo_estrategia: titulo,
     diagnostico_cenario: diagnostico,
@@ -279,5 +329,6 @@ export function montarEstrategiaHeuristicaAvancada(
     observacoes_veiculacao:
       `Valores calculados com base na tabela oficial de investimentos publicitários para o Distrito Federal. ` +
       `Sujeito à disponibilidade de grade no momento da aprovação do Pedido de Inserção (PI).`,
+    itens_inventario: itensInventario,
   };
 }

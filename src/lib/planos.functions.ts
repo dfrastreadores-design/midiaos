@@ -13,21 +13,18 @@ export type Plano = {
   ativo: boolean;
 };
 
-export const MODULOS_DISPONIVEIS: { key: string; label: string }[] = [
-  { key: "centralizadores", label: "Centralizadores & Planejadores" },
-  { key: "assinaturas", label: "Central de Assinaturas" },
-  { key: "pi", label: "Pedidos de Inserção" },
-  { key: "propostas", label: "Propostas" },
-  { key: "briefings", label: "Briefings" },
-  { key: "projetos", label: "Projetos Especiais" },
-  { key: "influenciadores", label: "Influenciadores" },
-  { key: "permuta", label: "Permuta" },
-  { key: "financeiro", label: "Financeiro" },
-  { key: "crm", label: "CRM / Atendimento" },
-  { key: "calendario", label: "Calendário" },
-  { key: "metas", label: "Metas" },
-  { key: "relatorios", label: "Relatórios" },
-  { key: "landing_pages", label: "Landing Pages" },
+export const MODULOS_DISPONIVEIS: { key: string; label: string; desc?: string }[] = [
+  { key: "centralizadores", label: "Centralizadores & Planejadores", desc: "Planejamento estratégico, inteligência de mercado e defesa de veiculação" },
+  { key: "propostas", label: "Propostas & Briefings", desc: "Elaboração de propostas, briefings comerciais, IA de mídia e modelos personalizados" },
+  { key: "pi", label: "Pedidos de Inserção (PI)", desc: "Emissão de PI digital, reservas de grade e histórico de veiculação" },
+  { key: "assinaturas", label: "Central de Assinaturas", desc: "Assinaturas eletrônicas com validade jurídica, hash SHA-256 e aprovação da diretoria" },
+  { key: "crm", label: "CRM & Funil Comercial", desc: "Gestão de leads, pipeline de vendas e calendário de atendimento" },
+  { key: "financeiro", label: "Financeiro & Faturamento", desc: "Contas a pagar/receber, conciliação, faturamento e permutas" },
+  { key: "comissoes", label: "Comissões & Indicadores", desc: "Comissões de executivos e repasses de parceiros por indicação" },
+  { key: "relatorios", label: "Relatórios & Metas", desc: "Dashboards executivos, DRE e acompanhamento de metas" },
+  { key: "influenciadores", label: "Influenciadores & Creators", desc: "Gestão de criadores de conteúdo e marketing de influência" },
+  { key: "landing_pages", label: "Landing Pages", desc: "Páginas de captura e mídia kit digital" },
+  { key: "social_media", label: "Redes Sociais & Tráfego", desc: "Gestão de redes sociais e campanhas integradas" },
 ];
 
 async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {

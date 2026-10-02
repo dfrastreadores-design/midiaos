@@ -1032,7 +1032,7 @@ export function gerarPdfPi(
     doc.setFontSize(7);
     doc.setTextColor(140);
     doc.text(
-      `Página ${pIdx}/${totalPages} · Documento gerado em ${new Date().toLocaleString("pt-BR")} · Mídia.OS — TV Brasília`,
+      `Página ${pIdx}/${totalPages} · Documento gerado em ${new Date().toLocaleString("pt-BR")} · Mídia.OS · Gestão Comercial de Mídia`,
       W / 2,
       H - 5,
       { align: "center" },

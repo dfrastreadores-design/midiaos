@@ -45,6 +45,8 @@ const ClienteSchema = z.object({
     .nullable()
     .optional(),
   status: z.enum(["ativo", "inativo", "prospect", "bloqueado"]).optional().default("ativo"),
+  indicador_id: z.string().uuid().nullable().optional(),
+  comissao_indicacao_pct: z.number().min(0).max(100).nullable().optional(),
   contatos: z.array(ContatoSchema).default([]),
 });
 
