@@ -67,6 +67,7 @@ import { ProdutoFotoImg } from "@/components/ProdutoFotoImg";
 import { ProdutoFotoGalleryModal } from "@/components/ProdutoFotoGalleryModal";
 import { ProdutoFormDialog, type Produto } from "@/components/ProdutoFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
+import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
 
 export const Route = createFileRoute("/produtos")({
@@ -131,6 +132,7 @@ function ProdutosPage() {
   const [cfgEditing, setCfgEditing] = useState<Partial<MidiaConfig> | null>(null);
   const [tiposOpen, setTiposOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [midiaKitOpen, setMidiaKitOpen] = useState(false);
   const [galleryFotos, setGalleryFotos] = useState<{
     fotos: string[];
     titulo: string;
@@ -326,6 +328,16 @@ function ProdutosPage() {
             <span>Baixar Modelo (.xlsx)</span>
           </Button>
 
+          <Button
+            variant="outline"
+            onClick={() => setMidiaKitOpen(true)}
+            className="gap-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 shadow-xs"
+            title="Importar produtos e cadastrar parceiro via PDF (Mídia Kit) ou Planilha Excel com IA"
+          >
+            <Sparkles className="size-4 text-indigo-600" />
+            <span>Importar PDF / Excel (IA)</span>
+          </Button>
+
           <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
             <Upload className="size-4" />
             <span>Importar Planilha</span>
@@ -371,6 +383,7 @@ function ProdutosPage() {
         </Card>
       )}
 
+      <ImportarMidiaKitDialog open={midiaKitOpen} onOpenChange={setMidiaKitOpen} />
       <ImportarProdutosDialog open={importOpen} onOpenChange={setImportOpen} midiaPadrao={tab as any} />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v)}>

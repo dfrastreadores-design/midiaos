@@ -211,10 +211,10 @@ export function ParceirosPage() {
                   setMidiaKitParceiroId(undefined);
                   setMidiaKitOpen(true);
                 }}
-                title="Fazer leitura de Mídia Kit, apresentação e tabela de preços com IA"
+                title="Cadastrar parceiro e produtos a partir de PDF (Mídia Kit) ou Planilha (Excel/CSV)"
               >
                 <Sparkles className="size-4 text-indigo-600" />
-                Importar Mídia Kit (IA)
+                Importar PDF ou Excel (IA)
               </Button>
               <Button
                 className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-sm"

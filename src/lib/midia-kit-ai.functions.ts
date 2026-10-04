@@ -109,7 +109,7 @@ export function extrairRotaEReferencia(text?: string | null): {
 }
 
 const ExtrairInputSchema = z.object({
-  texto: z.string().min(10).max(300000),
+  texto: z.string().min(5).max(400000),
   tabelaPrecosTexto: z.string().optional().nullable(),
   parceiroNome: z.string().optional().nullable(),
 });
@@ -121,12 +121,21 @@ export const extrairProdutosDeMidiaKit = createServerFn({ method: "POST" })
     const key =
       process.env.LOVABLE_API_KEY || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
 
+    // Extrai pistas de CNPJ, telefone, e-mail e nome do texto via Regex para máxima precisão
+    const textoGeral = `${data.texto}\n${data.tabelaPrecosTexto || ""}`;
+    const cnpjMatch = textoGeral.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/);
+    const emailMatch = textoGeral.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
+    const telMatch = textoGeral.match(/(?:(?:whatsapp|contato|fone|tel|celular)[:\s]*)?\(?\b([1-9]{2})\)?\s*(9?\d{4})[-.\s]?(\d{4})\b/i);
+
     const systemPrompt = `Você é um especialista em Mídia Kits, tabelas de preços e apresentações comerciais de veículos de comunicação (TV, Rádio, Painéis de LED/DOOH, Portais de Notícias, Mídia OOH, Mídia Impressa e Digital).
-Sua missão é extrair rigorosamente todos os produtos, cotas de patrocínio, formatos comerciais e espaços de mídia apresentados no material do parceiro, com suporte nativo a GEOLOCALIZAÇÃO para mídia exterior (OOH/DOOH).
+Sua missão é extrair rigorosamente:
+1. Os dados da EMPRESA/VEÍCULO PARCEIRO (Razão Social, Nome Fantasia, CNPJ se houver, telefone, e-mail, contato comercial).
+2. Todos os produtos, cotas de patrocínio, formatos comerciais e espaços de mídia apresentados no material do parceiro, com suporte nativo a GEOLOCALIZAÇÃO para mídia exterior (OOH/DOOH).
 
 Regras de Extração:
-1. Identifique cada espaço/produto como um item independente na lista de "produtos".
-2. Para cada produto, defina:
+1. Identifique a empresa / parceiro no objeto "parceiro_detectado".
+2. Identifique cada espaço/produto como um item independente na lista de "produtos".
+3. Para cada produto, defina:
    - "nome": Nome claro do produto ou programa/espaço (ex.: "Jornal do Meio-Dia - Cota Master", "Painel LED Eixo Monumental", "Banner Super Topo 728x90").
    - "midia": Um dos valores padrão: "TV", "Radio", "DOOH", "Digital", "OOH", "Impresso" ou "Outro".
    - "canal_macro": "OFF" para TV, Rádio, DOOH, OOH, Impresso; "ON" para Digital, Redes Sociais, Portais.
@@ -143,8 +152,8 @@ Regras de Extração:
    - "link_maps": URL do Google Maps se mencionada (ex: maps.google.com/?q=... ou goo.gl/maps/...).
    - "sentido_via": Sentido da via/fluxo de trânsito (ex: "Sentido Plano Piloto", "Sentido Taguatinga").
    - "ponto_referencia": Referência física estruturada (ex: "EPTG km 4 em frente à Só Reparos", "Próximo ao shopping").
-3. Se houver Tabela de Preços complementar, cruze os nomes dos produtos com os valores da tabela.
-4. Retorne APENAS um objeto JSON válido no formato especificado, sem formatação markdown ao redor.`;
+4. Se houver Tabela de Preços complementar, cruze os nomes dos produtos com os valores da tabela.
+5. Retorne APENAS um objeto JSON válido no formato especificado, sem formatação markdown ao redor.`;
 
     const userPrompt = `Material do Parceiro ${data.parceiroNome ? `(${data.parceiroNome})` : ""}:
 --- CONTEÚDO DO MÍDIA KIT / APRESENTAÇÃO ---
@@ -156,6 +165,13 @@ Retorne JSON no formato:
 {
   "parceiro_identificado": string,
   "resumo_apresentacao": string,
+  "parceiro_detectado": {
+    "nome": string | null,
+    "cnpj": string | null,
+    "telefone": string | null,
+    "email": string | null,
+    "contato": string | null
+  },
   "produtos": [
     {
       "nome": string,
@@ -178,6 +194,8 @@ Retorne JSON no formato:
   ]
 }`;
 
+    let parsedResult: any = null;
+
     if (key) {
       try {
         const isLovable = Boolean(process.env.LOVABLE_API_KEY);
@@ -192,7 +210,7 @@ Retorne JSON no formato:
             Authorization: `Bearer ${key}`,
           },
           body: JSON.stringify({
-            model: isLovable ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash",
+            model: "google/gemini-2.5-flash",
             response_format: { type: "json_object" },
             messages: [
               { role: "system", content: systemPrompt },
@@ -204,57 +222,71 @@ Retorne JSON no formato:
         if (res.ok) {
           const json = await res.json();
           const content = json?.choices?.[0]?.message?.content || "{}";
-          const parsed = JSON.parse(content);
-          const rawProds: any[] = Array.isArray(parsed.produtos) ? parsed.produtos : [];
-
-          const produtos: ProdutoExtraidoMidiaKit[] = rawProds.map((p, idx) => {
-            const fullContext = `${p.nome || ""} ${p.faixa || ""} ${p.detalhes_venda || ""} ${p.ponto_referencia || ""}`;
-            const geoExtracted = extrairCoordenadasDeTextoOuUrl(p.link_maps || fullContext);
-            const rotaExtracted = extrairRotaEReferencia(fullContext);
-
-            const isOff = ["DOOH", "OOH", "TV", "Radio", "Impresso"].includes(p.midia) ||
-              /led|painel|totem|frontlight|outdoor|estrada|km/i.test(p.nome + " " + p.tipo);
-
-            const lat = p.latitude != null ? Number(p.latitude) : geoExtracted.latitude || null;
-            const lng = p.longitude != null ? Number(p.longitude) : geoExtracted.longitude || null;
-            let linkMaps = p.link_maps ? String(p.link_maps).trim() : geoExtracted.linkMaps || null;
-            if (!linkMaps && lat != null && lng != null) {
-              linkMaps = `https://www.google.com/maps?q=${lat},${lng}`;
-            }
-
-            return {
-              id_temp: `temp-${Date.now()}-${idx}`,
-              nome: String(p.nome || `Produto ${idx + 1}`).trim(),
-              midia: String(p.midia || (isOff ? "DOOH" : "Digital")).trim(),
-              canal_macro: (p.canal_macro || (isOff ? "OFF" : "ON")) as "OFF" | "ON",
-              tipo: p.tipo ? String(p.tipo).trim() : "Comercial",
-              programa: p.programa ? String(p.programa).trim() : undefined,
-              faixa: p.faixa ? String(p.faixa).trim() : undefined,
-              duracao_segundos: Number(p.duracao_segundos) || (isOff ? 10 : 30),
-              insercoes_padrao: Number(p.insercoes_padrao) || 1,
-              valor_unit: Number(p.valor_unit) || 0,
-              formato: p.formato ? String(p.formato).trim() : undefined,
-              detalhes_venda: p.detalhes_venda ? String(p.detalhes_venda).trim() : undefined,
-              latitude: lat,
-              longitude: lng,
-              link_maps: linkMaps,
-              sentido_via: p.sentido_via ? String(p.sentido_via).trim() : rotaExtracted.sentidoVia || null,
-              ponto_referencia: p.ponto_referencia ? String(p.ponto_referencia).trim() : rotaExtracted.pontoReferencia || null,
-              selecionado: true,
-              fotos: [],
-            };
-          });
-
-          return {
-            sucesso: true,
-            parceiroIdentificado: parsed.parceiro_identificado || data.parceiroNome || "",
-            resumoApresentacao: parsed.resumo_apresentacao || "",
-            produtos,
-          };
+          parsedResult = JSON.parse(content);
         }
       } catch (err) {
         console.warn("Falha na chamada de IA para Mídia Kit, usando extrator semântico:", err);
       }
+    }
+
+    if (parsedResult && Array.isArray(parsedResult.produtos)) {
+      const rawProds: any[] = parsedResult.produtos;
+
+      const produtos: ProdutoExtraidoMidiaKit[] = rawProds.map((p, idx) => {
+        const fullContext = `${p.nome || ""} ${p.faixa || ""} ${p.detalhes_venda || ""} ${p.ponto_referencia || ""}`;
+        const geoExtracted = extrairCoordenadasDeTextoOuUrl(p.link_maps || fullContext);
+        const rotaExtracted = extrairRotaEReferencia(fullContext);
+
+        const isOff =
+          ["DOOH", "OOH", "TV", "Radio", "Impresso"].includes(p.midia) ||
+          /led|painel|totem|frontlight|outdoor|estrada|km/i.test(p.nome + " " + p.tipo);
+
+        const lat = p.latitude != null ? Number(p.latitude) : geoExtracted.latitude || null;
+        const lng = p.longitude != null ? Number(p.longitude) : geoExtracted.longitude || null;
+        let linkMaps = p.link_maps ? String(p.link_maps).trim() : geoExtracted.linkMaps || null;
+        if (!linkMaps && lat != null && lng != null) {
+          linkMaps = `https://www.google.com/maps?q=${lat},${lng}`;
+        }
+
+        return {
+          id_temp: `temp-${Date.now()}-${idx}`,
+          nome: String(p.nome || `Produto ${idx + 1}`).trim(),
+          midia: String(p.midia || (isOff ? "DOOH" : "Digital")).trim(),
+          canal_macro: (p.canal_macro || (isOff ? "OFF" : "ON")) as "OFF" | "ON",
+          tipo: p.tipo ? String(p.tipo).trim() : "Comercial",
+          programa: p.programa ? String(p.programa).trim() : undefined,
+          faixa: p.faixa ? String(p.faixa).trim() : undefined,
+          duracao_segundos: Number(p.duracao_segundos) || (isOff ? 10 : 30),
+          insercoes_padrao: Number(p.insercoes_padrao) || 1,
+          valor_unit: Number(p.valor_unit) || 0,
+          formato: p.formato ? String(p.formato).trim() : undefined,
+          detalhes_venda: p.detalhes_venda ? String(p.detalhes_venda).trim() : undefined,
+          latitude: lat,
+          longitude: lng,
+          link_maps: linkMaps,
+          sentido_via: p.sentido_via ? String(p.sentido_via).trim() : rotaExtracted.sentidoVia || null,
+          ponto_referencia: p.ponto_referencia ? String(p.ponto_referencia).trim() : rotaExtracted.pontoReferencia || null,
+          selecionado: true,
+          fotos: [],
+        };
+      });
+
+      const parcIa = parsedResult.parceiro_detectado || {};
+      const parceiroFinal = {
+        nome: parcIa.nome || parsedResult.parceiro_identificado || data.parceiroNome || "",
+        cnpj: parcIa.cnpj || (cnpjMatch ? cnpjMatch[0] : null),
+        telefone: parcIa.telefone || (telMatch ? `(${telMatch[1]}) ${telMatch[2]}-${telMatch[3]}` : null),
+        email: parcIa.email || (emailMatch ? emailMatch[0] : null),
+        contato: parcIa.contato || null,
+      };
+
+      return {
+        sucesso: true,
+        parceiroIdentificado: parceiroFinal.nome,
+        parceiroDetectado: parceiroFinal,
+        resumoApresentacao: parsedResult.resumo_apresentacao || "",
+        produtos,
+      };
     }
 
     // Fallback: extração semântica com Expressões Regulares se a IA estiver sem créditos
@@ -263,7 +295,6 @@ Retorne JSON no formato:
 
     for (let i = 0; i < linhas.length; i++) {
       const linha = linhas[i];
-      // Procura padrões de preço (ex: R$ 1.500,00 ou 1500,00)
       const matchPreco = linha.match(/(?:R\$\s*|valor:\s*)([\d\.]+,\d{2})/i);
       if (matchPreco || (linha.length > 5 && linha.length < 80)) {
         const valor = matchPreco ? Number(matchPreco[1].replace(/\./g, "").replace(",", ".")) : 0;
@@ -299,7 +330,7 @@ Retorne JSON no formato:
             selecionado: true,
             fotos: [],
           });
-          if (produtosFallback.length >= 25) break;
+          if (produtosFallback.length >= 35) break;
         }
       }
     }
@@ -307,15 +338,37 @@ Retorne JSON no formato:
     return {
       sucesso: true,
       parceiroIdentificado: data.parceiroNome || "",
-      resumoApresentacao: "Extração textual concluída.",
+      parceiroDetectado: {
+        nome: data.parceiroNome || "",
+        cnpj: cnpjMatch ? cnpjMatch[0] : null,
+        email: emailMatch ? emailMatch[0] : null,
+        telefone: telMatch ? `(${telMatch[1]}) ${telMatch[2]}-${telMatch[3]}` : null,
+      },
+      resumoApresentacao: "Extração textual e tabular concluída.",
       produtos: produtosFallback,
     };
   });
 
 const SalvarProdutosSchema = z.object({
-  parceiroId: z.string().uuid(),
+  parceiroId: z.string().uuid().optional().nullable(),
   parceiroNome: z.string().optional().nullable(),
   parceiroCnpj: z.string().optional().nullable(),
+  novoParceiro: z
+    .object({
+      razao_social: z.string().min(1, "Razão Social é obrigatória"),
+      nome_fantasia: z.string().optional().nullable(),
+      cnpj: z.string().optional().nullable(),
+      comissao_padrao_pct: z.number().min(0).max(100).optional().default(20),
+      contato_nome: z.string().optional().nullable(),
+      contato_telefone: z.string().optional().nullable(),
+      contato_email: z.string().optional().nullable(),
+      cidade: z.string().optional().nullable(),
+      uf: z.string().optional().nullable(),
+      endereco: z.string().optional().nullable(),
+      segmentos: z.array(z.string()).optional(),
+    })
+    .optional()
+    .nullable(),
   produtos: z.array(
     z.object({
       nome: z.string().min(1),
@@ -357,25 +410,93 @@ export const salvarProdutosExtraidosMidiaKit = createServerFn({ method: "POST" }
       .maybeSingle();
     const tenantId = prof?.tenant_id;
 
-    // 2. Buscar dados do parceiro se não informados
-    let parceiroNome = data.parceiroNome;
-    let parceiroCnpj = data.parceiroCnpj;
-    if (!parceiroNome || !parceiroCnpj) {
+    let targetParceiroId: string | null = data.parceiroId || null;
+    let parceiroNome: string | null = data.parceiroNome || null;
+    let parceiroCnpj: string | null = data.parceiroCnpj || null;
+
+    // 2. Se o usuário enviou dados complementares de um novo parceiro ou atualização de CNPJ:
+    if (data.novoParceiro) {
+      const cleanCnpj = data.novoParceiro.cnpj ? data.novoParceiro.cnpj.replace(/\D/g, "") : "";
+
+      // Verifica se já existe um parceiro com esse CNPJ no sistema
+      if (cleanCnpj.length === 14) {
+        let q = supabase.from("parceiros").select("id, razao_social, nome_fantasia, cnpj");
+        if (tenantId) q = q.eq("tenant_id", tenantId);
+        const { data: existingParceiros } = await q;
+        const match = existingParceiros?.find(
+          (p) => p.cnpj && p.cnpj.replace(/\D/g, "") === cleanCnpj,
+        );
+
+        if (match) {
+          targetParceiroId = match.id;
+          parceiroNome = match.nome_fantasia || match.razao_social;
+          parceiroCnpj = match.cnpj;
+        }
+      }
+
+      // Se ainda não tiver targetParceiroId, cria o parceiro agora
+      if (!targetParceiroId && data.novoParceiro.razao_social) {
+        const payloadParc: any = {
+          razao_social: data.novoParceiro.razao_social.trim(),
+          nome_fantasia: (data.novoParceiro.nome_fantasia || data.novoParceiro.razao_social).trim(),
+          cnpj: data.novoParceiro.cnpj?.trim() || null,
+          comissao_padrao_pct: data.novoParceiro.comissao_padrao_pct ?? 20.0,
+          contato_nome: data.novoParceiro.contato_nome?.trim() || null,
+          contato_telefone: data.novoParceiro.contato_telefone?.trim() || null,
+          contato_email: data.novoParceiro.contato_email?.trim() || null,
+          cidade: data.novoParceiro.cidade?.trim() || null,
+          uf: data.novoParceiro.uf?.trim() || null,
+          endereco: data.novoParceiro.endereco?.trim() || null,
+          segmentos: data.novoParceiro.segmentos || ["DOOH", "Mídia Exterior"],
+          modelo_remuneracao: "comissao_percentual",
+          ativo: true,
+          created_by: userId,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+        };
+
+        const { data: novoCriado, error: errCria } = await supabase
+          .from("parceiros")
+          .insert(payloadParc)
+          .select("id, razao_social, nome_fantasia, cnpj")
+          .single();
+
+        if (novoCriado) {
+          targetParceiroId = novoCriado.id;
+          parceiroNome = novoCriado.nome_fantasia || novoCriado.razao_social;
+          parceiroCnpj = novoCriado.cnpj;
+        } else if (errCria) {
+          console.error("Erro ao cadastrar novo parceiro:", errCria);
+        }
+      } else if (targetParceiroId && data.novoParceiro.cnpj) {
+        // Se já existia parceiro, mas CNPJ foi completado agora
+        await supabase
+          .from("parceiros")
+          .update({
+            cnpj: data.novoParceiro.cnpj.trim(),
+            ...(data.novoParceiro.contato_telefone ? { contato_telefone: data.novoParceiro.contato_telefone.trim() } : {}),
+            ...(data.novoParceiro.contato_email ? { contato_email: data.novoParceiro.contato_email.trim() } : {}),
+          })
+          .eq("id", targetParceiroId);
+      }
+    }
+
+    // 3. Se ainda faltam nome ou CNPJ e temos targetParceiroId, busca do banco
+    if (targetParceiroId && (!parceiroNome || !parceiroCnpj)) {
       const { data: parc } = await supabase
         .from("parceiros")
         .select("nome_fantasia, razao_social, cnpj")
-        .eq("id", data.parceiroId)
+        .eq("id", targetParceiroId)
         .maybeSingle();
       if (parc) {
-        parceiroNome = parc.nome_fantasia || parc.razao_social;
-        parceiroCnpj = parc.cnpj;
+        parceiroNome = parceiroNome || parc.nome_fantasia || parc.razao_social;
+        parceiroCnpj = parceiroCnpj || parc.cnpj;
       }
     }
 
     let cadastrados = 0;
     const erros: string[] = [];
 
-    // 3. Cadastrar cada produto vinculado ao parceiro
+    // 4. Cadastrar cada produto vinculado ao parceiro
     for (const prod of data.produtos) {
       const isOff = prod.canal_macro === "OFF" || ["DOOH", "OOH"].includes(prod.midia);
 
@@ -415,19 +536,19 @@ export const salvarProdutosExtraidosMidiaKit = createServerFn({ method: "POST" }
         sentido_via: prod.sentido_via || null,
         ponto_referencia: prod.ponto_referencia || null,
         detalhes_venda: JSON.stringify(metaObj),
-        observacao: prod.observacao || `Importado via Mídia Kit IA em ${new Date().toLocaleDateString("pt-BR")}`,
-        parceiro_id: data.parceiroId,
+        observacao: prod.observacao || `Importado via Mídia Kit / Planilha em ${new Date().toLocaleDateString("pt-BR")}`,
+        parceiro_id: targetParceiroId,
         parceiro_nome: parceiroNome || null,
         parceiro_cnpj: parceiroCnpj || null,
         ativo: true,
-        fotos: Array.isArray(prod.fotos) ? prod.fotos.slice(0, 2) : [],
+        fotos: Array.isArray(prod.fotos) ? prod.fotos.slice(0, 4) : [],
         created_by: userId,
         ...(tenantId ? { tenant_id: tenantId } : {}),
       };
 
       const { error: insErr } = await supabase.from("produtos").insert(payload);
       if (insErr) {
-        // Tenta fallback sem colunas que possam não existir em ambientes com migrações pendentes
+        // Fallback resiliente caso alguma coluna não exista
         if (
           insErr.message.toLowerCase().includes("parceiro") ||
           insErr.message.toLowerCase().includes("foto") ||
@@ -458,11 +579,11 @@ export const salvarProdutosExtraidosMidiaKit = createServerFn({ method: "POST" }
       }
     }
 
-    // 4. Se houver anexo do Mídia Kit / Apresentação, registrar no histórico de anexos do parceiro
-    if (data.arquivoKitUrl && data.arquivoKitNome) {
+    // 5. Se houver anexo do Mídia Kit / Apresentação, registrar no histórico do parceiro
+    if (targetParceiroId && data.arquivoKitUrl && data.arquivoKitNome) {
       try {
         await supabase.from("parceiro_anexos").insert({
-          parceiro_id: data.parceiroId,
+          parceiro_id: targetParceiroId,
           nome_arquivo: data.arquivoKitNome,
           url_arquivo: data.arquivoKitUrl,
           tipo: "midia_kit",
@@ -478,6 +599,9 @@ export const salvarProdutosExtraidosMidiaKit = createServerFn({ method: "POST" }
       sucesso: true,
       cadastrados,
       erros,
+      parceiroNome: parceiroNome || "Inventário Próprio",
+      parceiroId: targetParceiroId,
       total: data.produtos.length,
     };
   });
+
