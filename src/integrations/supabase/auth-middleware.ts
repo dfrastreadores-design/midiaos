@@ -61,19 +61,38 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
       },
     });
 
-    let claims: any;
+    let claims: any = null;
+    let userId: string | null = null;
+
     try {
       const { data, error } = await supabase.auth.getClaims(token);
-      if (error || !data?.claims) {
-        throw new Error(error?.message || "Invalid token");
+      if (!error && data?.claims?.sub) {
+        claims = data.claims;
+        userId = claims.sub;
       }
-      claims = data.claims;
-    } catch (err: any) {
-      console.warn("[requireSupabaseAuth] Falha na validação do token:", err?.message);
-      throw new Error(`Unauthorized: ${err?.message || "Invalid token"}`);
+    } catch {
+      // Ignora falha de getClaims (comum com tokens ES256 assimétricos) e tenta getUser
     }
 
-    if (!claims?.sub) {
+    if (!userId) {
+      try {
+        const { data: userData, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !userData?.user?.id) {
+          throw new Error(userError?.message || "Token inválido ou expirado");
+        }
+        userId = userData.user.id;
+        claims = {
+          sub: userId,
+          email: userData.user.email,
+          ...(userData.user.user_metadata || {}),
+        };
+      } catch (err: any) {
+        console.warn("[requireSupabaseAuth] Falha na validação do token:", err?.message);
+        throw new Error(`Unauthorized: ${err?.message || "Invalid token"}`);
+      }
+    }
+
+    if (!userId) {
       throw new Error("Unauthorized: No user ID found in token");
     }
 
