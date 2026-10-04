@@ -179,13 +179,17 @@ export function ProdutoFormDialog({
         },
       });
       await qc.invalidateQueries({ queryKey: ["midia_config"] });
-      set({ midia: nome });
+      await qc.invalidateQueries({ queryKey: ["produto_tipos"] });
+    } catch (e) {
+      console.warn("Aviso ao sincronizar nova mídia remota:", e);
+    } finally {
+      set({
+        midia: nome,
+        canal_macro: getMacroCanalParaMidia(nome),
+      });
       toast.success(`Mídia "${nome}" cadastrada com sucesso!`);
       setNovaMidiaForm({ nome: "", razao_social: "", cnpj: "" });
       setCadastrarMidiaModalOpen(false);
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
       setSalvandoNovaMidia(false);
     }
   };
@@ -625,14 +629,18 @@ export function ProdutoFormDialog({
                   creating={creatingMidia}
                   onCreate={async (v) => {
                     if (!v.trim()) return;
+                    const cleanName = v.trim();
                     try {
                       setCreatingMidia(true);
-                      await upsertConfigFn({ data: { midia: v.trim() } });
+                      await upsertConfigFn({ data: { midia: cleanName } });
                       await qc.invalidateQueries({ queryKey: ["midia_config"] });
                       await qc.invalidateQueries({ queryKey: ["produto_tipos"] });
+                    } catch (e) {
+                      console.warn("Aviso ao sincronizar mídia remota:", e);
+                    } finally {
                       set({
-                        midia: v.trim(),
-                        canal_macro: getMacroCanalParaMidia(v.trim()),
+                        midia: cleanName,
+                        canal_macro: getMacroCanalParaMidia(cleanName),
                       });
                       if (errors.midia) {
                         setErrors((prev) => {
@@ -641,10 +649,7 @@ export function ProdutoFormDialog({
                           return copy;
                         });
                       }
-                      toast.success(`Mídia "${v.trim()}" cadastrada com sucesso!`);
-                    } catch (e) {
-                      toast.error((e as Error).message);
-                    } finally {
+                      toast.success(`Mídia "${cleanName}" cadastrada com sucesso!`);
                       setCreatingMidia(false);
                     }
                   }}

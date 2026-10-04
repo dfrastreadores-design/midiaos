@@ -50,3 +50,23 @@ CREATE POLICY "authenticated update midia_config" ON public.midia_config
 -- 5. Garante permissões completas
 GRANT ALL ON public.midia_config TO authenticated;
 GRANT ALL ON public.midia_config TO service_role;
+
+-- 6. Remove restrição CHECK de produto_tipos para permitir criação de tipos de qualquer mídia
+DO $$
+BEGIN
+  ALTER TABLE public.produto_tipos DROP CONSTRAINT IF EXISTS produto_tipos_midia_check;
+  ALTER TABLE public.produto_tipos DROP CONSTRAINT IF EXISTS check_midia;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER TABLE public.produto_tipos ALTER COLUMN midia TYPE text;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
+
+GRANT ALL ON public.produto_tipos TO authenticated;
+GRANT ALL ON public.produto_tipos TO service_role;
+

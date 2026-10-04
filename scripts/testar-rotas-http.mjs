@@ -6,14 +6,13 @@ const routeFiles = fs.readdirSync(routesDir).filter((f) => f.endsWith(".tsx") ||
 
 // Mapeia arquivos de rotas para URLs testáveis
 function routeFileToUrl(filename) {
-  if (filename === "__root.tsx" || filename === "sitemap[.]xml.ts") return null;
+  if (filename === "__root.tsx" || filename === "sitemap[.]xml.ts" || filename === "site.tsx") return null;
   if (filename === "index.tsx") return "/";
   if (filename.startsWith("site.")) {
     const sub = filename.replace("site.", "").replace(/\.tsx?$/, "");
     if (sub === "index") return "/site";
     return `/site/${sub}`;
   }
-  if (filename === "site.tsx") return "/site";
   if (filename.includes("$token")) {
     const base = filename.split(".")[0];
     return `/${base}/token-teste-validacao`;
@@ -38,7 +37,8 @@ for (const file of routeFiles) {
 }
 
 console.log(`=======================================================`);
-console.log(`🌐 TESTANDO ${urlsToTest.length} PÁGINAS HTTP NO SERVIDOR LOCAL`);
+const baseUrl = process.env.APP_URL || "https://midiaos.online";
+console.log(`🌐 TESTANDO ${urlsToTest.length} PÁGINAS HTTP EM ${baseUrl}`);
 console.log(`=======================================================\n`);
 
 const results = [];
@@ -46,7 +46,7 @@ let passCount = 0;
 let failCount = 0;
 
 for (const item of urlsToTest) {
-  const targetUrl = `http://localhost:3000${item.url}`;
+  const targetUrl = `${baseUrl}${item.url}`;
   try {
     const res = await fetch(targetUrl, {
       headers: {

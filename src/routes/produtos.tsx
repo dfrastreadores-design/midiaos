@@ -138,6 +138,7 @@ function ProdutosPage() {
   } | null>(null);
   const [novaMidiaOpen, setNovaMidiaOpen] = useState(false);
   const [novaMidiaNome, setNovaMidiaNome] = useState("");
+  const [customMidias, setCustomMidias] = useState<string[]>([]);
 
   const { data, isLoading } = useQuery({ queryKey: ["produtos"], queryFn: () => fetchList() });
   const { data: configs } = useQuery({ queryKey: ["midia_config"], queryFn: () => fetchConfigs() });
@@ -151,8 +152,11 @@ function ProdutosPage() {
   const listaMidias = useMemo<string[]>(() => {
     const fromConfigs = ((configs as MidiaConfig[]) ?? []).map((c) => c.midia).filter(Boolean);
     const fromProdutos = allProdutos.map((p) => p.midia).filter(Boolean);
-    return Array.from(new Set(["TV", "Radio", "DOOH", ...fromConfigs, ...fromProdutos]));
-  }, [configs, allProdutos]);
+    const fromTipos = ((todosTipos as ProdutoTipo[]) ?? []).map((t) => t.midia).filter(Boolean);
+    return Array.from(
+      new Set(["TV", "Radio", "DOOH", ...fromConfigs, ...fromProdutos, ...fromTipos, ...customMidias]),
+    );
+  }, [configs, allProdutos, todosTipos, customMidias]);
 
   useEffect(() => {
     if (searchParams.parceiro && allProdutos.length > 0) {
@@ -889,12 +893,14 @@ function ProdutosPage() {
                 await upsertConfigFn({ data: { midia: nome } });
                 await qc.invalidateQueries({ queryKey: ["midia_config"] });
                 await qc.invalidateQueries({ queryKey: ["produto_tipos"] });
+              } catch (err: any) {
+                console.warn("[Cadastrar Nova Mídia] Aviso ao persistir configuração remota:", err);
+              } finally {
+                setCustomMidias((prev) => Array.from(new Set([...prev, nome])));
                 setTab(nome);
                 setNovaMidiaNome("");
                 setNovaMidiaOpen(false);
                 toast.success(`Mídia "${nome}" cadastrada com sucesso!`);
-              } catch (err: any) {
-                toast.error(err.message || "Erro ao cadastrar mídia");
               }
             }}
             className="space-y-4"
