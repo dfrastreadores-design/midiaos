@@ -1544,6 +1544,86 @@ export type Database = {
           },
         ];
       };
+      organizacoes: {
+        Row: {
+          cor_primaria: string | null;
+          created_at: string;
+          id: string;
+          logo_url: string | null;
+          nome: string;
+          site_url: string | null;
+          slug: string;
+          tagline: string | null;
+          termos_proposta: string | null;
+        };
+        Insert: {
+          cor_primaria?: string | null;
+          created_at?: string;
+          id?: string;
+          logo_url?: string | null;
+          nome: string;
+          site_url?: string | null;
+          slug: string;
+          tagline?: string | null;
+          termos_proposta?: string | null;
+        };
+        Update: {
+          cor_primaria?: string | null;
+          created_at?: string;
+          id?: string;
+          logo_url?: string | null;
+          nome?: string;
+          site_url?: string | null;
+          slug?: string;
+          tagline?: string | null;
+          termos_proposta?: string | null;
+        };
+        Relationships: [];
+      };
+      perfis: {
+        Row: {
+          ativo: boolean | null;
+          cargo: string | null;
+          created_at: string | null;
+          email: string | null;
+          id: string;
+          nome: string | null;
+          organizacao_id: string | null;
+          telefone: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          ativo?: boolean | null;
+          cargo?: string | null;
+          created_at?: string | null;
+          email?: string | null;
+          id?: string;
+          nome?: string | null;
+          organizacao_id?: string | null;
+          telefone?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          ativo?: boolean | null;
+          cargo?: string | null;
+          created_at?: string | null;
+          email?: string | null;
+          id?: string;
+          nome?: string | null;
+          organizacao_id?: string | null;
+          telefone?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "perfis_organizacao_id_fkey";
+            columns: ["organizacao_id"];
+            isOneToOne: false;
+            referencedRelation: "organizacoes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       permissions: {
         Row: {
           description: string | null;
@@ -2506,10 +2586,14 @@ export type Database = {
           seguidores: number | null;
           tempo_exibicao_segundos: number | null;
           tenant_id: string | null;
+          organizacao_id: string | null;
           tipo: string | null;
           canal_macro: "ON" | "OFF" | "HIBRIDO" | null;
           plataforma_rede: string | null;
           metricas_digitais: Json | null;
+          link_maps: string | null;
+          sentido_via: string | null;
+          ponto_referencia: string | null;
           updated_at: string;
           valor_unit: number;
           veiculacao_tipo: string;
@@ -2551,10 +2635,14 @@ export type Database = {
           seguidores?: number | null;
           tempo_exibicao_segundos?: number | null;
           tenant_id?: string | null;
+          organizacao_id?: string | null;
           tipo?: string | null;
           canal_macro?: "ON" | "OFF" | "HIBRIDO" | null;
           plataforma_rede?: string | null;
           metricas_digitais?: Json | null;
+          link_maps?: string | null;
+          sentido_via?: string | null;
+          ponto_referencia?: string | null;
           updated_at?: string;
           valor_unit?: number;
           veiculacao_tipo?: string;
@@ -2596,10 +2684,14 @@ export type Database = {
           seguidores?: number | null;
           tempo_exibicao_segundos?: number | null;
           tenant_id?: string | null;
+          organizacao_id?: string | null;
           tipo?: string | null;
           canal_macro?: "ON" | "OFF" | "HIBRIDO" | null;
           plataforma_rede?: string | null;
           metricas_digitais?: Json | null;
+          link_maps?: string | null;
+          sentido_via?: string | null;
+          ponto_referencia?: string | null;
           updated_at?: string;
           valor_unit?: number;
           veiculacao_tipo?: string;
@@ -2619,6 +2711,13 @@ export type Database = {
             referencedRelation: "tenants";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "produtos_organizacao_id_fkey";
+            columns: ["organizacao_id"];
+            isOneToOne: false;
+            referencedRelation: "organizacoes";
+            referencedColumns: ["id"];
+          },
         ];
       };
       profiles: {
@@ -2635,6 +2734,7 @@ export type Database = {
           nome: string;
           telefone: string | null;
           tenant_id: string | null;
+          organizacao_id: string | null;
           trial_ends_at: string | null;
           updated_at: string;
           whatsapp: string | null;
@@ -2652,6 +2752,7 @@ export type Database = {
           nome: string;
           telefone?: string | null;
           tenant_id?: string | null;
+          organizacao_id?: string | null;
           trial_ends_at?: string | null;
           updated_at?: string;
           whatsapp?: string | null;
@@ -2669,6 +2770,7 @@ export type Database = {
           nome?: string;
           telefone?: string | null;
           tenant_id?: string | null;
+          organizacao_id?: string | null;
           trial_ends_at?: string | null;
           updated_at?: string;
           whatsapp?: string | null;
@@ -2679,6 +2781,13 @@ export type Database = {
             columns: ["tenant_id"];
             isOneToOne: false;
             referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profiles_organizacao_id_fkey";
+            columns: ["organizacao_id"];
+            isOneToOne: false;
+            referencedRelation: "organizacoes";
             referencedColumns: ["id"];
           },
         ];
@@ -3633,7 +3742,89 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      inventario_midia: {
+        Row: {
+          id: string;
+          tenant_id: string | null;
+          organizacao_id: string | null;
+          nome: string;
+          midia: string | null;
+          tipo: string | null;
+          programa: string | null;
+          faixa: string | null;
+          duracao_segundos: number | null;
+          insercoes_padrao: number | null;
+          valor_unit: number;
+          canal_macro: "ON" | "OFF" | "HIBRIDO" | null;
+          plataforma_rede: string | null;
+          metricas_digitais: Json | null;
+          latitude: number | null;
+          longitude: number | null;
+          link_maps: string | null;
+          sentido_via: string | null;
+          ponto_referencia: string | null;
+          ativo: boolean;
+          parceiro_nome: string | null;
+          parceiro_cnpj: string | null;
+          praca: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id?: string | null;
+          organizacao_id?: string | null;
+          nome: string;
+          midia?: string | null;
+          tipo?: string | null;
+          programa?: string | null;
+          faixa?: string | null;
+          duracao_segundos?: number | null;
+          insercoes_padrao?: number | null;
+          valor_unit?: number;
+          canal_macro?: "ON" | "OFF" | "HIBRIDO" | null;
+          plataforma_rede?: string | null;
+          metricas_digitais?: Json | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          link_maps?: string | null;
+          sentido_via?: string | null;
+          ponto_referencia?: string | null;
+          ativo?: boolean;
+          parceiro_nome?: string | null;
+          parceiro_cnpj?: string | null;
+          praca?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          tenant_id?: string | null;
+          organizacao_id?: string | null;
+          nome?: string;
+          midia?: string | null;
+          tipo?: string | null;
+          programa?: string | null;
+          faixa?: string | null;
+          duracao_segundos?: number | null;
+          insercoes_padrao?: number | null;
+          valor_unit?: number;
+          canal_macro?: "ON" | "OFF" | "HIBRIDO" | null;
+          plataforma_rede?: string | null;
+          metricas_digitais?: Json | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          link_maps?: string | null;
+          sentido_via?: string | null;
+          ponto_referencia?: string | null;
+          ativo?: boolean;
+          parceiro_nome?: string | null;
+          parceiro_cnpj?: string | null;
+          praca?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Functions: {
       admin_cron_runs: {
@@ -3996,3 +4187,7 @@ export const Constants = {
     },
   },
 } as const;
+
+export type InventarioMidiaRow = Database["public"]["Views"]["inventario_midia"]["Row"];
+export type InventarioMidiaInsert = Database["public"]["Views"]["inventario_midia"]["Insert"];
+export type InventarioMidiaUpdate = Database["public"]["Views"]["inventario_midia"]["Update"];

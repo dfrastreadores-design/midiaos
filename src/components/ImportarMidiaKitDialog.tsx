@@ -44,14 +44,22 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  MapPin,
+  ExternalLink,
+  Navigation,
+  Compass,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { extractPdfText } from "@/lib/pdf-extract";
 import { uploadProdutoFoto } from "@/lib/produto-foto";
 import { listParceiros, type Parceiro } from "@/lib/parceiros.functions";
+import { geocodeAddress } from "@/lib/geocode.functions";
 import {
   extrairProdutosDeMidiaKit,
   salvarProdutosExtraidosMidiaKit,
+  extrairCoordenadasDeTextoOuUrl,
+  extrairRotaEReferencia,
   type ProdutoExtraidoMidiaKit,
 } from "@/lib/midia-kit-ai.functions";
 
@@ -72,6 +80,7 @@ export function ImportarMidiaKitDialog({
   const listParceirosFn = useServerFn(listParceiros);
   const extrairFn = useServerFn(extrairProdutosDeMidiaKit);
   const salvarFn = useServerFn(salvarProdutosExtraidosMidiaKit);
+  const geocodeAddressFn = useServerFn(geocodeAddress);
 
   // Estados de seleção e arquivos
   const [parceiroId, setParceiroId] = useState<string>(parceiroInicialId || "");
@@ -86,6 +95,15 @@ export function ImportarMidiaKitDialog({
   const [statusMsg, setStatusMsg] = useState("");
   const [produtosDetectados, setProdutosDetectados] = useState<ProdutoExtraidoMidiaKit[]>([]);
   const [resumoIa, setResumoIa] = useState("");
+
+  // Estados de Geocodificação e Edição de Localização
+  const [geocodingId, setGeocodingId] = useState<string | null>(null);
+  const [prodGeoModal, setProdGeoModal] = useState<ProdutoExtraidoMidiaKit | null>(null);
+  const [tempLinkMaps, setTempLinkMaps] = useState("");
+  const [tempLat, setTempLat] = useState("");
+  const [tempLng, setTempLng] = useState("");
+  const [tempSentido, setTempSentido] = useState("");
+  const [tempRef, setTempRef] = useState("");
 
   // Lista de parceiros cadastrados
   const { data: parceiros = [] } = useQuery<Parceiro[]>({
@@ -253,6 +271,8 @@ export function ImportarMidiaKitDialog({
           produtos: selecionados.map((p) => ({
             nome: p.nome,
             midia: p.midia,
+            canal_macro: p.canal_macro || (["DOOH", "OOH", "Radio", "TV"].includes(p.midia) ? "OFF" : "ON"),
+            plataforma_rede: p.plataforma_rede || null,
             tipo: p.tipo || null,
             programa: p.programa || null,
             faixa: p.faixa || null,
@@ -261,6 +281,11 @@ export function ImportarMidiaKitDialog({
             valor_unit: Number(p.valor_unit) || 0,
             formato: p.formato || null,
             detalhes_venda: p.detalhes_venda || null,
+            latitude: p.latitude != null ? Number(p.latitude) : null,
+            longitude: p.longitude != null ? Number(p.longitude) : null,
+            link_maps: p.link_maps || null,
+            sentido_via: p.sentido_via || null,
+            ponto_referencia: p.ponto_referencia || null,
             fotos: p.fotos || [],
           })),
         },
@@ -290,6 +315,7 @@ export function ImportarMidiaKitDialog({
     setFotosUrls([]);
     setProdutosDetectados([]);
     setStatusMsg("");
+    setProdGeoModal(null);
   }
 
   function handleToggleAll(checked: boolean) {
@@ -306,11 +332,77 @@ export function ImportarMidiaKitDialog({
     setProdutosDetectados((prev) => prev.filter((p) => p.id_temp !== id_temp));
   }
 
+  // Geocodificação automática por clique no preview
+  async function handleBuscarCoordenadas(prod: ProdutoExtraidoMidiaKit) {
+    const query = prod.ponto_referencia || prod.faixa || prod.nome;
+    if (!query || query.trim().length < 4) {
+      toast.warning("Endereço ou ponto de referência muito curto para buscar no mapa.");
+      return;
+    }
+    setGeocodingId(prod.id_temp);
+    try {
+      const res = await geocodeAddressFn({ data: { address: query } });
+      if (res.ok && res.latitude != null && res.longitude != null) {
+        const link = `https://www.google.com/maps?q=${res.latitude},${res.longitude}`;
+        handleUpdateProduto(prod.id_temp, "latitude", res.latitude);
+        handleUpdateProduto(prod.id_temp, "longitude", res.longitude);
+        handleUpdateProduto(prod.id_temp, "link_maps", link);
+        if (!prod.ponto_referencia && res.endereco) {
+          handleUpdateProduto(prod.id_temp, "ponto_referencia", res.endereco);
+        }
+        toast.success(`Coordenadas localizadas: ${res.latitude.toFixed(4)}, ${res.longitude.toFixed(4)}`);
+      } else {
+        toast.error("Não foi possível localizar o endereço com exatidão.");
+      }
+    } catch (e: any) {
+      toast.error("Erro ao buscar coordenadas: " + e.message);
+    } finally {
+      setGeocodingId(null);
+    }
+  }
+
+  function openGeoModal(prod: ProdutoExtraidoMidiaKit) {
+    setProdGeoModal(prod);
+    setTempLinkMaps(prod.link_maps || "");
+    setTempLat(prod.latitude != null ? String(prod.latitude) : "");
+    setTempLng(prod.longitude != null ? String(prod.longitude) : "");
+    setTempSentido(prod.sentido_via || "");
+    setTempRef(prod.ponto_referencia || "");
+  }
+
+  function handlePasteMapsUrl(url: string) {
+    setTempLinkMaps(url);
+    const extracted = extrairCoordenadasDeTextoOuUrl(url);
+    if (extracted.latitude != null && extracted.longitude != null) {
+      setTempLat(String(extracted.latitude));
+      setTempLng(String(extracted.longitude));
+      toast.success(`Coordenadas extraídas do link: ${extracted.latitude}, ${extracted.longitude}`);
+    }
+  }
+
+  function saveGeoModal() {
+    if (!prodGeoModal) return;
+    const lat = tempLat.trim() ? parseFloat(tempLat.trim()) : null;
+    const lng = tempLng.trim() ? parseFloat(tempLng.trim()) : null;
+    let link = tempLinkMaps.trim() || null;
+    if (!link && lat != null && lng != null) {
+      link = `https://www.google.com/maps?q=${lat},${lng}`;
+    }
+    handleUpdateProduto(prodGeoModal.id_temp, "latitude", lat);
+    handleUpdateProduto(prodGeoModal.id_temp, "longitude", lng);
+    handleUpdateProduto(prodGeoModal.id_temp, "link_maps", link);
+    handleUpdateProduto(prodGeoModal.id_temp, "sentido_via", tempSentido.trim() || null);
+    handleUpdateProduto(prodGeoModal.id_temp, "ponto_referencia", tempRef.trim() || null);
+    setProdGeoModal(null);
+    toast.success("Geolocalização atualizada no produto!");
+  }
+
   const totalSelecionados = produtosDetectados.filter((p) => p.selecionado).length;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-6 overflow-hidden">
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col p-6 overflow-hidden">
         <DialogHeader className="pb-3 border-b">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -506,6 +598,7 @@ export function ImportarMidiaKitDialog({
                     <TableHead>Produto / Programa</TableHead>
                     <TableHead className="w-28">Mídia / Tipo</TableHead>
                     <TableHead className="w-28">Faixa / Horário</TableHead>
+                    <TableHead className="w-56">Localização & Mapa (OOH/DOOH)</TableHead>
                     <TableHead className="w-32 text-right">Preço Tabela (R$)</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
@@ -583,6 +676,80 @@ export function ImportarMidiaKitDialog({
                           className="h-8 text-xs"
                           placeholder="Ex: 12h-14h"
                         />
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 min-w-[200px]">
+                          {prod.latitude != null && prod.longitude != null ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] font-mono gap-1 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500/40 py-0"
+                                >
+                                  <MapPin className="size-3 text-emerald-600" />
+                                  {prod.latitude.toFixed(4)}, {prod.longitude.toFixed(4)}
+                                </Badge>
+                                <a
+                                  href={prod.link_maps || `https://www.google.com/maps?q=${prod.latitude},${prod.longitude}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[11px] text-primary hover:underline inline-flex items-center gap-0.5"
+                                  title="Ver no Google Maps / Street View"
+                                >
+                                  <ExternalLink className="size-3" /> Ver no Mapa
+                                </a>
+                              </div>
+                              {(prod.sentido_via || prod.ponto_referencia) && (
+                                <p className="text-[10px] text-muted-foreground line-clamp-1">
+                                  {prod.sentido_via ? `🧭 ${prod.sentido_via} ` : ""}{prod.ponto_referencia ? `• 📍 ${prod.ponto_referencia}` : ""}
+                                </p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => openGeoModal(prod)}
+                                className="text-[10px] text-muted-foreground hover:text-foreground underline block"
+                              >
+                                Ajustar pin / rota
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              {prod.ponto_referencia ? (
+                                <p className="text-[11px] text-muted-foreground line-clamp-1" title={prod.ponto_referencia}>
+                                  📍 {prod.ponto_referencia}
+                                </p>
+                              ) : null}
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-[10px] px-2 gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                                  disabled={geocodingId === prod.id_temp}
+                                  onClick={() => handleBuscarCoordenadas(prod)}
+                                  title="Buscar coordenadas no mapa a partir do endereço"
+                                >
+                                  {geocodingId === prod.id_temp ? (
+                                    <Loader2 className="size-3 animate-spin" />
+                                  ) : (
+                                    <Search className="size-3" />
+                                  )}
+                                  Buscar Coordenadas
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-[10px] px-1.5 text-muted-foreground hover:text-foreground"
+                                  onClick={() => openGeoModal(prod)}
+                                  title="Inserir coordenadas ou link do Google Maps manualmente"
+                                >
+                                  Colar Link / Pin
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <Input
@@ -667,5 +834,90 @@ export function ImportarMidiaKitDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Modal para Ajuste Manual de Pin, Coordenadas e Link do Google Maps */}
+    <Dialog open={Boolean(prodGeoModal)} onOpenChange={(o) => !o && setProdGeoModal(null)}>
+      <DialogContent className="max-w-md p-5 rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold flex items-center gap-2">
+            <MapPin className="size-4 text-primary" />
+            Geolocalização & Rota do Ponto
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Ajuste as coordenadas ou cole o link do Google Maps enviado pelo parceiro (WhatsApp/Email).
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 py-2">
+          <div>
+            <Label className="text-xs font-semibold">Link do Google Maps / Street View</Label>
+            <Input
+              value={tempLinkMaps}
+              onChange={(e) => handlePasteMapsUrl(e.target.value)}
+              placeholder="Cole aqui o link do Google Maps (ex: maps.app.goo.gl/...)"
+              className="text-xs font-mono mt-1 bg-background"
+            />
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              💡 Ao colar o link enviado pelo WhatsApp, as coordenadas decimais são extraídas automaticamente.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Latitude</Label>
+              <Input
+                type="number"
+                step="any"
+                value={tempLat}
+                onChange={(e) => setTempLat(e.target.value)}
+                placeholder="-15.8341"
+                className="text-xs font-mono mt-1 bg-background"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Longitude</Label>
+              <Input
+                type="number"
+                step="any"
+                value={tempLng}
+                onChange={(e) => setTempLng(e.target.value)}
+                placeholder="-48.0567"
+                className="text-xs font-mono mt-1 bg-background"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Sentido da Via (Fluxo de Trânsito)</Label>
+            <Input
+              value={tempSentido}
+              onChange={(e) => setTempSentido(e.target.value)}
+              placeholder="Ex: Sentido Plano Piloto / Sentido Taguatinga"
+              className="text-xs mt-1 bg-background"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs">Ponto de Referência Estruturado</Label>
+            <Input
+              value={tempRef}
+              onChange={(e) => setTempRef(e.target.value)}
+              placeholder="Ex: EPTG km 4 em frente à Só Reparos"
+              className="text-xs mt-1 bg-background"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" size="sm" onClick={() => setProdGeoModal(null)}>
+            Cancelar
+          </Button>
+          <Button type="button" size="sm" onClick={saveGeoModal} className="bg-primary text-white">
+            Salvar Localização
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

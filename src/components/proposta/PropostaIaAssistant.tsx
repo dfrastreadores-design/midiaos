@@ -15,6 +15,7 @@ import {
   Tv,
   Radio,
   Monitor,
+  Globe,
   Check,
   Loader2,
   DollarSign,
@@ -60,7 +61,10 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
 
   // Bloco 2: Seleção de Soluções (O Portfólio Nexo)
   const [solucoesSelecionadas, setSolucoesSelecionadas] = useState<string[]>([]);
-  const [midias, setMidias] = useState<("TV" | "Radio" | "DOOH")[]>(["TV", "Radio", "DOOH"]);
+  const [midias, setMidias] = useState<string[]>(["TV", "Radio", "DOOH", "Digital"]);
+  const [canalMacroPreferencia, setCanalMacroPreferencia] = useState<
+    "TODOS" | "OFF" | "ON" | "HIBRIDO"
+  >("HIBRIDO");
 
   // Bloco 3: Especificações Técnicas e Escopo
   const [entregaveisVolumes, setEntregaveisVolumes] = useState("");
@@ -92,7 +96,7 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
     );
   };
 
-  const toggleMidia = (m: "TV" | "Radio" | "DOOH") => {
+  const toggleMidia = (m: string) => {
     setMidias((prev) =>
       prev.includes(m) ? (prev.length > 1 ? prev.filter((x) => x !== m) : prev) : [...prev, m],
     );
@@ -122,6 +126,7 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
           // Bloco 2
           solucoes: solucoesSelecionadas.length > 0 ? solucoesSelecionadas : undefined,
           midias: midias.length > 0 ? midias : undefined,
+          canal_macro_preferencia: canalMacroPreferencia,
 
           // Bloco 3
           entregaveis_volumes: entregaveisVolumes.trim() || null,
@@ -382,54 +387,120 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                   })}
                 </div>
 
-                {/* Canais de Mídia do Catálogo */}
-                <div className="pt-2 border-t mt-3 flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <Layers className="size-3.5 text-purple-600" />
-                    <span className="text-xs font-semibold text-foreground">
-                      Mídias do Catálogo para Vinculação:
-                    </span>
+                {/* Seletor de Canal Macro (360° Phygital / OFF / ON) */}
+                <div className="pt-2.5 border-t mt-3 space-y-2.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="size-3.5 text-purple-600" />
+                      <span className="text-xs font-semibold text-foreground">
+                        Foco Estratégico de Canal Macro:
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setCanalMacroPreferencia("HIBRIDO")}
+                        className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
+                          canalMacroPreferencia === "HIBRIDO"
+                            ? "bg-purple-600 text-white border-purple-600 shadow-xs font-semibold"
+                            : "bg-background text-muted-foreground hover:border-purple-300"
+                        }`}
+                      >
+                        <Sparkles className="size-3" />
+                        ⚡ 360° Phygital (Físico + Digital)
+                        {canalMacroPreferencia === "HIBRIDO" && <Check className="size-3 ml-0.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCanalMacroPreferencia("OFF")}
+                        className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
+                          canalMacroPreferencia === "OFF"
+                            ? "bg-emerald-600 text-white border-emerald-600 shadow-xs font-semibold"
+                            : "bg-background text-muted-foreground hover:border-emerald-300"
+                        }`}
+                      >
+                        <Radio className="size-3" />
+                        📻 Mídia OFF (Física / OOH)
+                        {canalMacroPreferencia === "OFF" && <Check className="size-3 ml-0.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCanalMacroPreferencia("ON")}
+                        className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
+                          canalMacroPreferencia === "ON"
+                            ? "bg-sky-600 text-white border-sky-600 shadow-xs font-semibold"
+                            : "bg-background text-muted-foreground hover:border-sky-300"
+                        }`}
+                      >
+                        <Globe className="size-3" />
+                        🌐 Mídia ON (Digital / Web)
+                        {canalMacroPreferencia === "ON" && <Check className="size-3 ml-0.5" />}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleMidia("DOOH")}
-                      className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
-                        midias.includes("DOOH")
-                          ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                          : "bg-background text-muted-foreground hover:border-purple-300"
-                      }`}
-                    >
-                      <Monitor className="size-3" />
-                      DOOH / Telas
-                      {midias.includes("DOOH") && <Check className="size-3 ml-0.5" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleMidia("TV")}
-                      className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
-                        midias.includes("TV")
-                          ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                          : "bg-background text-muted-foreground hover:border-purple-300"
-                      }`}
-                    >
-                      <Tv className="size-3" />
-                      TV
-                      {midias.includes("TV") && <Check className="size-3 ml-0.5" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleMidia("Radio")}
-                      className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border font-medium transition-all ${
-                        midias.includes("Radio")
-                          ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                          : "bg-background text-muted-foreground hover:border-purple-300"
-                      }`}
-                    >
-                      <Radio className="size-3" />
-                      Rádio
-                      {midias.includes("Radio") && <Check className="size-3 ml-0.5" />}
-                    </button>
+
+                  {/* Mídias específicas para vincular */}
+                  <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-purple-100/60 dark:border-purple-900/30">
+                    <div className="flex items-center gap-1.5">
+                      <Layers className="size-3 text-muted-foreground" />
+                      <span className="text-[11px] font-medium text-muted-foreground">
+                        Formatos do catálogo:
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => toggleMidia("DOOH")}
+                        className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border transition-all ${
+                          midias.includes("DOOH")
+                            ? "bg-purple-600/15 text-purple-700 dark:text-purple-300 border-purple-400 font-semibold"
+                            : "bg-background text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <Monitor className="size-3" />
+                        DOOH / Telas
+                        {midias.includes("DOOH") && <Check className="size-2.5 ml-0.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleMidia("TV")}
+                        className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border transition-all ${
+                          midias.includes("TV")
+                            ? "bg-purple-600/15 text-purple-700 dark:text-purple-300 border-purple-400 font-semibold"
+                            : "bg-background text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <Tv className="size-3" />
+                        TV
+                        {midias.includes("TV") && <Check className="size-2.5 ml-0.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleMidia("Radio")}
+                        className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border transition-all ${
+                          midias.includes("Radio")
+                            ? "bg-purple-600/15 text-purple-700 dark:text-purple-300 border-purple-400 font-semibold"
+                            : "bg-background text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <Radio className="size-3" />
+                        Rádio
+                        {midias.includes("Radio") && <Check className="size-2.5 ml-0.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleMidia("Digital")}
+                        className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border transition-all ${
+                          midias.includes("Digital")
+                            ? "bg-sky-600/15 text-sky-700 dark:text-sky-300 border-sky-400 font-semibold"
+                            : "bg-background text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <Globe className="size-3" />
+                        Digital / Redes
+                        {midias.includes("Digital") && <Check className="size-2.5 ml-0.5" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

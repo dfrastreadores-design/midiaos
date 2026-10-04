@@ -58,7 +58,9 @@ import {
   deleteProdutoTipo,
 } from "@/lib/produtos.functions";
 import { listMidiaConfig, upsertMidiaConfig } from "@/lib/midia-config.functions";
+import { SUGESTOES_TIPOS_POR_MIDIA } from "@/lib/catalogo-midias";
 import { useUserRoles } from "@/hooks/use-roles";
+import { useCurrentOrg } from "@/hooks/use-current-org";
 import { formatBRL } from "@/lib/mock-data";
 import { LogoImg } from "@/components/LogoImg";
 import { ProdutoFotoImg } from "@/components/ProdutoFotoImg";
@@ -122,6 +124,7 @@ function ProdutosPage() {
   const [filtroOrigem, setFiltroOrigem] = useState<"all" | "proprio" | "parceiro">(
     searchParams.parceiro ? "parceiro" : "all",
   );
+  const [filtroCanalMacro, setFiltroCanalMacro] = useState<"all" | "OFF" | "ON" | "HIBRIDO">("all");
   const [editing, setEditing] = useState<Partial<Produto> | null>(null);
   const [open, setOpen] = useState(false);
   const [cfgOpen, setCfgOpen] = useState(false);
@@ -195,8 +198,20 @@ function ProdutosPage() {
       return false;
     if (filtroOrigem === "parceiro" && !p.parceiro_cnpj && !p.parceiro_nome && !p.parceiro_id)
       return false;
+    if (filtroCanalMacro !== "all" && (p.canal_macro || "OFF") !== filtroCanalMacro)
+      return false;
     if (!q) return true;
-    return [p.nome, p.tipo, p.programa, p.formato, p.faixa, p.parceiro_nome, p.parceiro_cnpj]
+    return [
+      p.nome,
+      p.tipo,
+      p.programa,
+      p.formato,
+      p.faixa,
+      p.parceiro_nome,
+      p.parceiro_cnpj,
+      p.plataforma_rede,
+      p.canal_macro,
+    ]
       .filter(Boolean)
       .some((v) => String(v).toLowerCase().includes(q));
   });
@@ -210,7 +225,8 @@ function ProdutosPage() {
     const tiposDosProdutos = allProdutos
       .filter((p) => p.midia === m && p.tipo && p.tipo.trim())
       .map((p) => p.tipo!.trim());
-    return Array.from(new Set([...tiposDaMidia, ...tiposDosProdutos])).sort((a, b) =>
+    const tiposCatalogo = SUGESTOES_TIPOS_POR_MIDIA[m] || [];
+    return Array.from(new Set([...tiposDaMidia, ...tiposDosProdutos, ...tiposCatalogo])).sort((a, b) =>
       a.localeCompare(b, "pt-BR"),
     );
   };
@@ -265,11 +281,20 @@ function ProdutosPage() {
     <AppShell>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
-            Produtos
-          </h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+              {isNexo ? "Soluções Próprias Nexo & Veículos Representados" : "Produtos & Inventário Comercial"}
+            </h1>
+            {isNexo && (
+              <Badge variant="outline" className="bg-sky-500/10 text-sky-600 border-sky-500/30 text-xs font-bold py-0.5">
+                Hub Nexo 360° DF
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Cadastro de produtos de TV, Rádio e DOOH (valor, tempo e inserções padrão).
+            {isNexo
+              ? "Catálogo estratégico de inventário comercial: soluções próprias e veículos parceiros homologados no Distrito Federal."
+              : "Cadastro de produtos de TV, Rádio, DOOH e canais digitais (valor, tempo e inserções padrão)."}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
@@ -375,6 +400,112 @@ function ProdutosPage() {
 
         {listaMidias.map((m) => (
           <TabsContent key={m} value={m} className="mt-4 space-y-3">
+            {/* Seletor Visual de Categorias Híbridas Nexo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Categoria A: Soluções Próprias Nexo */}
+              <div
+                onClick={() => setFiltroOrigem(filtroOrigem === "proprio" ? "all" : "proprio")}
+                className={cn(
+                  "p-3.5 rounded-xl border transition-all cursor-pointer",
+                  filtroOrigem === "proprio"
+                    ? "bg-sky-500/10 border-sky-500 ring-2 ring-sky-500/30"
+                    : "bg-card hover:bg-muted/40 border-border/70",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⭐</span>
+                    <div>
+                      <div className="font-bold text-xs sm:text-sm text-foreground">
+                        A) SOLUÇÕES PRÓPRIAS NEXO (In-House Hub)
+                      </div>
+                      <div className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold">
+                        Gestão, Inteligência Estratégica & Execução Direta
+                      </div>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={filtroOrigem === "proprio" ? "default" : "outline"}
+                    className="text-[10px] px-2 py-0.5 shrink-0 bg-sky-600 hover:bg-sky-700 text-white"
+                  >
+                    {filtroOrigem === "proprio" ? "Ativo" : "Filtrar"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[
+                    "Planejamento Estratégico & Inteligência 360°",
+                    "Criação & Peças (LED, OOH, Digital)",
+                    "Gestão de Tráfego & Performance",
+                    "Coberturas, Eventos & Live Marketing",
+                  ].map((sub) => (
+                    <span
+                      key={sub}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFiltroOrigem("proprio");
+                        setSearch(sub.split(" ")[0]);
+                      }}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800 hover:bg-sky-100 transition-colors"
+                    >
+                      {sub}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Categoria B: Veículos Representados */}
+              <div
+                onClick={() => setFiltroOrigem(filtroOrigem === "parceiro" ? "all" : "parceiro")}
+                className={cn(
+                  "p-3.5 rounded-xl border transition-all cursor-pointer",
+                  filtroOrigem === "parceiro"
+                    ? "bg-purple-500/10 border-purple-500 ring-2 ring-purple-500/30"
+                    : "bg-card hover:bg-muted/40 border-border/70",
+                )}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🤝</span>
+                    <div>
+                      <div className="font-bold text-xs sm:text-sm text-foreground">
+                        B) VEÍCULOS REPRESENTADOS (Rede Homologada)
+                      </div>
+                      <div className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">
+                        Espaços de Alto Impacto • DF & Entorno
+                      </div>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={filtroOrigem === "parceiro" ? "default" : "outline"}
+                    className="text-[10px] px-2 py-0.5 shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {filtroOrigem === "parceiro" ? "Ativo" : "Filtrar"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[
+                    "Mídia Exterior & Rodoviária (LEDs/Fronts)",
+                    "Mídia Indoor & Hiperlocal (Elevadores)",
+                    "Mídia em Trânsito (TV Cars)",
+                    "Mídia Sonora & Rádios (Spots/Blitz)",
+                    "Mídia Digital Regional (Portais)",
+                  ].map((sub) => (
+                    <span
+                      key={sub}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFiltroOrigem("parceiro");
+                        setSearch(sub.split(" ")[0]);
+                      }}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800 hover:bg-purple-100 transition-colors"
+                    >
+                      {sub}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <Card>
               <CardContent className="p-3 flex flex-wrap gap-2 items-center">
                 <Input
@@ -407,13 +538,31 @@ function ProdutosPage() {
                   </SelectContent>
                 </Select>
                 <Select value={filtroOrigem} onValueChange={(v) => setFiltroOrigem(v as any)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Origem" />
+                  <SelectTrigger className="w-[260px]">
+                    <SelectValue placeholder="Categoria / Origem" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas as origens</SelectItem>
-                    <SelectItem value="proprio">🏢 Próprios do Inquilino</SelectItem>
-                    <SelectItem value="parceiro">🤝 De Parceiros</SelectItem>
+                    <SelectItem value="all">Todas as categorias</SelectItem>
+                    <SelectItem value="proprio">
+                      ⭐ A) SOLUÇÕES PRÓPRIAS NEXO (In-House Hub)
+                    </SelectItem>
+                    <SelectItem value="parceiro">
+                      🤝 B) VEÍCULOS REPRESENTADOS (Rede Homologada)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={filtroCanalMacro}
+                  onValueChange={(v) => setFiltroCanalMacro(v as any)}
+                >
+                  <SelectTrigger className="w-[170px]">
+                    <SelectValue placeholder="Canal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os canais</SelectItem>
+                    <SelectItem value="OFF">📻 Mídia OFF</SelectItem>
+                    <SelectItem value="ON">🌐 Mídia ON</SelectItem>
+                    <SelectItem value="HIBRIDO">⚡ Híbrido 360°</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="text-sm text-muted-foreground ml-auto">
@@ -504,6 +653,7 @@ function ProdutosPage() {
                                   setFiltroTipo("__all__");
                                   setFiltroStatus("all");
                                   setFiltroOrigem("all");
+                                  setFiltroCanalMacro("all");
                                 }}
                               >
                                 Limpar filtros
@@ -551,12 +701,30 @@ function ProdutosPage() {
                               </div>
                             )}
                             <div className="flex flex-col min-w-0">
-                              <span
-                                className="font-semibold text-foreground truncate max-w-[240px]"
-                                title={p.nome}
-                              >
-                                {p.nome}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span
+                                  className="font-semibold text-foreground truncate max-w-[240px]"
+                                  title={p.nome}
+                                >
+                                  {p.nome}
+                                </span>
+                                {p.canal_macro === "ON" && (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-sky-400 bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 text-[9px] py-0 px-1 font-semibold"
+                                  >
+                                    🌐 ON{p.plataforma_rede ? ` • ${p.plataforma_rede}` : ""}
+                                  </Badge>
+                                )}
+                                {p.canal_macro === "HIBRIDO" && (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-purple-400 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[9px] py-0 px-1 font-semibold"
+                                  >
+                                    ⚡ 360°
+                                  </Badge>
+                                )}
+                              </div>
                               {p.tipo && (
                                 <span className="text-[11px] text-muted-foreground truncate max-w-[240px]">
                                   {p.tipo}
@@ -568,25 +736,25 @@ function ProdutosPage() {
                         <TableCell>
                           {p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id ? (
                             <div className="flex flex-col items-start gap-1">
-                              <div className="flex items-center gap-1">
-                                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-200 text-[10px] font-medium py-0">
-                                  🤝 Parceiro
-                                </Badge>
+                              <Badge className="bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-200 border-purple-300 text-[10px] font-bold py-0.5">
+                                🤝 B) VEÍCULO REPRESENTADO (Rede Homologada)
+                              </Badge>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span
+                                  className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[190px]"
+                                  title={p.parceiro_nome || undefined}
+                                >
+                                  {p.parceiro_nome || "Veículo Parceiro"}
+                                </span>
                                 {p.comissao_inquilino_pct != null && (
                                   <Badge
                                     variant="outline"
                                     className="text-[10px] font-bold text-purple-700 dark:text-purple-300 border-purple-300 bg-purple-50 dark:bg-purple-950/40 py-0"
                                   >
-                                    {p.comissao_inquilino_pct}% remuneração
+                                    {p.comissao_inquilino_pct}% BV
                                   </Badge>
                                 )}
                               </div>
-                              <span
-                                className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[170px]"
-                                title={p.parceiro_nome || undefined}
-                              >
-                                {p.parceiro_nome || "Parceiro de Mídia"}
-                              </span>
                               {p.parceiro_cnpj && (
                                 <span className="font-mono text-[10px] text-muted-foreground">
                                   {p.parceiro_cnpj}
@@ -594,12 +762,17 @@ function ProdutosPage() {
                               )}
                             </div>
                           ) : (
-                            <Badge
-                              variant="outline"
-                              className="border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/20 text-[10px] py-0 font-normal"
-                            >
-                              🏢 Próprio
-                            </Badge>
+                            <div className="flex flex-col items-start gap-1">
+                              <Badge
+                                variant="outline"
+                                className="border-sky-500/60 text-sky-900 dark:text-sky-200 bg-sky-50 dark:bg-sky-950/50 text-[10px] py-0.5 font-bold"
+                              >
+                                ⭐ A) SOLUÇÃO PRÓPRIA NEXO (In-House Hub)
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
+                                Planejamento 360° • Criação • Tráfego • Ativação
+                              </span>
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -715,6 +888,7 @@ function ProdutosPage() {
               try {
                 await upsertConfigFn({ data: { midia: nome } });
                 await qc.invalidateQueries({ queryKey: ["midia_config"] });
+                await qc.invalidateQueries({ queryKey: ["produto_tipos"] });
                 setTab(nome);
                 setNovaMidiaNome("");
                 setNovaMidiaOpen(false);

@@ -1,5 +1,10 @@
-# Logs
-logs
+# ==============================================================================
+# Mídia.OS — .gitignore
+# Blindagem contra envio de arquivos pesados, caches, relatórios e envs locais
+# ==============================================================================
+
+# 1. Logs & Relatórios de Debug
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,43 +12,68 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-.output
-.vinxi
+# 2. Dependências & Builds
+node_modules/
+dist/
+dist-ssr/
+.output/
+.vinxi/
 .tanstack/**
-.nitro
-# Environment files
+.nitro/
+
+# 3. Pastas Temporárias & Caches de Compilação
+.cache/
+.temp/
+.turbo/
+*.tmp
+supabase/.temp/
+hostinger_staging_*
+
+# 4. Arquivos Compactados & Pacotes de Deploy
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+hostinger_deploy.zip
+hostinger/
+
+# 5. Variáveis de Ambiente & Segredos Locais
 .env
 .env.*
+.env.local
+.env.development
+.env.test
+.env.production.local
 !.env.example
 
-# Wrangler / Cloudflare
+# 6. Mídias Pesadas & Relatórios Locais Soltos
+*.pdf
+*.xlsx
+*.xls
+*.csv
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# 7. Backups Locais de Banco de Dados
+backups/
+*.backup.json
+
+# 8. Cloudflare / Wrangler
 .wrangler/
 .dev.vars
 
-# Editor directories and files
+# 9. Editores & Sistema Operacional
+.DS_Store
+Thumbs.db
+.idea/
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-# Hostinger Build & Package
-hostinger_deploy.zip
-hostinger/
-
-# Local Database Backups
-backups/
-*.backup.json
-
-# Heavy assets & temp files
-*.pdf
-*.xlsx
-supabase/.temp/
-

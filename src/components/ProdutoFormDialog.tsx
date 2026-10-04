@@ -31,12 +31,29 @@ import {
   Percent,
   Handshake,
   Plus,
+  Globe,
+  Radio,
+  Tv,
+  Sparkles,
+  Layers,
+  MousePointerClick,
+  Eye,
+  TrendingUp,
+  Share2,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { upsertProduto, upsertProdutoTipo } from "@/lib/produtos.functions";
 import { listEmissoras } from "@/lib/emissoras.functions";
-import { listParceiros, type Parceiro } from "@/lib/parceiros.functions";
+import { listParceiros, type Parceiro, SEGMENTOS_MIDIA } from "@/lib/parceiros.functions";
 import { listMidiaConfig, upsertMidiaConfig } from "@/lib/midia-config.functions";
+import {
+  MIDIAS_PARCEIROS_CATALOGO,
+  SUGESTOES_TIPOS_POR_MIDIA,
+  FORMATOS_SUGERIDOS_POR_MIDIA,
+  PROGRAMAS_SUGERIDOS_POR_MIDIA,
+  getMacroCanalParaMidia,
+} from "@/lib/catalogo-midias";
 import { useQuery } from "@tanstack/react-query";
 import { CreatableCombobox } from "@/components/CreatableCombobox";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
@@ -58,6 +75,9 @@ export type Produto = {
   id: string;
   nome: string;
   midia: Midia;
+  canal_macro?: "OFF" | "ON" | "HIBRIDO";
+  plataforma_rede?: string | null;
+  metricas_digitais?: Record<string, any> | null;
   tipo: string | null;
   programa: string | null;
   formato: string | null;
@@ -77,6 +97,9 @@ export type Produto = {
   cep?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  link_maps?: string | null;
+  sentido_via?: string | null;
+  ponto_referencia?: string | null;
   quantidade_telas?: number | null;
   ambientes?: string[];
   formato_tela?: string | null;
@@ -171,9 +194,6 @@ export function ProdutoFormDialog({
     queryKey: ["midia_config"],
     queryFn: () => fetchConfigsFn(),
   });
-  const todasMidias = Array.from(
-    new Set(["TV", "Radio", "DOOH", ...(configs as any[]).map((c) => c.midia).filter(Boolean)]),
-  ).sort();
 
   const listParceirosFn = useServerFn(listParceiros);
   const { data: emissoras = [] } = useQuery({
@@ -185,8 +205,26 @@ export function ProdutoFormDialog({
     queryFn: () => listParceirosFn(),
   });
 
+  // Segmentos extraídos dos parceiros cadastrados no sistema
+  const segmentosParceiros = (parceirosCadastrados ?? []).flatMap((p) =>
+    Array.isArray(p.segmentos) ? p.segmentos : [],
+  );
+
+  // Lista consolidada de todas as mídias: padrão comercial + catálogo parceiros + cadastrados no banco
+  const todasMidias = Array.from(
+    new Set([
+      ...MIDIAS_PARCEIROS_CATALOGO,
+      ...SEGMENTOS_MIDIA,
+      ...segmentosParceiros,
+      ...(configs as any[]).map((c) => c.midia).filter(Boolean),
+    ]),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
   const [form, setForm] = useState<Partial<Produto>>({
     midia: "TV",
+    canal_macro: "OFF",
+    plataforma_rede: null,
+    metricas_digitais: null,
     nome: "",
     duracao_segundos: 30,
     insercoes_padrao: 1,
@@ -207,6 +245,9 @@ export function ProdutoFormDialog({
       setErrors({});
       const init = initial || {
         midia: "TV",
+        canal_macro: "OFF",
+        plataforma_rede: null,
+        metricas_digitais: null,
         nome: "",
         duracao_segundos: 30,
         insercoes_padrao: 1,
@@ -219,8 +260,19 @@ export function ProdutoFormDialog({
         cep: null,
         fotos: [],
       };
+      const canalMacroInicial =
+        init.canal_macro ||
+        (["Digital", "Social", "Internet", "Web", "Portal"].includes(init.midia || "")
+          ? "ON"
+          : "OFF");
       setForm({
         ...init,
+        canal_macro: canalMacroInicial,
+        plataforma_rede: init.plataforma_rede || null,
+        metricas_digitais: init.metricas_digitais || null,
+        link_maps: init.link_maps || null,
+        sentido_via: init.sentido_via || null,
+        ponto_referencia: init.ponto_referencia || null,
         fotos: init.fotos || [],
       });
       const rawCep = init.cep || init.endereco_ponto?.match(/\b\d{5}-?\d{3}\b/)?.[0] || "";
@@ -229,6 +281,18 @@ export function ProdutoFormDialog({
   }, [open, initial]);
 
   const set = (patch: Partial<Produto>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const updateMetricaDigital = (key: string, val: any) => {
+    setForm((prev) => {
+      const cur = { ...(prev.metricas_digitais || {}) };
+      if (val === "" || val === null || val === undefined) {
+        delete cur[key];
+      } else {
+        cur[key] = val;
+      }
+      return { ...prev, metricas_digitais: Object.keys(cur).length ? cur : null };
+    });
+  };
 
   const handleReverseGeocode = async (lat: number, lng: number, silent = false) => {
     if (isResolvingRef.current) return;
@@ -390,6 +454,17 @@ export function ProdutoFormDialog({
     onError: (e: Error) => toast.error(traduzirErro(e)),
   });
 
+  const parceiroSelecionado = parceirosCadastrados.find((p) => p.id === form.parceiro_id) || null;
+
+  const parceirosQueOferecemMidia = form.midia
+    ? (parceirosCadastrados ?? []).filter((p) =>
+        Array.isArray(p.segmentos) &&
+        p.segmentos.some(
+          (seg) => seg.trim().toLowerCase() === form.midia!.trim().toLowerCase(),
+        ),
+      )
+    : [];
+
   const validateForm = () => {
     const errs: Record<string, string> = {};
     if (!form.nome?.trim()) {
@@ -431,6 +506,86 @@ export function ProdutoFormDialog({
             <DialogTitle>{form.id ? "Editar produto" : "Novo produto"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Seletor Visual de Macro Canal (OFF vs ON vs HÍBRIDO) */}
+            <div className="rounded-xl border p-3 bg-muted/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Layers className="size-3.5 text-primary" />
+                  Classificação do Inventário (Canal Macro) *
+                </Label>
+                <Badge
+                  variant="outline"
+                  className={
+                    form.canal_macro === "ON"
+                      ? "border-sky-500/40 text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20 text-[11px]"
+                      : form.canal_macro === "HIBRIDO"
+                        ? "border-purple-500/40 text-purple-600 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-950/20 text-[11px]"
+                        : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20 text-[11px]"
+                  }
+                >
+                  {form.canal_macro === "ON"
+                    ? "🌐 Mídia Digital / ON"
+                    : form.canal_macro === "HIBRIDO"
+                      ? "⚡ Mídia Híbrida 360°"
+                      : "📻 Mídia Tradicional / OFF"}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    set({ canal_macro: "OFF" });
+                    if (form.midia === "Digital" || form.midia === "Social") {
+                      set({ midia: "DOOH" });
+                    }
+                  }}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-lg border text-center transition-all cursor-pointer ${
+                    form.canal_macro === "OFF" || !form.canal_macro
+                      ? "bg-primary/10 border-primary text-primary shadow-sm font-semibold ring-1 ring-primary/30"
+                      : "bg-background border-border/70 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  }`}
+                >
+                  <Radio className="size-5 mb-1 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs font-bold leading-tight">Mídia OFF</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5">OOH, DOOH, TV, Rádio</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    set({ canal_macro: "ON" });
+                    if (["TV", "Radio", "DOOH"].includes(form.midia || "")) {
+                      set({ midia: "Digital" });
+                    }
+                  }}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-lg border text-center transition-all cursor-pointer ${
+                    form.canal_macro === "ON"
+                      ? "bg-primary/10 border-primary text-primary shadow-sm font-semibold ring-1 ring-primary/30"
+                      : "bg-background border-border/70 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  }`}
+                >
+                  <Globe className="size-5 mb-1 text-sky-600 dark:text-sky-400" />
+                  <span className="text-xs font-bold leading-tight">Mídia ON</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5">Social, Web, Portais</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => set({ canal_macro: "HIBRIDO" })}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-lg border text-center transition-all cursor-pointer ${
+                    form.canal_macro === "HIBRIDO"
+                      ? "bg-primary/10 border-primary text-primary shadow-sm font-semibold ring-1 ring-primary/30"
+                      : "bg-background border-border/70 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  }`}
+                >
+                  <Sparkles className="size-5 mb-1 text-purple-600 dark:text-purple-400" />
+                  <span className="text-xs font-bold leading-tight">Híbrido 360°</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5">Físico + Digital</span>
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div data-field="midia">
                 <div className="flex items-center justify-between mb-1.5">
@@ -449,9 +604,12 @@ export function ProdutoFormDialog({
                   </button>
                 </div>
                 <CreatableCombobox
-                  value={form.midia ?? "TV"}
+                  value={form.midia ?? "DOOH"}
                   onChange={(v) => {
-                    set({ midia: v });
+                    set({
+                      midia: v,
+                      canal_macro: getMacroCanalParaMidia(v),
+                    });
                     if (errors.midia) {
                       setErrors((prev) => {
                         const copy = { ...prev };
@@ -471,7 +629,11 @@ export function ProdutoFormDialog({
                       setCreatingMidia(true);
                       await upsertConfigFn({ data: { midia: v.trim() } });
                       await qc.invalidateQueries({ queryKey: ["midia_config"] });
-                      set({ midia: v.trim() });
+                      await qc.invalidateQueries({ queryKey: ["produto_tipos"] });
+                      set({
+                        midia: v.trim(),
+                        canal_macro: getMacroCanalParaMidia(v.trim()),
+                      });
                       if (errors.midia) {
                         setErrors((prev) => {
                           const copy = { ...prev };
@@ -488,14 +650,89 @@ export function ProdutoFormDialog({
                   }}
                 />
                 <FormFieldError message={errors.midia} />
+
+                {/* Formatos e mídias oferecidas pelo parceiro vinculado */}
+                {parceiroSelecionado?.segmentos && parceiroSelecionado.segmentos.length > 0 && (
+                  <div className="mt-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                    <div className="text-[11px] font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-1 mb-1">
+                      <Sparkles className="size-3 text-purple-600" />
+                      Mídias de {parceiroSelecionado.nome_fantasia || parceiroSelecionado.razao_social}:
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {parceiroSelecionado.segmentos.map((seg) => (
+                        <button
+                          key={seg}
+                          type="button"
+                          onClick={() => {
+                            set({
+                              midia: seg,
+                              canal_macro: getMacroCanalParaMidia(seg),
+                            });
+                            if (errors.midia) {
+                              setErrors((prev) => {
+                                const copy = { ...prev };
+                                delete copy.midia;
+                                return copy;
+                              });
+                            }
+                          }}
+                          className={cn(
+                            "px-2 py-0.5 rounded text-[10px] font-medium transition-all flex items-center gap-0.5 cursor-pointer",
+                            form.midia === seg
+                              ? "bg-purple-600 text-white shadow-sm font-bold"
+                              : "bg-background hover:bg-purple-100 dark:hover:bg-purple-950 text-foreground border border-purple-200 dark:border-purple-800",
+                          )}
+                        >
+                          {form.midia === seg ? "✓ " : "+ "}
+                          {seg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sugestão de parceiros homologados que oferecem a mídia selecionada */}
+                {!form.parceiro_id && parceirosQueOferecemMidia.length > 0 && (
+                  <div className="mt-2 p-2 rounded-lg bg-muted/40 border border-purple-200/60 dark:border-purple-800/60 text-[11px]">
+                    <div className="text-muted-foreground flex items-center gap-1 mb-1 font-medium text-[10px]">
+                      <Handshake className="size-3 text-purple-600" />
+                      <span>Parceiros homologados com este formato:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {parceirosQueOferecemMidia.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            set({
+                              parceiro_id: p.id,
+                              parceiro_cnpj: p.cnpj || null,
+                              parceiro_nome: p.nome_fantasia || p.razao_social,
+                              comissao_inquilino_pct: p.comissao_padrao_pct ?? 20.0,
+                            });
+                            toast.info(`Parceiro "${p.nome_fantasia || p.razao_social}" vinculado ao produto!`);
+                          }}
+                          className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold hover:bg-purple-200 transition-colors cursor-pointer border border-purple-200 dark:border-purple-800 text-[10px]"
+                        >
+                          🤝 {p.nome_fantasia || p.razao_social} ({p.comissao_padrao_pct ?? 20}%)
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <Label>Tipo do Produto</Label>
                 {(() => {
-                  const tiposOptions =
-                    getTiposParaMidia && form.midia
-                      ? getTiposParaMidia(form.midia)
-                      : (sugestoes.tipos ?? []);
+                  const tiposSugeridosCatalogo = form.midia ? SUGESTOES_TIPOS_POR_MIDIA[form.midia] || [] : [];
+                  const tiposOptions = Array.from(
+                    new Set([
+                      ...(getTiposParaMidia && form.midia ? getTiposParaMidia(form.midia) : []),
+                      ...(sugestoes.tipos ?? []),
+                      ...tiposSugeridosCatalogo,
+                    ]),
+                  ).filter(Boolean);
+
                   return (
                     <CreatableCombobox
                       value={form.tipo ?? ""}
@@ -533,30 +770,29 @@ export function ProdutoFormDialog({
                 <div>
                   <Label className="text-sm font-semibold flex items-center gap-1.5">
                     <Handshake className="size-4 text-purple-600" />
-                    Origem do Produto & Parceiro de Mídia
+                    Categorização: Representação vs. Soluções Próprias
                   </Label>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Selecione um parceiro cadastrado para vincular as condições comerciais ou
-                    preencha manualmente.
+                    Defina se o produto é um <strong>Veículo Representado / Mídia Externa</strong> ou uma <strong>Solução In-House Nexo</strong>.
                   </p>
                 </div>
                 {form.parceiro_id || form.parceiro_cnpj?.trim() ? (
                   <Badge className="bg-purple-600 hover:bg-purple-700 text-white gap-1 text-[11px] py-0.5">
-                    🤝 Produto de Parceiro
+                    🤝 Veículo Representado / Mídia Externa
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
-                    className="border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20 text-[11px] py-0.5"
+                    className="border-sky-500/40 text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 text-[11px] py-0.5 font-bold"
                   >
-                    🏢 Próprio do Inquilino
+                    ⭐ Soluções e Serviços Nexo In-House
                   </Badge>
                 )}
               </div>
 
-              {/* Seletor rápido de Parceiros Cadastrados */}
+              {/* Seletor rápido de Categoria e Parceiros Cadastrados */}
               <div>
-                <Label className="text-xs font-medium">Vincular a Parceiro Cadastrado</Label>
+                <Label className="text-xs font-medium">Categoria Comercial / Veículo Representado</Label>
                 <Select
                   value={form.parceiro_id || (form.parceiro_cnpj ? "outro" : "nenhum")}
                   onValueChange={(val) => {
@@ -576,32 +812,42 @@ export function ProdutoFormDialog({
                     } else {
                       const sel = parceirosCadastrados.find((p) => p.id === val);
                       if (sel) {
+                        const midiasDoParceiro = Array.isArray(sel.segmentos) ? sel.segmentos : [];
+                        const deveTrocarMidia =
+                          midiasDoParceiro.length > 0 &&
+                          (!form.midia || form.midia === "TV") &&
+                          !midiasDoParceiro.includes("TV");
+                        const novaMidia = deveTrocarMidia ? midiasDoParceiro[0] : form.midia;
+
                         set({
                           parceiro_id: sel.id,
                           parceiro_cnpj: sel.cnpj || null,
                           parceiro_nome: sel.nome_fantasia || sel.razao_social,
                           comissao_inquilino_pct: sel.comissao_padrao_pct ?? 20.0,
+                          ...(novaMidia ? { midia: novaMidia, canal_macro: getMacroCanalParaMidia(novaMidia) } : {}),
                         });
                       }
                     }
                   }}
                 >
                   <SelectTrigger className="mt-1 h-9 text-xs bg-background">
-                    <SelectValue placeholder="Selecione um parceiro cadastrado..." />
+                    <SelectValue placeholder="Selecione a categoria ou veículo..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="novo" className="font-bold text-primary">
-                      ✨ Cadastrar Novo Parceiro...
+                    <SelectItem value="nenhum" className="font-semibold text-sky-700 dark:text-sky-400">
+                      ⭐ Soluções e Serviços Nexo In-House (Planejamento 360°, Produção OOH/DOOH, Projetos Especiais, PDV)
                     </SelectItem>
-                    <SelectItem value="nenhum">🏢 Próprio do Inquilino (Sem Parceiro)</SelectItem>
+                    <SelectItem value="novo" className="font-bold text-primary">
+                      ✨ Cadastrar Novo Veículo Representado...
+                    </SelectItem>
                     {parceirosCadastrados.map((p) => (
                       <SelectItem key={p.id} value={p.id!}>
-                        🤝 {p.nome_fantasia || p.razao_social}{" "}
+                        🤝 [Veículo Representado] {p.nome_fantasia || p.razao_social}{" "}
                         {p.comissao_padrao_pct ? `(${p.comissao_padrao_pct}% remuneração)` : ""}
                       </SelectItem>
                     ))}
                     <SelectItem value="outro">
-                      ✍️ Outro Parceiro (Digitar CNPJ / Nome Manualmente)
+                      ✍️ Outro Veículo Externo (Digitar CNPJ / Razão Social)
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -748,21 +994,39 @@ export function ProdutoFormDialog({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>programa</Label>
-                <CreatableCombobox
-                  value={form.programa ?? ""}
-                  onChange={(v) => set({ programa: v })}
-                  options={sugestoes.programas}
-                  placeholder="Selecione ou crie"
-                />
+                {(() => {
+                  const programasCatalogo = form.midia ? PROGRAMAS_SUGERIDOS_POR_MIDIA[form.midia] || [] : [];
+                  const progOptions = Array.from(
+                    new Set([...(sugestoes.programas ?? []), ...programasCatalogo]),
+                  ).filter(Boolean);
+
+                  return (
+                    <CreatableCombobox
+                      value={form.programa ?? ""}
+                      onChange={(v) => set({ programa: v })}
+                      options={progOptions}
+                      placeholder="Selecione ou crie"
+                    />
+                  );
+                })()}
               </div>
               <div>
                 <Label>Formato</Label>
-                <CreatableCombobox
-                  value={form.formato ?? ""}
-                  onChange={(v) => set({ formato: v })}
-                  options={sugestoes.formatos}
-                  placeholder="Selecione ou crie (30s, Página...)"
-                />
+                {(() => {
+                  const formatosCatalogo = form.midia ? FORMATOS_SUGERIDOS_POR_MIDIA[form.midia] || [] : [];
+                  const formOptions = Array.from(
+                    new Set([...(sugestoes.formatos ?? []), ...formatosCatalogo]),
+                  ).filter(Boolean);
+
+                  return (
+                    <CreatableCombobox
+                      value={form.formato ?? ""}
+                      onChange={(v) => set({ formato: v })}
+                      options={formOptions}
+                      placeholder="Selecione ou crie (30s, Página...)"
+                    />
+                  );
+                })()}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -885,155 +1149,405 @@ export function ProdutoFormDialog({
                 automaticamente.
               </p>
             </div>
-            {form.midia === "DOOH" && (
-              <div className="rounded-md border p-3 bg-muted/30 space-y-3">
+
+            {/* Bloco Mídia Digital (ON) */}
+            {(form.canal_macro === "ON" || form.canal_macro === "HIBRIDO") && (
+              <div className="rounded-lg border border-sky-300 dark:border-sky-800 bg-sky-50/40 dark:bg-sky-950/20 p-4 space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-sky-200 dark:border-sky-800">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                      <Globe className="size-4" />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-bold text-sky-950 dark:text-sky-100">
+                        Ativação Digital (Mídia ON)
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Redes sociais, portais web, banners, posts patrocinados e métricas de audiência digital.
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-sky-100/60 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-700 text-[10px]">
+                    🌐 Canal Digital
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Plataforma / Rede Digital</Label>
+                    <CreatableCombobox
+                      value={form.plataforma_rede ?? ""}
+                      onChange={(v) => {
+                        set({ plataforma_rede: v });
+                        updateMetricaDigital("plataforma", v);
+                      }}
+                      options={[
+                        "Instagram",
+                        "Portal Web / Notícias",
+                        "YouTube",
+                        "TikTok",
+                        "LinkedIn",
+                        "Facebook",
+                        "X (Twitter)",
+                        "Podcast / Spotify",
+                        "E-mail / Newsletter",
+                        "Google Ads / Display",
+                      ]}
+                      placeholder="Ex: Instagram, Portal Web..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">URL / Perfil do Veículo</Label>
+                    <Input
+                      placeholder="Ex: @portalnoticias ou https://..."
+                      value={form.metricas_digitais?.url_perfil ?? form.link_modelo ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateMetricaDigital("url_perfil", val);
+                        if (!form.link_modelo) {
+                          set({ link_modelo: val });
+                        }
+                      }}
+                      className="text-xs bg-background"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Formato Digital</Label>
+                    <CreatableCombobox
+                      value={form.metricas_digitais?.formato_digital ?? form.formato ?? ""}
+                      onChange={(v) => {
+                        updateMetricaDigital("formato_digital", v);
+                        if (!form.formato || form.formato === "30s") {
+                          set({ formato: v });
+                        }
+                      }}
+                      options={[
+                        "Post no Feed (Imagem/Carrossel)",
+                        "Reels / Vídeo Curto",
+                        "Stories com Link (Sequência)",
+                        "Banner Super Top (728x90)",
+                        "Banner Retângulo (300x250)",
+                        "Publieditorial / Matéria Patrocinada",
+                        "Pre-roll Vídeo (YouTube)",
+                        "Podcast / Testemunhal de Abertura",
+                        "Takeover de Página / Pop-up",
+                      ]}
+                      placeholder="Ex: Post Feed, Banner 728x90..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">CPM Estimado (R$ por 1.000 impressões)</Label>
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-semibold">
+                        R$
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        placeholder="15.00"
+                        value={form.metricas_digitais?.cpm_estimado ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? null : Number(e.target.value);
+                          updateMetricaDigital("cpm_estimado", val);
+                        }}
+                        className="pl-8 text-xs bg-background font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Métricas Estimadas de Entrega */}
                 <div>
-                  <Label className="text-sm">Rede de telas / ponto com múltiplas telas</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Preencha se o ponto tem mais de uma tela (edifícios, gastronomia, bares,
-                    academias, etc.).
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Quantidade de telas</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={form.quantidade_telas ?? ""}
-                      onChange={(e) =>
-                        set({
-                          quantidade_telas: e.target.value === "" ? null : Number(e.target.value),
-                        })
-                      }
-                      placeholder="Ex.: 12"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Formato da tela</Label>
-                    <Input
-                      value={form.formato_tela ?? ""}
-                      onChange={(e) => set({ formato_tela: e.target.value })}
-                      placeholder="LED, LCD, Painel Digital, Outdoor…"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Resolução</Label>
-                    <Input
-                      value={form.resolucao ?? ""}
-                      onChange={(e) => set({ resolucao: e.target.value })}
-                      placeholder="Full HD, 4K, 1920x1080…"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Tempo de exibição por inserção (s)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={form.tempo_exibicao_segundos ?? ""}
-                      onChange={(e) =>
-                        set({
-                          tempo_exibicao_segundos:
-                            e.target.value === "" ? null : Number(e.target.value),
-                        })
-                      }
-                      placeholder="Ex.: 15"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Loop (minutos)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={form.loop_minutos ?? ""}
-                      onChange={(e) =>
-                        set({ loop_minutos: e.target.value === "" ? null : Number(e.target.value) })
-                      }
-                      placeholder="Ex.: 10"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Inserções por hora</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={form.insercoes_por_hora ?? ""}
-                      onChange={(e) =>
-                        set({
-                          insercoes_por_hora: e.target.value === "" ? null : Number(e.target.value),
-                        })
-                      }
-                      placeholder="Ex.: 6"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Horas de operação/dia</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={24}
-                      value={form.horas_operacao_dia ?? ""}
-                      onChange={(e) =>
-                        set({
-                          horas_operacao_dia: e.target.value === "" ? null : Number(e.target.value),
-                        })
-                      }
-                      placeholder="Ex.: 12"
-                    />
+                  <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                    <TrendingUp className="size-3.5 text-sky-600" />
+                    Métricas Estimadas de Entrega (Estimativas por Campanha)
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    <div className="p-2 rounded border bg-background/80">
+                      <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground mb-1">
+                        <Eye className="size-3 text-sky-600" />
+                        <span>Impressões</span>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Ex: 50000"
+                        value={form.metricas_digitais?.impressoes_estimadas ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? null : Number(e.target.value);
+                          updateMetricaDigital("impressoes_estimadas", val);
+                        }}
+                        className="h-7 text-xs font-mono"
+                      />
+                    </div>
+
+                    <div className="p-2 rounded border bg-background/80">
+                      <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground mb-1">
+                        <Share2 className="size-3 text-purple-600" />
+                        <span>Alcance Único</span>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Ex: 35000"
+                        value={form.metricas_digitais?.alcance_estimado ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? null : Number(e.target.value);
+                          updateMetricaDigital("alcance_estimado", val);
+                        }}
+                        className="h-7 text-xs font-mono"
+                      />
+                    </div>
+
+                    <div className="p-2 rounded border bg-background/80">
+                      <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground mb-1">
+                        <MousePointerClick className="size-3 text-emerald-600" />
+                        <span>Cliques Estimados</span>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        placeholder="Ex: 1200"
+                        value={form.metricas_digitais?.cliques_estimados ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? null : Number(e.target.value);
+                          updateMetricaDigital("cliques_estimados", val);
+                        }}
+                        className="h-7 text-xs font-mono"
+                      />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <Label className="text-xs">Ambientes atendidos</Label>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {[
-                      "Edifícios corporativos",
-                      "Edifícios residenciais",
-                      "Gastronomia",
-                      "Bares",
-                      "Academias",
-                      "Shoppings",
-                      "Farmácias",
-                      "Postos de combustível",
-                      "Padarias",
-                      "Clínicas",
-                      "Hospitais",
-                      "Universidades",
-                      "Aeroportos",
-                      "Rodoviárias",
-                    ].map((a) => {
-                      const active = (form.ambientes ?? []).includes(a);
-                      return (
-                        <button
-                          key={a}
-                          type="button"
-                          onClick={() => {
-                            const cur = new Set(form.ambientes ?? []);
-                            if (cur.has(a)) cur.delete(a);
-                            else cur.add(a);
-                            set({ ambientes: Array.from(cur) });
-                          }}
-                          className={`px-2 py-1 rounded border text-[11px] font-medium ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
-                        >
-                          {a}
-                        </button>
-                      );
-                    })}
+              </div>
+            )}
+
+            {/* Bloco Mídia OFF (Física / OOH / DOOH / Rádio / TV) */}
+            {(form.canal_macro === "OFF" ||
+              form.canal_macro === "HIBRIDO" ||
+              form.midia === "DOOH" ||
+              form.midia === "OOH" ||
+              form.midia === "TV" ||
+              form.midia === "Radio") && (
+              <div className="rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/20 p-4 space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-emerald-200 dark:border-emerald-800">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <Radio className="size-4" />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-bold text-emerald-950 dark:text-emerald-100">
+                        Ativação Física / Tradicional (Mídia OFF)
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Pontos de rua, painéis LED, outdoors, fluxo de público, dimensões físicas e geolocalização.
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-emerald-100/60 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 text-[10px]">
+                    📍 Canal Físico / OOH
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Tipo de Equipamento / Veículo</Label>
+                    <CreatableCombobox
+                      value={form.formato_tela ?? form.metricas_digitais?.tipo_equipamento ?? ""}
+                      onChange={(v) => {
+                        set({ formato_tela: v });
+                        updateMetricaDigital("tipo_equipamento", v);
+                      }}
+                      options={[
+                        "Painel LED Digital Outdoor",
+                        "Painel LED Indoor",
+                        "Frontlight 9x3m",
+                        "Outdoor Tradicional 9x3m",
+                        "Mupi / Relógio de Rua",
+                        "Top Sight Rodoviário",
+                        "Busdoor / Traseira de Ônibus",
+                        "Abrigo de Ônibus",
+                        "Totem Digital de Shopping",
+                        "Painel Empena de Prédio",
+                        "Rádio Dial FM",
+                        "Jornal Impresso / Revista",
+                      ]}
+                      placeholder="Ex: Painel LED Outdoor..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">Dimensões Físicas</Label>
+                    <Input
+                      placeholder="Ex: 9m x 3m, 120x180cm, 55''..."
+                      value={form.metricas_digitais?.dimensoes_fisicas ?? ""}
+                      onChange={(e) => updateMetricaDigital("dimensoes_fisicas", e.target.value)}
+                      className="text-xs bg-background"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">Fluxo Estimado (Veículos / Pedestres)</Label>
+                    <Input
+                      placeholder="Ex: 50.000 veículos/dia, 80.000 pessoas/dia..."
+                      value={form.metricas_digitais?.fluxo_estimado ?? ""}
+                      onChange={(e) => updateMetricaDigital("fluxo_estimado", e.target.value)}
+                      className="text-xs bg-background"
+                    />
                   </div>
                 </div>
-                <div>
-                  <Label className="text-xs">Detalhes de venda / observações técnicas</Label>
-                  <Textarea
-                    rows={3}
-                    value={form.detalhes_venda ?? ""}
-                    onChange={(e) => set({ detalhes_venda: e.target.value })}
-                    placeholder="Ex.: 12 telas 55'' distribuídas em elevadores e recepção, exibição das 7h às 22h, 6 inserções/hora em loop de 10 min…"
-                  />
-                </div>
-                <div className="border-t pt-3">
+
+                {/* Rede de telas / Ponto DOOH com múltiplas telas */}
+                {(form.midia === "DOOH" || form.quantidade_telas != null) && (
+                  <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 space-y-3">
+                    <div>
+                      <Label className="text-xs font-semibold text-foreground">
+                        Rede de telas / ponto com múltiplas telas
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Preencha se o ponto tem mais de uma tela (edifícios corporativos, gastronomia, academias, etc.).
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      <div>
+                        <Label className="text-xs">Quantidade de telas</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.quantidade_telas ?? ""}
+                          onChange={(e) =>
+                            set({
+                              quantidade_telas: e.target.value === "" ? null : Number(e.target.value),
+                            })
+                          }
+                          placeholder="Ex.: 12"
+                          className="h-8 text-xs bg-background"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Resolução</Label>
+                        <Input
+                          value={form.resolucao ?? ""}
+                          onChange={(e) => set({ resolucao: e.target.value })}
+                          placeholder="Full HD, 4K, 1920x1080…"
+                          className="h-8 text-xs bg-background"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Tempo exibição (s)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.tempo_exibicao_segundos ?? ""}
+                          onChange={(e) =>
+                            set({
+                              tempo_exibicao_segundos:
+                                e.target.value === "" ? null : Number(e.target.value),
+                            })
+                          }
+                          placeholder="Ex.: 15"
+                          className="h-8 text-xs bg-background"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Loop (minutos)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.loop_minutos ?? ""}
+                          onChange={(e) =>
+                            set({ loop_minutos: e.target.value === "" ? null : Number(e.target.value) })
+                          }
+                          placeholder="Ex.: 10"
+                          className="h-8 text-xs bg-background"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Inserções por hora</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.insercoes_por_hora ?? ""}
+                          onChange={(e) =>
+                            set({
+                              insercoes_por_hora: e.target.value === "" ? null : Number(e.target.value),
+                            })
+                          }
+                          placeholder="Ex.: 6"
+                          className="h-8 text-xs bg-background"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Horas operação/dia</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={24}
+                          value={form.horas_operacao_dia ?? ""}
+                          onChange={(e) =>
+                            set({
+                              horas_operacao_dia: e.target.value === "" ? null : Number(e.target.value),
+                            })
+                          }
+                          placeholder="Ex.: 12"
+                          className="h-8 text-xs bg-background"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Ambientes atendidos</Label>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {[
+                          "Edifícios corporativos",
+                          "Edifícios residenciais",
+                          "Gastronomia",
+                          "Bares",
+                          "Academias",
+                          "Shoppings",
+                          "Farmácias",
+                          "Postos de combustível",
+                          "Padarias",
+                          "Clínicas",
+                          "Hospitais",
+                          "Universidades",
+                          "Aeroportos",
+                          "Rodoviárias",
+                        ].map((a) => {
+                          const active = (form.ambientes ?? []).includes(a);
+                          return (
+                            <button
+                              key={a}
+                              type="button"
+                              onClick={() => {
+                                const cur = new Set(form.ambientes ?? []);
+                                if (cur.has(a)) cur.delete(a);
+                                else cur.add(a);
+                                set({ ambientes: Array.from(cur) });
+                              }}
+                              className={`px-2 py-1 rounded border text-[11px] font-medium transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
+                            >
+                              {a}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Geolocalização do ponto (OOH/DOOH) */}
+                <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold flex items-center gap-1.5">
-                      <MapPin className="size-4 text-primary" />
-                      Geolocalização do ponto (OOH/DOOH)
+                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                      <MapPin className="size-3.5 text-primary" />
+                      Geolocalização e Endereço do Ponto Físico
                     </Label>
                     {(loadingAddress || loadingCoords || loadingCep) && (
                       <Badge variant="outline" className="gap-1.5 text-[11px] animate-pulse">
@@ -1046,252 +1560,310 @@ export function ProdutoFormDialog({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Preencha o CEP ou endereço para localizar as coordenadas, ou posicione no mapa
-                    para preencher o endereço automaticamente.
+                  <p className="text-[11px] text-muted-foreground">
+                    Preencha o CEP ou endereço para localizar as coordenadas, ou posicione no mapa interativo.
                   </p>
-                </div>
 
-                {/* CEP e Endereço */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-1">
-                    <Label className="text-xs font-medium">CEP do ponto</Label>
-                    <div className="flex gap-1 mt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="sm:col-span-1">
+                      <Label className="text-xs font-medium">CEP do ponto</Label>
+                      <div className="flex gap-1 mt-1">
+                        <Input
+                          placeholder="00000-000"
+                          value={cepInput}
+                          onChange={(e) => {
+                            const val = formatCEP(e.target.value);
+                            setCepInput(val);
+                            if (onlyDigits(val).length === 8) {
+                              handleLookupCep(val);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (onlyDigits(cepInput).length === 8) {
+                              handleLookupCep(cepInput, true);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleLookupCep(cepInput);
+                            }
+                          }}
+                          className="font-mono text-xs bg-background"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                          disabled={loadingCep || onlyDigits(cepInput).length !== 8}
+                          onClick={() => handleLookupCep(cepInput)}
+                          title="Buscar dados do CEP"
+                        >
+                          {loadingCep ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Search className="size-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Label className="text-xs font-medium">Endereço do ponto</Label>
+                      <div className="flex gap-1 mt-1">
+                        <Input
+                          value={form.endereco_ponto ?? ""}
+                          onChange={(e) => set({ endereco_ponto: e.target.value })}
+                          onBlur={(e) => {
+                            if (e.target.value?.trim().length >= 4) {
+                              handleGeocodeAddress(e.target.value, true);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleGeocodeAddress(form.endereco_ponto ?? "");
+                            }
+                          }}
+                          placeholder="Av. Paulista, 1000 — Bela Vista, São Paulo/SP"
+                          className="text-xs bg-background"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                          disabled={loadingAddress || !(form.endereco_ponto ?? "").trim()}
+                          onClick={() => handleGeocodeAddress(form.endereco_ponto ?? "")}
+                          title="Buscar coordenadas pelo endereço"
+                        >
+                          {loadingAddress ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <MapPin className="size-3.5" />
+                          )}
+                          Buscar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sentido da Via & Ponto de Referência */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <Label className="text-xs font-medium">Sentido da Via (Fluxo)</Label>
                       <Input
-                        placeholder="00000-000"
-                        value={cepInput}
+                        value={form.sentido_via ?? ""}
+                        onChange={(e) => set({ sentido_via: e.target.value })}
+                        placeholder="Ex: Sentido Plano Piloto / Sentido Taguatinga"
+                        className="text-xs bg-background mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium">Ponto de Referência</Label>
+                      <Input
+                        value={form.ponto_referencia ?? ""}
+                        onChange={(e) => set({ ponto_referencia: e.target.value })}
+                        placeholder="Ex: Em frente ao Taguatinga Shopping"
+                        className="text-xs bg-background mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Coordenadas e Mapa */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <Label className="text-xs">Latitude</Label>
+                      <Input
+                        type="number"
+                        step="any"
+                        min={-90}
+                        max={90}
+                        value={form.latitude ?? ""}
                         onChange={(e) => {
-                          const val = formatCEP(e.target.value);
-                          setCepInput(val);
-                          if (onlyDigits(val).length === 8) {
-                            handleLookupCep(val);
-                          }
+                          const val = e.target.value === "" ? null : Number(e.target.value);
+                          set({ latitude: val });
                         }}
                         onBlur={() => {
-                          if (onlyDigits(cepInput).length === 8) {
-                            handleLookupCep(cepInput, true);
+                          if (form.latitude != null && form.longitude != null) {
+                            handleReverseGeocode(form.latitude, form.longitude, true);
                           }
                         }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleLookupCep(cepInput);
-                          }
-                        }}
-                        className="font-mono text-xs"
+                        placeholder="-23.5613"
+                        className="font-mono text-xs bg-background"
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
-                        disabled={loadingCep || onlyDigits(cepInput).length !== 8}
-                        onClick={() => handleLookupCep(cepInput)}
-                        title="Buscar dados do CEP"
-                      >
-                        {loadingCep ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <Search className="size-3.5" />
-                        )}
-                      </Button>
                     </div>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <Label className="text-xs font-medium">Endereço do ponto</Label>
-                    <div className="flex gap-1 mt-1">
+                    <div>
+                      <Label className="text-xs">Longitude</Label>
                       <Input
-                        value={form.endereco_ponto ?? ""}
-                        onChange={(e) => set({ endereco_ponto: e.target.value })}
-                        onBlur={(e) => {
-                          if (e.target.value?.trim().length >= 4) {
-                            handleGeocodeAddress(e.target.value, true);
+                        type="number"
+                        step="any"
+                        min={-180}
+                        max={180}
+                        value={form.longitude ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value === "" ? null : Number(e.target.value);
+                          set({ longitude: val });
+                        }}
+                        onBlur={() => {
+                          if (form.latitude != null && form.longitude != null) {
+                            handleReverseGeocode(form.latitude, form.longitude, true);
                           }
                         }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleGeocodeAddress(form.endereco_ponto ?? "");
-                          }
-                        }}
-                        placeholder="Av. Paulista, 1000 — Bela Vista, São Paulo/SP"
-                        className="text-xs"
+                        placeholder="-46.6558"
+                        className="font-mono text-xs bg-background"
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
-                        disabled={loadingAddress || !(form.endereco_ponto ?? "").trim()}
-                        onClick={() => handleGeocodeAddress(form.endereco_ponto ?? "")}
-                        title="Buscar coordenadas pelo endereço"
-                      >
-                        {loadingAddress ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <MapPin className="size-3.5" />
-                        )}
-                        Buscar
-                      </Button>
                     </div>
                   </div>
-                </div>
 
-                {/* Latitude e Longitude */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Latitude</Label>
-                    <Input
-                      type="number"
-                      step="any"
-                      min={-90}
-                      max={90}
-                      value={form.latitude ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value === "" ? null : Number(e.target.value);
-                        set({ latitude: val });
-                      }}
-                      onBlur={() => {
-                        if (form.latitude != null && form.longitude != null) {
-                          handleReverseGeocode(form.latitude, form.longitude, true);
-                        }
-                      }}
-                      placeholder="-23.5613"
-                      className="font-mono text-xs"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Longitude</Label>
-                    <Input
-                      type="number"
-                      step="any"
-                      min={-180}
-                      max={180}
-                      value={form.longitude ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value === "" ? null : Number(e.target.value);
-                        set({ longitude: val });
-                      }}
-                      onBlur={() => {
-                        if (form.latitude != null && form.longitude != null) {
-                          handleReverseGeocode(form.latitude, form.longitude, true);
-                        }
-                      }}
-                      placeholder="-46.6558"
-                      className="font-mono text-xs"
-                    />
-                  </div>
-                </div>
-
-                {/* Ações rápidas de localização */}
-                <div className="flex flex-wrap gap-2 items-center">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => {
-                      if (!navigator.geolocation) {
-                        toast.error("Geolocalização não suportada neste navegador");
-                        return;
-                      }
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          const lat = Number(pos.coords.latitude.toFixed(7));
-                          const lng = Number(pos.coords.longitude.toFixed(7));
-                          set({ latitude: lat, longitude: lng });
-                          handleReverseGeocode(lat, lng);
-                        },
-                        (err) => toast.error("Não foi possível obter localização: " + err.message),
-                        { enableHighAccuracy: true, timeout: 10000 },
-                      );
-                    }}
-                  >
-                    <Navigation className="size-3.5" />
-                    Usar minha localização
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={async () => {
-                      const txt = await navigator.clipboard.readText().catch(() => "");
-                      const m = txt.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
-                      if (!m) {
-                        toast.error("Cole coordenadas no formato: -23.5613, -46.6558");
-                        return;
-                      }
-                      const lat = Number(m[1]);
-                      const lng = Number(m[2]);
-                      set({ latitude: lat, longitude: lng });
-                      handleReverseGeocode(lat, lng);
-                    }}
-                  >
-                    Colar do Google Maps
-                  </Button>
-
-                  {form.latitude != null && form.longitude != null && (
+                  <div className="flex flex-wrap gap-2 items-center pt-1">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="gap-1.5 text-xs text-primary border-primary/40 hover:bg-primary/10"
-                      disabled={loadingCoords}
-                      onClick={() => handleReverseGeocode(form.latitude!, form.longitude!)}
-                      title="Consultar endereço destas coordenadas"
+                      className="gap-1.5 text-xs"
+                      onClick={() => {
+                        if (!navigator.geolocation) {
+                          toast.error("Geolocalização não suportada neste navegador");
+                          return;
+                        }
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            const lat = Number(pos.coords.latitude.toFixed(7));
+                            const lng = Number(pos.coords.longitude.toFixed(7));
+                            set({ latitude: lat, longitude: lng });
+                            handleReverseGeocode(lat, lng);
+                          },
+                          (err) => toast.error("Não foi possível obter localização: " + err.message),
+                          { enableHighAccuracy: true, timeout: 10000 },
+                        );
+                      }}
                     >
-                      {loadingCoords ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Search className="size-3.5" />
-                      )}
-                      Puxar endereço pelas coordenadas
+                      <Navigation className="size-3.5" />
+                      Usar minha localização
                     </Button>
-                  )}
 
-                  {form.latitude != null && form.longitude != null && (
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="text-xs text-muted-foreground ml-auto"
-                      asChild
+                      className="gap-1.5 text-xs"
+                      onClick={async () => {
+                        const txt = await navigator.clipboard.readText().catch(() => "");
+                        const m = txt.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+                        if (!m) {
+                          toast.error("Cole coordenadas no formato: -23.5613, -46.6558");
+                          return;
+                        }
+                        const lat = Number(m[1]);
+                        const lng = Number(m[2]);
+                        set({ latitude: lat, longitude: lng });
+                        handleReverseGeocode(lat, lng);
+                      }}
                     >
-                      <a
-                        href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Ver no mapa ↗
-                      </a>
+                      Colar do Google Maps
                     </Button>
-                  )}
-                </div>
 
-                {/* Mapa interativo */}
-                <div className="mt-2">
-                  <LocationPickerMap
-                    latitude={form.latitude ?? null}
-                    longitude={form.longitude ?? null}
-                    onChange={(lat, lng) => {
-                      set({ latitude: lat, longitude: lng });
-                      handleReverseGeocode(lat, lng);
-                    }}
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground flex items-center justify-between">
-                    <span>
-                      Clique no mapa ou arraste o marcador para preencher o endereço
-                      automaticamente.
-                    </span>
                     {form.latitude != null && form.longitude != null && (
-                      <span className="font-mono text-[11px] text-muted-foreground">
-                        {form.latitude.toFixed(5)}, {form.longitude.toFixed(5)}
-                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs text-primary border-primary/40 hover:bg-primary/10"
+                        disabled={loadingCoords}
+                        onClick={() => handleReverseGeocode(form.latitude!, form.longitude!)}
+                        title="Consultar endereço destas coordenadas"
+                      >
+                        {loadingCoords ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Search className="size-3.5" />
+                        )}
+                        Puxar endereço
+                      </Button>
                     )}
-                  </p>
+
+                    {form.latitude != null && form.longitude != null && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-muted-foreground ml-auto"
+                        asChild
+                      >
+                        <a
+                          href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ver no mapa ↗
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Mapa interativo */}
+                  <div className="mt-2">
+                    <LocationPickerMap
+                      latitude={form.latitude ?? null}
+                      longitude={form.longitude ?? null}
+                      onChange={(lat, lng) => {
+                        set({ latitude: lat, longitude: lng });
+                        handleReverseGeocode(lat, lng);
+                      }}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground flex items-center justify-between">
+                      <span>Clique no mapa ou arraste o marcador para preencher o endereço automaticamente.</span>
+                      {form.latitude != null && form.longitude != null && (
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {form.latitude.toFixed(5)}, {form.longitude.toFixed(5)}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Link Maps Direto */}
+                  <div className="pt-2 border-t border-border/40">
+                    <Label className="text-xs font-medium flex items-center justify-between">
+                      <span>Link Maps Direto (Google Maps / Waze)</span>
+                      {form.latitude != null && form.longitude != null && !form.link_maps && (
+                        <button
+                          type="button"
+                          className="text-[11px] text-primary hover:underline font-normal"
+                          onClick={() =>
+                            set({
+                              link_maps: `https://www.google.com/maps?q=${form.latitude},${form.longitude}`,
+                            })
+                          }
+                        >
+                          Gerar pelas coordenadas
+                        </button>
+                      )}
+                    </Label>
+                    <div className="flex gap-1.5 mt-1">
+                      <Input
+                        value={form.link_maps ?? ""}
+                        onChange={(e) => set({ link_maps: e.target.value })}
+                        placeholder="https://maps.google.com/?q=-15.6543,-47.7891"
+                        className="text-xs bg-background font-mono"
+                      />
+                      {form.link_maps?.trim() && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                          asChild
+                        >
+                          <a href={form.link_maps.trim()} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="size-3.5" />
+                            Abrir
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

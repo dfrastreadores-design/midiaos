@@ -33,6 +33,9 @@ import { ProposalObservations } from "@/components/proposta/ProposalObservations
 import { PropostaAnexosSection } from "@/components/PropostaAnexosSection";
 import { NearbyDoohSuggestions } from "@/components/NearbyDoohSuggestions";
 import { PropostaIaAssistant } from "@/components/proposta/PropostaIaAssistant";
+import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
+import { Badge } from "@/components/ui/badge";
+import { Compass } from "lucide-react";
 import { errorFieldClass, errorInputClass } from "@/lib/form-errors";
 
 type Props = {
@@ -103,6 +106,49 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
     }
   };
 
+  const [modalPlanejamento360Open, setModalPlanejamento360Open] = useState(false);
+
+  const handleAplicarPlano360 = (itens: any[], defesa: string) => {
+    if (!itens || itens.length === 0) return;
+
+    const novosItens = itens.map((it) => ({
+      tipo: it.tipo || "DOOH",
+      programa: it.nome,
+      horario: "Rotativo",
+      formato: it.formato,
+      mes: new Date().getMonth() + 1,
+      ano: new Date().getFullYear(),
+      insercoes_dia: Math.max(1, Math.round((it.insercoes_mes || 30) / 30)),
+      dias_semana: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"],
+      dias_mes: Array.from({ length: 30 }, (_, i) => i + 1),
+      desconto: it.desconto_pct || 0,
+      valor_unit: it.valor_negociado / Math.max(1, it.insercoes_mes || 1),
+      valor_tabela: it.valor_tabela || it.valor_negociado,
+      valor_negociado: it.valor_negociado,
+      total_insercoes: it.insercoes_mes || 30,
+      produto_id: it.produto_id || null,
+      parceiro_nome: it.parceiro_nome || null,
+      latitude: it.latitude || null,
+      longitude: it.longitude || null,
+      link_maps: it.link_maps || null,
+      sentido_via: it.sentido_via || null,
+      ponto_referencia: it.ponto_referencia || null,
+      endereco_ponto: it.localizacao || null,
+      canal_macro: "OFF" as const,
+    }));
+
+    state.setItems(novosItens);
+
+    if (defesa) {
+      const novaObs = state.observacao ? `${defesa}\n\n---\n${state.observacao}` : defesa;
+      state.setObservacao(novaObs);
+    }
+
+    if (!state.campanha || state.campanha.trim() === "") {
+      state.setCampanha(`Estratégia 360° — ${itens[0]?.regiao || "DF"}`);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -143,6 +189,35 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
                 </Button>
               </div>
             )}
+
+            {/* Banner de Disparo: Planejamento 360° & Radar de Expansão */}
+            <div className="p-3 bg-gradient-to-r from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-500/30 rounded-xl flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
+                <div className="size-8 rounded-lg bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold shrink-0">
+                  <Compass className="size-4 animate-pulse" />
+                </div>
+                <div>
+                  <div className="font-bold flex items-center gap-2 text-foreground">
+                    <span>Planejamento Estratégico 360° & Radar de Expansão</span>
+                    <Badge className="bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/40 text-[9px] uppercase font-semibold">
+                      Ao Vivo na Reunião
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Diagnóstico de público (DF), histórico de sucesso do cliente e radar de novas oportunidades com vias troncais.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                className="shrink-0 h-8 text-xs bg-sky-600 hover:bg-sky-700 text-white gap-1.5 shadow-sm font-semibold"
+                onClick={() => setModalPlanejamento360Open(true)}
+              >
+                <Compass className="size-3.5" />
+                Abrir Planejador 360°
+              </Button>
+            </div>
 
             <PropostaIaAssistant
               clienteNome={
@@ -325,6 +400,18 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <Planejamento360Modal
+        open={modalPlanejamento360Open}
+        onOpenChange={setModalPlanejamento360Open}
+        clienteNome={
+          clienteSelecionado?.nome_fantasia ||
+          clienteSelecionado?.razao_social ||
+          state.clienteAvulso
+        }
+        clienteId={state.clienteId}
+        onAplicarAoPlano={handleAplicarPlano360}
+      />
     </Dialog>
   );
 }

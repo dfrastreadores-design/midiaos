@@ -145,7 +145,8 @@ export const PropostaIaInputSchema = z.object({
   // Campos adicionais / legados
   objetivo: z.string().max(300).nullable().optional(),
   publico: z.string().max(300).nullable().optional(),
-  midias: z.array(z.enum(["TV", "Radio", "DOOH"])).optional(),
+  midias: z.array(z.string()).optional(),
+  canal_macro_preferencia: z.enum(["OFF", "ON", "HIBRIDO", "TODOS"]).optional(),
   periodo_dias: z.number().int().positive().nullable().optional(),
   foco_horario: z.string().max(100).nullable().optional(),
   observacoes: z.string().max(1000).nullable().optional(),
@@ -179,9 +180,17 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
   const anoAtual = hoje.getFullYear();
 
   const midiasFiltro = data.midias && data.midias.length > 0 ? new Set(data.midias) : null;
+  const canalPref = data.canal_macro_preferencia || "TODOS";
+  const isProdutoOn = (p: any) =>
+    p.canal_macro === "ON" || ["Digital", "Social", "Web", "Portal"].includes(p.midia);
+  const isProdutoOff = (p: any) =>
+    (p.canal_macro || "OFF") === "OFF" || ["TV", "Radio", "DOOH", "OOH"].includes(p.midia);
+
   const produtosElegiveis = produtos.filter((p) => {
     if (!p.ativo) return false;
     if (midiasFiltro && !midiasFiltro.has(p.midia)) return false;
+    if (canalPref === "OFF" && isProdutoOn(p) && !isProdutoOff(p)) return false;
+    if (canalPref === "ON" && isProdutoOff(p) && !isProdutoOn(p)) return false;
     return true;
   });
 
@@ -231,13 +240,32 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
 
   scored.sort((a, b) => b.score - a.score);
 
-  // Seleciona de 2 a 4 produtos diversificados
+  // Seleciona de 2 a 4 produtos diversificados com suporte a campanhas 360° Phygital
   const selecionadosMap = new Map<string, any>();
-  for (const item of scored) {
-    if (selecionadosMap.size >= 4) break;
-    const key = `${item.p.midia}_${item.p.tipo}_${item.p.programa}`;
-    if (!selecionadosMap.has(key)) {
+  const produtosOff = scored.filter((s) => isProdutoOff(s.p));
+  const produtosOn = scored.filter((s) => isProdutoOn(s.p));
+
+  if (
+    (canalPref === "HIBRIDO" || canalPref === "TODOS") &&
+    produtosOff.length > 0 &&
+    produtosOn.length > 0
+  ) {
+    // Composição 360° balanceada: até 2 produtos de Mídia OFF e até 2 de Mídia ON
+    for (const item of produtosOff.slice(0, 2)) {
+      const key = `${item.p.midia}_${item.p.tipo}_${item.p.programa}`;
       selecionadosMap.set(key, item.p);
+    }
+    for (const item of produtosOn.slice(0, 2)) {
+      const key = `${item.p.midia}_${item.p.tipo}_${item.p.programa}`;
+      selecionadosMap.set(key, item.p);
+    }
+  } else {
+    for (const item of scored) {
+      if (selecionadosMap.size >= 4) break;
+      const key = `${item.p.midia}_${item.p.tipo}_${item.p.programa}`;
+      if (!selecionadosMap.has(key)) {
+        selecionadosMap.set(key, item.p);
+      }
     }
   }
 
@@ -317,6 +345,10 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
       total_insercoes: totalIns,
       dias_veiculacao: diasItem.length,
       link_modelo: prod.link_modelo || null,
+      produto_id: prod.id || null,
+      canal_macro: prod.canal_macro || "OFF",
+      plataforma_rede: prod.plataforma_rede || null,
+      metricas_digitais: prod.metricas_digitais || null,
     };
   });
 
@@ -340,13 +372,26 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
       ? `Proposta Comercial${nomeCliente} (${titulosSolucoes.slice(0, 2).join(" & ")})`
       : `Campanha ${data.dor_ou_momento || data.objetivo || "Comercial"}${nomeCliente} (${focoMidia})`;
 
+  const temOff = produtosFinal.some((p) => isProdutoOff(p));
+  const temOn = produtosFinal.some((p) => isProdutoOn(p));
+
+  let sinergiaDefesa = "";
+  if (temOff && temOn) {
+    sinergiaDefesa =
+      "\n\n🔥 DEFESA COMERCIAL — SINERGIA 360° (MUNDO FÍSICO + DIGITAL):\n" +
+      "Esta proposta comercial foi arquitetada estrategicamente para explorar a complementaridade de canais Phygital: " +
+      "a Mídia OFF (pontos de rua, DOOH, outdoors e veículos tradicionais) constrói autoridade de marca incontestável, credibilidade institucional e recall visual contínuo nos momentos de deslocamento e convívio urbano. " +
+      "Concomitantemente, as ativações de Mídia ON (redes sociais, portais e formatos digitais interativos) prolongam essa experiência na ponta dos dedos do consumidor, promovendo engajamento imediato, navegação qualificada e conversão direta via links e métricas mensuráveis.";
+  }
+
   const estrategia =
     `Plano estratégico estruturado com foco em ${data.dor_ou_momento || data.objetivo || "alcance, conversão e consolidação de marca"}. ` +
     `A proposta atende ao momento da empresa ${data.cliente_nome || "do cliente"}` +
     `${data.segmento_atuacao ? ` no segmento de ${data.segmento_atuacao}` : ""}` +
     `${data.contato_decisor ? `, em alinhamento direto com ${data.contato_decisor}` : ""}. ` +
     `\n\nA seleção dos formatos e canais prioriza alta assertividade com o público-alvo (${data.publico || "decisores e consumidores qualificados"}), ` +
-    `garantindo máxima rentabilidade sobre o capital investido e distribuição cronológica calculada para acelerar os resultados.`;
+    `garantindo máxima rentabilidade sobre o capital investido e distribuição cronológica calculada para acelerar os resultados.` +
+    sinergiaDefesa;
 
   // Escopo Detalhado
   const escopoLinhas: string[] = [];
@@ -368,7 +413,7 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
   if (data.condicoes_especiais) condicoesArr.push(`Condição Especial: ${data.condicoes_especiais}`);
 
   const justificativa =
-    `A composição da proposta contempla ${itens.length} formatos táticos entregando ${totInsercoes} veiculações/entregáveis planejados, ` +
+    `A composição da proposta contempla ${itens.length} formatos táticos entregando ${totInsercoes} veiculações/entregáveis planejados${temOff && temOn ? " em campanha 360° Phygital de alto impacto" : ""}, ` +
     `otimizando o budget ${orcamentoTotal > 0 ? `estimado de R$ ${orcamentoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "proposto"} ` +
     `com taxa de desconto comercial de ${descPct}%.` +
     (condicoesArr.length > 0 ? ` (${condicoesArr.join(" • ")})` : "");
@@ -428,6 +473,9 @@ export const sugerirPropostaIA = createServerFn({ method: "POST" })
           id: p.id,
           nome: p.nome,
           midia: p.midia,
+          canal_macro: p.canal_macro || "OFF",
+          plataforma_rede: p.plataforma_rede || null,
+          metricas_digitais: p.metricas_digitais || null,
           tipo: p.tipo,
           programa: p.programa,
           formato: p.formato,
@@ -449,6 +497,7 @@ export const sugerirPropostaIA = createServerFn({ method: "POST" })
         const systemPrompt = `Você é um Diretor Comercial e Especialista em Mídia e Soluções Comerciais da Nexo Mídia e Representação.
 Sua missão é sugerir uma proposta comercial otimizada, estratégica e convincente para o cliente com base no Formulário de Briefing preenchido.
 REGRA FUNDAMENTAL: Você deve selecionar produtos de veiculação EXCLUSIVAMENTE a partir do catálogo fornecido. Não invente produtos que não estejam no catálogo.
+SINERGIA 360° (PHYGITAL): Caso a proposta combine produtos de Mídia OFF (pontos de rua, DOOH, outdoors, rádio, TV) e Mídia ON (digital, web, redes, portais), ou a preferência seja HÍBRIDO/TODOS, destaque obrigatoriamente na estratégia e na defesa comercial a sinergia entre o mundo físico (construção de autoridade, recall visual massivo e presença urbana) e o mundo digital (engajamento direto, cliques e conversão rápida via links).
 Retorne SEMPRE um JSON válido no formato especificado.`;
 
         const userPrompt = `FORMULÁRIO DE BRIEFING PARA PROPOSTA COMERCIAL (NEXO MÍDIA E REPRESENTAÇÃO):
@@ -539,11 +588,18 @@ FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
                     ? it.dias_mes
                     : [1, 2, 3, 4, 5, 8, 9, 10, 11, 12];
 
+                const dbProd = catalogoSimplificado.find(
+                  (p) =>
+                    it.programa &&
+                    (p.programa?.toLowerCase() === it.programa.toLowerCase() ||
+                      p.nome?.toLowerCase() === it.programa.toLowerCase()),
+                );
+
                 return {
-                  tipo: String(it.tipo || "VT"),
-                  programa: it.programa ? String(it.programa) : null,
-                  horario: it.horario ? String(it.horario) : null,
-                  formato: it.formato ? String(it.formato) : null,
+                  tipo: String(it.tipo || dbProd?.tipo || "VT"),
+                  programa: it.programa ? String(it.programa) : dbProd?.programa || null,
+                  horario: it.horario ? String(it.horario) : dbProd?.faixa || null,
+                  formato: it.formato ? String(it.formato) : dbProd?.formato || null,
                   mes: mesAtual,
                   ano: anoAtual,
                   insercoes_dia: Number(it.insercoes_dia) || 1,
@@ -556,6 +612,10 @@ FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
                   total_insercoes: totalIns,
                   dias_veiculacao: diasMes.length,
                   link_modelo: null,
+                  produto_id: dbProd?.id || null,
+                  canal_macro: dbProd?.canal_macro || "OFF",
+                  plataforma_rede: dbProd?.plataforma_rede || null,
+                  metricas_digitais: dbProd?.metricas_digitais || null,
                 };
               });
 

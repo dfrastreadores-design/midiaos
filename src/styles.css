@@ -325,26 +325,78 @@
   --sar: env(safe-area-inset-right, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
+  --header-mobile-h: calc(3.5rem + var(--sat));
+  --bottom-nav-h: calc(3.75rem + var(--sab));
 }
 
 .pt-safe {
-  padding-top: var(--sat);
+  padding-top: max(var(--sat), 0px);
 }
 .pb-safe {
   padding-bottom: max(var(--sab), 0.75rem);
 }
 .pl-safe {
-  padding-left: var(--sal);
+  padding-left: max(var(--sal), 0px);
 }
 .pr-safe {
-  padding-right: var(--sar);
+  padding-right: max(var(--sar), 0px);
 }
 
-/* Mobile Touch & Scroll Feel */
-html,
-body {
+/* Mobile Touch & Proporções Responsivas para Android e iOS */
+html {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  min-height: 100%;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Proporção correta de containers e tabelas em celulares */
+@media (max-width: 768px) {
+  /* Prevenção de quebra de largura em telas compactas (360px - 430px) */
+  .container,
+  main,
+  header {
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Rolagem horizontal suave por toque para tabelas sem distorcer o layout */
+  .table-container,
+  .overflow-x-auto,
+  div:has(> table) {
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: thin;
+    max-width: 100vw;
+  }
+
+  /* Modais com proporção perfeita ocupando margens confortáveis no celular */
+  [role="dialog"] {
+    width: calc(100vw - 1.25rem) !important;
+    max-width: calc(100vw - 1.25rem) !important;
+    max-height: calc(100dvh - var(--sat) - var(--sab) - 1.5rem) !important;
+    margin: auto !important;
+    padding: 1rem !important;
+    border-radius: 1.25rem !important;
+  }
+
+  /* Alvos de toque acessíveis no celular (padrão 44px HIG / Material) */
+  button,
+  a[role="button"],
+  input,
+  select {
+    min-height: 2.5rem;
+  }
 }
 
 /* ==========================================================================

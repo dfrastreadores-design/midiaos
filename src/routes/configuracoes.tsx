@@ -31,7 +31,24 @@ import {
   type SystemAnnouncement,
 } from "@/lib/system-announcements.functions";
 import { Textarea } from "@/components/ui/textarea";
-import { Megaphone, Trash2, Pencil, Plus, Building2 } from "lucide-react";
+import {
+  Megaphone,
+  Trash2,
+  Pencil,
+  Plus,
+  Building2,
+  Sparkles,
+  Eye,
+  Layers,
+  Image as ImageIcon,
+  MapPin,
+  Radio,
+  Monitor,
+  CheckCircle2,
+  ArrowRight,
+} from "lucide-react";
+import { useCurrentOrg } from "@/hooks/use-current-org";
+import { upsertTemplatePropostaConfig } from "@/lib/organizacoes.functions";
 import {
   Dialog,
   DialogContent,
@@ -166,6 +183,7 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       </div>
 
       <PerfilEmpresaCard />
+      <TemplatePropostaConfigCard />
 
       <Card>
         <CardHeader>
@@ -1498,6 +1516,811 @@ function PerfilEmpresaCard() {
             className="rounded-xl px-6"
           >
             {saveMut.isPending ? "Salvando…" : "Salvar Configurações da Empresa"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TemplatePropostaConfigCard() {
+  const qc = useQueryClient();
+  const { org, isNexo, templateConfig } = useCurrentOrg();
+  const saveTemplateFn = useServerFn(upsertTemplatePropostaConfig);
+
+  const [form, setForm] = useState({
+    logo_url: templateConfig?.logo_url ?? null,
+    cor_fundo_capa: templateConfig?.cor_fundo_capa ?? "#0b0c10",
+    cor_destaque_primaria: templateConfig?.cor_destaque_primaria ?? "#ff6b00",
+    cor_destaque_secundaria: templateConfig?.cor_destaque_secundaria ?? "#7928ca",
+    telefone_contato: templateConfig?.telefone_contato ?? "(61) 99125-7245",
+    email_contato: templateConfig?.email_contato ?? "rafaelnexomidia@gmail.com",
+    instagram_contato: templateConfig?.instagram_contato ?? "nexobrasilmidia",
+    site_url: templateConfig?.site_url ?? (isNexo ? "https://nexomidiaerepresentacao.com.br" : ""),
+    manifesto_titulo: templateConfig?.manifesto_titulo ?? "O significado de Nexo",
+    manifesto_texto:
+      templateConfig?.manifesto_texto ??
+      "No dicionário, nexo significa conexão, ligação, vínculo entre partes. No mercado de comunicação do Distrito Federal e entorno, a Nexo Mídia e Representação é a ponte estratégica que une marcas, veículos de alto impacto e consumidores em momentos decisivos da sua jornada diária.",
+    exibir_overview: templateConfig?.exibir_overview ?? true,
+    exibir_metodologia: templateConfig?.exibir_metodologia ?? true,
+    exibir_mapa_satelite: templateConfig?.exibir_mapa_satelite ?? true,
+    incluir_capa: templateConfig?.incluir_capa ?? true,
+    incluir_manifesto: templateConfig?.incluir_manifesto ?? true,
+    incluir_como_atuamos: templateConfig?.incluir_como_atuamos ?? true,
+    incluir_laminas_pontos: templateConfig?.incluir_laminas_pontos ?? true,
+    fechamento_titulo: templateConfig?.fechamento_titulo ?? "Vamos criar o próximo nexo?",
+    fechamento_subtitulo: templateConfig?.fechamento_subtitulo ?? "Conectando marcas, veículos e pessoas com inteligência estratégica.",
+    total_populacao_impacto: templateConfig?.total_populacao_impacto ?? "+5,5 milhões de habitantes",
+    total_impactos_mes: templateConfig?.total_impactos_mes ?? "+18,5 milhões de impactos/mês",
+    cobertura_pracas: templateConfig?.cobertura_pracas ?? "Distrito Federal + Goiás (Entorno)",
+  });
+
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [activePreviewSlide, setActivePreviewSlide] = useState<
+    "capa" | "manifesto" | "como_atuamos" | "overview" | "ponto" | "fechamento"
+  >("capa");
+
+  useEffect(() => {
+    if (templateConfig) {
+      setForm({
+        logo_url: templateConfig.logo_url ?? null,
+        cor_fundo_capa: templateConfig.cor_fundo_capa ?? "#0b0c10",
+        cor_destaque_primaria: templateConfig.cor_destaque_primaria ?? "#ff6b00",
+        cor_destaque_secundaria: templateConfig.cor_destaque_secundaria ?? "#7928ca",
+        telefone_contato: templateConfig.telefone_contato ?? "(61) 99125-7245",
+        email_contato: templateConfig.email_contato ?? "rafaelnexomidia@gmail.com",
+        instagram_contato: templateConfig.instagram_contato ?? "nexobrasilmidia",
+        site_url: templateConfig.site_url ?? (isNexo ? "https://nexomidiaerepresentacao.com.br" : ""),
+        manifesto_titulo: templateConfig.manifesto_titulo ?? "O significado de Nexo",
+        manifesto_texto:
+          templateConfig.manifesto_texto ??
+          "No dicionário, nexo significa conexão, ligação, vínculo entre partes. No mercado de comunicação do Distrito Federal e entorno, a Nexo Mídia e Representação é a ponte estratégica que une marcas, veículos de alto impacto e consumidores em momentos decisivos da sua jornada diária.",
+        exibir_overview: templateConfig.exibir_overview ?? true,
+        exibir_metodologia: templateConfig.exibir_metodologia ?? true,
+        exibir_mapa_satelite: templateConfig.exibir_mapa_satelite ?? true,
+        incluir_capa: templateConfig.incluir_capa ?? true,
+        incluir_manifesto: templateConfig.incluir_manifesto ?? true,
+        incluir_como_atuamos: templateConfig.incluir_como_atuamos ?? true,
+        incluir_laminas_pontos: templateConfig.incluir_laminas_pontos ?? true,
+        fechamento_titulo: templateConfig.fechamento_titulo ?? "Vamos criar o próximo nexo?",
+        fechamento_subtitulo: templateConfig.fechamento_subtitulo ?? "Conectando marcas, veículos e pessoas com inteligência estratégica.",
+        total_populacao_impacto: templateConfig.total_populacao_impacto ?? "+5,5 milhões de habitantes",
+        total_impactos_mes: templateConfig.total_impactos_mes ?? "+18,5 milhões de impactos/mês",
+        cobertura_pracas: templateConfig.cobertura_pracas ?? "Distrito Federal + Goiás (Entorno)",
+      });
+    }
+  }, [templateConfig, isNexo]);
+
+  useEffect(() => {
+    let cancel = false;
+    if (!form.logo_url) {
+      setLogoPreview(null);
+      return;
+    }
+    if (form.logo_url.startsWith("data:") || form.logo_url.startsWith("http")) {
+      setLogoPreview(form.logo_url);
+      return;
+    }
+    getLogoSignedUrl(form.logo_url).then((url) => {
+      if (!cancel) setLogoPreview(url);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [form.logo_url]);
+
+  const handleLogoUpload = async (file: File) => {
+    try {
+      setLogoUploading(true);
+      const ext = file.name.split(".").pop();
+      const path = `template-logos/${Date.now()}-${Math.random().toString(36).substring(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("logos")
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      setForm((f) => ({ ...f, logo_url: path }));
+      toast.success("Logotipo do template enviado com sucesso");
+    } catch (err: any) {
+      toast.error(err?.message || "Falha ao enviar logotipo");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const saveMut = useMutation({
+    mutationFn: async () => {
+      if (!org?.id) throw new Error("Organização não identificada.");
+      return saveTemplateFn({
+        data: {
+          organizacao_id: org.id,
+          ...form,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Template de proposta comercial atualizado com sucesso!");
+      qc.invalidateQueries({ queryKey: ["current-org"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (!org?.id) return null;
+
+  return (
+    <Card className="border-sky-300 dark:border-sky-800 shadow-md">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-amber-500" /> Modelo de Proposta Comercial & Template Executivo
+            </CardTitle>
+            <CardDescription>
+              Personalize o layout dos slides (padrão institucional Nexo), paleta executiva, logomarca, canais de atendimento e seções exibidas.
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-sky-600 text-white font-semibold">
+              {org.nome || "Nexo Mídia e Representação"}
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              Layout 16:9 • Volvo Standard
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-8">
+        {/* ====================================================================
+            LIVE PREVIEW (16:9 INTERATIVO)
+        ==================================================================== */}
+        <div className="rounded-2xl border border-border p-4 bg-muted/20 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Eye className="size-4 text-primary" />
+              <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                Visualização Prévia em Tempo Real (Live Preview 16:9)
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Button
+                variant={activePreviewSlide === "capa" ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[11px] px-2.5"
+                onClick={() => setActivePreviewSlide("capa")}
+              >
+                Capa
+              </Button>
+              <Button
+                variant={activePreviewSlide === "manifesto" ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[11px] px-2.5"
+                onClick={() => setActivePreviewSlide("manifesto")}
+              >
+                Essência
+              </Button>
+              <Button
+                variant={activePreviewSlide === "como_atuamos" ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[11px] px-2.5"
+                onClick={() => setActivePreviewSlide("como_atuamos")}
+              >
+                Como Atuamos
+              </Button>
+              <Button
+                variant={activePreviewSlide === "overview" ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[11px] px-2.5"
+                onClick={() => setActivePreviewSlide("overview")}
+              >
+                Overview
+              </Button>
+              <Button
+                variant={activePreviewSlide === "ponto" ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[11px] px-2.5"
+                onClick={() => setActivePreviewSlide("ponto")}
+              >
+                Lâmina do Ponto
+              </Button>
+              <Button
+                variant={activePreviewSlide === "fechamento" ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-[11px] px-2.5"
+                onClick={() => setActivePreviewSlide("fechamento")}
+              >
+                Fechamento
+              </Button>
+            </div>
+          </div>
+
+          {/* Canvas do Slide 16:9 */}
+          <div
+            className="w-full aspect-[16/9] rounded-xl overflow-hidden relative shadow-2xl border border-slate-700/60 p-6 flex flex-col justify-between select-none transition-colors duration-300"
+            style={{ backgroundColor: form.cor_fundo_capa }}
+          >
+            {/* Linha superior de degradê */}
+            <div
+              className="absolute top-0 left-0 right-0 h-1.5 flex"
+              style={{
+                background: `linear-gradient(to right, ${form.cor_destaque_primaria} 60%, ${form.cor_destaque_secundaria} 100%)`,
+              }}
+            />
+
+            {/* SLIDE 1: CAPA */}
+            {activePreviewSlide === "capa" && (
+              <div className="h-full flex flex-col justify-between text-center items-center py-2">
+                <div className="space-y-2 mt-4">
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Logo" className="h-10 mx-auto object-contain" />
+                  ) : (
+                    <div className="text-xl font-bold text-white tracking-wide">
+                      {org.nome?.toUpperCase() || "NEXO MÍDIA E REPRESENTAÇÃO"}
+                    </div>
+                  )}
+                  <div
+                    className="text-[10px] font-bold tracking-widest uppercase"
+                    style={{ color: form.cor_destaque_primaria }}
+                  >
+                    Hub de Negócios & Soluções Estratégicas em Mídia
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 my-auto">
+                  <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                    PROPOSTA COMERCIAL
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Plano Estratégico & Comercial de Mídia OOH / DOOH
+                  </div>
+                </div>
+
+                <div className="w-full max-w-lg bg-slate-900/80 border border-slate-700/80 rounded-lg p-2.5 text-[10px] flex justify-between items-center text-slate-300">
+                  <div className="text-left">
+                    <span className="text-slate-500 font-bold uppercase block text-[8px]">Cliente</span>
+                    <span className="font-semibold text-white">Anunciante Exemplo S/A</span>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-slate-500 font-bold uppercase block text-[8px]">Campanha</span>
+                    <span className="font-semibold text-white">Lançamento & Cerco 360°</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-500 font-bold uppercase block text-[8px]">Praça</span>
+                    <span className="font-semibold text-white">Brasília / DF + GO</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SLIDE 2: ESSÊNCIA & MANIFESTO */}
+            {activePreviewSlide === "manifesto" && (
+              <div className="h-full flex flex-col justify-between pt-2">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <span style={{ color: form.cor_destaque_primaria }}>★</span>
+                    <span>Nossa Essência & Posicionamento</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">
+                    {org.nome || "Nexo Mídia"}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-12 gap-3 my-auto items-stretch">
+                  <div className="col-span-5 bg-slate-900/90 border border-slate-700 rounded-lg p-3 flex flex-col justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-white mb-1.5">
+                        {form.manifesto_titulo}
+                      </div>
+                      <p className="text-[9px] text-slate-300 leading-relaxed line-clamp-6">
+                        {form.manifesto_texto}
+                      </p>
+                    </div>
+                    <div
+                      className="text-[8px] font-bold uppercase tracking-wider pt-2 border-t border-slate-800"
+                      style={{ color: form.cor_destaque_primaria }}
+                    >
+                      Ponte Estratégica Regional
+                    </div>
+                  </div>
+
+                  <div className="col-span-7 grid grid-cols-2 gap-2">
+                    {[
+                      { t: "1. CONEXÃO", d: "Ponte direta entre marcas e grandes veículos.", c: form.cor_destaque_primaria },
+                      { t: "2. ESTRATÉGIA", d: "Geolocalização e cerco de rotas diárias.", c: form.cor_destaque_secundaria },
+                      { t: "3. REPRESENTAÇÃO", d: "Hub homologado com painéis líderes.", c: form.cor_destaque_primaria },
+                      { t: "4. RESULTADOS", d: "Alto impacto sem desperdício de verba.", c: form.cor_destaque_secundaria },
+                    ].map((p, i) => (
+                      <div key={i} className="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex flex-col justify-center">
+                        <div className="text-[10px] font-bold" style={{ color: p.c }}>{p.t}</div>
+                        <div className="text-[8px] text-slate-400 mt-0.5 leading-snug">{p.d}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SLIDE 3: COMO ATUAMOS */}
+            {activePreviewSlide === "como_atuamos" && (
+              <div className="h-full flex flex-col justify-between pt-2">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="text-xs font-bold text-white uppercase tracking-wider">
+                    Como Atuamos • Metodologia de Mídia 360°
+                  </div>
+                  <div className="text-[10px] text-slate-400">4 Etapas Estratégicas</div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2.5 my-auto">
+                  {[
+                    { n: "01", t: "ENTENDER", d: "Diagnóstico completo do briefing e persona.", c: form.cor_destaque_primaria },
+                    { n: "02", t: "IDENTIFICAR", d: "Curadoria dos melhores pontos e fluxos TMD.", c: form.cor_destaque_secundaria },
+                    { n: "03", t: "NEGOCIAR", d: "Condição comercial exclusiva e bonificações.", c: form.cor_destaque_primaria },
+                    { n: "04", t: "ACOMPANHAR", d: "Auditoria, checking fotográfico e suporte.", c: form.cor_destaque_secundaria },
+                  ].map((st, i) => (
+                    <div key={i} className="bg-slate-900/90 border border-slate-800 rounded-lg overflow-hidden flex flex-col">
+                      <div className="p-2 text-center text-white font-bold" style={{ backgroundColor: st.c }}>
+                        <div className="text-xs">{st.n}</div>
+                        <div className="text-[9px] tracking-wider">{st.t}</div>
+                      </div>
+                      <div className="p-2 text-[8px] text-slate-300 leading-snug my-auto">
+                        {st.d}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* SLIDE 4: OVERVIEW DE IMPACTO */}
+            {activePreviewSlide === "overview" && (
+              <div className="h-full flex flex-col justify-between pt-2">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="text-xs font-bold text-white uppercase tracking-wider">
+                    Overview de Impacto & Praças Atendidas
+                  </div>
+                  <div className="text-[10px]" style={{ color: form.cor_destaque_primaria }}>
+                    Cobertura 360°
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 my-auto">
+                  <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-3 text-center">
+                    <div className="text-base font-extrabold text-white">{form.total_populacao_impacto}</div>
+                    <div className="text-[9px] font-bold text-amber-500 uppercase mt-0.5">População Atingida</div>
+                    <div className="text-[8px] text-slate-400 mt-1">DF e Região Integrada (RIDE)</div>
+                  </div>
+                  <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-3 text-center">
+                    <div className="text-base font-extrabold text-white">{form.total_impactos_mes}</div>
+                    <div className="text-[9px] font-bold uppercase mt-0.5" style={{ color: form.cor_destaque_secundaria }}>Impactos Mensais</div>
+                    <div className="text-[8px] text-slate-400 mt-1">Fluxo qualificado diário</div>
+                  </div>
+                  <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-3 text-center">
+                    <div className="text-sm font-extrabold text-white line-clamp-1">{form.cobertura_pracas}</div>
+                    <div className="text-[9px] font-bold text-emerald-400 uppercase mt-0.5">Praças Atendidas</div>
+                    <div className="text-[8px] text-slate-400 mt-1">Vias Troncais & Indoor</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SLIDE 5: LÂMINA TÉCNICA DO PONTO (DUPLO DISPLAY) */}
+            {activePreviewSlide === "ponto" && (
+              <div className="h-full flex flex-col justify-between pt-1">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                  <div className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <span style={{ color: form.cor_destaque_primaria }}>📍</span>
+                    <span>Painel LED Digital • EPTG Km 04 (Sentido Plano Piloto)</span>
+                  </div>
+                  <Badge variant="outline" className="text-[9px] py-0 border-amber-500/50 text-amber-400">
+                    Ponto 01 de 03
+                  </Badge>
+                </div>
+
+                {/* Duplo Display: Foto + Ficha à Esquerda | Mapa Satélite à Direita */}
+                <div className="grid grid-cols-12 gap-2.5 my-auto items-stretch">
+                  <div className="col-span-6 flex flex-col gap-1.5">
+                    <div className="h-16 bg-slate-900 border border-slate-700 rounded-lg flex items-center justify-center relative overflow-hidden">
+                      <div className="text-center">
+                        <div className="text-[10px] font-bold text-white">📷 SIMULAÇÃO FRONTAL DO PAINEL</div>
+                        <div className="text-[8px]" style={{ color: form.cor_destaque_primaria }}>6,00 x 3,00m • 1920x1080px (Full HD)</div>
+                      </div>
+                    </div>
+                    <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 text-[8px] space-y-0.5 text-slate-300">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 font-bold">FLUXO (TMD):</span>
+                        <span className="font-semibold text-white">85.000 veículos/dia</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 font-bold">INSERÇÕES:</span>
+                        <span className="font-semibold text-white">120/dia (3.600 total)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 font-bold">VIA / SENTIDO:</span>
+                        <span className="font-semibold text-white">EPTG • Sentido Brasília</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-span-6 bg-slate-900/90 border border-slate-700 rounded-lg p-2 flex flex-col justify-between relative overflow-hidden">
+                    <div className="flex items-center justify-between text-[8px]">
+                      <span className="font-bold uppercase text-slate-400">🛰️ Radar Satélite & Coordenadas</span>
+                      <span className="font-mono text-emerald-400">-15.8341, -48.0567</span>
+                    </div>
+                    <div className="h-16 w-full rounded bg-slate-950 border border-slate-800 flex items-center justify-center relative">
+                      <div className="w-8 h-8 rounded-full border border-purple-500/40 animate-ping absolute" />
+                      <div className="w-3 h-3 rounded-full bg-amber-500 z-10 flex items-center justify-center text-[7px] text-black font-black">●</div>
+                      <span className="absolute bottom-1 right-1 text-[7px] text-slate-500 font-mono">Google Maps Pin</span>
+                    </div>
+                    <div className="text-[8px] text-center font-bold text-white py-1 rounded bg-gradient-to-r from-amber-600 to-orange-600">
+                      Abrir no Google Maps & Street View
+                    </div>
+                  </div>
+                </div>
+
+                {/* Barra de Negociação Inferior */}
+                <div
+                  className="w-full rounded-md p-1.5 text-[8px] flex items-center justify-between text-white border"
+                  style={{
+                    backgroundColor: "#161c28",
+                    borderColor: form.cor_destaque_primaria,
+                  }}
+                >
+                  <div><span className="text-slate-400">Metragem:</span> 18m²</div>
+                  <div><span className="text-slate-400">Tempo:</span> 15 seg</div>
+                  <div><span className="text-slate-400">Tabela:</span> R$ 6.800,00</div>
+                  <div><span className="text-slate-400">Desconto:</span> 25%</div>
+                  <div className="font-bold text-amber-400">Negociado: R$ 5.100,00</div>
+                </div>
+              </div>
+            )}
+
+            {/* SLIDE 6: FECHAMENTO */}
+            {activePreviewSlide === "fechamento" && (
+              <div className="h-full flex flex-col justify-between items-center text-center py-2">
+                <div className="space-y-1 mt-4">
+                  <div className="text-xl sm:text-2xl font-black text-white">
+                    {form.fechamento_titulo}
+                  </div>
+                  <div className="text-xs text-slate-400 max-w-md mx-auto">
+                    {form.fechamento_subtitulo}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 w-full max-w-lg my-auto">
+                  <div className="bg-slate-900 border border-slate-800 rounded p-2 text-center">
+                    <div className="text-[7px] font-bold text-amber-500 uppercase">WhatsApp</div>
+                    <div className="text-[9px] font-semibold text-white mt-0.5">{form.telefone_contato}</div>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 rounded p-2 text-center">
+                    <div className="text-[7px] font-bold text-purple-400 uppercase">E-mail</div>
+                    <div className="text-[8px] font-semibold text-white mt-0.5 truncate">{form.email_contato}</div>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 rounded p-2 text-center">
+                    <div className="text-[7px] font-bold text-amber-500 uppercase">Instagram</div>
+                    <div className="text-[9px] font-semibold text-white mt-0.5">@{form.instagram_contato.replace(/^@/, "")}</div>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 rounded p-2 text-center">
+                    <div className="text-[7px] font-bold text-purple-400 uppercase">Portal</div>
+                    <div className="text-[8px] font-semibold text-white mt-0.5 truncate">nexomidia.com.br</div>
+                  </div>
+                </div>
+
+                <div className="text-[9px] text-slate-500">
+                  Operado por Nexo Mídia e Representação (nexomidiaerepresentacao.com.br)
+                </div>
+              </div>
+            )}
+
+            {/* Rodapé do Slide */}
+            <div className="flex justify-between items-center text-[8px] text-slate-500 border-t border-slate-800/80 pt-1">
+              <span>{org.nome || "NEXO Mídia e Representação"} • Proposta Comercial Oficial</span>
+              <span>Layout Executivo 16:9</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ====================================================================
+            FORMULÁRIO DE CUSTOMIZAÇÃO DO TEMPLATE
+        ==================================================================== */}
+        <div className="space-y-6">
+          {/* 1. Logotipo Oficial */}
+          <div>
+            <Label className="text-xs font-semibold">
+              Logotipo do Template de Proposta (PNG transparente ou SVG)
+            </Label>
+            <div className="flex items-center gap-4 mt-2 flex-wrap">
+              {logoPreview ? (
+                <div className="h-16 w-36 border rounded-xl bg-slate-900 p-2 flex items-center justify-center shadow-sm">
+                  <img src={logoPreview} alt="Logo Template" className="max-h-full max-w-full object-contain" />
+                </div>
+              ) : (
+                <div className="h-16 w-36 border border-dashed rounded-xl flex items-center justify-center text-xs text-muted-foreground bg-muted/20">
+                  sem logotipo
+                </div>
+              )}
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  type="file"
+                  accept="image/png,image/svg+xml,image/jpeg"
+                  disabled={logoUploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleLogoUpload(f);
+                  }}
+                  className="max-w-xs text-xs"
+                />
+                {form.logo_url && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs w-fit text-destructive hover:text-destructive"
+                    onClick={() => setForm((f) => ({ ...f, logo_url: null }))}
+                  >
+                    Remover logotipo do template
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Paleta de Cores Executiva */}
+          <div className="border-t pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+              Paleta de Cores Executiva do Template
+            </h4>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-xs font-semibold">Cor Fundo da Capa e Slides</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={form.cor_fundo_capa}
+                    onChange={(e) => setForm({ ...form, cor_fundo_capa: e.target.value })}
+                    className="w-10 h-10 p-0.5 rounded cursor-pointer border"
+                  />
+                  <Input
+                    value={form.cor_fundo_capa}
+                    onChange={(e) => setForm({ ...form, cor_fundo_capa: e.target.value })}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <span className="text-[10px] text-muted-foreground">Padrão Nexo: #0b0c10</span>
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold">Cor Destaque Primária (Laranja)</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={form.cor_destaque_primaria}
+                    onChange={(e) => setForm({ ...form, cor_destaque_primaria: e.target.value })}
+                    className="w-10 h-10 p-0.5 rounded cursor-pointer border"
+                  />
+                  <Input
+                    value={form.cor_destaque_primaria}
+                    onChange={(e) => setForm({ ...form, cor_destaque_primaria: e.target.value })}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <span className="text-[10px] text-muted-foreground">Laranja Nexo: #ff6b00</span>
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold">Cor Secundária / Degradê (Roxo)</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={form.cor_destaque_secundaria}
+                    onChange={(e) => setForm({ ...form, cor_destaque_secundaria: e.target.value })}
+                    className="w-10 h-10 p-0.5 rounded cursor-pointer border"
+                  />
+                  <Input
+                    value={form.cor_destaque_secundaria}
+                    onChange={(e) => setForm({ ...form, cor_destaque_secundaria: e.target.value })}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <span className="text-[10px] text-muted-foreground">Roxo Nexo: #7928ca</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Informações de Contato e Assinatura */}
+          <div className="border-t pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+              Dados de Contato e Assinatura das Propostas
+            </h4>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <Label className="text-xs font-semibold">WhatsApp / Telefone</Label>
+                <Input
+                  value={form.telefone_contato}
+                  onChange={(e) => setForm({ ...form, telefone_contato: e.target.value })}
+                  placeholder="(61) 99125-7245"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">E-mail Comercial</Label>
+                <Input
+                  type="email"
+                  value={form.email_contato}
+                  onChange={(e) => setForm({ ...form, email_contato: e.target.value })}
+                  placeholder="rafaelnexomidia@gmail.com"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Instagram Oficial (@)</Label>
+                <Input
+                  value={form.instagram_contato}
+                  onChange={(e) => setForm({ ...form, instagram_contato: e.target.value })}
+                  placeholder="nexobrasilmidia"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Site / Portal Oficial</Label>
+                <Input
+                  value={form.site_url}
+                  onChange={(e) => setForm({ ...form, site_url: e.target.value })}
+                  placeholder="https://nexomidiaerepresentacao.com.br"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Switches / Toggles de Seções da Apresentação */}
+          <div className="border-t pt-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+              Estrutura de Lâminas / Seções do Template
+            </h4>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="flex items-center justify-between p-3 border rounded-xl bg-card">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-semibold">1. Capa Institucional Executiva</div>
+                  <div className="text-[11px] text-muted-foreground">Logo centralizado e tipografia premium</div>
+                </div>
+                <Switch
+                  checked={form.incluir_capa}
+                  onCheckedChange={(c) => setForm({ ...form, incluir_capa: c })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-xl bg-card">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-semibold">2. Lâmina Nossa Essência</div>
+                  <div className="text-[11px] text-muted-foreground">Manifesto e os 4 pilares estratégicos</div>
+                </div>
+                <Switch
+                  checked={form.incluir_manifesto}
+                  onCheckedChange={(c) => setForm({ ...form, incluir_manifesto: c })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-xl bg-card">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-semibold">3. Lâmina "Como Atuamos"</div>
+                  <div className="text-[11px] text-muted-foreground">Entender, Identificar, Negociar, Acompanhar</div>
+                </div>
+                <Switch
+                  checked={form.incluir_como_atuamos}
+                  onCheckedChange={(c) => setForm({ ...form, incluir_como_atuamos: c })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-xl bg-card">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-semibold">4. Overview de Impacto</div>
+                  <div className="text-[11px] text-muted-foreground">Estatísticas chave e praças atendidas</div>
+                </div>
+                <Switch
+                  checked={form.exibir_overview}
+                  onCheckedChange={(c) => setForm({ ...form, exibir_overview: c })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-xl bg-card">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-semibold">5. Lâminas Técnicas dos Pontos</div>
+                  <div className="text-[11px] text-muted-foreground">Duplo Display: Foto + Satélite + Negociação</div>
+                </div>
+                <Switch
+                  checked={form.incluir_laminas_pontos}
+                  onCheckedChange={(c) => setForm({ ...form, incluir_laminas_pontos: c })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-xl bg-card">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-semibold">Pin de Satélite & Rotas</div>
+                  <div className="text-[11px] text-muted-foreground">Exibir coordenadas e link Google Maps</div>
+                </div>
+                <Switch
+                  checked={form.exibir_mapa_satelite}
+                  onCheckedChange={(c) => setForm({ ...form, exibir_mapa_satelite: c })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Textos & Estatísticas Customizáveis */}
+          <div className="border-t pt-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Textos Institucionais & Indicadores de Impacto
+            </h4>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-xs font-semibold">População Impactada (Overview)</Label>
+                <Input
+                  value={form.total_populacao_impacto}
+                  onChange={(e) => setForm({ ...form, total_populacao_impacto: e.target.value })}
+                  placeholder="+5,5 milhões de habitantes"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Impactos Mensais Estimados</Label>
+                <Input
+                  value={form.total_impactos_mes}
+                  onChange={(e) => setForm({ ...form, total_impactos_mes: e.target.value })}
+                  placeholder="+18,5 milhões de impactos/mês"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Cobertura Geográfica</Label>
+                <Input
+                  value={form.cobertura_pracas}
+                  onChange={(e) => setForm({ ...form, cobertura_pracas: e.target.value })}
+                  placeholder="Distrito Federal + Goiás (Entorno)"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold">Título do Manifesto</Label>
+                <Input
+                  value={form.manifesto_titulo}
+                  onChange={(e) => setForm({ ...form, manifesto_titulo: e.target.value })}
+                  placeholder="O significado de Nexo"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Título de Fechamento</Label>
+                <Input
+                  value={form.fechamento_titulo}
+                  onChange={(e) => setForm({ ...form, fechamento_titulo: e.target.value })}
+                  placeholder="Vamos criar o próximo nexo?"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-xs font-semibold">Texto do Manifesto / Racional de Abertura</Label>
+              <Textarea
+                rows={3}
+                value={form.manifesto_texto}
+                onChange={(e) => setForm({ ...form, manifesto_texto: e.target.value })}
+                placeholder="No dicionário, nexo significa conexão, ligação..."
+                className="mt-1 text-xs leading-relaxed"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <Button
+            onClick={() => saveMut.mutate()}
+            disabled={saveMut.isPending}
+            className="rounded-xl px-7 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold shadow-md"
+          >
+            {saveMut.isPending ? "Salvando…" : "Salvar Configurações do Template"}
           </Button>
         </div>
       </CardContent>

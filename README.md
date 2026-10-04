@@ -1,26 +1,114 @@
-# Midia online
+# 🚀 Mídia.OS — Plataforma de Gestão Comercial e Operacional para Mídia
 
-Crie um sistema completo de gerenciamento comercial e vendas para uma empresa de mídia/publicidade, com foco em controle de PI (Pedido de Inserção), propostas comerciais, cadastro de clientes, agências e acompanhamento de processos comerciais. O sistema deve possuir interface moderna, intuitiva, responsiva e profissional, com dashboard executivo e controle total do fluxo comercial. O sistema deverá permitir cadastro de empresas anunciantes, agências de publicidade, veículos de comunicação, executivos de contas e usuários internos com níveis de acesso. Criar módulo de CRM comercial com funil de vendas contendo etapas como prospecção, negociação, proposta enviada, aprovação, faturamento e finalizado. Cada cliente deve possuir uma área própria para armazenar histórico completo de atendimentos, arquivos, propostas, contratos, observações, tarefas e andamento dos processos. Criar módulo de geração automática de PI baseado no modelo anexado, contendo informações como número do PI, cliente, razão social, CNPJ, endereço, executivo responsável, veículo, campanha, período de veiculação, produtos, quantidade de inserções, valores unitários, valor de tabela, desconto aplicado, valor negociado, faturamento, vencimento e observações contratuais. O sistema deve gerar o PI automaticamente em PDF com layout profissional semelhante ao modelo enviado. Criar também módulo de propostas comerciais integrado à tabela de preços da planilha anexada, permitindo selecionar produtos, formatos, quantidade de inserções, descontos e gerar automaticamente o valor final da proposta. O sistema deve calcular comissão de agência, faturamento e margem automaticamente. Criar painel financeiro com controle de propostas aprovadas, faturamentos pendentes, contratos ativos, pagamentos e relatórios financeiros. Adicionar sistema de anexos para upload de PDFs, contratos, artes, vídeos e documentos relacionados aos clientes. Implementar busca inteligente por cliente, agência, campanha ou número de PI. Criar relatórios completos com exportação em PDF e Excel, incluindo relatórios de vendas, clientes ativos, campanhas em andamento, faturamento mensal e desempenho dos executivos. O sistema deve possuir notificações automáticas para vencimentos, aprovações pendentes e follow-up de clientes. Implementar integração com WhatsApp e e-mail para envio automático de propostas e PI diretamente pelo sistema. Criar calendário comercial para acompanhamento de campanhas e agendas. O design deve ser moderno no estilo SaaS premium, com cores profissionais, gráficos interativos, cards de métricas e navegação simples. Utilizar banco de dados robusto, autenticação segura e arquitetura escalável. O sistema deverá funcionar perfeitamente em desktop e mobile.
+> O sistema operacional inteligente e definitivo para Emissoras de TV, Rádios, Painéis OOH/DOOH, Portais Digitais e Hubs de Mídia.
 
-This project was built with [Lovable](https://lovable.dev).
+[![Status](https://img.shields.io/badge/Status-Produção_Ativa-brightgreen)](#)
+[![Stack](https://img.shields.io/badge/Stack-TanStack_Start_%2B_React_19_%2B_Supabase-blue)](#)
+[![Architecture](https://img.shields.io/badge/Arquitetura-Multi--Tenant_%2B_White--Label-orange)](#)
 
-**Live app**: https://tvbrasilia.lovable.app
+---
 
-## Build with Lovable
+## 📌 Visão Geral
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/6b654fc1-df4a-464c-a27c-64cb194379cd).
+O **Mídia.OS** é uma plataforma SaaS corporativa desenvolvida para gerenciar com máxima eficiência e inteligência todo o ciclo comercial de veículos de comunicação e agências de representação:
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+- **Prospecção & CRM Comercial**: Funil visual (Kanban), tarefas com notificações em tempo real e consulta cadastral instantânea via CNPJ (Receita Federal).
+- **Diagnóstico Comercial 360° & Radar de Expansão**: Orquestração integrada de 5 pilares de mídia (OOH/DOOH, TV/Rádio, Digital, Influenciadores e Projetos Especiais) cobrindo todas as 35 Regiões Administrativas do DF com inteligência de rotas troncais.
+- **Inventário de Mídia com Geolocalização**: Cadastro e geocodificação de painéis de LED, frontlights e mobiliário urbano com coordenadas de satélite, visualização no mapa e link direto para o **Google Street View**.
+- **Propostas Comerciais & Apresentações Executivas**: Calculadora de mídia automatizada, descontos progressivos por volume, modelos customizáveis e exportação em alta resolução para **PDF timbrado** e **PowerPoint (.pptx)**.
+- **Pedidos de Inserção (PIs) com IA**: Emissão automatizada, fluxo de aprovação multinível (Executivo → Gerência → Diretoria), link seguro para aprovação móvel e parser com inteligência artificial para leitura e extração de dados de PIs em PDF.
+- **Central de Assinaturas Digitais**: Portal público do signatário (`/assinar/$token`) com assinatura na tela touch/mouse, registro de IP, data/hora e carimbo com validade jurídica (MP 2.200-2/2001).
+- **Financeiro & Comissões**: Contas a pagar e a receber vinculadas aos PIs aprovados, cálculo e split automático de comissões/BV de agência e controle rigoroso de permutas de mídia.
+- **White-Label & Multi-Tenant Nativo**: Suporte dinâmico a múltiplas organizações (como a *Nexo Mídia e Representação*), personalizando marca, cores, logotipos, termos de propostas e isolando o catálogo de produtos próprios.
 
-## Development
+---
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## 🏗️ Arquitetura e Tecnologias
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+- **Frontend & SSR**: [TanStack Start](https://tanstack.com/start) com motor [Nitro](https://nitro.unjs.io/) e [Vite](https://vitejs.dev/).
+- **Interface & Componentes**: [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [TailwindCSS](https://tailwindcss.com/) e [Radix UI / shadcn](https://ui.shadcn.com/).
+- **Banco de Dados & Autenticação**: [Supabase](https://supabase.com/) com PostgreSQL 15, Row Level Security (RLS) e Triggers de Auditoria Universal.
+- **Exportações**: `PptxGenJS` (PowerPoint executivo), `jsPDF` e `xlsx` (relatórios analíticos).
+- **Mobile**: Suporte a compilação nativa híbrida para iOS e Android via [Capacitor](https://capacitorjs.com/).
+
+---
+
+## 🧭 Documentação Completa
+
+Para detalhes técnicos aprofundados sobre arquitetura, modelo de dados, políticas de segurança e regras de negócio, consulte:
+
+- 📖 **[Manual do Sistema (DOCUMENTACAO_SISTEMA.md)](./DOCUMENTACAO_SISTEMA.md)**
+- 💻 **Manual Interativo no App**: Acesse `/documentacao` dentro da plataforma logada.
+
+---
+
+## ⚙️ Instalação e Desenvolvimento Local
+
+### Pré-requisitos
+- Node.js 20+ instalado.
+- Chaves de acesso ao Supabase configuradas no arquivo `.env`.
+
+### Passo a passo
+```bash
+# 1. Clonar o repositório
+git clone <url-do-repositorio>
+cd tvbrasilia-main
+
+# 2. Instalar as dependências
+npm install
+
+# 3. Iniciar o servidor local de desenvolvimento
 npm run dev
 ```
+Acesse a aplicação no navegador em `http://localhost:3000`.
+
+---
+
+## 🧪 Testes Automatizados
+
+Para rodar as suítes de validação dos módulos centrais:
+
+```bash
+# Testar motor de White-label e isolamento de Organizações
+node tests/testar-whitelabel-organizacoes.mjs
+
+# Testar geolocalização e rotas OOH/DOOH
+node tests/testar-geolocalizacao-ooh.mjs
+
+# Testar Planejamento 360° e Radar de Expansão Regional (DF)
+node --experimental-strip-types tests/testar-planejamento-360-radar.mjs
+```
+
+---
+
+## 📦 Build e Deploy
+
+### 1. Build Rápido de Produção
+Para compilar o pacote de produção em segundos sem onerar o ambiente:
+```bash
+node scripts/build-quick.mjs
+```
+
+### 2. Sincronização e Deploy em Produção (Hostinger)
+```bash
+node scripts/sync-hostinger-all.mjs
+```
+
+---
+
+## 🔒 Diretrizes de Segurança (Produção Ativa)
+
+O Mídia.OS opera com **política de zero perda de dados**:
+1. Comandos destrutivos (`DROP`, `TRUNCATE` ou `DELETE` sem filtro restritivo de chave primária e tenant) são bloqueados por triggers.
+2. Todas as migrações são aditivas e retrocompatíveis (`IF NOT EXISTS`).
+3. Todas as alterações em dados comerciais são registradas na tabela `auditoria_alteracoes`.
+4. Itens excluídos por usuários são direcionados para a `trash_items` (lixeira com retenção de 45 dias).
+
+---
+
+## 👤 Suporte e Contato
+
+- **Desenvolvedor & Arquiteto**: Rafael Rodrigo
+- **E-mail**: [Rafaelrodrigo.as@gmail.com](mailto:Rafaelrodrigo.as@gmail.com)
+- **WhatsApp / Telefone**: (61) 98474-6857
+- **Organização Parceira**: [Nexo Mídia e Representação](https://nexomidiaerepresentacao.com.br)

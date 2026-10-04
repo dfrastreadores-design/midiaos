@@ -70,6 +70,7 @@ import { UserCheck } from "lucide-react";
 import logoMidiaOS from "@/assets/logo-midiaos.png";
 import { useTenantBranding } from "@/hooks/use-tenant-branding";
 import { useTenantModulos } from "@/hooks/use-tenant-modulos";
+import { useCurrentOrg } from "@/hooks/use-current-org";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { SessionExpiredDialog } from "@/components/SessionExpiredDialog";
 import { useQuery } from "@tanstack/react-query";
@@ -138,12 +139,24 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     staleTime: 5 * 60_000,
   });
   const { hasModulo } = useTenantModulos();
-  const visibleNav = nav.filter((item) => {
-    if (item.to === "/lixeira") return isAdmin;
-    const canAccess = can(item.to);
-    const hasMod = item.modulo == null || hasModulo(item.modulo);
-    return canAccess && hasMod;
-  });
+  const visibleNav = nav
+    .filter((item) => {
+      if (item.to === "/lixeira") return isAdmin;
+      const canAccess = can(item.to);
+      const hasMod = item.modulo == null || hasModulo(item.modulo);
+      return canAccess && hasMod;
+    })
+    .map((item) => {
+      if (isNexo) {
+        if (item.to === "/produtos") {
+          return { ...item, label: "Soluções Próprias & Parceiros" };
+        }
+        if (item.to === "/centralizadores") {
+          return { ...item, label: "Planejamento 360° & Radar DF" };
+        }
+      }
+      return item;
+    });
   const matchedNavItem = nav.find(
     (item) =>
       item.to === location.pathname || (item.to !== "/" && location.pathname.startsWith(item.to)),
@@ -161,6 +174,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [installDialogOpen, setInstallDialogOpen] = useState(false);
   const { logoSrc: tenantLogo, nome: tenantNome } = useTenantBranding();
+  const { isNexo, nome: orgNome, siteUrl: orgSiteUrl } = useCurrentOrg();
   const brandLogo = tenantLogo ?? logoMidiaOS;
   const brandAlt = tenantNome ?? "mídia.OS";
 
@@ -176,20 +190,44 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             <img src={brandLogo} alt={brandAlt} className="h-full w-auto object-contain" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-display font-bold text-lg tracking-tight text-sidebar truncate flex items-center gap-1.5">
-              {tenantNome || (
-                <>
-                  Mídia<span className="text-gold">.</span>OS
-                </>
-              )}
-            </div>
-            <div className="text-[10px] uppercase tracking-widest font-bold text-sidebar/40 truncate">
-              {isSuperAdmin
-                ? "👑 Gestão Global"
-                : tenantNome
-                  ? "Espaço da Empresa"
-                  : "Premium Suite"}
-            </div>
+            {isNexo ? (
+              <a
+                href={orgSiteUrl || "https://nexomidiaerepresentacao.com.br"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block group"
+                title="Acessar site da Nexo Mídia e Representação"
+              >
+                <div className="font-display font-bold text-sm tracking-tight text-sidebar group-hover:text-primary transition-colors leading-tight">
+                  NEXO Mídia e Representação
+                </div>
+                <div className="text-[10px] tracking-wide font-semibold text-sky-600 truncate mt-0.5">
+                  Hub de Negócios & Soluções Estratégicas em Mídia
+                </div>
+                <div className="mt-1">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700">
+                    Mídia.OS • Plataforma Oficial de Inteligência Comercial
+                  </span>
+                </div>
+              </a>
+            ) : (
+              <>
+                <div className="font-display font-bold text-lg tracking-tight text-sidebar truncate flex items-center gap-1.5">
+                  {tenantNome || (
+                    <>
+                      Mídia<span className="text-gold">.</span>OS
+                    </>
+                  )}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest font-bold text-sidebar/40 truncate">
+                  {isSuperAdmin
+                    ? "👑 Gestão Global"
+                    : tenantNome
+                      ? "Espaço da Empresa"
+                      : "Premium Suite"}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -339,34 +377,50 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 bg-background/50 relative">
-        <header className="sticky top-0 z-30 h-16 lg:h-20 bg-background/60 backdrop-blur-xl border-b border-border/40 px-3 sm:px-6 lg:px-10 flex items-center justify-between gap-2">
+        <header className="sticky top-0 z-30 pt-[max(var(--sat),0px)] bg-background/85 backdrop-blur-xl border-b border-border/40 px-3 sm:px-6 lg:px-10 flex items-center justify-between gap-2 min-h-[3.75rem] lg:h-20 transition-all">
           <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
               <SheetTrigger asChild>
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  className="lg:hidden shrink-0 hover:bg-muted/50 rounded-xl"
+                  variant="outline"
+                  size="sm"
+                  className="lg:hidden shrink-0 h-10 px-2.5 rounded-xl border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                  aria-label="Abrir Menu do Sistema"
                 >
                   <Menu className="size-5" />
+                  <span className="text-xs font-bold tracking-tight">Menu</span>
                 </Button>
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="w-[85vw] max-w-xs sm:w-80 p-0 border-r border-sidebar-border/50 bg-sidebar text-sidebar-foreground flex flex-col"
+                className="w-[85vw] max-w-xs sm:w-80 p-0 border-r border-sidebar-border/50 bg-sidebar text-sidebar-foreground flex flex-col h-[100dvh] pt-[max(var(--sat),0px)] pb-[max(var(--sab),0.5rem)]"
               >
-                <div className="px-8 py-8 flex items-center gap-4 border-b border-sidebar-border/30 bg-white/95 backdrop-blur-sm">
+                <div className="px-6 py-6 flex items-center gap-3.5 border-b border-sidebar-border/30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm">
                   <div className="size-10 rounded-xl bg-white shadow-sm flex items-center justify-center p-1.5 border border-slate-100">
                     <img src={brandLogo} alt={brandAlt} className="h-full w-auto object-contain" />
                   </div>
-                  <div>
-                    <div className="font-display font-bold text-base tracking-tight text-sidebar flex items-center">
-                      Mídia<span className="text-gold">.</span>OS
+                  <div className="min-w-0 flex-1">
+                    <div className="font-display font-bold text-sm tracking-tight text-sidebar">
+                      {isNexo ? (
+                        <>
+                          <div className="leading-tight truncate">NEXO Mídia e Representação</div>
+                          <div className="text-[10px] font-semibold text-sky-600 tracking-wide mt-0.5 truncate">
+                            Hub de Negócios & Soluções 360°
+                          </div>
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700">
+                              Mídia.OS Oficial
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>Mídia<span className="text-gold">.</span>OS</>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto scrollbar-thin">
+                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin overscroll-contain">
                   {visibleNav.map((item) => {
                     const active =
                       location.pathname === item.to ||
@@ -378,19 +432,20 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                         to={item.to}
                         onClick={() => setMobileNavOpen(false)}
                         className={cn(
-                          "group flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold transition-all duration-300",
+                          "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 min-h-[44px]",
                           active
-                            ? "bg-sidebar-accent text-sidebar-primary shadow-sm"
-                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                            ? "bg-sidebar-accent text-sidebar-primary shadow-sm font-bold"
+                            : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
                         )}
                       >
                         <Icon
                           className={cn(
-                            "size-4.5",
-                            active ? "text-sidebar-primary" : "text-sidebar-foreground/40",
+                            "size-4.5 shrink-0",
+                            active ? "text-sidebar-primary" : "text-sidebar-foreground/50",
                           )}
                         />
-                        <span className="flex-1">{item.label}</span>
+                        <span className="flex-1 truncate">{item.label}</span>
+                        {active && <span className="size-1.5 rounded-full bg-primary" />}
                       </Link>
                     );
                   })}
@@ -448,14 +503,56 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
             <div className="lg:hidden flex items-center gap-2 min-w-0">
-              <img src={brandLogo} alt={brandAlt} className="h-7 w-auto shrink-0" />
-              <span className="font-display font-bold text-base sm:text-lg truncate">Mídia.OS</span>
+              <img src={brandLogo} alt={brandAlt} className="h-7 w-auto shrink-0 object-contain" />
+              <div className="flex flex-col min-w-0">
+                <span className="font-display font-bold text-xs sm:text-sm truncate">
+                  {isNexo ? "NEXO Mídia" : "Mídia.OS"}
+                </span>
+                {isNexo ? (
+                  <span className="text-[9px] text-sky-600 font-semibold truncate hidden sm:inline">
+                    Hub de Negócios 360°
+                  </span>
+                ) : (
+                  <span className="text-[9px] text-muted-foreground font-medium truncate hidden sm:inline">
+                    Inteligência Comercial
+                  </span>
+                )}
+              </div>
             </div>
             <div className="hidden lg:flex items-center gap-3">
               <div className="h-5 w-1 bg-gold/30 rounded-full" />
-              <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 select-none">
-                {tenantNome ? `Empresa: ${tenantNome}` : "Comercial Engine"}
-              </h2>
+              {isNexo ? (
+                <div className="flex items-center gap-2.5">
+                  <a
+                    href={orgSiteUrl || "https://nexomidiaerepresentacao.com.br"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 hover:opacity-85 transition-opacity"
+                    title="Visitar Nexo Mídia e Representação (nexomidiaerepresentacao.com.br)"
+                  >
+                    <span className="text-sm font-bold text-foreground tracking-tight">
+                      NEXO Mídia e Representação
+                    </span>
+                    <span className="text-muted-foreground/40 font-normal">|</span>
+                    <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
+                      Hub de Negócios & Soluções Estratégicas em Mídia
+                    </span>
+                  </a>
+                  <Badge
+                    variant="outline"
+                    className="bg-sky-500/10 text-sky-600 border-sky-500/30 text-[10px] px-2 py-0.5 font-bold"
+                  >
+                    DF & Entorno
+                  </Badge>
+                  <span className="hidden xl:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700">
+                    Mídia.OS • Plataforma Oficial de Inteligência Comercial
+                  </span>
+                </div>
+              ) : (
+                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 select-none">
+                  {tenantNome ? `Empresa: ${tenantNome}` : "Comercial Engine"}
+                </h2>
+              )}
               {isSuperAdmin && (
                 <Badge
                   variant="outline"
@@ -581,7 +678,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <ImpersonateDialog open={impersonateOpen} onOpenChange={setImpersonateOpen} />
         <SessionExpiredDialog />
 
-        <main className="flex-1 px-3 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-12 pb-24 lg:pb-12 max-w-[1600px] w-full mx-auto animate-fade-up min-w-0 space-y-6">
+        <main className="flex-1 px-3 sm:px-6 lg:px-12 py-4 sm:py-8 lg:py-12 pb-[calc(6.5rem+var(--sab))] lg:pb-12 max-w-[1600px] w-full mx-auto animate-fade-up min-w-0 space-y-6">
           <PushNotificationBanner />
           {blocked ? (
             <AcessoNegadoScreen
@@ -596,6 +693,34 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
             children
           )}
         </main>
+
+        {/* Rodapé Institucional */}
+        <footer className="border-t border-border/40 py-5 px-4 sm:px-8 text-xs text-muted-foreground bg-background/60 backdrop-blur-sm mt-auto pb-20 lg:pb-5">
+          <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+              <span>Operado por</span>
+              <a
+                href={orgSiteUrl || "https://nexomidiaerepresentacao.com.br"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-primary hover:underline flex items-center gap-1"
+                title="Acessar portal da Nexo Mídia e Representação"
+              >
+                NEXO Mídia e Representação — nexomidiaerepresentacao.com.br
+              </a>
+              <span className="hidden sm:inline text-muted-foreground/50">•</span>
+              <span className="text-[11px] text-muted-foreground font-medium">
+                Hub de Negócios & Soluções Estratégicas em Mídia
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Mídia.OS • Plataforma Oficial de Inteligência Comercial
+              </span>
+            </div>
+          </div>
+        </footer>
 
         {/* Barra de Navegação Inferior para Celular */}
         <MobileBottomNav

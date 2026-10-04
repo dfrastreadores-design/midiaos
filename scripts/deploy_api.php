@@ -259,6 +259,24 @@ if ($action === 'extract') {
         'message' => 'Deploy e extração concluídos com sucesso!',
         'files_extracted' => $numFiles,
         'passenger_restarted' => $restarted !== false,
+        'zip_purged' => !file_exists($zipFile),
+        'timestamp' => date('c'),
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($action === 'cleanup') {
+    $removed = [];
+    if (file_exists($zipFile)) {
+        if (@unlink($zipFile)) $removed[] = 'hostinger_deploy.zip';
+    }
+    foreach (glob($pubHtml . '/*.zip') as $f) {
+        if (@unlink($f)) $removed[] = basename($f);
+    }
+    echo json_encode([
+        'success' => true,
+        'message' => 'Limpeza de arquivos temporários e zips no servidor concluída!',
+        'removed' => $removed,
         'timestamp' => date('c'),
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     exit;

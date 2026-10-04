@@ -167,16 +167,42 @@ try {
   const result = await requestJson(triggerUrl);
 
   if (result.status === 200 && result.body && result.body.success) {
-    console.log("  ✅ Extração realizada com sucesso!");
+    console.log("  ✅ Extração realizada com sucesso no servidor!");
     console.log(`  📦 Arquivos atualizados: ${result.body.files_extracted}`);
     console.log(
       `  🔄 Passenger/Node.js reiniciado: ${result.body.passenger_restarted ? "SIM" : "OK"}`,
     );
+
+    // [5/5] Limpeza de arquivos temporários locais e remotos
+    console.log("\n🧹 [5/5] Executando higienização pós-deploy (removendo zips temporários)...");
+    
+    // 5.1 Limpeza remota
+    try {
+      const cleanUrl = `${APP_URL}/deploy_api.php?token=${DEPLOY_TOKEN}&action=cleanup`;
+      const cleanRes = await requestJson(cleanUrl);
+      if (cleanRes.status === 200 && cleanRes.body?.success) {
+        console.log("  ✅ Arquivo hostinger_deploy.zip removido do servidor com sucesso!");
+      }
+    } catch (cleanErr) {
+      console.warn("  ⚠️ Aviso ao solicitar limpeza remota:", cleanErr.message);
+    }
+
+    // 5.2 Limpeza local
+    if (fs.existsSync(zipPath)) {
+      fs.rmSync(zipPath, { force: true });
+      console.log("  ✅ Arquivo local hostinger_deploy.zip removido com sucesso!");
+    }
   } else {
     console.warn("  ⚠️ Resposta do deploy:", result.body || result.raw);
   }
 } catch (err) {
   console.error("  ⚠️ Aviso ao chamar trigger de extração:", err.message);
+} finally {
+  // Garantir que o zip local nunca permaneça no repositório
+  if (fs.existsSync(zipPath)) {
+    fs.rmSync(zipPath, { force: true });
+    console.log("  🧹 Limpeza de segurança: arquivo local hostinger_deploy.zip eliminado.");
+  }
 }
 
 // Verificação final do site
@@ -205,3 +231,4 @@ console.log("🎉 DEPLOY NA HOSTINGER FINALIZADO COM SUCESSO!");
 console.log(`⏱️  Tempo total de execução: ${totalTime}s`);
 console.log(`🔗 Aplicação online: ${APP_URL}`);
 console.log("====================================================");
+

@@ -221,19 +221,19 @@ function AssinaturaUniversalView({
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* Cabeçalho */}
+        {/* Cabeçalho Institucional Nexo */}
         <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-2">
-            <ShieldCheck className="h-4 w-4" />
-            Portal Seguro de Assinatura Eletrônica — Mídia OS
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 text-xs font-semibold mb-2">
+            <ShieldCheck className="h-4 w-4 text-sky-600" />
+            NEXO Mídia e Representação • Hub de Negócios & Soluções Estratégicas em Mídia
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {documento.titulo}
           </h1>
-          <p className="text-xs text-muted-foreground">
-            Documento {documento.numero || "S/N"} • Versão v{documento.versao} • Tipo:{" "}
-            {LABELS_DOCUMENTO_TIPO[documento.documento_tipo as keyof typeof LABELS_DOCUMENTO_TIPO] ||
-              documento.documento_tipo}
+          <p className="text-xs text-muted-foreground flex items-center justify-center gap-2 flex-wrap">
+            <span>Documento {documento.numero || "S/N"} • Versão v{documento.versao}</span>
+            <span>•</span>
+            <span className="text-primary font-medium">Mídia.OS • Plataforma Oficial de Inteligência Comercial</span>
           </p>
         </div>
 
@@ -544,6 +544,23 @@ function AssinaturaUniversalView({
             </CardContent>
           </Card>
         )}
+
+        <footer className="text-center text-xs text-muted-foreground pt-6 pb-4 space-y-1">
+          <p>
+            Operado por{" "}
+            <a
+              href="https://nexomidiaerepresentacao.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-primary hover:underline"
+            >
+              NEXO Mídia e Representação (nexomidiaerepresentacao.com.br)
+            </a>
+          </p>
+          <p className="text-[11px] opacity-75">
+            Hub de Negócios & Soluções Estratégicas em Mídia • Mídia.OS • Plataforma Oficial de Inteligência Comercial
+          </p>
+        </footer>
       </div>
     </div>
   );
@@ -759,6 +776,23 @@ function AssinarPiView({
             </CardContent>
           </Card>
         )}
+
+        <footer className="text-center text-xs text-muted-foreground pt-6 pb-4 space-y-1">
+          <p>
+            Operado por{" "}
+            <a
+              href="https://nexomidiaerepresentacao.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-primary hover:underline"
+            >
+              NEXO Mídia e Representação (nexomidiaerepresentacao.com.br)
+            </a>
+          </p>
+          <p className="text-[11px] opacity-75">
+            Hub de Negócios & Soluções Estratégicas em Mídia • Mídia.OS • Plataforma Oficial de Inteligência Comercial
+          </p>
+        </footer>
       </div>
     </div>
   );

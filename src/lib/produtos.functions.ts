@@ -36,6 +36,9 @@ const ProdutoSchema = z.object({
   cep: z.string().max(20).optional().nullable(),
   latitude: z.number().min(-90).max(90).optional().nullable(),
   longitude: z.number().min(-180).max(180).optional().nullable(),
+  link_maps: z.string().max(500).optional().nullable(),
+  sentido_via: z.string().max(150).optional().nullable(),
+  ponto_referencia: z.string().max(250).optional().nullable(),
   quantidade_telas: z.number().int().min(0).max(100000).optional().nullable(),
   ambientes: z.array(z.string().max(60)).default([]),
   formato_tela: z.string().max(120).optional().nullable(),
@@ -45,6 +48,11 @@ const ProdutoSchema = z.object({
   insercoes_por_hora: z.number().int().min(0).max(10000).optional().nullable(),
   horas_operacao_dia: z.number().int().min(0).max(24).optional().nullable(),
   detalhes_venda: z.string().max(2000).optional().nullable(),
+  canal_macro: z.enum(["OFF", "ON", "HIBRIDO"]).default("OFF").optional(),
+  origem_produto: z.enum(["PROPRIO", "PARCEIRO"]).default("PROPRIO").optional(),
+  organizacao_id: z.string().uuid().optional().nullable(),
+  plataforma_rede: z.string().max(120).optional().nullable(),
+  metricas_digitais: z.record(z.any()).optional().nullable(),
   parceiro_id: z.string().uuid().optional().nullable(),
   parceiro_cnpj: z.string().max(30).optional().nullable(),
   parceiro_nome: z.string().max(200).optional().nullable(),
@@ -53,6 +61,12 @@ const ProdutoSchema = z.object({
 });
 
 function normalizeProdutoRow(row: any) {
+  let canal_macro = row.canal_macro || "OFF";
+  let plataforma_rede = row.plataforma_rede || null;
+  let metricas_digitais = row.metricas_digitais || null;
+  let link_maps = row.link_maps || null;
+  let sentido_via = row.sentido_via || null;
+  let ponto_referencia = row.ponto_referencia || null;
   let parceiro_id = row.parceiro_id || null;
   let parceiro_cnpj = row.parceiro_cnpj || null;
   let parceiro_nome = row.parceiro_nome || null;
@@ -96,6 +110,24 @@ function normalizeProdutoRow(row: any) {
             .filter((f: any) => typeof f === "string" && f.trim().length > 0)
             .slice(0, 2);
         }
+        if (!row.canal_macro && parsed._canal_macro) {
+          canal_macro = parsed._canal_macro;
+        }
+        if (!row.plataforma_rede && parsed._plataforma_rede) {
+          plataforma_rede = parsed._plataforma_rede;
+        }
+        if (!row.metricas_digitais && parsed._metricas_digitais) {
+          metricas_digitais = parsed._metricas_digitais;
+        }
+        if (!row.link_maps && parsed._link_maps) {
+          link_maps = parsed._link_maps;
+        }
+        if (!row.sentido_via && parsed._sentido_via) {
+          sentido_via = parsed._sentido_via;
+        }
+        if (!row.ponto_referencia && parsed._ponto_referencia) {
+          ponto_referencia = parsed._ponto_referencia;
+        }
       }
     } catch {
       // ignora caso não seja JSON
@@ -107,8 +139,21 @@ function normalizeProdutoRow(row: any) {
     if (m) cep = m[0];
   }
 
+  let origem_produto = row.origem_produto;
+  if (!origem_produto) {
+    origem_produto = (parceiro_id || parceiro_cnpj || parceiro_nome) ? "PARCEIRO" : "PROPRIO";
+  }
+
   return {
     ...row,
+    origem_produto: (origem_produto || "PROPRIO") as "PROPRIO" | "PARCEIRO",
+    organizacao_id: row.organizacao_id || null,
+    canal_macro: (canal_macro || "OFF") as "OFF" | "ON" | "HIBRIDO",
+    plataforma_rede: plataforma_rede ? String(plataforma_rede).trim() : null,
+    metricas_digitais: metricas_digitais || null,
+    link_maps: link_maps ? String(link_maps).trim() : null,
+    sentido_via: sentido_via ? String(sentido_via).trim() : null,
+    ponto_referencia: ponto_referencia ? String(ponto_referencia).trim() : null,
     cep: cep ? String(cep).trim() : null,
     parceiro_id: parceiro_id || null,
     parceiro_cnpj: parceiro_cnpj ? String(parceiro_cnpj).trim() : null,
@@ -124,24 +169,60 @@ function normalizeProdutoRow(row: any) {
 export const listProdutos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // 1. Obter tenant_id do usuário logado para isolamento estrito
+    // 1. Obter tenant_id e organizacao_id do perfil do usuário logado
     const { data: prof } = await context.supabase
       .from("profiles")
-      .select("tenant_id")
+      .select("id, email, tenant_id, organizacao_id")
       .eq("id", context.userId)
       .maybeSingle();
-    const tenantId = prof?.tenant_id;
 
-    let query = context.supabase.from("produtos").select("*");
+    const tenantId = prof?.tenant_id || null;
+    let userOrgId = prof?.organizacao_id || null;
+    const userEmail = (prof?.email || "").toLowerCase();
 
-    // Filtra pelo tenant do usuário caso exista
-    if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
+    // Auto-identificação da organização Nexo caso organizacao_id ainda não esteja salvo no perfil
+    if (!userOrgId && (userEmail.includes("nexo") || userEmail.includes("rafaelnexomidia@gmail.com"))) {
+      try {
+        const { data: nexoOrg } = await (context.supabase.from("organizacoes") as any)
+          .select("id")
+          .eq("slug", "nexo")
+          .maybeSingle();
+        if (nexoOrg) userOrgId = nexoOrg.id;
+      } catch {
+        /* ignore */
+      }
     }
 
+    let query = (context.supabase.from("produtos") as any).select("*");
     const { data, error } = await query.order("midia").order("nome");
     if (error) throw new Error(error.message);
-    return (data ?? []).map(normalizeProdutoRow);
+
+    const rows = (data ?? []).map(normalizeProdutoRow);
+
+    // O super-administrador global tem visibilidade irrestrita
+    const isSuperAdminUser = userEmail === "rafaelrodrigo.as@gmail.com";
+    if (isSuperAdminUser) {
+      return rows;
+    }
+
+    // REGRA DE SEGURANÇA MULTI-TENANT:
+    // - PROPRIO: visível APENAS se o organizacao_id for idêntico ao do usuário logado (ou mesmo tenant_id)
+    // - PARCEIRO: veículos parceiros homologados compartilhados para montagem de planos
+    return rows.filter((p) => {
+      const origem = p.origem_produto || (p.parceiro_id || p.parceiro_nome || p.parceiro_cnpj ? "PARCEIRO" : "PROPRIO");
+      if (origem === "PROPRIO") {
+        if (userOrgId && p.organizacao_id) {
+          return p.organizacao_id === userOrgId;
+        }
+        if (tenantId && p.tenant_id) {
+          return p.tenant_id === tenantId;
+        }
+        // Se o usuário não tem organização e o produto é próprio, não exibe
+        return false;
+      }
+      // Produtos de veículos parceiros homologados são visíveis para planejamento comercial
+      return true;
+    });
   });
 
 export const upsertProduto = createServerFn({ method: "POST" })
@@ -150,10 +231,18 @@ export const upsertProduto = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: prof } = await context.supabase
       .from("profiles")
-      .select("tenant_id")
+      .select("id, email, tenant_id, organizacao_id")
       .eq("id", context.userId)
       .maybeSingle();
     const tenantId = prof?.tenant_id;
+    let userOrgId = prof?.organizacao_id || null;
+    const userEmail = (prof?.email || "").toLowerCase();
+    if (!userOrgId && (userEmail.includes("nexo") || userEmail.includes("rafaelnexomidia@gmail.com"))) {
+      try {
+        const { data: nexoOrg } = await (context.supabase.from("organizacoes") as any).select("id").eq("slug", "nexo").maybeSingle();
+        if (nexoOrg) userOrgId = nexoOrg.id;
+      } catch {}
+    }
 
     const parceiroId = data.parceiro_id || null;
     const parceiroCnpj = data.parceiro_cnpj ? data.parceiro_cnpj.trim() : null;
@@ -163,12 +252,31 @@ export const upsertProduto = createServerFn({ method: "POST" })
         ? Number(data.comissao_inquilino_pct)
         : null;
     const cep = data.cep ? data.cep.trim() : null;
+    const canalMacro = data.canal_macro || "OFF";
+    const plataformaRede = data.plataforma_rede ? data.plataforma_rede.trim() : null;
+    const metricasDigitais = data.metricas_digitais || null;
+    const linkMaps = data.link_maps ? data.link_maps.trim() : null;
+    const sentidoVia = data.sentido_via ? data.sentido_via.trim() : null;
+    const pontoReferencia = data.ponto_referencia ? data.ponto_referencia.trim() : null;
     const fotos = Array.isArray(data.fotos)
       ? data.fotos.filter((f: any) => typeof f === "string" && f.trim().length > 0).slice(0, 2)
       : [];
 
+    let origemProduto = data.origem_produto;
+    if (!origemProduto) {
+      origemProduto = (parceiroId || parceiroCnpj || parceiroNome) ? "PARCEIRO" : "PROPRIO";
+    }
+
     let payload: any = {
       ...data,
+      origem_produto: origemProduto,
+      organizacao_id: userOrgId || data.organizacao_id || null,
+      canal_macro: canalMacro,
+      plataforma_rede: plataformaRede,
+      metricas_digitais: metricasDigitais,
+      link_maps: linkMaps,
+      sentido_via: sentidoVia,
+      ponto_referencia: pontoReferencia,
       created_by: context.userId,
       ...(tenantId ? { tenant_id: tenantId } : {}),
       parceiro_id: parceiroId,
@@ -179,20 +287,32 @@ export const upsertProduto = createServerFn({ method: "POST" })
       fotos: fotos,
     };
 
-    // Tenta salvar com as colunas dedicadas parceiro_*, comissao_inquilino_pct, cep e fotos
+    // Tenta salvar com as colunas dedicadas
     let q = data.id
       ? context.supabase.from("produtos").update(payload).eq("id", data.id).select().single()
       : context.supabase.from("produtos").insert(payload).select().single();
     let res = await q;
 
-    // Se as colunas parceiro_*, comissao_inquilino_pct, cep ou fotos ainda não existirem na tabela SQL do Supabase:
+    // Se as colunas adicionais ainda não existirem na tabela SQL do Supabase:
     if (
       res.error &&
       (res.error.message.toLowerCase().includes("parceiro") ||
         res.error.message.toLowerCase().includes("cep") ||
         res.error.message.toLowerCase().includes("comissao") ||
-        res.error.message.toLowerCase().includes("foto"))
+        res.error.message.toLowerCase().includes("foto") ||
+        res.error.message.toLowerCase().includes("canal_macro") ||
+        res.error.message.toLowerCase().includes("plataforma") ||
+        res.error.message.toLowerCase().includes("metricas") ||
+        res.error.message.toLowerCase().includes("link_maps") ||
+        res.error.message.toLowerCase().includes("sentido_via") ||
+        res.error.message.toLowerCase().includes("ponto_referencia"))
     ) {
+      delete payload.canal_macro;
+      delete payload.plataforma_rede;
+      delete payload.metricas_digitais;
+      delete payload.link_maps;
+      delete payload.sentido_via;
+      delete payload.ponto_referencia;
       delete payload.parceiro_id;
       delete payload.parceiro_cnpj;
       delete payload.parceiro_nome;
@@ -210,6 +330,12 @@ export const upsertProduto = createServerFn({ method: "POST" })
           metaObj = { _texto: payload.detalhes_venda };
         }
       }
+      metaObj._canal_macro = canalMacro;
+      if (plataformaRede) metaObj._plataforma_rede = plataformaRede;
+      if (metricasDigitais) metaObj._metricas_digitais = metricasDigitais;
+      if (linkMaps) metaObj._link_maps = linkMaps;
+      if (sentidoVia) metaObj._sentido_via = sentidoVia;
+      if (pontoReferencia) metaObj._ponto_referencia = pontoReferencia;
       if (parceiroId) metaObj._parceiro_id = parceiroId;
       metaObj._parceiro = parceiroCnpj ? { cnpj: parceiroCnpj, nome: parceiroNome } : null;
       if (comissaoInquilinoPct !== null) metaObj._comissao_inquilino_pct = comissaoInquilinoPct;
@@ -317,7 +443,7 @@ export const upsertProdutoTipo = createServerFn({ method: "POST" })
       .object({
         id: z.string().uuid().optional(),
         nome: z.string().min(1).max(100),
-        midia: z.enum(["TV", "Radio", "DOOH"]),
+        midia: z.string().min(1).max(100),
       })
       .parse(d),
   )
@@ -385,12 +511,12 @@ export const importProdutosBulk = createServerFn({ method: "POST" })
     const tenantId = prof?.tenant_id;
 
     // Registra novos tipos detectados na planilha para este inquilino
-    const uniqueTipos = new Map<string, { nome: string; midia: "TV" | "Radio" | "DOOH" }>();
+    const uniqueTipos = new Map<string, { nome: string; midia: string }>();
     for (const p of data.produtos) {
       if (p.tipo && p.tipo.trim() && p.midia) {
         const key = `${p.midia}:${p.tipo.trim().toLowerCase()}`;
         if (!uniqueTipos.has(key)) {
-          uniqueTipos.set(key, { nome: p.tipo.trim(), midia: p.midia as any });
+          uniqueTipos.set(key, { nome: p.tipo.trim(), midia: p.midia });
         }
       }
     }

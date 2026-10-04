@@ -25,6 +25,9 @@ import {
   Copy,
   Handshake,
   Building2,
+  MapPin,
+  ExternalLink,
+  Navigation,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -77,6 +80,16 @@ export type CalcItemOut = {
   parceiro_nome?: string | null;
   parceiro_cnpj?: string | null;
   comissao_inquilino_pct?: number | null;
+  canal_macro?: "OFF" | "ON" | "HIBRIDO" | null;
+  plataforma_rede?: string | null;
+  metricas_digitais?: Record<string, any> | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  link_maps?: string | null;
+  sentido_via?: string | null;
+  ponto_referencia?: string | null;
+  endereco_ponto?: string | null;
+  fluxo_veiculos_dia?: number | null;
 };
 
 export type CalcTotals = {
@@ -122,6 +135,16 @@ type Item = {
   parceiroNome?: string | null;
   parceiroCnpj?: string | null;
   comissaoInquilinoPct?: number | null;
+  canalMacro?: "OFF" | "ON" | "HIBRIDO" | null;
+  plataformaRede?: string | null;
+  metricasDigitais?: Record<string, any> | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  linkMaps?: string | null;
+  sentidoVia?: string | null;
+  pontoReferencia?: string | null;
+  enderecoPonto?: string | null;
+  fluxoVeiculosDia?: number | null;
 };
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -148,6 +171,16 @@ const newItem = (mes: number | null, ano: number | null): Item => ({
   parceiroNome: null,
   parceiroCnpj: null,
   comissaoInquilinoPct: null,
+  canalMacro: "OFF",
+  plataformaRede: null,
+  metricasDigitais: null,
+  latitude: null,
+  longitude: null,
+  linkMaps: null,
+  sentidoVia: null,
+  pontoReferencia: null,
+  enderecoPonto: null,
+  fluxoVeiculosDia: null,
 });
 
 function totalInsercoesItem(it: Item): number {
@@ -304,6 +337,16 @@ export function PriceCalculator({
         parceiroNome: (it as any).parceiro_nome || matchedInit?.parceiro_nome || null,
         parceiroCnpj: (it as any).parceiro_cnpj || matchedInit?.parceiro_cnpj || null,
         comissaoInquilinoPct: (it as any).comissao_inquilino_pct ?? matchedInit?.comissao_inquilino_pct ?? null,
+        canalMacro: (it as any).canal_macro ?? (matchedInit as any)?.canal_macro ?? "OFF",
+        plataformaRede: (it as any).plataforma_rede ?? (matchedInit as any)?.plataforma_rede ?? null,
+        metricasDigitais: (it as any).metricas_digitais ?? (matchedInit as any)?.metricas_digitais ?? null,
+        latitude: (it as any).latitude ?? (matchedInit as any)?.latitude ?? ((matchedInit as any)?.detalhes_venda?._latitude != null ? Number((matchedInit as any)?.detalhes_venda?._latitude) : null),
+        longitude: (it as any).longitude ?? (matchedInit as any)?.longitude ?? ((matchedInit as any)?.detalhes_venda?._longitude != null ? Number((matchedInit as any)?.detalhes_venda?._longitude) : null),
+        linkMaps: (it as any).link_maps || (matchedInit as any)?.link_maps || (matchedInit as any)?.detalhes_venda?._link_maps || null,
+        sentidoVia: (it as any).sentido_via || (matchedInit as any)?.sentido_via || (matchedInit as any)?.detalhes_venda?._sentido_via || null,
+        pontoReferencia: (it as any).ponto_referencia || (matchedInit as any)?.ponto_referencia || (matchedInit as any)?.detalhes_venda?._ponto_referencia || null,
+        enderecoPonto: (it as any).endereco_ponto || (matchedInit as any)?.endereco_ponto || null,
+        fluxoVeiculosDia: (it as any).fluxo_veiculos_dia ?? (matchedInit as any)?.detalhes_venda?.fluxo_veiculos_dia ?? (matchedInit as any)?.detalhes_venda?.fluxo_diario ?? null,
       };
     });
   };
@@ -364,6 +407,17 @@ export function PriceCalculator({
             next.parceiroNome = dbMatch.parceiro_nome || null;
             next.parceiroCnpj = dbMatch.parceiro_cnpj || null;
             next.comissaoInquilinoPct = dbMatch.comissao_inquilino_pct ?? null;
+            next.canalMacro = dbMatch.canal_macro ?? "OFF";
+            next.plataformaRede = dbMatch.plataforma_rede ?? null;
+            next.metricasDigitais = dbMatch.metricas_digitais ?? null;
+            const dv = dbMatch.detalhes_venda || {};
+            next.latitude = dbMatch.latitude ?? (dv._latitude != null ? Number(dv._latitude) : null);
+            next.longitude = dbMatch.longitude ?? (dv._longitude != null ? Number(dv._longitude) : null);
+            next.linkMaps = dbMatch.link_maps || dv._link_maps || (next.latitude && next.longitude ? `https://www.google.com/maps?q=${next.latitude},${next.longitude}` : null);
+            next.sentidoVia = dbMatch.sentido_via || dv._sentido_via || null;
+            next.pontoReferencia = dbMatch.ponto_referencia || dv._ponto_referencia || null;
+            next.enderecoPonto = dbMatch.endereco_ponto || null;
+            next.fluxoVeiculosDia = dv.fluxo_veiculos_dia ?? dv.fluxo_diario ?? dv.impactos_dia ?? null;
             if (
               it.mes != null &&
               it.ano != null &&
@@ -392,6 +446,13 @@ export function PriceCalculator({
             next.parceiroNome = null;
             next.parceiroCnpj = null;
             next.comissaoInquilinoPct = null;
+            next.latitude = null;
+            next.longitude = null;
+            next.linkMaps = null;
+            next.sentidoVia = null;
+            next.pontoReferencia = null;
+            next.enderecoPonto = null;
+            next.fluxoVeiculosDia = null;
             const row =
               next.programa && next.formato
                 ? findPrice(next.tipo as any, next.programa, next.formato)
@@ -650,6 +711,16 @@ export function PriceCalculator({
             parceiro_nome: it.parceiroNome || null,
             parceiro_cnpj: it.parceiroCnpj || null,
             comissao_inquilino_pct: it.comissaoInquilinoPct ?? null,
+            canal_macro: it.canalMacro ?? "OFF",
+            plataforma_rede: it.plataformaRede ?? null,
+            metricas_digitais: it.metricasDigitais ?? null,
+            latitude: it.latitude ?? null,
+            longitude: it.longitude ?? null,
+            link_maps: it.linkMaps ?? null,
+            sentido_via: it.sentidoVia ?? null,
+            ponto_referencia: it.pontoReferencia ?? null,
+            endereco_ponto: it.enderecoPonto ?? null,
+            fluxo_veiculos_dia: it.fluxoVeiculosDia ?? null,
           };
         });
       }),
@@ -1317,9 +1388,9 @@ function ItemRow({
       if (!progName) continue;
       if (item.tipo && normalize(p.tipo) !== itemTipoNorm) continue;
       if (p.parceiro_nome) {
-        map[progName] = `🤝 Parceiro: ${p.parceiro_nome}${p.parceiro_cnpj ? ` • CNPJ: ${p.parceiro_cnpj}` : ""}`;
+        map[progName] = `🤝 B) Representado: ${p.parceiro_nome}${p.parceiro_cnpj ? ` • CNPJ: ${p.parceiro_cnpj}` : ""}`;
       } else {
-        map[progName] = "🏢 Inventário Próprio";
+        map[progName] = "⭐ A) Soluções Próprias Nexo (In-House Hub)";
       }
     }
     return map;
@@ -1508,40 +1579,138 @@ function ItemRow({
         />
       </div>
 
+      {/* Informações do Canal Macro (Mídia OFF / Mídia ON / Híbrido 360°) */}
+      {item.programa && (
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg border text-xs bg-muted/20">
+          <div className="flex items-center gap-2 flex-wrap">
+            {((matchedProduto?.canal_macro === "ON" || item.canalMacro === "ON")) ? (
+              <Badge variant="outline" className="border-sky-400 bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 font-semibold text-[11px] gap-1">
+                🌐 Mídia ON (Digital)
+                {(matchedProduto?.plataforma_rede || item.plataformaRede) && (
+                  <span>• {matchedProduto?.plataforma_rede || item.plataformaRede}</span>
+                )}
+              </Badge>
+            ) : (matchedProduto?.canal_macro === "HIBRIDO" || item.canalMacro === "HIBRIDO") ? (
+              <Badge variant="outline" className="border-purple-400 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 font-semibold text-[11px] gap-1">
+                ⚡ Híbrido 360° (Phygital)
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="border-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] gap-1">
+                📻 Mídia OFF (Física / Tradicional)
+              </Badge>
+            )}
+            {(matchedProduto?.metricas_digitais?.formato_digital || matchedProduto?.metricas_digitais?.tipo_equipamento) && (
+              <span className="text-muted-foreground text-[11px]">
+                {matchedProduto?.metricas_digitais?.formato_digital || matchedProduto?.metricas_digitais?.tipo_equipamento}
+              </span>
+            )}
+          </div>
+          {(matchedProduto?.metricas_digitais?.cpm_estimado != null || matchedProduto?.metricas_digitais?.impressoes_estimadas != null) && (
+            <span className="text-[11px] font-mono text-muted-foreground">
+              {matchedProduto?.metricas_digitais?.cpm_estimado ? `CPM R$ ${matchedProduto.metricas_digitais.cpm_estimado}` : ""}
+              {matchedProduto?.metricas_digitais?.impressoes_estimadas ? ` • ${Number(matchedProduto.metricas_digitais.impressoes_estimadas).toLocaleString()} impr.` : ""}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Informações do Parceiro Fornecedor do Produto */}
       {(matchedProduto?.parceiro_nome || item.parceiroNome) ? (
-        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-950 dark:text-emerald-200">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-950 dark:text-purple-200">
           <div className="flex items-center gap-2.5">
             <span className="text-xl">🤝</span>
             <div>
-              <div className="font-semibold text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2 flex-wrap">
-                <span>Parceiro Fornecedor:</span>
-                <span className="font-bold underline decoration-emerald-500/50">
+              <div className="font-semibold text-xs text-purple-900 dark:text-purple-200 flex items-center gap-2 flex-wrap">
+                <Badge className="bg-purple-600 text-white border-0 text-[10px] font-bold py-0">
+                  B) VEÍCULO REPRESENTADO (Rede Homologada)
+                </Badge>
+                <span className="font-bold underline decoration-purple-500/50">
                   {matchedProduto?.parceiro_nome || item.parceiroNome}
                 </span>
                 {(matchedProduto?.parceiro_cnpj || item.parceiroCnpj) && (
-                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-medium">
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-800 dark:text-purple-300 font-medium">
                     CNPJ: {matchedProduto?.parceiro_cnpj || item.parceiroCnpj}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
-                Produto comercializado em parceria. Vinculado ao CNPJ do fornecedor para proposta, faturamento e prestação de contas.
+              <p className="text-[11px] text-purple-700 dark:text-purple-400 mt-0.5">
+                Espaço comercializado via veículo homologado Nexo. Faturamento e veiculação vinculados ao parceiro.
               </p>
             </div>
           </div>
           {(matchedProduto?.comissao_inquilino_pct != null || item.comissaoInquilinoPct != null) && (
-            <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs shrink-0 py-1">
-              Remuneração: {matchedProduto?.comissao_inquilino_pct ?? item.comissaoInquilinoPct}%
+            <Badge variant="outline" className="border-purple-500/40 bg-purple-500/10 text-purple-700 dark:text-purple-300 text-xs shrink-0 py-1">
+              Remuneração Hub: {matchedProduto?.comissao_inquilino_pct ?? item.comissaoInquilinoPct}%
             </Badge>
           )}
         </div>
       ) : item.programa ? (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 border border-border/50 text-muted-foreground text-xs">
-          <span>🏢</span>
-          <span><strong>Inventário Próprio:</strong> Produto da grade própria do veículo / emissora (sem intermediação de parceiro externo).</span>
+        <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-950 dark:text-sky-200 text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline" className="border-sky-500/60 bg-sky-50 dark:bg-sky-950/50 text-sky-900 dark:text-sky-200 text-[10px] py-0.5 font-bold">
+              ⭐ A) SOLUÇÃO PRÓPRIA NEXO (In-House Hub)
+            </Badge>
+            <span className="text-sky-800 dark:text-sky-300 text-[11px]">
+              Planejamento Estratégico 360° • Produção Criativa • Ativação Direta Hub Nexo
+            </span>
+          </div>
         </div>
       ) : null}
+
+      {/* Geolocalização / Mídia Exterior OOH/DOOH */}
+      {(item.linkMaps ||
+        item.latitude ||
+        item.sentidoVia ||
+        item.pontoReferencia ||
+        item.fluxoVeiculosDia ||
+        matchedProduto?.latitude ||
+        matchedProduto?.link_maps ||
+        matchedProduto?.sentido_via ||
+        matchedProduto?.ponto_referencia) && (
+        <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-950 dark:text-sky-200">
+          <div className="flex items-center gap-2 flex-wrap text-xs">
+            <span className="text-base">📍</span>
+            {(item.sentidoVia || matchedProduto?.sentido_via) && (
+              <span className="font-semibold text-sky-900 dark:text-sky-200 flex items-center gap-1">
+                <Navigation className="size-3 text-sky-600 dark:text-sky-400 rotate-45" />
+                Sentido: {item.sentidoVia || matchedProduto?.sentido_via}
+              </span>
+            )}
+            {(item.pontoReferencia || matchedProduto?.ponto_referencia) && (
+              <span className="text-sky-800 dark:text-sky-300">
+                • Ref: {item.pontoReferencia || matchedProduto?.ponto_referencia}
+              </span>
+            )}
+            {(item.fluxoVeiculosDia || matchedProduto?.detalhes_venda?.fluxo_veiculos_dia) && (
+              <Badge variant="outline" className="border-sky-500/40 bg-sky-500/20 text-sky-800 dark:text-sky-200 text-[10px] h-5 py-0 px-2 font-medium">
+                🚗 {Number(item.fluxoVeiculosDia || matchedProduto?.detalhes_venda?.fluxo_veiculos_dia).toLocaleString("pt-BR")} veíc/dia
+              </Badge>
+            )}
+            {(item.latitude && item.longitude) && (
+              <span className="font-mono text-[10px] text-muted-foreground">
+                ({item.latitude.toFixed(4)}, {item.longitude.toFixed(4)})
+              </span>
+            )}
+          </div>
+          {(item.linkMaps || (item.latitude && item.longitude) || matchedProduto?.link_maps || (matchedProduto?.latitude && matchedProduto?.longitude)) && (
+            <a
+              href={
+                item.linkMaps ||
+                (item.latitude && item.longitude ? `https://www.google.com/maps?q=${item.latitude},${item.longitude}` : "") ||
+                matchedProduto?.link_maps ||
+                (matchedProduto?.latitude && matchedProduto?.longitude ? `https://www.google.com/maps?q=${matchedProduto.latitude},${matchedProduto.longitude}` : "#")
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 hover:underline shrink-0 bg-sky-100 dark:bg-sky-900/40 px-2.5 py-1 rounded-md border border-sky-300 dark:border-sky-700"
+            >
+              <MapPin className="size-3.5 text-red-500" />
+              <span>Ver no Maps / Street View</span>
+              <ExternalLink className="size-3 opacity-70" />
+            </a>
+          )}
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-4 gap-3">
         <div className="space-y-1.5">

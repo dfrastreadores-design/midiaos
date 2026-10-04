@@ -7,6 +7,7 @@ import { applyTrialWatermark } from "@/lib/trial-watermark";
 import jsPDF from "jspdf";
 import autoTable, { type UserOptions } from "jspdf-autotable";
 import type { SlideTemplateItem, MapeamentoTemplateConfig } from "@/lib/layouts.functions";
+import { type TemplatePropostaConfig, DEFAULT_NEXO_TEMPLATE_CONFIG } from "@/lib/organizacoes.functions";
 
 import tplSlide1 from "@/assets/proposta-template/hslide-1.jpg";
 import tplSlide2 from "@/assets/proposta-template/hslide-2.jpg";
@@ -55,6 +56,14 @@ type Item = {
   parceiro_nome?: string | null;
   parceiro_cnpj?: string | null;
   comissao_inquilino_pct?: number | null;
+  canal_macro?: "OFF" | "ON" | "HIBRIDO" | null;
+  plataforma_rede?: string | null;
+  metricas_digitais?: Record<string, any> | null;
+  link_maps?: string | null;
+  sentido_via?: string | null;
+  ponto_referencia?: string | null;
+  fluxo_veiculos_dia?: number | null;
+  tipo_origem?: string | null;
 };
 
 const MESES_BR = [
@@ -125,12 +134,33 @@ function detalhesProduto(it: Item, opts?: { mostrarEndereco?: boolean }): string
     partes.push(`🤝 Parceiro: ${it.parceiro_nome}${it.parceiro_cnpj ? ` (${it.parceiro_cnpj})` : ""}`);
   }
 
+  if (it.canal_macro === "ON") {
+    partes.push(`🌐 Mídia ON${it.plataforma_rede ? ` (${it.plataforma_rede})` : ""}`);
+  } else if (it.canal_macro === "HIBRIDO") {
+    partes.push(`⚡ 360° Phygital`);
+  }
+
   const showEnd = opts?.mostrarEndereco !== false;
-  if (showEnd && it.endereco_ponto) {
+  if (showEnd && it.ponto_referencia) {
+    partes.push(`📍 Ref: ${it.ponto_referencia}`);
+  } else if (showEnd && it.endereco_ponto) {
     partes.push(`📍 ${it.endereco_ponto}`);
+  }
+  if (showEnd && it.sentido_via) {
+    partes.push(`🛣️ Sentido: ${it.sentido_via}`);
+  }
+  if (showEnd && it.fluxo_veiculos_dia) {
+    partes.push(`🚗 Fluxo: ${Number(it.fluxo_veiculos_dia).toLocaleString("pt-BR")} veíc/dia`);
   }
   if (showEnd && it.latitude && it.longitude) {
     partes.push(`🌐 GPS: ${it.latitude.toFixed(4)}, ${it.longitude.toFixed(4)}`);
+  }
+  if ((it as any).tipo_origem === "oportunidade_mapeamento" || it.programa?.includes("Mapeamento") || it.programa?.includes("Reserva")) {
+    partes.push(`⭐ Oportunidade em Mapeamento / Reserva Técnica`);
+  } else if ((it as any).tipo_origem === "transbordamento_radar") {
+    partes.push(`📡 Transbordamento Troncal`);
+  } else if ((it as any).tipo_origem === "confirmado") {
+    partes.push(`✅ Ponto Confirmado`);
   }
   return partes.join(" · ");
 }
@@ -169,6 +199,18 @@ export type PropostaApresentacao = {
     telefone?: string | null;
     cargo?: string | null;
   };
+  organizacao?: {
+    id?: string | null;
+    nome?: string;
+    slug?: string;
+    site_url?: string | null;
+    logo_url?: string | null;
+    tagline?: string | null;
+    termos_proposta?: string | null;
+    cor_primaria?: string | null;
+    isNexo?: boolean;
+    templateConfig?: TemplatePropostaConfig | null;
+  } | null;
   itens?: Item[];
 };
 
@@ -2766,7 +2808,22 @@ export async function gerarPdfProposta(
     });
   }
 
+  const org = (p as any).organizacao;
+  const isNexo = org?.isNexo || org?.slug === "nexo" || org?.nome?.toLowerCase().includes("nexo");
+
   const rodapeY = H - 14;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(100);
+  doc.text(
+    isNexo
+      ? "Desenvolvido e operado por Nexo Mídia e Representação (nexomidiaerepresentacao.com.br)"
+      : "Mídia.OS · Sistema Integrado de Gestão Comercial e Mídia 360°",
+    15,
+    rodapeY,
+    { align: "left" },
+  );
+
   if (p.validade || p.created_at) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
@@ -2805,24 +2862,63 @@ export async function gerarPdfPropostaSimplificada(
   const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
   const logoData = await logoToDataUrl(logoUrl);
 
-  // Cores
-  const COR_NAVY = [15, 23, 42]; // Azul escuro
-  const COR_PRIMARY = [59, 130, 246]; // Azul MidiaOS
+  // Cores Dinâmicas e Configuração de Template
+  const org = (p as any).organizacao;
+  const isNexo = org?.isNexo || org?.slug === "nexo" || org?.nome?.toLowerCase().includes("nexo");
+  const templateConfig: TemplatePropostaConfig | undefined = org?.templateConfig || (isNexo ? DEFAULT_NEXO_TEMPLATE_CONFIG : undefined);
+
+  const hexToRgb = (hex?: string | null, def: [number, number, number] = [15, 23, 42]): [number, number, number] => {
+    if (!hex) return def;
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : def;
+  };
+
+  const COR_NAVY = hexToRgb(templateConfig?.cor_fundo_capa, [11, 12, 16]); // Fundo capa ou escuro executivo (#0b0c10)
+  const COR_PRIMARY = hexToRgb(templateConfig?.cor_destaque_primaria, isNexo ? [255, 107, 0] : [59, 130, 246]); // Laranja Nexo (#ff6b00) ou Azul
+  const COR_SECONDARY = hexToRgb(templateConfig?.cor_destaque_secundaria, isNexo ? [121, 40, 202] : [76, 29, 149]); // Roxo Nexo (#7928ca)
   const COR_BG_LIGHT = [248, 250, 252];
 
-  // 1. Header (Logo + Título)
+  const emissorNome = org?.nome || (isNexo ? "NEXO MÍDIA E REPRESENTAÇÃO" : "Mídia.OS");
+  const emissorTagline = org?.tagline || (isNexo ? "Hub de Negócios & Soluções Estratégicas em Mídia" : "Sistema Integrado de Gestão Comercial e Mídia 360°");
+  const emissorSite = templateConfig?.site_url || org?.site_url || (isNexo ? "https://nexomidiaerepresentacao.com.br" : "");
+  const emissorTelefone = templateConfig?.telefone_contato || (isNexo ? "(61) 99125-7245" : "");
+  const emissorEmail = templateConfig?.email_contato || (isNexo ? "rafaelnexomidia@gmail.com" : "");
+  const emissorInstagram = templateConfig?.instagram_contato || (isNexo ? "nexobrasilmidia" : "");
+  const manifestoTitulo = templateConfig?.manifesto_titulo || (isNexo ? "O significado de Nexo" : "Sobre a Estratégia");
+  const manifestoTexto = templateConfig?.manifesto_texto || (isNexo
+    ? "No dicionário, nexo significa conexão, ligação, vínculo entre partes. No mercado de comunicação do Distrito Federal e entorno, a Nexo Mídia e Representação é a ponte estratégica que une marcas, veículos de alto impacto e consumidores em momentos decisivos da sua jornada diária."
+    : (org?.termos_proposta || "Nossa estratégia é especializada em conectar marcas e negócios locais ao seu público de interesse no exato instante de maior predisposição ao consumo. Unimos inteligência geográfica e pontos de alto impacto."));
+
+  // 1. Header (Logo + Título Emissor + Contatos)
   if (logoData) {
     try {
       doc.addImage(logoData, "PNG", 15, 15, 40, 25, undefined, "FAST");
     } catch {
-      doc.setFontSize(22);
+      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.text(clienteNome.slice(0, 15), 15, 25);
     }
+  } else if (isNexo || templateConfig) {
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(COR_NAVY[0], COR_NAVY[1], COR_NAVY[2]);
+    doc.text(emissorNome.toUpperCase(), 15, 20);
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(emissorTagline, 15, 25);
+    doc.setFontSize(7);
+    doc.setTextColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
+    const contatosHeader = [
+      emissorSite ? emissorSite.replace(/^https?:\/\//, "") : "",
+      emissorInstagram ? `@${emissorInstagram.replace(/^@/, "")}` : "",
+      emissorTelefone,
+    ].filter(Boolean).join("  •  ");
+    doc.text(contatosHeader, 15, 30);
   } else {
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text("MÍDIA.OS", 15, 25);
+    doc.text(emissorNome, 15, 25);
   }
 
   doc.setFillColor(COR_NAVY[0], COR_NAVY[1], COR_NAVY[2]);
@@ -2862,18 +2958,19 @@ export async function gerarPdfPropostaSimplificada(
   // 3. Seções Institucionais
   let y = 70;
 
-  // Sobre a Empresa
+  // Manifesto / Sobre a Estratégia
   doc.setFillColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
   doc.rect(15, y, 2, 6, "F");
   doc.setFontSize(12);
-  doc.text("1. SOBRE A ESTRATÉGIA", 20, y + 5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0);
+  doc.text(`1. ${manifestoTitulo.toUpperCase()}`, 20, y + 5);
   y += 10;
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setFont("helvetica", "normal");
-  const sobreTxt =
-    "Nossa estratégia é especializada em conectar marcas e negócios locais ao seu público de interesse no exato instante de maior predisposição ao consumo. Unimos inteligência geográfica e pontos de alto impacto.";
-  doc.text(doc.splitTextToSize(sobreTxt, W - 30), 15, y);
-  y += 15;
+  doc.setTextColor(30);
+  doc.text(doc.splitTextToSize(manifestoTexto, W - 30), 15, y);
+  y += 16;
 
   // Defesa Técnica
   doc.setFillColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
@@ -2960,9 +3057,29 @@ export async function gerarPdfPropostaSimplificada(
     : [["CÓD.", "FORMATO", "LOCALIZAÇÃO & ENDEREÇO", "INSERÇÕES", "VALOR MENSAL"]];
 
   const tableBody = (p.itens || []).map((it, i) => {
-    let locStr = it.programa || "Ponto Estratégico";
-    if (mostrarEnd && it.endereco_ponto) {
+    const isRadarOportunidade =
+      it.programa?.toLowerCase().includes("mapeamento") ||
+      it.programa?.toLowerCase().includes("reserva") ||
+      (it as any).tipo_origem === "oportunidade_mapeamento";
+    const isTransbordamento = (it as any).tipo_origem === "transbordamento_radar";
+
+    const statusTag = isRadarOportunidade
+      ? " [⭐ Oportunidade / Reserva]"
+      : isTransbordamento
+        ? " [📡 Transbordamento]"
+        : " [✅ Confirmado]";
+
+    let locStr = `${it.programa || "Ponto Estratégico"}${statusTag}`;
+    if (mostrarEnd && it.ponto_referencia) {
+      locStr += `\n📍 Ref: ${it.ponto_referencia}`;
+    } else if (mostrarEnd && it.endereco_ponto) {
       locStr += `\n📍 ${it.endereco_ponto}`;
+    }
+    if (mostrarEnd && it.sentido_via) {
+      locStr += `\n🛣️ Sentido: ${it.sentido_via}`;
+    }
+    if (mostrarEnd && it.fluxo_veiculos_dia) {
+      locStr += `\n🚗 Fluxo: ${Number(it.fluxo_veiculos_dia).toLocaleString("pt-BR")} veíc/dia`;
     }
     if (mostrarEnd && it.latitude && it.longitude) {
       locStr += `\n🌐 GPS: ${it.latitude}, ${it.longitude}`;
@@ -2970,7 +3087,7 @@ export async function gerarPdfPropostaSimplificada(
 
     if (isPacoteMidia) {
       let linkLabel = "";
-      if (it.latitude && it.longitude) linkLabel += "🗺️ Ver no Mapa";
+      if (it.link_maps || (it.latitude && it.longitude)) linkLabel += "🗺️ Ver no Mapa / Street View";
       if (mostrarFt && it.fotos && it.fotos.length > 0) {
         if (linkLabel) linkLabel += "\n";
         linkLabel += `📸 Ver Fotos (${it.fotos.length})`;
@@ -3008,9 +3125,10 @@ export async function gerarPdfPropostaSimplificada(
       if (data.section === "body" && isPacoteMidia && data.column.index === 4) {
         const it = p.itens?.[data.row.index];
         if (!it) return;
-        if (it.latitude && it.longitude) {
+        const mapUrl = it.link_maps || (it.latitude && it.longitude ? `https://www.google.com/maps?q=${it.latitude},${it.longitude}` : null);
+        if (mapUrl) {
           doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height / 2, {
-            url: `https://www.google.com/maps?q=${it.latitude},${it.longitude}`,
+            url: mapUrl,
           });
         }
         if (mostrarFt && it.fotos?.[0]) {
@@ -3028,27 +3146,97 @@ export async function gerarPdfPropostaSimplificada(
     },
   });
 
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  const finalY = (doc as any).lastAutoTable.finalY + 8;
 
-  // Total Investimento
-  const labelTotal = isPacoteMidia ? "VALOR DO PACOTE DE MÍDIA" : "VALOR TOTAL DA PROPOSTA";
-  doc.setFillColor(COR_NAVY[0], COR_NAVY[1], COR_NAVY[2]);
-  doc.rect(15, finalY, W - 30, 9, "F");
-  doc.setTextColor(255, 255, 255);
+  // Resumo Financeiro Estruturado Nexo (Representados vs. In-House vs. Total)
+  const totalRepresentados = (p.itens || []).reduce((acc: number, it: any) => {
+    const isParceiro = !!(it.parceiro_id || it.parceiro_nome || it.parceiro_cnpj);
+    return isParceiro ? acc + (Number(it.valor_negociado) || 0) : acc;
+  }, 0);
+  const totalInHouse = (p.itens || []).reduce((acc: number, it: any) => {
+    const isParceiro = !!(it.parceiro_id || it.parceiro_nome || it.parceiro_cnpj);
+    return !isParceiro ? acc + (Number(it.valor_negociado) || 0) : acc;
+  }, 0);
+
+  // 3 Blocos de Resumo Financeiro Estruturado
+  const boxW = (W - 36) / 3;
+  const boxH = 14;
+
+  // Bloco 1: Veiculação de Mídia / Espaços Representados
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(15, finalY, boxW, boxH, 1.5, 1.5, "FD");
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(100);
+  doc.text("VEICULAÇÃO / ESPAÇOS REPRESENTADOS", 18, finalY + 5);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text(`${labelTotal}: ${fmtBRL(p.valor_negociado)}`, W - 20, finalY + 6, { align: "right" });
+  doc.setTextColor(COR_SECONDARY[0], COR_SECONDARY[1], COR_SECONDARY[2]);
+  doc.text(fmtBRL(totalRepresentados), 18, finalY + 11);
 
-  // Footer
-  doc.setFontSize(8);
+  // Bloco 2: Estratégia, Produção & Ativação Nexo
+  const bx2 = 15 + boxW + 3;
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(bx2, finalY, boxW, boxH, 1.5, 1.5, "FD");
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(100);
+  doc.text("ESTRATÉGIA, PRODUÇÃO & ATIVAÇÃO NEXO", bx2 + 3, finalY + 5);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
+  doc.text(fmtBRL(totalInHouse), bx2 + 3, finalY + 11);
+
+  // Bloco 3: Total com Condição Comercial Exclusiva
+  const bx3 = bx2 + boxW + 3;
+  doc.setFillColor(COR_NAVY[0], COR_NAVY[1], COR_NAVY[2]);
+  doc.roundedRect(bx3, finalY, boxW, boxH, 1.5, 1.5, "F");
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("CONDIÇÃO EXCLUSIVA HUB NEXO", bx3 + 3, finalY + 5);
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text(fmtBRL(p.valor_negociado), bx3 + 3, finalY + 11);
+
+  const posDefesaY = finalY + boxH + 4;
+
+  // Defesa Institucional / Termos da Organização
+  const termosExibicao = (org as any)?.termos_proposta || (isNexo ? "A Nexo Mídia e Representação atua como um Hub de Negócios e Inteligência de Mídia no Distrito Federal. Conectamos sua marca aos veículos de maior impacto regional, unindo mídia de rua, ambientes de convivência, presença digital e ações presenciais para cercar a jornada diária do seu público-alvo." : "");
+  if (termosExibicao && posDefesaY < H - 28) {
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(15, posDefesaY, W - 30, 14, 1.5, 1.5, "FD");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(COR_NAVY[0], COR_NAVY[1], COR_NAVY[2]);
+    doc.text("TERMOS & DEFESA INSTITUCIONAL NEXO:", 18, posDefesaY + 4.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(termosExibicao, 18, posDefesaY + 8.5, { maxWidth: W - 36 });
+  }
+
+  // Footer Dinâmico com dados de contato da organização
+  doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(150);
-  doc.text(
-    `${p.executivo?.nome || "Mídia.OS"} | (61) 9 8474-6857 | rafaelnexomidia@gmail.com`,
-    W / 2,
-    H - 10,
-    { align: "center" },
-  );
+  doc.setTextColor(130);
+  const footerParts = isNexo
+    ? [
+        "NEXO Mídia e Representação (nexomidiaerepresentacao.com.br)",
+        emissorTelefone ? `Tel: ${emissorTelefone}` : "",
+        emissorEmail ? `E-mail: ${emissorEmail}` : "",
+        emissorInstagram ? `@${emissorInstagram.replace(/^@/, "")}` : "",
+        p.executivo?.nome ? `Executivo: ${p.executivo.nome}` : "",
+      ].filter(Boolean)
+    : [
+        p.executivo?.nome ? `${p.executivo.nome}` : "",
+        emissorNome,
+        emissorSite,
+        emissorTelefone,
+      ].filter(Boolean);
+  doc.text(footerParts.join("  •  "), W / 2, H - 8, { align: "center" });
 
   applyTrialWatermark(doc);
   saveBlob(doc.output("blob"), `${slugify(clienteNome)}-Proposta-Simplificada-${p.numero}.pdf`);
@@ -3086,3 +3274,901 @@ async function renderMetricCard(
   doc.setFontSize(18);
   doc.text(value, x + w / 2, y + 16, { align: "center" });
 }
+
+/**
+ * ====================================================================
+ * GERADOR DE APRESENTAÇÃO EXECUTIVA NEXO (SLIDES 16:9 - VOLVO STANDARD)
+ * ====================================================================
+ * Layout fiel ao documento comercial institucional da NEXO MÍDIA E REPRESENTAÇÃO:
+ * 1. Capa Executiva Premium
+ * 2. Lâmina Nossa Essência & Manifesto (Conexão, Estratégia, Representação, Resultados)
+ * 3. Lâmina Como Atuamos (Entender, Identificar, Negociar, Acompanhar)
+ * 4. Lâmina Overview de Impacto & Praças Atendidas (+5,5 mi hab, +18,5 mi impactos/mês)
+ * 5..N. Lâminas Técnicas dos Pontos de Mídia (Duplo Display: Foto + Ficha Técnica + Mapa Satélite + Barra de Negociação)
+ * Final. Lâmina de Fechamento ("Vamos criar o próximo nexo?")
+ */
+export async function gerarPdfPropostaNexo(
+  p: PropostaApresentacao,
+  _resumoIA?: string,
+  options?: { returnBlob?: boolean },
+): Promise<Blob | void> {
+  const { p: pAdj, dataStr } = aplicarPadroes(p);
+  p = pAdj;
+
+  // Formato A4 Paisagem (297mm x 210mm) de alta resolução executiva
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  const W = doc.internal.pageSize.getWidth(); // 297mm
+  const H = doc.internal.pageSize.getHeight(); // 210mm
+
+  const clienteNome =
+    p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente Anunciante";
+  const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
+  const logoClienteData = await logoToDataUrl(logoUrl);
+
+  const org = (p as any).organizacao;
+  const isNexo = org?.isNexo || org?.slug === "nexo" || org?.nome?.toLowerCase().includes("nexo");
+  const cfg: TemplatePropostaConfig = org?.templateConfig || DEFAULT_NEXO_TEMPLATE_CONFIG;
+
+  const hexToRgb = (hex?: string | null, def: [number, number, number] = [15, 23, 42]): [number, number, number] => {
+    if (!hex) return def;
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : def;
+  };
+
+  const bgDark = hexToRgb(cfg.cor_fundo_capa, [11, 12, 16]); // #0b0c10
+  const colPrimaria = hexToRgb(cfg.cor_destaque_primaria, [255, 107, 0]); // #ff6b00 Laranja
+  const colSecundaria = hexToRgb(cfg.cor_destaque_secundaria, [121, 40, 202]); // #7928ca Roxo
+  const colCard = [18, 22, 30]; // Dark card background
+  const colBorder = [36, 44, 58];
+  const colTextMuted = [156, 163, 175];
+
+  const logoNexoData = cfg.logo_url ? await logoToDataUrl(cfg.logo_url) : null;
+
+  // Função auxiliar para desenhar o background padrão das lâminas escuras
+  const renderBackgroundSlide = (tituloSecao?: string, subtituloSecao?: string) => {
+    doc.setFillColor(bgDark[0], bgDark[1], bgDark[2]);
+    doc.rect(0, 0, W, H, "F");
+
+    // Linha superior de destaque (degradê institucional simulado)
+    doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.rect(0, 0, W * 0.6, 2.5, "F");
+    doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
+    doc.rect(W * 0.6, 0, W * 0.4, 2.5, "F");
+
+    // Header superior discreto se houver título da seção
+    if (tituloSecao) {
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+      doc.text("NEXO MÍDIA E REPRESENTAÇÃO", 15, 14);
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+      doc.text(" •  HUB DE NEGÓCIOS & SOLUÇÕES ESTRATÉGICAS EM MÍDIA", 62, 14);
+
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(tituloSecao.toUpperCase(), 15, 22);
+
+      if (subtituloSecao) {
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+        doc.text(subtituloSecao, 15, 27);
+      }
+
+      // Linha separadora do topo
+      doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+      doc.line(15, 30, W - 15, 30);
+    }
+
+    // Rodapé sutil com assinatura oficial
+    const rodapeY = H - 8;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text(
+      `NEXO Mídia e Representação (nexomidiaerepresentacao.com.br) • Proposta Comercial #${p.numero}`,
+      15,
+      rodapeY,
+    );
+    doc.text(
+      `${clienteNome} • ${p.campanha || "Campanha Estratégica"}`,
+      W - 15,
+      rodapeY,
+      { align: "right" },
+    );
+  };
+
+  let isFirstPage = true;
+
+  // ====================================================================
+  // 1. CAPA INSTITUCIONAL PREMIUM
+  // ====================================================================
+  if (cfg.incluir_capa !== false) {
+    if (!isFirstPage) doc.addPage("a4", "landscape");
+    isFirstPage = false;
+
+    // Fundo preto puro / grafite
+    doc.setFillColor(bgDark[0], bgDark[1], bgDark[2]);
+    doc.rect(0, 0, W, H, "F");
+
+    // Glow e borda sutil nas laterais
+    doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.rect(0, 0, 4, H, "F");
+    doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
+    doc.rect(W - 4, 0, 4, H, "F");
+
+    // Logo Nexo ou Cliente Centralizado
+    if (logoNexoData) {
+      try {
+        doc.addImage(logoNexoData, "PNG", W / 2 - 30, 36, 60, 22, undefined, "FAST");
+      } catch {
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255);
+        doc.text("NEXO MÍDIA E REPRESENTAÇÃO", W / 2, 48, { align: "center" });
+      }
+    } else {
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("NEXO MÍDIA E REPRESENTAÇÃO", W / 2, 48, { align: "center" });
+    }
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.text("HUB DE NEGÓCIOS & SOLUÇÕES ESTRATÉGICAS EM MÍDIA", W / 2, 62, { align: "center" });
+
+    // Linha divisória de efeito degradê
+    doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.rect(W / 2 - 40, 68, 40, 1.2, "F");
+    doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
+    doc.rect(W / 2, 68, 40, 1.2, "F");
+
+    // Título Principal Estilizado
+    doc.setFontSize(30);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("PROPOSTA COMERCIAL", W / 2, 94, { align: "center" });
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text(
+      "Plano Estratégico & Comercial de Mídia Exterior (OOH / DOOH)",
+      W / 2,
+      103,
+      { align: "center" },
+    );
+
+    // Card de Identificação da Campanha (Glassmorphism dark)
+    const cardW = 210;
+    const cardH = 46;
+    const cardX = (W - cardW) / 2;
+    const cardY = 120;
+
+    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(cardX, cardY, cardW, cardH, 2.5, 2.5, "FD");
+
+    // Grid com dados do anunciante
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.text("CLIENTE / ANUNCIANTE", cardX + 12, cardY + 12);
+    doc.text("CAMPANHA", cardX + 115, cardY + 12);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(clienteNome, cardX + 12, cardY + 20, { maxWidth: 95 });
+    doc.text(p.campanha || "Veiculação de Alta Performance", cardX + 115, cardY + 20, { maxWidth: 85 });
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text("DATA DE EMISSÃO", cardX + 12, cardY + 34);
+    doc.text("PRAÇA DE ATUAÇÃO", cardX + 70, cardY + 34);
+    doc.text("VALIDADE DA PROPOSTA", cardX + 140, cardY + 34);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(230, 230, 230);
+    doc.text(dataStr, cardX + 12, cardY + 40);
+    doc.text(p.cliente?.cidade || "Distrito Federal + GO", cardX + 70, cardY + 40);
+    doc.text(fmtDataBR(p.validade) || "10 dias úteis", cardX + 140, cardY + 40);
+
+    // Rodapé da capa
+    doc.setFontSize(8);
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text(
+      `Desenvolvido e operado por Nexo Mídia e Representação • Executivo: ${p.executivo?.nome || "Equipe Comercial Nexo"}`,
+      W / 2,
+      H - 14,
+      { align: "center" },
+    );
+  }
+
+  // ====================================================================
+  // 2. LÂMINA NOSSA ESSÊNCIA & MANIFESTO
+  // ====================================================================
+  if (cfg.incluir_manifesto !== false) {
+    if (!isFirstPage) doc.addPage("a4", "landscape");
+    isFirstPage = false;
+
+    renderBackgroundSlide(
+      "Nossa Essência & Posicionamento",
+      "Conexão estratégica entre marcas, veículos líderes e consumidores no Distrito Federal",
+    );
+
+    // Lado Esquerdo: Manifesto em destaque
+    const boxLeftW = 125;
+    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(15, 38, boxLeftW, 146, 2, 2, "FD");
+
+    // Tarja lateral laranja
+    doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.roundedRect(15, 38, 3, 146, 1, 1, "F");
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(cfg.manifesto_titulo || "O significado de Nexo", 24, 52);
+
+    doc.setFontSize(9.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(220, 225, 230);
+    const manifestoLines = doc.splitTextToSize(cfg.manifesto_texto, boxLeftW - 18);
+    doc.text(manifestoLines, 24, 62);
+
+    // Badge de posicionamento na base do manifesto
+    doc.setFillColor(30, 36, 50);
+    doc.roundedRect(24, 150, boxLeftW - 18, 24, 1.5, 1.5, "F");
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.text("HUB DE NEGÓCIOS REGIONAIS", 30, 158);
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text("Presença em todos os pontos de contato da rotina do consumidor.", 30, 166);
+
+    // Lado Direito: Os 4 Pilares da Essência
+    const pilarW = 137;
+    const pilarH = 33;
+    const pilares = [
+      {
+        t: "1. CONEXÃO",
+        sub: "A ponte estratégica entre anunciantes e grandes veículos",
+        d: "Unimos marcas consagradas aos veículos de maior credibilidade do Centro-Oeste, criando lembrança forte e presença constante.",
+        cor: colPrimaria,
+      },
+      {
+        t: "2. ESTRATÉGIA",
+        sub: "Inteligência geográfica e cerco de rotas diárias",
+        d: "Interceptamos o consumidor nos momentos de deslocamento, convivência e decisão de compra nas principais vias e centros comerciais.",
+        cor: colSecundaria,
+      },
+      {
+        t: "3. REPRESENTAÇÃO",
+        sub: "Hub multimídia completo e homologado",
+        d: "Operamos uma rede integrada de painéis LED, front lights, rádio, mídia indoor e portais com padrão técnico executivo de excelência.",
+        cor: colPrimaria,
+      },
+      {
+        t: "4. RESULTADOS",
+        sub: "Blindagem de marca e retorno de investimento",
+        d: "Foco absoluto em visibilidade real, sem desperdício de verba, com alto impacto visual e comprovação de veiculação (checking).",
+        cor: colSecundaria,
+      },
+    ];
+
+    pilares.forEach((pilar, i) => {
+      const py = 38 + i * (pilarH + 4.5);
+      doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+      doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+      doc.roundedRect(145, py, pilarW, pilarH, 2, 2, "FD");
+
+      doc.setFillColor(pilar.cor[0], pilar.cor[1], pilar.cor[2]);
+      doc.rect(145, py, 2.5, pilarH, "F");
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(pilar.t, 153, py + 8);
+
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(pilar.cor[0], pilar.cor[1], pilar.cor[2]);
+      doc.text(pilar.sub.toUpperCase(), 153, py + 14);
+
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+      doc.text(doc.splitTextToSize(pilar.d, pilarW - 14), 153, py + 20);
+    });
+  }
+
+  // ====================================================================
+  // 3. LÂMINA COMO ATUAMOS (METODOLOGIA 360°)
+  // ====================================================================
+  if (cfg.incluir_como_atuamos !== false) {
+    if (!isFirstPage) doc.addPage("a4", "landscape");
+    isFirstPage = false;
+
+    renderBackgroundSlide(
+      "Como Atuamos • Metodologia 360°",
+      "Processo estruturado em 4 etapas para garantir máxima precisão e retorno sobre o investimento",
+    );
+
+    const etapas = [
+      {
+        num: "01",
+        t: "ENTENDER",
+        sub: "Briefing & Diagnóstico de Marca",
+        d: "Compreensão profunda das metas de negócio, público-alvo, persona e praças prioritárias para definir a rota perfeita.",
+        cor: colPrimaria,
+      },
+      {
+        num: "02",
+        t: "IDENTIFICAR",
+        sub: "Curadoria dos Melhores Ativos",
+        d: "Mapeamento dos pontos de maior fluxo (TMD), painéis digitais de alto impacto e formatos ideais para cada momento da campanha.",
+        cor: colSecundaria,
+      },
+      {
+        num: "03",
+        t: "NEGOCIAR",
+        sub: "Condição Comercial Exclusiva",
+        d: "Aplicação do poder de compra e representação do Hub Nexo para garantir as melhores condições, bonificações e custos por mil.",
+        cor: colPrimaria,
+      },
+      {
+        num: "04",
+        t: "ACOMPANHAR",
+        sub: "Auditoria & Checking 360°",
+        d: "Monitoramento em tempo real, relatórios fotográficos de exibição, aferição de veiculação e suporte comercial contínuo.",
+        cor: colSecundaria,
+      },
+    ];
+
+    const etapaW = (W - 30 - 3 * 6) / 4;
+    etapas.forEach((et, i) => {
+      const ex = 15 + i * (etapaW + 6);
+      const ey = 42;
+      const eh = 142;
+
+      doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+      doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+      doc.roundedRect(ex, ey, etapaW, eh, 2.5, 2.5, "FD");
+
+      // Topo com número da etapa
+      doc.setFillColor(et.cor[0], et.cor[1], et.cor[2]);
+      doc.roundedRect(ex, ey, etapaW, 28, 2.5, 2.5, "F");
+      doc.rect(ex, ey + 24, etapaW, 4, "F"); // cobrir cantos inferiores
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(et.num, ex + etapaW / 2, ey + 14, { align: "center" });
+
+      doc.setFontSize(8.5);
+      doc.text(et.t, ex + etapaW / 2, ey + 22, { align: "center" });
+
+      // Corpo da etapa
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(doc.splitTextToSize(et.sub, etapaW - 12), ex + 6, ey + 42);
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+      doc.text(doc.splitTextToSize(et.d, etapaW - 12), ex + 6, ey + 64);
+
+      // Ícone ou indicador de avanço
+      doc.setFillColor(et.cor[0], et.cor[1], et.cor[2]);
+      doc.circle(ex + etapaW / 2, ey + 128, 3, "F");
+    });
+  }
+
+  // ====================================================================
+  // 4. LÂMINA OVERVIEW DE IMPACTO & PRAÇAS ATENDIDAS
+  // ====================================================================
+  if (cfg.exibir_overview !== false) {
+    if (!isFirstPage) doc.addPage("a4", "landscape");
+    isFirstPage = false;
+
+    renderBackgroundSlide(
+      "Overview de Impacto & Praças Atendidas",
+      "Cobertura ampla em rodovias, eixos troncais, centros comerciais e áreas nobres do DF e Goiás",
+    );
+
+    // 3 Cards Grandes de Métricas
+    const mW = (W - 30 - 2 * 6) / 3;
+    const metricsData = [
+      {
+        v: cfg.total_populacao_impacto || "+5,5 milhões",
+        l: "POPULAÇÃO TOTAL ATINGIDA",
+        sub: "Distrito Federal e Região Integrada (RIDE-DF)",
+        cor: colPrimaria,
+      },
+      {
+        v: cfg.total_impactos_mes || "+18,5 milhões",
+        l: "IMPACTOS VISUAIS / MÊS",
+        sub: "Fluxo qualificado de veículos e pedestres",
+        cor: colSecundaria,
+      },
+      {
+        v: cfg.cobertura_pracas || "DF + Goiás (Entorno)",
+        l: "COBERTURA GEOGRÁFICA",
+        sub: "Plano Piloto, Cidades Satélites e Entorno",
+        cor: colPrimaria,
+      },
+    ];
+
+    metricsData.forEach((m, i) => {
+      const mx = 15 + i * (mW + 6);
+      doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+      doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+      doc.roundedRect(mx, 40, mW, 42, 2, 2, "FD");
+
+      doc.setFillColor(m.cor[0], m.cor[1], m.cor[2]);
+      doc.rect(mx, 40, 2.5, 42, "F");
+
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(m.v, mx + 10, 56);
+
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(m.cor[0], m.cor[1], m.cor[2]);
+      doc.text(m.l, mx + 10, 65);
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+      doc.text(m.sub, mx + 10, 74);
+    });
+
+    // Bloco Inferior: Resumo Consolidado do Plano Proposto
+    const resumoBoxY = 90;
+    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(15, resumoBoxY, W - 30, 94, 2, 2, "FD");
+
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("CONSOLIDAÇÃO COMERCIAL DO PLANO DE MÍDIA", 25, resumoBoxY + 14);
+
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text(
+      "Resumo dos investimentos negociados e benefícios diretos aplicados exclusivamente pela Nexo Mídia:",
+      25,
+      resumoBoxY + 21,
+    );
+
+    // 4 mini boxes de resumo comercial
+    const bW = (W - 50 - 3 * 5) / 4;
+    const bY = resumoBoxY + 30;
+    const resumoBoxes = [
+      { t: "TOTAL DE PONTOS", v: String(p.itens?.length || 0), sub: "Locais Estratégicos" },
+      { t: "INSERÇÕES NO PERÍODO", v: "+" + (p.total_insercoes || 0).toLocaleString(), sub: "Inserções Totais" },
+      { t: "VALOR TABELA", v: fmtBRL(p.valor_tabela), sub: "Preço Padrão de Mercado" },
+      { t: "VALOR NEGOCIADO HUB", v: fmtBRL(p.valor_negociado), sub: "Condição Exclusiva Nexo", destaque: true },
+    ];
+
+    resumoBoxes.forEach((bx, i) => {
+      const bxX = 25 + i * (bW + 5);
+      doc.setFillColor(bx.destaque ? 30 : 24, bx.destaque ? 38 : 28, bx.destaque ? 54 : 38);
+      doc.setDrawColor(bx.destaque ? colPrimaria[0] : colBorder[0], bx.destaque ? colPrimaria[1] : colBorder[1], bx.destaque ? colPrimaria[2] : colBorder[2]);
+      doc.roundedRect(bxX, bY, bW, 44, 2, 2, "FD");
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(bx.destaque ? colPrimaria[0] : colTextMuted[0], bx.destaque ? colPrimaria[1] : colTextMuted[1], bx.destaque ? colPrimaria[2] : colTextMuted[2]);
+      doc.text(bx.t, bxX + bW / 2, bY + 11, { align: "center" });
+
+      doc.setFontSize(bx.destaque ? 13 : 11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(bx.destaque ? 255 : 230, bx.destaque ? 255 : 230, bx.destaque ? 255 : 230);
+      doc.text(bx.v, bxX + bW / 2, bY + 24, { align: "center" });
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+      doc.text(bx.sub, bxX + bW / 2, bY + 34, { align: "center" });
+    });
+  }
+
+  // ====================================================================
+  // 5..N. LÂMINAS TÉCNICAS DOS PONTOS DE MÍDIA (DUPLO DISPLAY)
+  // ====================================================================
+  if (cfg.incluir_laminas_pontos !== false && p.itens && p.itens.length > 0) {
+    for (let index = 0; index < p.itens.length; index++) {
+      const it = p.itens[index];
+      if (!isFirstPage) doc.addPage("a4", "landscape");
+      isFirstPage = false;
+
+      const pontoNum = String(index + 1).padStart(2, "0");
+      const totalPontos = String(p.itens.length).padStart(2, "0");
+
+      renderBackgroundSlide(
+        `Lâmina Técnica de Mídia • Ponto ${pontoNum} de ${totalPontos}`,
+        `${it.programa || "Ponto Estratégico"} — ${it.tipo || "Mídia Exterior"}`,
+      );
+
+      // ------------------------------------------------------------------
+      // LADO ESQUERDO SUPERIOR: FOTO REAL DO PONTO / SIMULAÇÃO OOH
+      // ------------------------------------------------------------------
+      const fotoX = 15;
+      const fotoY = 32;
+      const fotoW = 125;
+      const fotoH = 66;
+
+      doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+      doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+      doc.roundedRect(fotoX, fotoY, fotoW, fotoH, 2, 2, "FD");
+
+      let fotoLoaded = false;
+      const fotoUrlCandidate = (it as any).foto_url || (it.fotos && it.fotos[0]);
+      if (fotoUrlCandidate) {
+        const fotoData = await logoToDataUrl(fotoUrlCandidate);
+        if (fotoData) {
+          try {
+            doc.addImage(fotoData, "JPEG", fotoX + 1, fotoY + 1, fotoW - 2, fotoH - 2, undefined, "FAST");
+            fotoLoaded = true;
+          } catch {
+            fotoLoaded = false;
+          }
+        }
+      }
+
+      // Se não houver foto, desenhar renderização vetorial executiva de painel LED
+      if (!fotoLoaded) {
+        doc.setFillColor(10, 14, 22);
+        doc.roundedRect(fotoX + 2, fotoY + 2, fotoW - 4, fotoH - 4, 1.5, 1.5, "F");
+
+        // Moldura do Painel LED
+        doc.setDrawColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+        doc.setLineWidth(0.8);
+        doc.rect(fotoX + 16, fotoY + 8, fotoW - 32, fotoH - 22, "D");
+        doc.setLineWidth(0.2);
+
+        // Tela interna com brilho
+        doc.setFillColor(22, 28, 42);
+        doc.rect(fotoX + 17, fotoY + 9, fotoW - 34, fotoH - 24, "F");
+
+        // Poste estrutural
+        doc.setFillColor(45, 55, 72);
+        doc.rect(fotoX + fotoW / 2 - 2, fotoY + fotoH - 14, 4, 12, "F");
+
+        // Texto na tela
+        doc.setFontSize(8.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255);
+        doc.text(it.programa || "PAINEL LED DIGITAL NEXO", fotoX + fotoW / 2, fotoY + 24, { align: "center" });
+
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+        doc.text(it.formato || "1920x1080px • Full HD", fotoX + fotoW / 2, fotoY + 31, { align: "center" });
+        doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+        doc.text("Visualização frontal em alta definição", fotoX + fotoW / 2, fotoY + 37, { align: "center" });
+      }
+
+      // Badge superior da foto
+      doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+      doc.roundedRect(fotoX + 4, fotoY + 4, 38, 5.5, 1, 1, "F");
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("IMAGEM FRONTAL", fotoX + 6, fotoY + 8);
+
+      // ------------------------------------------------------------------
+      // LADO ESQUERDO INFERIOR: FICHA TÉCNICA COMPLETA DO PONTO
+      // ------------------------------------------------------------------
+      const fichaX = 15;
+      const fichaY = 101;
+      const fichaW = 125;
+      const fichaH = 70;
+
+      doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+      doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+      doc.roundedRect(fichaX, fichaY, fichaW, fichaH, 2, 2, "FD");
+
+      // Cabeçalho da Ficha
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+      doc.text("FICHA TÉCNICA DE VEICULAÇÃO", fichaX + 8, fichaY + 8);
+
+      const tmd = (it as any).fluxo_veiculos_dia
+        ? `${Number((it as any).fluxo_veiculos_dia).toLocaleString()} veíc/dia`
+        : "+45.000 veíc/dia";
+      const dimensoes = (it as any).dimensoes || "6,00 x 3,00m (18m²)";
+      const resolucao = it.formato || "1920x1080px (Full HD)";
+      const sentidoVia = (it as any).sentido_via || "Fluxo Central / Principal";
+      const pontoRef = it.ponto_referencia || p.cliente?.cidade || "Distrito Federal";
+      const coordenadas = (it as any).latitude && (it as any).longitude
+        ? `${(it as any).latitude}, ${(it as any).longitude}`
+        : "-15.8341, -48.0567";
+
+      const gridSpecs = [
+        { label: "LOCALIZAÇÃO / RA:", val: pontoRef },
+        { label: "SENTIDO DA VIA:", val: sentidoVia },
+        { label: "FLUXO ESTIMADO (TMD):", val: tmd },
+        { label: "INSERÇÕES:", val: `${it.insercoes_dia || 120}/dia (${(it.total_insercoes || 3600).toLocaleString()} total)` },
+        { label: "DIMENSÕES / METRAGEM:", val: dimensoes },
+        { label: "RESOLUÇÃO / FORMATO:", val: resolucao },
+        { label: "MATERIAL / TEMPO:", val: "Vídeo MP4 / H.264 (15s)" },
+        { label: "COORDENADAS GPS:", val: coordenadas },
+      ];
+
+      doc.setFontSize(6.5);
+      gridSpecs.forEach((spec, i) => {
+        const lineY = fichaY + 15 + i * 6.5;
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+        doc.text(spec.label, fichaX + 8, lineY);
+
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(240, 240, 240);
+        doc.text(spec.val, fichaX + 54, lineY, { maxWidth: fichaW - 60 });
+      });
+
+      // ------------------------------------------------------------------
+      // LADO DIREITO: MAPA SATÉLITE & GEOLOCALIZAÇÃO
+      // ------------------------------------------------------------------
+      const mapaX = 145;
+      const mapaY = 32;
+      const mapaW = 137;
+      const mapaH = 139;
+
+      doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+      doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+      doc.roundedRect(mapaX, mapaY, mapaW, mapaH, 2, 2, "FD");
+
+      // Header do Mapa
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
+      doc.text("GEOLOCALIZAÇÃO & COBERTURA SATÉLITE", mapaX + 10, mapaY + 9);
+
+      doc.setFontSize(6.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+      doc.text("Cerco geográfico e interceptação de fluxo na rota do consumidor", mapaX + 10, mapaY + 15);
+
+      // Renderização do Mapa Cartográfico Satélite (Dark Mode Vetorial com Radar)
+      const mapCanvasX = mapaX + 8;
+      const mapCanvasY = mapaY + 20;
+      const mapCanvasW = mapaW - 16;
+      const mapCanvasH = 96;
+
+      doc.setFillColor(10, 13, 20);
+      doc.roundedRect(mapCanvasX, mapCanvasY, mapCanvasW, mapCanvasH, 2, 2, "F");
+
+      // Malha viária cartográfica simulada
+      doc.setDrawColor(28, 36, 52);
+      doc.setLineWidth(0.4);
+      // Rodovia principal cortando o mapa
+      doc.line(mapCanvasX, mapCanvasY + mapCanvasH * 0.7, mapCanvasX + mapCanvasW, mapCanvasY + mapCanvasH * 0.3);
+      doc.line(mapCanvasX + mapCanvasW * 0.3, mapCanvasY, mapCanvasX + mapCanvasW * 0.7, mapCanvasY + mapCanvasH);
+      doc.line(mapCanvasX, mapCanvasY + 25, mapCanvasX + mapCanvasW, mapCanvasY + 45);
+
+      // Círculos concêntricos de raio de alcance (500m / 1km / 2km)
+      const pinCenterX = mapCanvasX + mapCanvasW * 0.52;
+      const pinCenterY = mapCanvasY + mapCanvasH * 0.48;
+
+      doc.setDrawColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
+      doc.setLineWidth(0.2);
+      doc.circle(pinCenterX, pinCenterY, 14, "D");
+      doc.circle(pinCenterX, pinCenterY, 26, "D");
+      doc.circle(pinCenterX, pinCenterY, 40, "D");
+
+      // Pin de Localização Oficial Nexo (Destaque Laranja)
+      doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+      doc.circle(pinCenterX, pinCenterY, 3.5, "F");
+      doc.setFillColor(255, 255, 255);
+      doc.circle(pinCenterX, pinCenterY, 1.2, "F");
+
+      // Card flutuante sobre o pin
+      doc.setFillColor(20, 26, 38);
+      doc.setDrawColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+      doc.roundedRect(pinCenterX - 24, pinCenterY - 18, 48, 11, 1, 1, "FD");
+      doc.setFontSize(5.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(it.programa || "Ponto Nexo", pinCenterX, pinCenterY - 12, { align: "center", maxWidth: 44 });
+      doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+      doc.text(coordenadas, pinCenterX, pinCenterY - 9, { align: "center" });
+
+      // Legenda do Mapa
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+      doc.text("● Raio de Atração: 500m / 1km / 2km", mapCanvasX + 4, mapCanvasY + mapCanvasH - 3);
+
+      // Botão Clicável para abrir o Google Maps
+      const btnLinkY = mapaY + 120;
+      const btnLinkW = mapaW - 16;
+      doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+      doc.roundedRect(mapaX + 8, btnLinkY, btnLinkW, 11, 1.5, 1.5, "F");
+
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("📍 VER LOCALIZAÇÃO NO GOOGLE MAPS & STREET VIEW", mapaX + mapaW / 2, btnLinkY + 7, { align: "center" });
+
+      const linkMaps = (it as any).link_maps || `https://www.google.com/maps?q=${encodeURIComponent(coordenadas)}`;
+      doc.link(mapaX + 8, btnLinkY, btnLinkW, 11, { url: linkMaps });
+
+      // ------------------------------------------------------------------
+      // BARRA DE NEGOCIAÇÃO INFERIOR
+      // ------------------------------------------------------------------
+      const barX = 15;
+      const barY = 175;
+      const barW = W - 30;
+      const barH = 24;
+
+      doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+      doc.setDrawColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(barX, barY, barW, barH, 2, 2, "FD");
+      doc.setLineWidth(0.2);
+
+      // 6 Colunas da Barra de Negociação
+      const colW = barW / 6;
+      const colunasNegociacao = [
+        { label: "NOME DO PONTO", val: it.programa || "Painel Nexo" },
+        { label: "METRAGEM", val: dimensoes },
+        { label: "TEMPO TELA", val: "15 Segundos" },
+        { label: "VALOR TABELA", val: fmtBRL(it.valor_tabela) },
+        { label: "DESCONTO HUB", val: it.desconto > 0 ? `${it.desconto}%` : "Condição Hub" },
+        { label: "VALOR NEGOCIADO", val: fmtBRL(it.valor_negociado), destaque: true },
+      ];
+
+      colunasNegociacao.forEach((col, i) => {
+        const cx = barX + i * colW;
+        doc.setFontSize(6);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(col.destaque ? colPrimaria[0] : colTextMuted[0], col.destaque ? colPrimaria[1] : colTextMuted[1], col.destaque ? colPrimaria[2] : colTextMuted[2]);
+        doc.text(col.label, cx + colW / 2, barY + 7, { align: "center" });
+
+        doc.setFontSize(col.destaque ? 9.5 : 8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(col.destaque ? 255 : 230, col.destaque ? 255 : 230, col.destaque ? 255 : 230);
+        doc.text(col.val, cx + colW / 2, barY + 16, { align: "center", maxWidth: colW - 4 });
+
+        if (i < 5) {
+          doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+          doc.line(cx + colW, barY + 3, cx + colW, barY + barH - 3);
+        }
+      });
+    }
+  }
+
+  // ====================================================================
+  // FECHAMENTO: LÂMINA DE ENCERRAMENTO & CONTATOS
+  // ====================================================================
+  if (!isFirstPage) doc.addPage("a4", "landscape");
+  isFirstPage = false;
+
+  doc.setFillColor(bgDark[0], bgDark[1], bgDark[2]);
+  doc.rect(0, 0, W, H, "F");
+
+  // Brilho e barras laterais
+  doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+  doc.rect(0, 0, 4, H, "F");
+  doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
+  doc.rect(W - 4, 0, 4, H, "F");
+
+  // Logo ou nome institucional
+  if (logoNexoData) {
+    try {
+      doc.addImage(logoNexoData, "PNG", W / 2 - 25, 30, 50, 20, undefined, "FAST");
+    } catch {
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("NEXO MÍDIA E REPRESENTAÇÃO", W / 2, 42, { align: "center" });
+    }
+  } else {
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("NEXO MÍDIA E REPRESENTAÇÃO", W / 2, 42, { align: "center" });
+  }
+
+  // Título e Subtítulo de Fechamento
+  doc.setFontSize(26);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text(cfg.fechamento_titulo || "Vamos criar o próximo nexo?", W / 2, 70, { align: "center" });
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+  doc.text(
+    cfg.fechamento_subtitulo || "Conectando marcas, veículos e pessoas com inteligência estratégica.",
+    W / 2,
+    80,
+    { align: "center" },
+  );
+
+  // 4 Cards de Contato Oficiais
+  const contactCardW = (W - 30 - 3 * 6) / 4;
+  const contactCardH = 46;
+  const contactCardY = 100;
+
+  const contacts = [
+    { label: "WHATSAPP / TELEFONE", val: cfg.telefone_contato || "(61) 99125-7245", cor: colPrimaria },
+    { label: "E-MAIL COMERCIAL", val: cfg.email_contato || "rafaelnexomidia@gmail.com", cor: colSecundaria },
+    { label: "INSTAGRAM OFICIAL", val: `@${(cfg.instagram_contato || "nexobrasilmidia").replace(/^@/, "")}`, cor: colPrimaria },
+    { label: "PORTAL DE SOLUÇÕES", val: (cfg.site_url || "nexomidiaerepresentacao.com.br").replace(/^https?:\/\//, ""), cor: colSecundaria },
+  ];
+
+  contacts.forEach((c, i) => {
+    const cx = 15 + i * (contactCardW + 6);
+    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(cx, contactCardY, contactCardW, contactCardH, 2, 2, "FD");
+
+    doc.setFillColor(c.cor[0], c.cor[1], c.cor[2]);
+    doc.rect(cx, contactCardY, 2, contactCardH, "F");
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(c.cor[0], c.cor[1], c.cor[2]);
+    doc.text(c.label, cx + 8, contactCardY + 14);
+
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(c.val, cx + 8, contactCardY + 28, { maxWidth: contactCardW - 14 });
+  });
+
+  // Assinatura do Executivo
+  if (p.executivo?.nome) {
+    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(W / 2 - 60, 160, 120, 24, 2, 2, "FD");
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.text("ATENDIMENTO EXCLUSIVO", W / 2, 168, { align: "center" });
+
+    doc.setFontSize(9.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(p.executivo.nome, W / 2, 177, { align: "center" });
+  }
+
+  // Rodapé do slide de encerramento
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+  doc.text(
+    "NEXO Mídia e Representação (nexomidiaerepresentacao.com.br) • Hub de Negócios & Soluções Estratégicas em Mídia",
+    W / 2,
+    H - 10,
+    { align: "center" },
+  );
+
+  applyTrialWatermark(doc);
+  const blob = doc.output("blob") as Blob;
+  if (options?.returnBlob) return blob;
+  saveBlob(blob, `${slugify(clienteNome)}-Proposta-Nexo-Slide-${p.numero}.pdf`);
+}
+

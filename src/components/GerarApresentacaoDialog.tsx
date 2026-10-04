@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ImportarModeloPropostaDialog } from "@/components/ImportarModeloPropostaDialog";
+import { useCurrentOrg } from "@/hooks/use-current-org";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; propostaId: string | null };
 
@@ -67,6 +68,7 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  const { org } = useCurrentOrg();
 
   const { data: layouts = [] } = useQuery({
     queryKey: ["proposal_layouts"],
@@ -223,6 +225,7 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
         razao_social: proposta.cliente?.razao_social ?? null,
         logo_url: logoDataUrl,
       },
+      organizacao: (proposta as any).organizacao || org,
     };
   };
 
@@ -253,8 +256,13 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     const p = propostaParaExport();
     if (!p) return;
     try {
-      const { gerarPdfProposta } = await import("@/lib/proposta-presentation");
-      await gerarPdfProposta(p, resumo, getLayoutPayload());
+      if (selectedLayoutId === "__nexo_slides__") {
+        const { gerarPdfPropostaNexo } = await import("@/lib/proposta-presentation");
+        await gerarPdfPropostaNexo(p, resumo);
+      } else {
+        const { gerarPdfProposta } = await import("@/lib/proposta-presentation");
+        await gerarPdfProposta(p, resumo, getLayoutPayload());
+      }
       toast.success("PDF gerado com sucesso");
     } catch (e) {
       console.error("Erro exportarPdf:", e);
@@ -266,10 +274,11 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     if (!p) return;
     setPreviewLoading(true);
     try {
-      const { gerarPdfProposta } = await import("@/lib/proposta-presentation");
-      const blob = (await gerarPdfProposta(p, resumo, getLayoutPayload(), {
-        returnBlob: true,
-      })) as Blob;
+      const { gerarPdfProposta, gerarPdfPropostaNexo } = await import("@/lib/proposta-presentation");
+      const blob = (selectedLayoutId === "__nexo_slides__"
+        ? await gerarPdfPropostaNexo(p, resumo, { returnBlob: true })
+        : await gerarPdfProposta(p, resumo, getLayoutPayload(), { returnBlob: true })
+      ) as Blob;
       const buf = await blob.arrayBuffer();
 
       const pdfjs: any = await import("pdfjs-dist");
@@ -329,10 +338,11 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     if (phone === null) return;
     setSharing(true);
     try {
-      const { gerarPdfProposta } = await import("@/lib/proposta-presentation");
-      const blob = (await gerarPdfProposta(p, resumo, getLayoutPayload(), {
-        returnBlob: true,
-      })) as Blob;
+      const { gerarPdfProposta, gerarPdfPropostaNexo } = await import("@/lib/proposta-presentation");
+      const blob = (selectedLayoutId === "__nexo_slides__"
+        ? await gerarPdfPropostaNexo(p, resumo, { returnBlob: true })
+        : await gerarPdfProposta(p, resumo, getLayoutPayload(), { returnBlob: true })
+      ) as Blob;
       const fileName = `Proposta-${p.numero || propostaId}.pdf`;
       const url = await uploadPdfSigned("proposta-anexos", propostaId, fileName, blob);
       const msgPadrao = `Olá! Segue a proposta comercial ${p.numero ? `nº ${p.numero}` : ""}${p.campanha ? ` — ${p.campanha}` : ""}.\n\nPDF: ${url}`;
@@ -407,6 +417,12 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
                       <SelectValue placeholder="Selecione um layout" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem
+                        value="__nexo_slides__"
+                        className="text-[#ff6b00] font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-[#ff6b00]/10 cursor-pointer"
+                      >
+                        🌟 Lâminas Nexo (Slides 16:9 • Volvo Standard)
+                      </SelectItem>
                       <SelectItem
                         value="__novo_modelo__"
                         className="text-primary font-semibold border-b border-border/80 mb-1 pb-1.5 focus:bg-primary/10 cursor-pointer"

@@ -26,6 +26,14 @@ const ItemSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => (v && v.length ? v : null)),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  link_maps: z.string().trim().max(1000).nullable().optional(),
+  sentido_via: z.string().trim().max(200).nullable().optional(),
+  ponto_referencia: z.string().trim().max(500).nullable().optional(),
+  fluxo_veiculos_dia: z.number().nullable().optional(),
+  endereco_ponto: z.string().trim().max(500).nullable().optional(),
+  fotos: z.array(z.string()).nullable().optional(),
   produto_id: z.string().uuid().nullable().optional(),
   parceiro_id: z.string().uuid().nullable().optional(),
   parceiro_nome: z.string().max(200).nullable().optional(),
@@ -150,11 +158,44 @@ export const getProposta = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
+    // Obter dados da organização emissora da proposta (White-label Nexo vs Neutro)
+    let org: any = null;
+    const orgId = (prop as any).organizacao_id || (prop.executivo as any)?.organizacao_id || prop.tenant_id;
+    if (orgId) {
+      try {
+        const { data: orgData } = await (context.supabase.from("organizacoes") as any)
+          .select("id, nome, slug, site_url, logo_url, tagline, termos_proposta, cor_primaria")
+          .eq("id", orgId)
+          .maybeSingle();
+        if (orgData) org = orgData;
+      } catch {}
+    }
+
+    if (!org) {
+      const executivoEmail = (prop.executivo?.email || "").toLowerCase();
+      if (executivoEmail.includes("nexo") || executivoEmail.includes("rafaelnexomidia@gmail.com")) {
+        try {
+          const { data: nexoOrg } = await (context.supabase.from("organizacoes") as any)
+            .select("id, nome, slug, site_url, logo_url, tagline, termos_proposta, cor_primaria")
+            .eq("slug", "nexo")
+            .maybeSingle();
+          if (nexoOrg) org = nexoOrg;
+        } catch {}
+      }
+    }
+
+    if (org) {
+      (prop as any).organizacao = {
+        ...org,
+        isNexo: org.slug === "nexo" || org.nome?.toLowerCase().includes("nexo"),
+      };
+    }
+
     // Enriquecer itens com dados de produtos (endereço, latitude, longitude, fotos) caso não estejam preenchidos no item
     if (prop?.itens && Array.isArray(prop.itens) && prop.itens.length > 0) {
       try {
         const { data: prods } = await (context.supabase.from("produtos") as any).select(
-          "id, nome, programa, tipo, endereco_ponto, latitude, longitude, fotos, parceiro_id, parceiro_nome, parceiro_cnpj, comissao_inquilino_pct",
+          "id, nome, programa, tipo, endereco_ponto, latitude, longitude, link_maps, sentido_via, ponto_referencia, detalhes_venda, fotos, parceiro_id, parceiro_nome, parceiro_cnpj, comissao_inquilino_pct, canal_macro, plataforma_rede, metricas_digitais",
         );
         if (prods && prods.length > 0) {
           const prodsMap = new Map<string, any>();
@@ -183,11 +224,35 @@ export const getProposta = createServerFn({ method: "POST" })
               }
             }
 
+            const dv = matched?.detalhes_venda || {};
+            const lat = it.latitude ?? matched?.latitude ?? (dv._latitude != null ? Number(dv._latitude) : null);
+            const lng = it.longitude ?? matched?.longitude ?? (dv._longitude != null ? Number(dv._longitude) : null);
+            const linkMaps =
+              it.link_maps ||
+              matched?.link_maps ||
+              dv._link_maps ||
+              (lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : null);
+            const sentidoVia = it.sentido_via || matched?.sentido_via || dv._sentido_via || null;
+            const pontoRef = it.ponto_referencia || matched?.ponto_referencia || dv._ponto_referencia || null;
+            const fluxoVeiculos =
+              it.fluxo_veiculos_dia ??
+              dv.fluxo_veiculos_dia ??
+              dv.fluxo_diario ??
+              dv.impactos_dia ??
+              null;
+
             return {
               ...it,
               endereco_ponto: it.endereco_ponto || matched?.endereco_ponto || null,
-              latitude: it.latitude ?? matched?.latitude ?? null,
-              longitude: it.longitude ?? matched?.longitude ?? null,
+              latitude: lat,
+              longitude: lng,
+              link_maps: linkMaps,
+              sentido_via: sentidoVia,
+              ponto_referencia: pontoRef,
+              fluxo_veiculos_dia: fluxoVeiculos,
+              canal_macro: it.canal_macro || matched?.canal_macro || "OFF",
+              plataforma_rede: it.plataforma_rede || matched?.plataforma_rede || null,
+              metricas_digitais: it.metricas_digitais || matched?.metricas_digitais || null,
               parceiro_id: it.parceiro_id || matched?.parceiro_id || null,
               parceiro_nome: it.parceiro_nome || matched?.parceiro_nome || null,
               parceiro_cnpj: it.parceiro_cnpj || matched?.parceiro_cnpj || null,

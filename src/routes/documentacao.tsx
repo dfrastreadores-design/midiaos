@@ -41,6 +41,10 @@ import {
   Trash2,
   UserCog,
   Compass,
+  MapPin,
+  Layers,
+  FileCheck,
+  Share2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/documentacao")({
@@ -116,6 +120,90 @@ const MODULOS: ModuloDoc[] = [
       "Ajuste as cotas e gere o plano executivo integrado.",
     ],
     dica: "Utilize o centralizador para estruturar pacotes integrados com múltiplos veículos e parceiros.",
+  },
+  {
+    icon: Compass,
+    titulo: "Planejamento 360° & Radar DF",
+    rota: "/centralizadores",
+    resumo:
+      "Diagnóstico comercial estratégico em reuniões: análise de público (Classes A/B, B/C, C/D), dores comerciais e recomendação inteligente nos 5 pilares de mídia nas 35 RAs do DF.",
+    recursos: [
+      "Cobertura completa das 35 Regiões Administrativas do Distrito Federal",
+      "5 Pilares Integrados: OOH/DOOH, TV/Rádio, Digital, Influenciadores e Projetos Especiais",
+      "Radar de Expansão: sugestão de eixos troncais (EPTG, Estrutural, Eixo Rodoviário) para regiões sem inventário",
+      "Geração de propostas executivas integradas prontas para apresentação",
+    ],
+    passos: [
+      "Abra o diagnóstico comercial durante a reunião com o cliente.",
+      "Selecione a Região do Desafio, a classe social e o estilo de vida do público-alvo.",
+      "O sistema monta a cesta 360° com produtos próprios e parceiros recomendados.",
+    ],
+    dica: "Se a RA não tiver pontos cadastrados, o Radar indica rotas estruturantes de alto tráfego.",
+  },
+  {
+    icon: MapPin,
+    titulo: "Inventário & Geolocalização OOH/DOOH",
+    rota: "/parceiros",
+    resumo:
+      "Mapeamento georreferenciado de painéis de LED, outdoors e telas urbanas com coordenadas de satélite, sentidos da via e visualização Street View.",
+    recursos: [
+      "Latitude, Longitude e Link direto para Google Maps / Waze",
+      "Sentido da via (ex: Sentido Plano Piloto, Sentido Taguatinga)",
+      "Ponto de referência e especificações técnicas de resolução e inserções/dia",
+      "Visualização interativa no mapa com botão de Google Street View",
+      "Geocodificação automática ao importar Mídia Kits em PDF ou planilhas",
+    ],
+    passos: [
+      "Acesse Parceiros ou o módulo de Inventário.",
+      "Importe o Mídia Kit do parceiro para captura automática de coordenadas.",
+      "Consulte os pontos no mapa e utilize no construtor de propostas e PIs.",
+    ],
+    dica: "Use o Street View para mostrar ao anunciante a perspectiva exata do motorista na via.",
+  },
+  {
+    icon: Layers,
+    titulo: "White-label & Organizações",
+    rota: "/configuracoes",
+    resumo:
+      "Personalização dinâmica de marca, layout e termos para organizações e marcas próprias (ex: Nexo Mídia e Representação).",
+    recursos: [
+      "Logotipo, slogan, site e paleta de cores institucional por organização",
+      "Timbragem automática em propostas executivas (PDF e PPTX)",
+      "Isolamento de produtos próprios: 'PROPRIO' vs 'PARCEIRO'",
+      "Textos contratuais e termos comerciais exclusivos por organização",
+    ],
+    passos: [
+      "Administradores configuram a organização vinculada ao perfil.",
+      "O sistema aplica dinamicamente o branding e termos contratuais.",
+      "Produtos próprios só são visíveis para a organização proprietária.",
+    ],
+    dica: "Usuários da Nexo Mídia visualizam branding e soluções exclusivas automaticamente.",
+  },
+  {
+    icon: FileCheck,
+    titulo: "Contratos Comerciais",
+    rota: "/contratos",
+    modulo: "propostas",
+    resumo:
+      "Geração de minutas contratuais de veiculação e prestação de serviços com cláusulas customizáveis e vínculo direto aos PIs.",
+    recursos: [
+      "Minutas parametrizáveis com dados do anunciante e agência",
+      "Vinculação direta com propostas e Pedidos de Inserção",
+      "Disparo automático para a Central de Assinaturas Digitais",
+      "Controle de status (Minuta, Em Aprovação, Assinado, Vigente)",
+    ],
+  },
+  {
+    icon: Share2,
+    titulo: "Social Media & Conteúdo",
+    rota: "/social-media",
+    resumo:
+      "Calendário editorial para planejamento, criação e aprovação de publicações e campanhas digitais para marcas e veículos.",
+    recursos: [
+      "Calendário visual de publicações (Stories, Reels, Feed, Carrossel)",
+      "Fluxo de redação, arte e aprovação do anunciante",
+      "Vinculação com pacotes de mídia digital de propostas comerciais",
+    ],
   },
   {
     icon: FileSignature,
@@ -231,20 +319,21 @@ const MODULOS: ModuloDoc[] = [
   },
   {
     icon: Package,
-    titulo: "Produtos",
+    titulo: "Produtos & Catálogo Comercial",
     rota: "/produtos",
     resumo:
-      "Catálogo comercial: programas, faixas horárias, formatos e tabela de preços por segundagem.",
+      "Catálogo de soluções de mídia: programas, painéis, faixas horárias, formatos, segundagens e isolamento de produtos próprios vs parceiros.",
     recursos: [
-      "Preços por segundagem (15s, 30s, 45s, 60s)",
-      "Descontos por faixa de volume",
-      "Categorização por veículo e faixa horária",
-      "Histórico de alterações de preço",
+      "Distinção inteligente: Soluções Próprias ('PROPRIO') vs Produtos de Parceiros ('PARCEIRO')",
+      "Preços por segundagem (15s, 30s, 45s, 60s) e diárias para DOOH",
+      "Descontos automáticos por faixa de volume e investimento",
+      "Isolamento seguro: produtos próprios aparecem apenas para a organização vinculada",
+      "Histórico de alterações de preço e versionamento",
     ],
     passos: [
-      "Cadastre o produto (ex: ‘Jornal das 12’) e vincule ao veículo.",
-      "Defina a tabela de preços por segundagem.",
-      "Configure descontos por faixa de volume.",
+      "Cadastre o produto e selecione a origem (Próprio ou Parceiro).",
+      "Defina a tabela de preços por segundagem ou formato.",
+      "Configure descontos por volume para uso automático nas propostas.",
     ],
   },
   {

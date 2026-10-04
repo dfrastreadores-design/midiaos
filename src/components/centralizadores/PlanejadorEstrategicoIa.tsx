@@ -41,6 +41,7 @@ import {
   MapPin,
   Package,
   Filter,
+  Compass,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -53,6 +54,7 @@ import { listProdutos, type Produto } from "@/lib/produtos.functions";
 import { listParceirosMetricas } from "@/lib/parceiros-metricas.functions";
 import { UniversalAnexosModal } from "@/components/anexos/UniversalAnexosModal";
 import { ClienteFormDialog } from "@/components/ClienteFormDialog";
+import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
 
 const PRESETS_CENARIOS = [
   {
@@ -139,6 +141,7 @@ export function PlanejadorEstrategicoIa() {
 
   const [usarTodoInventario, setUsarTodoInventario] = useState(true);
   const [modalNovoClienteOpen, setModalNovoClienteOpen] = useState(false);
+  const [modal360Open, setModal360Open] = useState(false);
 
   const [form, setForm] = useState<EstrategiaMidiaInput>({
     cliente_id: null,
@@ -278,17 +281,28 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                 com cronograma em fases, métricas projetadas e argumentos comerciais persuasivos.
               </p>
             </div>
-            {resultado && (
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
               <Button
-                variant="outline"
+                variant="default"
                 size="sm"
-                onClick={copiarEstrategiaCompleta}
-                className="gap-1.5 text-xs bg-background shrink-0"
+                onClick={() => setModal360Open(true)}
+                className="gap-1.5 text-xs bg-sky-600 hover:bg-sky-700 text-white shrink-0 shadow-md font-semibold"
               >
-                <Copy className="size-3.5" />
-                Copiar Estratégia
+                <Compass className="size-4 animate-pulse" />
+                Planejamento 360° & Radar (Ao Vivo)
               </Button>
-            )}
+              {resultado && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copiarEstrategiaCompleta}
+                  className="gap-1.5 text-xs bg-background shrink-0"
+                >
+                  <Copy className="size-3.5" />
+                  Copiar Estratégia
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1024,6 +1038,13 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
             toast.success("Cliente cadastrado e selecionado no planejador!");
           }
         }}
+      />
+
+      <Planejamento360Modal
+        open={modal360Open}
+        onOpenChange={setModal360Open}
+        clienteNome={form.cliente_nome}
+        clienteId={form.cliente_id}
       />
     </div>
   );

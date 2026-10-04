@@ -127,61 +127,60 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "mídia.OS — Sistema comercial para veículos de comunicação" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover",
+      },
+      { name: "format-detection", content: "telephone=no" },
+      { name: "apple-touch-fullscreen", content: "yes" },
+      { title: "NEXO Mídia e Representação | Hub de Negócios & Soluções Estratégicas em Mídia" },
       {
         name: "description",
         content:
-          "Aumente suas vendas de mídia: CRM, propostas, PI digital e financeiro em uma plataforma feita para TVs, rádios, portais e OOH/DOOH. Agende uma demonstração gratuita.",
+          "NEXO Mídia e Representação — Hub de Negócios & Soluções Estratégicas em Mídia. Inteligência comercial, planejamento 360°, inventário de mídia exterior, indoor e soluções in-house no DF e entorno.",
       },
       {
         name: "keywords",
         content:
-          "sistema para emissora de tv, software para rádio, CRM mídia, PI digital, propostas comerciais, gestão de mídia, software para veículos de comunicação",
+          "Nexo Mídia e Representação, Hub de Negócios, mídia DF, DOOH Brasília, OOH, mídia exterior, inteligência comercial, Mídia.OS",
       },
-      { name: "author", content: "mídia.OS" },
+      { name: "author", content: "NEXO Mídia e Representação" },
       { name: "robots", content: "index, follow, max-image-preview:large" },
-      { property: "og:site_name", content: "mídia.OS" },
+      { property: "og:site_name", content: "NEXO Mídia e Representação" },
       {
         property: "og:title",
-        content: "mídia.OS — Sistema comercial para veículos de comunicação",
+        content: "NEXO Mídia e Representação | Hub de Negócios & Soluções Estratégicas em Mídia",
       },
       {
         property: "og:description",
         content:
-          "Do briefing à PI assinada: tudo em uma plataforma feita para quem vende mídia. Demonstração gratuita.",
+          "Hub de Negócios & Soluções Estratégicas em Mídia. Mídia.OS • Plataforma Oficial de Inteligência Comercial.",
       },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pt_BR" },
       {
         property: "og:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9bdbc7cd-7703-4e9b-8dec-61e20fa07162",
+        content: "https://nexomidiaerepresentacao.com.br/logo-nexo.png",
       },
       {
         property: "og:image:alt",
-        content: "mídia.OS — sistema comercial para veículos de comunicação",
+        content: "NEXO Mídia e Representação — Hub de Negócios & Soluções Estratégicas em Mídia",
       },
       { name: "twitter:card", content: "summary_large_image" },
       {
         name: "twitter:title",
-        content: "mídia.OS — Sistema comercial para veículos de comunicação",
+        content: "NEXO Mídia e Representação | Hub de Negócios & Soluções Estratégicas em Mídia",
       },
       {
         name: "twitter:description",
-        content: "Do briefing à PI assinada: tudo em uma plataforma feita para quem vende mídia.",
+        content: "Hub de Negócios & Soluções Estratégicas em Mídia. Mídia.OS • Plataforma Oficial de Inteligência Comercial.",
       },
-      {
-        name: "twitter:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/9bdbc7cd-7703-4e9b-8dec-61e20fa07162",
-      },
-      { name: "theme-color", content: "#0d0d24" },
+      { name: "theme-color", content: "#0f172a" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "Mídia.OS" },
-      { name: "application-name", content: "Mídia.OS" },
+      { name: "apple-mobile-web-app-title", content: "NEXO Mídia e Representação" },
+      { name: "application-name", content: "NEXO Mídia e Representação" },
     ],
     links: [
       { rel: "manifest", href: "/manifest.webmanifest" },
@@ -201,12 +200,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Organization",
-          name: "mídia.OS",
-          url: "https://midiaos.online",
-          logo: "https://midiaos.online/favicon.png",
+          name: "NEXO Mídia e Representação",
+          url: "https://nexomidiaerepresentacao.com.br",
+          logo: "https://nexomidiaerepresentacao.com.br/logo-nexo.png",
           description:
-            "Plataforma SaaS de gestão comercial para veículos de comunicação: emissoras de TV, rádios, portais e mídia OOH/DOOH.",
-          sameAs: [],
+            "Hub de Negócios & Soluções Estratégicas em Mídia. Inteligência geográfica, veículos consolidados e soluções 360° no Distrito Federal e entorno.",
+          sameAs: ["https://nexomidiaerepresentacao.com.br"],
         }),
       },
       {
@@ -214,8 +213,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebSite",
-          name: "mídia.OS",
-          url: "https://midiaos.online",
+          name: "NEXO Mídia e Representação",
+          url: "https://nexomidiaerepresentacao.com.br",
           inLanguage: "pt-BR",
         }),
       },

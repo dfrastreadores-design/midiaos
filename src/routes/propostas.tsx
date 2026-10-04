@@ -18,7 +18,9 @@ import {
   FileUp,
   Paperclip,
   Sliders,
+  Compass,
 } from "lucide-react";
+import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
 import {
   Table,
   TableBody,
@@ -58,9 +60,61 @@ function Propostas() {
   const [apresentando, setApresentando] = useState<Proposta | null>(null);
   const [visualizando, setVisualizando] = useState<Proposta | null>(null);
   const [recusando, setRecusando] = useState<Proposta | null>(null);
+  const [planejamento360Open, setPlanejamento360Open] = useState(false);
 
   const totalBruto = propostas.reduce((s, p) => s + Number(p.valor_tabela || 0), 0);
   const totalLiquido = propostas.reduce((s, p) => s + Number(p.valor_negociado || 0), 0);
+
+  const handleAplicarPlano360Direto = (itens: any[], defesa: string) => {
+    if (!itens || itens.length === 0) return;
+    const novosItens = itens.map((it) => ({
+      tipo: it.tipo || "DOOH",
+      programa: it.nome,
+      horario: "Rotativo",
+      formato: it.formato,
+      mes: new Date().getMonth() + 1,
+      ano: new Date().getFullYear(),
+      insercoes_dia: Math.max(1, Math.round((it.insercoes_mes || 30) / 30)),
+      dias_semana: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"],
+      dias_mes: Array.from({ length: 30 }, (_, i) => i + 1),
+      desconto: it.desconto_pct || 0,
+      valor_unit: it.valor_negociado / Math.max(1, it.insercoes_mes || 1),
+      valor_tabela: it.valor_tabela || it.valor_negociado,
+      valor_negociado: it.valor_negociado,
+      total_insercoes: it.insercoes_mes || 30,
+      produto_id: it.produto_id || null,
+      parceiro_nome: it.parceiro_nome || null,
+      latitude: it.latitude || null,
+      longitude: it.longitude || null,
+      link_maps: it.link_maps || null,
+      sentido_via: it.sentido_via || null,
+      ponto_referencia: it.ponto_referencia || null,
+      endereco_ponto: it.localizacao || null,
+      canal_macro: "OFF" as const,
+    }));
+
+    setEditing({
+      id: "",
+      numero: "",
+      campanha: `Estratégia 360° — ${itens[0]?.regiao || "DF"}`,
+      status: "rascunho",
+      cliente_id: null,
+      agencia_id: null,
+      cliente_avulso: "Cliente Comercial em Reunião",
+      validade: null,
+      observacao: defesa,
+      valor_tabela: itens.reduce((s, it) => s + (it.valor_tabela || 0), 0),
+      valor_desconto: itens.reduce((s, it) => s + ((it.valor_tabela || it.valor_negociado) - it.valor_negociado), 0),
+      valor_negociado: itens.reduce((s, it) => s + (it.valor_negociado || 0), 0),
+      total_insercoes: itens.reduce((s, it) => s + (it.insercoes_mes || 30), 0),
+      comissao_pct: 0,
+      itens: novosItens,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as any);
+
+    setFormOpen(true);
+  };
 
   return (
     <AppShell>
@@ -74,6 +128,15 @@ function Propostas() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            className="border-sky-500/50 bg-sky-500/10 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 font-semibold"
+            onClick={() => setPlanejamento360Open(true)}
+            title="Diagnóstico ao vivo na reunião, perfil de público do DF e radar de expansão regional"
+          >
+            <Compass className="size-4 mr-2 text-sky-600 dark:text-sky-400 animate-pulse" />
+            Planejamento 360°
+          </Button>
           <Button
             variant="outline"
             className="border-primary/40 text-primary hover:bg-primary/10"
@@ -343,6 +406,12 @@ function Propostas() {
       <LayoutManagerDialog open={layoutOpen} onOpenChange={setLayoutOpen} />
 
       <ImportarModeloPropostaDialog open={modeloEmpresaOpen} onOpenChange={setModeloEmpresaOpen} />
+
+      <Planejamento360Modal
+        open={planejamento360Open}
+        onOpenChange={setPlanejamento360Open}
+        onAplicarAoPlano={handleAplicarPlano360Direto}
+      />
     </AppShell>
   );
 }
