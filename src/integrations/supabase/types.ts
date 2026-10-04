@@ -2507,7 +2507,9 @@ export type Database = {
           tempo_exibicao_segundos: number | null;
           tenant_id: string | null;
           tipo: string | null;
-          tipo_midia: Database["public"]["Enums"]["tipo_midia"] | null;
+          canal_macro: "ON" | "OFF" | "HIBRIDO" | null;
+          plataforma_rede: string | null;
+          metricas_digitais: Json | null;
           updated_at: string;
           valor_unit: number;
           veiculacao_tipo: string;
@@ -2550,7 +2552,9 @@ export type Database = {
           tempo_exibicao_segundos?: number | null;
           tenant_id?: string | null;
           tipo?: string | null;
-          tipo_midia?: Database["public"]["Enums"]["tipo_midia"] | null;
+          canal_macro?: "ON" | "OFF" | "HIBRIDO" | null;
+          plataforma_rede?: string | null;
+          metricas_digitais?: Json | null;
           updated_at?: string;
           valor_unit?: number;
           veiculacao_tipo?: string;
@@ -2593,7 +2597,9 @@ export type Database = {
           tempo_exibicao_segundos?: number | null;
           tenant_id?: string | null;
           tipo?: string | null;
-          tipo_midia?: Database["public"]["Enums"]["tipo_midia"] | null;
+          canal_macro?: "ON" | "OFF" | "HIBRIDO" | null;
+          plataforma_rede?: string | null;
+          metricas_digitais?: Json | null;
           updated_at?: string;
           valor_unit?: number;
           veiculacao_tipo?: string;
