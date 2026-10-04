@@ -496,6 +496,68 @@ export const salvarProdutosExtraidosMidiaKit = createServerFn({ method: "POST" }
     let cadastrados = 0;
     const erros: string[] = [];
 
+    // 3.1 Registrar novos tipos/particularidades em produto_tipos caso ainda não existam no catálogo
+    const uniqueTipos = new Map<string, { nome: string; midia: string }>();
+    for (const prod of data.produtos) {
+      if (prod.tipo && prod.tipo.trim() && prod.midia) {
+        const key = `${prod.midia}:${prod.tipo.trim().toLowerCase()}`;
+        if (!uniqueTipos.has(key)) {
+          uniqueTipos.set(key, { nome: prod.tipo.trim(), midia: prod.midia });
+        }
+      }
+    }
+    for (const item of uniqueTipos.values()) {
+      try {
+        const tipoPayload: any = {
+          nome: item.nome,
+          midia: item.midia,
+          created_by: userId,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+        };
+        const { error: insTipoErr } = await supabase.from("produto_tipos").insert(tipoPayload);
+        if (insTipoErr && insTipoErr.message.toLowerCase().includes("tenant_id")) {
+          delete tipoPayload.tenant_id;
+          await supabase.from("produto_tipos").insert(tipoPayload);
+        }
+      } catch {
+        // Ignora duplicidade
+      }
+    }
+
+    // 3.2 Se temos parceiro vinculado, adiciona novos segmentos/particularidades ao cadastro do parceiro
+    if (targetParceiroId) {
+      try {
+        const { data: parcAtual } = await supabase
+          .from("parceiros")
+          .select("segmentos")
+          .eq("id", targetParceiroId)
+          .maybeSingle();
+
+        const segmentosSet = new Set<string>(parcAtual?.segmentos || []);
+        let houveMudanca = false;
+
+        for (const prod of data.produtos) {
+          if (prod.tipo && !segmentosSet.has(prod.tipo.trim())) {
+            segmentosSet.add(prod.tipo.trim());
+            houveMudanca = true;
+          }
+          if (prod.midia && !segmentosSet.has(prod.midia.trim())) {
+            segmentosSet.add(prod.midia.trim());
+            houveMudanca = true;
+          }
+        }
+
+        if (houveMudanca) {
+          await supabase
+            .from("parceiros")
+            .update({ segmentos: Array.from(segmentosSet).slice(0, 25) })
+            .eq("id", targetParceiroId);
+        }
+      } catch (err: any) {
+        console.warn("Aviso ao sincronizar segmentos do parceiro:", err?.message);
+      }
+    }
+
     // 4. Cadastrar cada produto vinculado ao parceiro
     for (const prod of data.produtos) {
       const isOff = prod.canal_macro === "OFF" || ["DOOH", "OOH"].includes(prod.midia);

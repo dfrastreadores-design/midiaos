@@ -50,6 +50,7 @@ import {
   Phone,
   Mail,
   Edit2,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { uploadProdutoFoto } from "@/lib/produto-foto";
@@ -57,6 +58,7 @@ import { listParceiros, type Parceiro } from "@/lib/parceiros.functions";
 import { geocodeAddress } from "@/lib/geocode.functions";
 import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
 import { processarArquivoImportacao } from "@/lib/documento-importer";
+import { enriquecerParceiroPorUrl } from "@/lib/parceiro-scraper.functions";
 import {
   extrairProdutosDeMidiaKit,
   salvarProdutosExtraidosMidiaKit,
@@ -85,6 +87,7 @@ export function ImportarMidiaKitDialog({
   const extrairFn = useServerFn(extrairProdutosDeMidiaKit);
   const salvarFn = useServerFn(salvarProdutosExtraidosMidiaKit);
   const geocodeAddressFn = useServerFn(geocodeAddress);
+  const enriquecerFn = useServerFn(enriquecerParceiroPorUrl);
 
   // Arquivos enviados
   const [midiaKitFile, setMidiaKitFile] = useState<File | null>(null);
@@ -92,6 +95,12 @@ export function ImportarMidiaKitDialog({
   const [fotosUpload, setFotosUpload] = useState<File[]>([]);
   const [fotosUrls, setFotosUrls] = useState<string[]>([]);
   const [uploadingFotos, setUploadingFotos] = useState(false);
+
+  // Captura direta via Site e Redes Sociais
+  const [siteUrlInput, setSiteUrlInput] = useState("");
+  const [instagramInput, setInstagramInput] = useState("");
+  const [enrichingWeb, setEnrichingWeb] = useState(false);
+  const [particularidadesDetectadas, setParticularidadesDetectadas] = useState<string[]>([]);
 
   // Estados do fluxo
   const [step, setStep] = useState<"upload" | "revisao">("upload");
@@ -239,6 +248,65 @@ export function ImportarMidiaKitDialog({
       toast.error(err.message || "Erro ao consultar CNPJ na Receita");
     } finally {
       setSearchingCnpj(false);
+    }
+  }
+
+  // Captura direta via Site e Redes Sociais do Parceiro
+  async function handleCapturarSiteRedes() {
+    if (!siteUrlInput && !instagramInput) {
+      toast.warning("Informe o Site ou Instagram do parceiro para leitura automática.");
+      return;
+    }
+    setEnrichingWeb(true);
+    setStatusMsg("Acessando site/redes e extraindo particularidades comerciais...");
+    try {
+      const res = await enriquecerFn({
+        data: {
+          siteUrl: siteUrlInput || undefined,
+          instagram: instagramInput || undefined,
+        },
+      });
+
+      if (res.sucesso) {
+        setParceiroForm((prev) => ({
+          ...prev,
+          razao_social: res.razao_social || res.nome_fantasia || prev.razao_social,
+          nome_fantasia: res.nome_fantasia || prev.nome_fantasia,
+          cnpj: res.cnpj || prev.cnpj,
+          contato_telefone: res.telefone || prev.contato_telefone,
+          contato_email: res.email || prev.contato_email,
+          cidade: res.cidade || prev.cidade,
+          uf: res.uf || prev.uf,
+          endereco: res.endereco || prev.endereco,
+        }));
+
+        setParticularidadesDetectadas(res.particularidades || []);
+
+        if (res.produtosDetectados && res.produtosDetectados.length > 0) {
+          const prods: ProdutoExtraidoMidiaKit[] = res.produtosDetectados.map((p, idx) => ({
+            id_temp: `web-${Date.now()}-${idx}`,
+            nome: p.nome,
+            midia: p.midia,
+            tipo: p.tipo,
+            duracao_segundos: p.duracao_segundos || 15,
+            insercoes_padrao: p.insercoes_padrao || 1,
+            valor_unit: p.valor_unit || 0,
+            detalhes_venda: p.detalhes_venda,
+            selecionado: true,
+            fotos: [],
+          }));
+          setProdutosDetectados(prods);
+        }
+
+        setTipoVinculo("novo");
+        setStep("revisao");
+        toast.success("Dados do site, particularidades e produtos capturados com sucesso!");
+      }
+    } catch (err: any) {
+      toast.error(`Falha ao ler site/redes: ${err?.message || "Erro de conexão"}`);
+    } finally {
+      setEnrichingWeb(false);
+      setStatusMsg("");
     }
   }
 
@@ -753,6 +821,56 @@ export function ImportarMidiaKitDialog({
                 )}
               </div>
 
+              {/* Leitura e Enriquecimento Automático por Site ou Redes Sociais */}
+              <div className="p-3.5 border rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-purple-900 dark:text-purple-200">
+                    <Globe className="size-3.5 text-purple-600" />
+                    Ou capture direto pelo Site Oficial ou Instagram do Parceiro
+                  </Label>
+                  <Badge variant="outline" className="text-[10px] text-purple-700 bg-purple-100/50">
+                    IA Conectada
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Se o parceiro possui site ou perfil no Instagram com fotos e formatos, informe o link para a IA extrair dados cadastrais, particularidades técnicas e produtos automaticamente:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <div className="sm:col-span-6">
+                    <Input
+                      placeholder="Site (ex: https://tvcars.com.br)"
+                      value={siteUrlInput}
+                      onChange={(e) => setSiteUrlInput(e.target.value)}
+                      className="h-8 text-xs bg-background"
+                    />
+                  </div>
+                  <div className="sm:col-span-4">
+                    <Input
+                      placeholder="Instagram (ex: @tvcars)"
+                      value={instagramInput}
+                      onChange={(e) => setInstagramInput(e.target.value)}
+                      className="h-8 text-xs bg-background"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={enrichingWeb || (!siteUrlInput && !instagramInput)}
+                      onClick={handleCapturarSiteRedes}
+                      className="h-8 w-full text-xs bg-purple-600 hover:bg-purple-700 text-white gap-1"
+                    >
+                      {enrichingWeb ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="size-3" />
+                      )}
+                      Rastrear
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               {/* Alerta de Status / Andamento */}
               {extrairMutation.isPending && (
                 <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center gap-3">
@@ -1050,6 +1168,25 @@ export function ImportarMidiaKitDialog({
                   </div>
                 )}
               </div>
+
+              {/* PARTICULARIDADES COMERCIAIS IDENTIFICADAS PELA IA */}
+              {particularidadesDetectadas.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap text-xs bg-purple-50/60 dark:bg-purple-950/30 p-2.5 rounded-xl border border-purple-200 dark:border-purple-800/60">
+                  <span className="font-semibold text-purple-800 dark:text-purple-300 flex items-center gap-1 text-[11px] shrink-0">
+                    <Sparkles className="size-3.5 text-purple-600" />
+                    Particularidades e Diferenciais de Mídia:
+                  </span>
+                  {particularidadesDetectadas.map((part, idx) => (
+                    <Badge
+                      key={idx}
+                      variant="secondary"
+                      className="text-[10px] bg-white dark:bg-purple-900/50 text-purple-900 dark:text-purple-200 border border-purple-200/60"
+                    >
+                      {part}
+                    </Badge>
+                  ))}
+                </div>
+              )}
 
               {/* BARRA DE TÍTULO DA TABELA DE PRODUTOS */}
               <div className="flex items-center justify-between px-1">

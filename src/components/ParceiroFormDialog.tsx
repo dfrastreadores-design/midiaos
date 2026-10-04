@@ -35,6 +35,7 @@ import {
   Linkedin,
   Facebook,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -43,6 +44,7 @@ import {
   MODELOS_REMUNERACAO,
   type Parceiro,
 } from "@/lib/parceiros.functions";
+import { enriquecerParceiroPorUrl } from "@/lib/parceiro-scraper.functions";
 import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
 import { lookupCep, formatCEP } from "@/lib/geocode.functions";
 import { traduzirErro } from "@/lib/error-translator";
@@ -64,9 +66,11 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
   const qc = useQueryClient();
   const upsertFn = useServerFn(upsertParceiro);
   const lookupCepFn = useServerFn(lookupCep);
+  const enriquecerFn = useServerFn(enriquecerParceiroPorUrl);
 
   const [searchingCnpj, setSearchingCnpj] = useState(false);
   const [searchingCep, setSearchingCep] = useState(false);
+  const [enriching, setEnriching] = useState(false);
   const [customSegmento, setCustomSegmento] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -204,6 +208,64 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
       toast.error(traduzirErro(err) || "Erro ao buscar CEP.");
     } finally {
       setSearchingCep(false);
+    }
+  };
+
+  const handleEnriquecerPorSiteRedes = async () => {
+    if (!form.site && !form.instagram) {
+      toast.warning("Informe o Site Oficial ou Instagram do parceiro para pesquisar.");
+      return;
+    }
+    setEnriching(true);
+    try {
+      const res = await enriquecerFn({
+        data: {
+          siteUrl: form.site || undefined,
+          instagram: form.instagram || undefined,
+          nomeParceiro: form.nome_fantasia || form.razao_social || undefined,
+        },
+      });
+
+      if (res.sucesso) {
+        setForm((prev) => {
+          const patch: Partial<Parceiro> = {};
+          if (res.nome_fantasia && !prev.nome_fantasia) patch.nome_fantasia = res.nome_fantasia;
+          if (res.razao_social && !prev.razao_social) patch.razao_social = res.razao_social;
+          if (res.cnpj && !prev.cnpj) patch.cnpj = res.cnpj;
+          if (res.telefone && !prev.contato_telefone) patch.contato_telefone = res.telefone;
+          if (res.email && !prev.contato_email) patch.contato_email = res.email;
+          if (res.site && !prev.site) patch.site = res.site;
+          if (res.instagram && !prev.instagram) patch.instagram = res.instagram;
+          if (res.linkedin && !prev.linkedin) patch.linkedin = res.linkedin;
+          if (res.facebook && !prev.facebook) patch.facebook = res.facebook;
+          if (res.cidade && !prev.cidade) patch.cidade = res.cidade;
+          if (res.uf && !prev.uf) patch.uf = res.uf;
+          if (res.endereco && !prev.endereco) patch.endereco = res.endereco;
+
+          if (Array.isArray(res.segmentos) && res.segmentos.length > 0) {
+            const currentSegs = new Set(prev.segmentos || []);
+            res.segmentos.forEach((s) => currentSegs.add(s));
+            patch.segmentos = Array.from(currentSegs);
+          }
+
+          if (res.descricao || (res.particularidades && res.particularidades.length > 0)) {
+            const partText = res.particularidades?.length
+              ? `\nParticularidades de Mídia: ${res.particularidades.join("; ")}`
+              : "";
+            if (!prev.observacoes) {
+              patch.observacoes = `${res.descricao || ""}${partText}`.trim();
+            }
+          }
+
+          return { ...prev, ...patch };
+        });
+
+        toast.success("Dados do parceiro, contatos e particularidades capturados com sucesso!");
+      }
+    } catch (err: any) {
+      toast.error(`Erro ao capturar dados: ${err?.message || "Falha na leitura"}`);
+    } finally {
+      setEnriching(false);
     }
   };
 
@@ -599,14 +661,27 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
 
           {/* Website & Redes Sociais do Parceiro (Opcional) */}
           <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <Label className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
                 <Globe className="size-3.5 text-primary" />
-                Website & Redes Sociais (Opcional)
+                Website & Redes Sociais
               </Label>
-              <Badge variant="outline" className="text-[10px]">
-                Opcional
-              </Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={enriching || (!form.site && !form.instagram)}
+                onClick={handleEnriquecerPorSiteRedes}
+                className="h-7 text-[11px] gap-1.5 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                title="Rastrear site e redes do parceiro com IA para extrair dados cadastrais, particularidades e produtos"
+              >
+                {enriching ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Sparkles className="size-3 text-purple-600" />
+                )}
+                Capturar Dados do Site & Redes (IA)
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
