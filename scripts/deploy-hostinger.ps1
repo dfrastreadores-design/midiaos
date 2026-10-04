@@ -2,11 +2,23 @@ param (
     [switch]$SkipBuild
 )
 
-$nodeArgs = @()
+$env:NODE_OPTIONS = "--max-old-space-size=4096"
+
+Write-Host ">>> [1/4] Limpando pastas temporárias, cache e zip antigo..." -ForegroundColor Cyan
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue dist, build, .cache, hostinger_deploy.zip
+
+Write-Host ">>> [2/4] Disparando compilação e deploy para a Hostinger..." -ForegroundColor Cyan
+$argsList = @()
 if ($SkipBuild) {
-    $nodeArgs += "--skip-build"
+    $argsList += "--skip-build"
 }
 
-Write-Host "Iniciando deploy de alta velocidade para a Hostinger via Node.js..." -ForegroundColor Cyan
-node scripts/deploy-hostinger.mjs @nodeArgs
+node scripts/deploy-hostinger.mjs @argsList
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host ">>> [4/4] Deploy finalizado com sucesso no servidor!" -ForegroundColor Green
+} else {
+    Write-Host ">>> [ERRO] O deploy falhou durante a transferência FTP ou extração pelo webhook." -ForegroundColor Red
+}
+
 exit $LASTEXITCODE

@@ -44,12 +44,17 @@ const startTime = Date.now();
 
 // [1/4] Build da aplicação
 if (!skipBuild) {
-  console.log("\n📦 [1/4] Compilando a aplicação para produção (npm run build)...");
-  const buildCmd =
-    process.platform === "win32"
-      ? `cmd /c "set NODE_OPTIONS=--max-old-space-size=4096 && npm run build"`
-      : `NODE_OPTIONS=--max-old-space-size=4096 npm run build`;
-  execSync(buildCmd, { stdio: "inherit" });
+  if (fs.existsSync("D:\\midiaos_build")) {
+    console.log("\n📦 [1/4] Compilando a aplicação em disco rápido (D:\\midiaos_build)...");
+    execSync("node scripts/build-quick.mjs", { stdio: "inherit" });
+  } else {
+    console.log("\n📦 [1/4] Compilando a aplicação para produção (npm run build)...");
+    const buildCmd =
+      process.platform === "win32"
+        ? `cmd /c "set NODE_OPTIONS=--max-old-space-size=4096 && npm run build"`
+        : `NODE_OPTIONS=--max-old-space-size=4096 npm run build`;
+    execSync(buildCmd, { stdio: "inherit" });
+  }
 } else {
   console.log("\n⚡ [1/4] Pulando compilação (usando .output existente)...");
 }
