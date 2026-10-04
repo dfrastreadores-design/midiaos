@@ -71,6 +71,7 @@ import logoMidiaOS from "@/assets/logo-midiaos.png";
 import { useTenantBranding } from "@/hooks/use-tenant-branding";
 import { useTenantModulos } from "@/hooks/use-tenant-modulos";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { SessionExpiredDialog } from "@/components/SessionExpiredDialog";
 import { useQuery } from "@tanstack/react-query";
 import { getInicio } from "@/lib/inicio.functions";
 import { Badge } from "@/components/ui/badge";
@@ -578,6 +579,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <ImpersonateDialog open={impersonateOpen} onOpenChange={setImpersonateOpen} />
+        <SessionExpiredDialog />
 
         <main className="flex-1 px-3 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-12 pb-24 lg:pb-12 max-w-[1600px] w-full mx-auto animate-fade-up min-w-0 space-y-6">
           <PushNotificationBanner />

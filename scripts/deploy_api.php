@@ -238,10 +238,10 @@ if ($action === 'extract') {
         "PassengerRestartDir /home/u233352823/domains/midiaos.online/hbuilds/current/nodejs/tmp\n" .
         "SetEnv NODE_OPTIONS \"--require /home/u233352823/domains/midiaos.online/hbuilds/config/preload-timestamp.js\"\n" .
         "SetEnv LSNODE_CONSOLE_LOG console.log\n" .
-        "SetEnv SUPABASE_URL \"https://odgowgvhjhvpeazglsly.supabase.co\"\n" .
-        "SetEnv SUPABASE_PUBLISHABLE_KEY \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ293Z3Zoamh2cGVhemdsc2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwODYwOTQsImV4cCI6MjA5NDY2MjA5NH0.X0-jxfLmUFTpxUm6O0-802xVK1iNt41He6Gho-oDb0E\"\n" .
-        "SetEnv VITE_SUPABASE_URL \"https://odgowgvhjhvpeazglsly.supabase.co\"\n" .
-        "SetEnv VITE_SUPABASE_PUBLISHABLE_KEY \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ293Z3Zoamh2cGVhemdsc2x5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwODYwOTQsImV4cCI6MjA5NDY2MjA5NH0.X0-jxfLmUFTpxUm6O0-802xVK1iNt41He6Gho-oDb0E\"\n";
+        "SetEnv SUPABASE_URL \"https://tvniawyweymutjiybxyo.supabase.co\"\n" .
+        "SetEnv SUPABASE_PUBLISHABLE_KEY \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmlhd3l3ZXltdXRqaXlieHlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NzkwNTcsImV4cCI6MjEwNjQ1NTA1N30.4SyTIJH3ZZzTN-fX4MjTsuR2Ez-8rF6zyytqZvnxtoQ\"\n" .
+        "SetEnv VITE_SUPABASE_URL \"https://tvniawyweymutjiybxyo.supabase.co\"\n" .
+        "SetEnv VITE_SUPABASE_PUBLISHABLE_KEY \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmlhd3l3ZXltdXRqaXlieHlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NzkwNTcsImV4cCI6MjEwNjQ1NTA1N30.4SyTIJH3ZZzTN-fX4MjTsuR2Ez-8rF6zyytqZvnxtoQ\"\n";
     @file_put_contents($htaccessFile, $htaccessContent);
 
     // 4. Cria diretório tmp e atualiza restart.txt para reiniciar o Passenger Node.js

@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProdutoFotoImg } from "@/components/ProdutoFotoImg";
-import { ChevronLeft, ChevronRight, Download, ExternalLink, Camera } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ExternalLink, Camera, ShieldCheck } from "lucide-react";
 import { getProdutoFotoUrl } from "@/lib/produto-foto";
+import { ProdutoFotoCensuraModal } from "@/components/ProdutoFotoCensuraModal";
 
 type Props = {
   open: boolean;
@@ -12,6 +13,7 @@ type Props = {
   fotos: string[];
   titulo?: string;
   subtitulo?: string;
+  onUpdateFoto?: (newUrl: string, index: number) => void;
 };
 
 export function ProdutoFotoGalleryModal({
@@ -20,8 +22,10 @@ export function ProdutoFotoGalleryModal({
   fotos = [],
   titulo = "Fotos do Produto",
   subtitulo,
+  onUpdateFoto,
 }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [censuraOpen, setCensuraOpen] = useState(false);
 
   const activeIndex = Math.min(currentIndex, Math.max(0, fotos.length - 1));
   const activeFoto = fotos[activeIndex];
@@ -45,37 +49,51 @@ export function ProdutoFotoGalleryModal({
   if (!fotos || fotos.length === 0) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background">
-        <DialogHeader className="p-4 pb-2 border-b bg-muted/20">
-          <div className="flex items-center justify-between pr-6">
-            <div>
-              <DialogTitle className="text-base font-semibold flex items-center gap-2">
-                <Camera className="size-4 text-primary" />
-                {titulo}
-              </DialogTitle>
-              {subtitulo && <p className="text-xs text-muted-foreground mt-0.5">{subtitulo}</p>}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background">
+          <DialogHeader className="p-4 pb-2 border-b bg-muted/20">
+            <div className="flex items-center justify-between pr-6 flex-wrap gap-2">
+              <div>
+                <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                  <Camera className="size-4 text-primary" />
+                  {titulo}
+                </DialogTitle>
+                {subtitulo && <p className="text-xs text-muted-foreground mt-0.5">{subtitulo}</p>}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="font-mono text-xs">
+                  Foto {activeIndex + 1} de {fotos.length}
+                </Badge>
+                {onUpdateFoto && activeFoto && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2.5 text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/10 font-medium"
+                    onClick={() => setCensuraOpen(true)}
+                    title="Cobrir logo/telefone do parceiro com a logo da Nexo ou desfoque"
+                  >
+                    <ShieldCheck className="size-3.5 text-emerald-500" />
+                    <span>Logo Nexo / Borrar</span>
+                  </Button>
+                )}
+                {activeFoto && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                    onClick={handleOpenOriginal}
+                    title="Abrir imagem original em nova aba"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    <span className="hidden sm:inline">Ver Original</span>
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-xs">
-                Foto {activeIndex + 1} de {fotos.length}
-              </Badge>
-              {activeFoto && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                  onClick={handleOpenOriginal}
-                  title="Abrir imagem original em nova aba"
-                >
-                  <ExternalLink className="size-3.5" />
-                  <span className="hidden sm:inline">Ver Original</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
         <div className="relative bg-black/95 flex items-center justify-center min-h-[340px] max-h-[70vh] p-4">
           <div className="relative max-w-full max-h-[60vh] flex items-center justify-center">
@@ -136,5 +154,19 @@ export function ProdutoFotoGalleryModal({
         )}
       </DialogContent>
     </Dialog>
+
+    {onUpdateFoto && activeFoto && (
+      <ProdutoFotoCensuraModal
+        open={censuraOpen}
+        onOpenChange={setCensuraOpen}
+        fotoSrc={activeFoto}
+        onSave={(newUrl) => {
+          onUpdateFoto(newUrl, activeIndex);
+          setCensuraOpen(false);
+        }}
+        tituloProduto={titulo}
+      />
+    )}
+  </>
   );
 }

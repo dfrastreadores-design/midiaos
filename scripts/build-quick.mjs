@@ -14,13 +14,30 @@ if (!fs.existsSync(buildDir)) {
   process.exit(1);
 }
 
-console.log("\n📁 [1/3] Sincronizando apenas pastas de código-fonte (src, public, scripts)...");
-const itemsToSync = ["src", "public", "scripts"];
+console.log("\n📁 [1/3] Sincronizando código-fonte e configurações para D:\\midiaos_build...");
+const itemsToSync = [
+  "src",
+  "public",
+  "scripts",
+  "supabase",
+  ".env",
+  "package.json",
+  "vite.config.ts",
+  "tsconfig.json",
+  "hostinger.mjs",
+  "tailwind.config.ts",
+  "postcss.config.js"
+];
 for (const item of itemsToSync) {
   const srcPath = path.join(sourceDir, item);
   const destPath = path.join(buildDir, item);
   if (!fs.existsSync(srcPath)) continue;
-  fs.cpSync(srcPath, destPath, { recursive: true });
+  const stat = fs.statSync(srcPath);
+  if (stat.isDirectory()) {
+    fs.cpSync(srcPath, destPath, { recursive: true });
+  } else {
+    fs.copyFileSync(srcPath, destPath);
+  }
 }
 
 console.log("\n🚀 [2/3] Compilando aplicação (npm run build)...");

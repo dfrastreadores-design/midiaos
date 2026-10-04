@@ -49,6 +49,8 @@ import {
   lookupCep,
   formatCEP,
 } from "@/lib/geocode.functions";
+import { FormFieldError, errorLabelClass, scrollToFirstError } from "@/lib/form-errors";
+import { traduzirErro } from "@/lib/error-translator";
 
 export type Midia = string;
 
@@ -198,8 +200,11 @@ export function ProdutoFormDialog({
     fotos: [],
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (open) {
+      setErrors({});
       const init = initial || {
         midia: "TV",
         nome: "",
@@ -382,8 +387,41 @@ export function ProdutoFormDialog({
       toast.success("Produto salvo com sucesso");
       onOpenChange(false);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(traduzirErro(e)),
   });
+
+  const validateForm = () => {
+    const errs: Record<string, string> = {};
+    if (!form.nome?.trim()) {
+      errs.nome = "O nome do produto é obrigatório.";
+    }
+    if (!form.midia?.trim()) {
+      errs.midia = "A mídia é obrigatória.";
+    }
+    if (form.valor_unit == null || isNaN(Number(form.valor_unit)) || Number(form.valor_unit) < 0) {
+      errs.valor_unit = "Informe um valor unitário válido.";
+    }
+    if (!form.duracao_segundos || Number(form.duracao_segundos) <= 0) {
+      errs.duracao_segundos = "Duração deve ser maior que zero.";
+    }
+    if (!form.insercoes_padrao || Number(form.insercoes_padrao) <= 0) {
+      errs.insercoes_padrao = "Inserções padrão deve ser pelo menos 1.";
+    }
+    return errs;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs = validateForm();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      toast.error("Por favor, preencha os campos obrigatórios destacados em vermelho.");
+      scrollToFirstError(errs);
+      return;
+    }
+    setErrors({});
+    saveMut.mutate(form);
+  };
 
   return (
     <>
@@ -392,17 +430,11 @@ export function ProdutoFormDialog({
           <DialogHeader>
             <DialogTitle>{form.id ? "Editar produto" : "Novo produto"}</DialogTitle>
           </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              saveMut.mutate(form);
-            }}
-            className="space-y-4"
-          >
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <div data-field="midia">
                 <div className="flex items-center justify-between mb-1.5">
-                  <Label className="font-semibold text-xs flex items-center gap-1">
+                  <Label className={`font-semibold text-xs flex items-center gap-1 ${errors.midia ? errorLabelClass : ""}`}>
                     <span>Mídia *</span>
                   </Label>
                   <button
@@ -418,7 +450,17 @@ export function ProdutoFormDialog({
                 </div>
                 <CreatableCombobox
                   value={form.midia ?? "TV"}
-                  onChange={(v) => set({ midia: v })}
+                  onChange={(v) => {
+                    set({ midia: v });
+                    if (errors.midia) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.midia;
+                        return copy;
+                      });
+                    }
+                  }}
+                  error={errors.midia}
                   options={todasMidias}
                   placeholder="Selecione ou digite para cadastrar..."
                   emptyLabel="Nenhuma mídia encontrada"
@@ -430,6 +472,13 @@ export function ProdutoFormDialog({
                       await upsertConfigFn({ data: { midia: v.trim() } });
                       await qc.invalidateQueries({ queryKey: ["midia_config"] });
                       set({ midia: v.trim() });
+                      if (errors.midia) {
+                        setErrors((prev) => {
+                          const copy = { ...prev };
+                          delete copy.midia;
+                          return copy;
+                        });
+                      }
                       toast.success(`Mídia "${v.trim()}" cadastrada com sucesso!`);
                     } catch (e) {
                       toast.error((e as Error).message);
@@ -438,6 +487,7 @@ export function ProdutoFormDialog({
                     }
                   }}
                 />
+                <FormFieldError message={errors.midia} />
               </div>
               <div>
                 <Label>Tipo do Produto</Label>
@@ -677,12 +727,23 @@ export function ProdutoFormDialog({
             </div>
 
             <div>
-              <Label>Nome do Produto *</Label>
+              <Label className={errors.nome ? errorLabelClass : undefined}>Nome do Produto *</Label>
               <Input
-                required
+                data-field="nome"
+                error={errors.nome}
                 value={form.nome ?? ""}
-                onChange={(e) => set({ nome: e.target.value })}
+                onChange={(e) => {
+                  set({ nome: e.target.value });
+                  if (errors.nome) {
+                    setErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.nome;
+                      return copy;
+                    });
+                  }
+                }}
               />
+              <FormFieldError message={errors.nome} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -717,37 +778,70 @@ export function ProdutoFormDialog({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label>Duração (s)</Label>
+                  <Label className={errors.duracao_segundos ? errorLabelClass : undefined}>Duração (s)</Label>
                   <Input
+                    data-field="duracao_segundos"
+                    error={errors.duracao_segundos}
                     type="number"
                     min={1}
-                    required
                     value={form.duracao_segundos ?? 30}
-                    onChange={(e) => set({ duracao_segundos: Number(e.target.value) })}
+                    onChange={(e) => {
+                      set({ duracao_segundos: Number(e.target.value) });
+                      if (errors.duracao_segundos) {
+                        setErrors((prev) => {
+                          const copy = { ...prev };
+                          delete copy.duracao_segundos;
+                          return copy;
+                        });
+                      }
+                    }}
                   />
+                  <FormFieldError message={errors.duracao_segundos} />
                 </div>
                 <div>
-                  <Label>Ins. padrão</Label>
+                  <Label className={errors.insercoes_padrao ? errorLabelClass : undefined}>Ins. padrão</Label>
                   <Input
+                    data-field="insercoes_padrao"
+                    error={errors.insercoes_padrao}
                     type="number"
                     min={1}
-                    required
                     value={form.insercoes_padrao ?? 1}
-                    onChange={(e) => set({ insercoes_padrao: Number(e.target.value) })}
+                    onChange={(e) => {
+                      set({ insercoes_padrao: Number(e.target.value) });
+                      if (errors.insercoes_padrao) {
+                        setErrors((prev) => {
+                          const copy = { ...prev };
+                          delete copy.insercoes_padrao;
+                          return copy;
+                        });
+                      }
+                    }}
                   />
+                  <FormFieldError message={errors.insercoes_padrao} />
                 </div>
               </div>
             </div>
             <div>
-              <Label>Valor unitário (R$)</Label>
+              <Label className={errors.valor_unit ? errorLabelClass : undefined}>Valor unitário (R$) *</Label>
               <Input
+                data-field="valor_unit"
+                error={errors.valor_unit}
                 type="number"
                 min={0}
                 step="0.01"
-                required
                 value={form.valor_unit ?? 0}
-                onChange={(e) => set({ valor_unit: Number(e.target.value) })}
+                onChange={(e) => {
+                  set({ valor_unit: Number(e.target.value) });
+                  if (errors.valor_unit) {
+                    setErrors((prev) => {
+                      const copy = { ...prev };
+                      delete copy.valor_unit;
+                      return copy;
+                    });
+                  }
+                }}
               />
+              <FormFieldError message={errors.valor_unit} />
             </div>
             <div>
               <Label>Link do modelo do produto (opcional)</Label>
@@ -1203,7 +1297,11 @@ export function ProdutoFormDialog({
             )}
 
             {/* Fotos do Produto (no máximo 2 fotos) */}
-            <ProdutoFotosUploader fotos={form.fotos} onChange={(f) => set({ fotos: f })} />
+            <ProdutoFotosUploader
+              fotos={form.fotos}
+              onChange={(f) => set({ fotos: f })}
+              tituloProduto={form.nome || form.programa || undefined}
+            />
 
             <div>
               <Label>Observação do produto</Label>

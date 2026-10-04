@@ -8,10 +8,27 @@ if (typeof window !== "undefined") {
     (toast as any).__translated = true;
     toast.error = (message: any, data?: any) => {
       const translated = traduzirErro(message);
-      if (data && typeof data.description === "string") {
-        data = { ...data, description: traduzirErro(data.description) };
+      let updatedData = data;
+      if (updatedData && typeof updatedData.description === "string") {
+        updatedData = { ...updatedData, description: traduzirErro(updatedData.description) };
       }
-      return originalError(translated, data);
+      if (
+        typeof translated === "string" &&
+        translated.toLowerCase().includes("sessão de acesso expirou")
+      ) {
+        window.dispatchEvent(new CustomEvent("midiaos:session-expired"));
+        updatedData = {
+          ...updatedData,
+          action: {
+            label: "Fazer Login",
+            onClick: () => {
+              window.location.href = "/login";
+            },
+          },
+          duration: 10000,
+        };
+      }
+      return originalError(translated, updatedData);
     };
   }
 }

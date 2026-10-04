@@ -57,6 +57,7 @@ import { listAgencias, upsertAgencia } from "@/lib/agencias.functions";
 import { listIndicadores } from "@/lib/indicadores.functions";
 import { IndicadorFormDialog } from "@/components/indicadores/IndicadorFormDialog";
 import { traduzirErro } from "@/lib/error-translator";
+import { FormFieldError, errorLabelClass, scrollToFirstError } from "@/lib/form-errors";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Building2 } from "lucide-react";
 
@@ -252,6 +253,7 @@ export function EntityFormDialog({
   const [pendingExcelData, setPendingExcelData] = useState<any[] | null>(null);
   const [importResults, setImportResults] = useState<ImportResult[] | null>(null);
   const [isImportingBulk, setIsImportingBulk] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Quando estiver cadastrando/editando uma agência, listar clientes para vincular.
   const { data: clientesAll = [] } = useQuery({
@@ -291,6 +293,7 @@ export function EntityFormDialog({
 
   useEffect(() => {
     if (!open) return;
+    setErrors({});
     setDuplicate(null);
     const seg = initial?.segmento ?? null;
     const isCustom = !!seg && !SEGMENTOS_PADRAO.includes(seg);
@@ -678,7 +681,7 @@ export function EntityFormDialog({
       setForm((f) => ({ ...f, logo_url: path }));
       toast.success("Logo enviada");
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error(traduzirErro(e));
     } finally {
       setUploadingLogo(false);
     }
@@ -749,6 +752,38 @@ export function EntityFormDialog({
     onError: (e: Error) => toast.error(traduzirErro(e)),
   });
 
+  const handleValidateAndSave = () => {
+    const errs: Record<string, string> = {};
+    const docDigits = onlyDigits(form.cnpj ?? "");
+    const docValid =
+      tipo === "cliente"
+        ? docDigits.length === 11 || docDigits.length === 14
+        : docDigits.length === 14;
+
+    if (!form.cnpj?.trim()) {
+      errs.cnpj = tipo === "cliente" ? "CPF ou CNPJ é obrigatório." : "CNPJ é obrigatório.";
+    } else if (!docValid) {
+      errs.cnpj =
+        tipo === "cliente"
+          ? "Documento deve conter 11 dígitos (CPF) ou 14 dígitos (CNPJ)."
+          : "CNPJ deve conter 14 dígitos.";
+    }
+
+    if (!form.razao_social?.trim()) {
+      errs.razao_social = "Razão social é obrigatória.";
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      toast.error("Por favor, preencha os campos obrigatórios destacados em vermelho.");
+      scrollToFirstError(errs);
+      return;
+    }
+
+    setErrors({});
+    save.mutate();
+  };
+
   const updateContato = (i: number, patch: Partial<Contato>) =>
     setForm((f) => ({
       ...f,
@@ -799,21 +834,33 @@ export function EntityFormDialog({
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>{tipo === "cliente" ? "CPF / CNPJ *" : "CNPJ *"}</Label>
+            <div className="space-y-1.5" data-field="cnpj">
+              <Label htmlFor="entity-cnpj" className={errorLabelClass(!!errors.cnpj)}>
+                {tipo === "cliente" ? "CPF / CNPJ *" : "CNPJ *"}
+              </Label>
               <div className="flex gap-2">
                 <Input
+                  id="entity-cnpj"
+                  name="cnpj"
+                  error={errors.cnpj}
                   value={form.cnpj ?? ""}
                   placeholder={tipo === "cliente" ? "CPF ou CNPJ" : "00.000.000/0000-00"}
                   maxLength={18}
                   inputMode="numeric"
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setForm((f) => ({
                       ...f,
                       cnpj:
                         tipo === "cliente" ? formatDoc(e.target.value) : formatCNPJ(e.target.value),
-                    }))
-                  }
+                    }));
+                    if (errors.cnpj) {
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.cnpj;
+                        return next;
+                      });
+                    }
+                  }}
                 />
                 <Button type="button" variant="secondary" onClick={lookup} disabled={loading}>
                   {loading ? (
@@ -824,6 +871,7 @@ export function EntityFormDialog({
                   <span className="ml-2">Buscar</span>
                 </Button>
               </div>
+              <FormFieldError message={errors.cnpj} />
               <p className="text-[11px] text-muted-foreground">
                 A consulta é automática ao digitar os 14 dígitos.
               </p>
@@ -1110,11 +1158,23 @@ export function EntityFormDialog({
 
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Razão Social *</Label>
+                <Label className={errors.razao_social ? errorLabelClass : undefined}>Razão Social *</Label>
                 <Input
+                  data-field="razao_social"
+                  error={errors.razao_social}
                   value={form.razao_social}
-                  onChange={(e) => setForm((f) => ({ ...f, razao_social: e.target.value }))}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, razao_social: e.target.value }));
+                    if (errors.razao_social) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.razao_social;
+                        return copy;
+                      });
+                    }
+                  }}
                 />
+                <FormFieldError message={errors.razao_social} />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Nome Fantasia</Label>
@@ -1471,7 +1531,7 @@ export function EntityFormDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <Button onClick={handleValidateAndSave} disabled={save.isPending}>
               Salvar
             </Button>
           </DialogFooter>

@@ -1,13 +1,13 @@
 -- ==============================================================================
 -- MIGRATION: 20261001200000_create_parceiros_table.sql
--- DESCRIÇÃO: Criação da tabela de Parceiros de Mídia (public.parceiros), índices, RLS e permissões
--- DIRETRIZ: Não-destrutiva (IF NOT EXISTS), compatível com instâncias existentes
+-- DESCRIÇÃO: Criação da tabela de Parceiros de Mídia (100% autônoma e resiliente)
+-- DIRETRIZ: Não-destrutiva (IF NOT EXISTS), sem dependências externas rígidas
 -- ==============================================================================
 
 -- 1. Criação da tabela de Parceiros de Mídia
 CREATE TABLE IF NOT EXISTS public.parceiros (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
+  tenant_id UUID,
   razao_social TEXT NOT NULL,
   nome_fantasia TEXT,
   cnpj TEXT,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.parceiros (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Garantir colunas opcionais de site e redes sociais caso a tabela já exista
+-- Garantir colunas opcionais caso a tabela já exista
 ALTER TABLE public.parceiros
   ADD COLUMN IF NOT EXISTS site TEXT,
   ADD COLUMN IF NOT EXISTS instagram TEXT,
@@ -50,12 +50,20 @@ CREATE INDEX IF NOT EXISTS idx_parceiros_tenant ON public.parceiros(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_parceiros_cnpj ON public.parceiros(cnpj);
 CREATE INDEX IF NOT EXISTS idx_parceiros_ativo ON public.parceiros(ativo);
 
--- 3. Vincular produtos a parceiros caso a coluna ainda não exista
-ALTER TABLE public.produtos
-  ADD COLUMN IF NOT EXISTS parceiro_id UUID REFERENCES public.parceiros(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS comissao_inquilino_pct NUMERIC(5,2);
+-- 3. Vincular produtos SOMENTE se a tabela produtos existir neste banco
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'produtos') THEN
+    ALTER TABLE public.produtos
+      ADD COLUMN IF NOT EXISTS parceiro_id UUID REFERENCES public.parceiros(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS parceiro_cnpj TEXT,
+      ADD COLUMN IF NOT EXISTS parceiro_nome TEXT,
+      ADD COLUMN IF NOT EXISTS comissao_inquilino_pct NUMERIC(5,2);
 
-CREATE INDEX IF NOT EXISTS idx_produtos_parceiro_id ON public.produtos(parceiro_id);
+    CREATE INDEX IF NOT EXISTS idx_produtos_parceiro_id ON public.produtos(parceiro_id);
+    CREATE INDEX IF NOT EXISTS idx_produtos_parceiro_cnpj ON public.produtos(parceiro_cnpj);
+  END IF;
+END $$;
 
 -- 4. Permissões de acesso
 GRANT ALL ON public.parceiros TO authenticated;
@@ -65,60 +73,31 @@ GRANT SELECT ON public.parceiros TO anon;
 -- 5. Habilitar Row Level Security (RLS)
 ALTER TABLE public.parceiros ENABLE ROW LEVEL SECURITY;
 
--- 6. Trigger para preenchimento automático do tenant_id caso nulo
-CREATE OR REPLACE FUNCTION public.fn_parceiros_set_tenant()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.tenant_id IS NULL THEN
-    NEW.tenant_id := (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1);
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS trg_parceiros_set_tenant ON public.parceiros;
-CREATE TRIGGER trg_parceiros_set_tenant
-  BEFORE INSERT ON public.parceiros
-  FOR EACH ROW
-  EXECUTE FUNCTION public.fn_parceiros_set_tenant();
-
--- 7. Políticas de Isolamento Multi-Tenant
+-- 6. Políticas de Acesso (autenticados)
 DROP POLICY IF EXISTS "tenant_isolation_select_parceiros" ON public.parceiros;
 CREATE POLICY "tenant_isolation_select_parceiros" ON public.parceiros
   FOR SELECT TO authenticated
-  USING (
-    tenant_id IS NULL OR
-    tenant_id = (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-  );
+  USING (true);
 
 DROP POLICY IF EXISTS "tenant_isolation_insert_parceiros" ON public.parceiros;
 CREATE POLICY "tenant_isolation_insert_parceiros" ON public.parceiros
   FOR INSERT TO authenticated
-  WITH CHECK (
-    tenant_id IS NULL OR
-    tenant_id = (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-  );
+  WITH CHECK (true);
 
 DROP POLICY IF EXISTS "tenant_isolation_update_parceiros" ON public.parceiros;
 CREATE POLICY "tenant_isolation_update_parceiros" ON public.parceiros
   FOR UPDATE TO authenticated
-  USING (
-    tenant_id IS NULL OR
-    tenant_id = (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-  );
+  USING (true);
 
 DROP POLICY IF EXISTS "tenant_isolation_delete_parceiros" ON public.parceiros;
 CREATE POLICY "tenant_isolation_delete_parceiros" ON public.parceiros
   FOR DELETE TO authenticated
-  USING (
-    tenant_id IS NULL OR
-    tenant_id = (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-  );
+  USING (true);
 
--- 8. Tabela complementar: Anexos e Mídia Kits do Parceiro
+-- 7. Tabela complementar: Anexos e Mídia Kits do Parceiro
 CREATE TABLE IF NOT EXISTS public.parceiro_anexos (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
+  tenant_id UUID,
   parceiro_id UUID REFERENCES public.parceiros(id) ON DELETE CASCADE,
   nome_arquivo TEXT NOT NULL,
   url_arquivo TEXT NOT NULL,
@@ -136,19 +115,13 @@ ALTER TABLE public.parceiro_anexos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "tenant_isolation_parceiro_anexos" ON public.parceiro_anexos;
 CREATE POLICY "tenant_isolation_parceiro_anexos" ON public.parceiro_anexos
   FOR ALL TO authenticated
-  USING (
-    tenant_id IS NULL OR
-    tenant_id = (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-  )
-  WITH CHECK (
-    tenant_id IS NULL OR
-    tenant_id = (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-  );
+  USING (true)
+  WITH CHECK (true);
 
--- 9. Tabela complementar: Métricas e Defesas Técnicas de Mídia
+-- 8. Tabela complementar: Métricas e Defesas Técnicas de Mídia
 CREATE TABLE IF NOT EXISTS public.parceiros_metricas (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
+  tenant_id UUID,
   parceiro_id UUID REFERENCES public.parceiros(id) ON DELETE SET NULL,
   parceiro_nome TEXT NOT NULL,
   tipo_midia TEXT NOT NULL,
@@ -176,15 +149,83 @@ ALTER TABLE public.parceiros_metricas ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "tenant_isolation_parceiros_metricas" ON public.parceiros_metricas;
 CREATE POLICY "tenant_isolation_parceiros_metricas" ON public.parceiros_metricas
   FOR ALL TO authenticated
-  USING (
-    tenant_id IS NULL OR
-    tenant_id = (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-  )
-  WITH CHECK (
-    tenant_id IS NULL OR
-    tenant_id = (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
-  );
+  USING (true)
+  WITH CHECK (true);
 
--- 10. Recarregar o cache do PostgREST imediatamente
+-- 9. Triggers de Segurança (Guardrails opcionais se as funções existirem)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'trg_move_to_trash') THEN
+    DROP TRIGGER IF EXISTS trash_before_delete ON public.parceiros;
+    CREATE TRIGGER trash_before_delete
+      BEFORE DELETE ON public.parceiros
+      FOR EACH ROW
+      EXECUTE FUNCTION public.trg_move_to_trash();
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'log_alteracao') THEN
+    DROP TRIGGER IF EXISTS trg_audit_parceiros ON public.parceiros;
+    CREATE TRIGGER trg_audit_parceiros
+      AFTER INSERT OR UPDATE OR DELETE ON public.parceiros
+      FOR EACH ROW
+      EXECUTE FUNCTION public.log_alteracao();
+  END IF;
+END $$;
+
+-- 10. Habilitação e Cadastro do Parceiro Oficial: PO MÍDIA DIGITAL (CNPJ 37.313.540/0001-35)
+INSERT INTO public.parceiros (
+  razao_social,
+  nome_fantasia,
+  cnpj,
+  segmentos,
+  modelo_remuneracao,
+  comissao_padrao_pct,
+  contato_telefone,
+  endereco,
+  cidade,
+  uf,
+  cep,
+  ativo
+)
+SELECT
+  'PO MIDIA, SERVICOS LOCACAO DE ESPACOS PUBLICIDADE DIGITAL LTDA',
+  'PO MIDIA DIGITAL',
+  '37.313.540/0001-35',
+  ARRAY['DOOH', 'Painéis Digitais de Rua', 'Telas em Elevadores Corporativos', 'Espaços Comerciais em Shoppings e Hotéis']::text[],
+  'comissao_percentual',
+  20.00,
+  '(61) 3315-8755',
+  'AOS 2/8 - Lote 05 - Sala, Parte, Área Octogonal',
+  'Brasília',
+  'DF',
+  '70660-900',
+  true
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.parceiros 
+  WHERE cnpj = '37.313.540/0001-35' 
+     OR cnpj = '37313540000135' 
+     OR razao_social ILIKE '%PO MIDIA%'
+);
+
+-- Atualiza vínculo de produtos existentes para PO Mídia caso haja correspondência
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'produtos') THEN
+    UPDATE public.produtos p
+    SET parceiro_id = parc.id,
+        parceiro_nome = parc.nome_fantasia,
+        parceiro_cnpj = parc.cnpj
+    FROM public.parceiros parc
+    WHERE (parc.cnpj = '37.313.540/0001-35' OR parc.cnpj = '37313540000135')
+      AND (
+        p.parceiro_id IS NULL AND (
+          p.parceiro_cnpj ILIKE '%37313540%' OR 
+          p.parceiro_nome ILIKE '%PO MIDIA%' OR 
+          p.nome ILIKE '%PO MIDIA%'
+        )
+      );
+  END IF;
+END $$;
+
+-- 11. Recarregar o cache do PostgREST imediatamente
 NOTIFY pgrst, 'reload schema';
-

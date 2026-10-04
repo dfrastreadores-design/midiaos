@@ -22,6 +22,7 @@ import { UserCheck, DollarSign, Percent, QrCode, Phone, Mail, FileText, CheckCir
 import { toast } from "sonner";
 import { upsertIndicador, type IndicadorInput } from "@/lib/indicadores.functions";
 import { formatCNPJ, onlyDigits } from "@/lib/cnpj";
+import { traduzirErro } from "@/lib/error-translator";
 
 interface IndicadorFormDialogProps {
   open: boolean;
@@ -88,7 +89,7 @@ export function IndicadorFormDialog({
       onSaved();
       onOpenChange(false);
     } catch (err: any) {
-      toast.error("Erro ao salvar indicador: " + (err?.message || "falha desconhecida"));
+      toast.error(traduzirErro(err));
     } finally {
       setSalvando(false);
     }

@@ -17,19 +17,28 @@ import {
   Link as LinkIcon,
   CheckCircle2,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ProdutoFotoCensuraModal } from "@/components/ProdutoFotoCensuraModal";
 
 type Props = {
   fotos?: string[] | null;
   onChange: (fotos: string[]) => void;
   disabled?: boolean;
+  tituloProduto?: string;
 };
 
-export function ProdutoFotosUploader({ fotos = [], onChange, disabled = false }: Props) {
+export function ProdutoFotosUploader({
+  fotos = [],
+  onChange,
+  disabled = false,
+  tituloProduto,
+}: Props) {
   const currentFotos = (fotos || []).slice(0, 2);
   const [uploading, setUploading] = useState(false);
   const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
+  const [editingFotoIndex, setEditingFotoIndex] = useState<number | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState("");
@@ -196,38 +205,64 @@ export function ProdutoFotosUploader({ fotos = [], onChange, disabled = false }:
               >
                 <Maximize2 className="size-3.5" />
               </button>
+
+              {/* Botão rápido sobre a imagem para censurar / sobrepor Logo Nexo */}
+              <button
+                type="button"
+                onClick={() => setEditingFotoIndex(index)}
+                className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/75 hover:bg-black/90 text-white text-[10px] font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm shadow border border-white/10"
+                title="Cobrir logo/telefone do parceiro com a logo da Nexo ou desfoque"
+              >
+                <ShieldCheck className="size-3 text-emerald-400" />
+                <span>Ocultar Parceiro / Logo Nexo</span>
+              </button>
             </div>
 
             {/* Ações inferiores da foto */}
-            <div className="p-2 bg-muted/20 border-t flex items-center justify-between gap-1">
+            <div className="p-2 bg-muted/20 border-t flex items-center justify-between gap-1 flex-wrap">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
-                onClick={() => {
-                  setReplacingIndex(index);
-                  replaceInputRef.current?.click();
-                }}
+                className="h-7 px-2 text-xs text-primary border-primary/30 hover:bg-primary/10 gap-1 font-medium"
+                onClick={() => setEditingFotoIndex(index)}
                 disabled={uploading || disabled}
-                title="Trocar esta foto por outro arquivo"
+                title="Cobrir logo do parceiro ou telefone com o logo da Nexo ou desfoque"
               >
-                <Upload className="size-3" />
-                Substituir
+                <ShieldCheck className="size-3.5 text-emerald-500" />
+                <span>Logo Nexo / Borrar</span>
               </Button>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1 ml-auto"
-                onClick={() => handleRemove(index)}
-                disabled={uploading || disabled}
-                title="Remover esta foto"
-              >
-                <Trash2 className="size-3" />
-                Remover
-              </Button>
+              <div className="flex items-center gap-1 ml-auto">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+                  onClick={() => {
+                    setReplacingIndex(index);
+                    replaceInputRef.current?.click();
+                  }}
+                  disabled={uploading || disabled}
+                  title="Trocar esta foto por outro arquivo"
+                >
+                  <Upload className="size-3" />
+                  Trocar
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                  onClick={() => handleRemove(index)}
+                  disabled={uploading || disabled}
+                  title="Remover esta foto"
+                >
+                  <Trash2 className="size-3" />
+                  Remover
+                </Button>
+              </div>
             </div>
           </div>
         ))}
@@ -351,6 +386,25 @@ export function ProdutoFotosUploader({ fotos = [], onChange, disabled = false }:
         onOpenChange={setGalleryOpen}
         fotos={currentFotos}
         titulo="Visualização das Fotos do Produto"
+        onUpdateFoto={(newUrl, idx) => {
+          const updated = [...currentFotos];
+          updated[idx] = newUrl;
+          onChange(updated);
+        }}
+      />
+
+      {/* Modal para borrar telefone/parceiro e sobrepor logo Nexo */}
+      <ProdutoFotoCensuraModal
+        open={editingFotoIndex !== null}
+        onOpenChange={(op) => !op && setEditingFotoIndex(null)}
+        fotoSrc={editingFotoIndex !== null ? currentFotos[editingFotoIndex] : null}
+        onSave={(newUrl) => {
+          if (editingFotoIndex === null) return;
+          const updated = [...currentFotos];
+          updated[editingFotoIndex] = newUrl;
+          onChange(updated);
+        }}
+        tituloProduto={tituloProduto}
       />
     </div>
   );

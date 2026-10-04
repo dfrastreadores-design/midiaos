@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.indicadores (
 CREATE OR REPLACE TRIGGER set_indicadores_updated_at
   BEFORE UPDATE ON public.indicadores
   FOR EACH ROW
-  EXECUTE FUNCTION public.set_current_timestamp_updated_at();
+  EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Índices de consulta rápida
 CREATE INDEX IF NOT EXISTS idx_indicadores_tenant_id ON public.indicadores(tenant_id);
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public.comissoes_indicacao (
   indicador_id uuid NOT NULL REFERENCES public.indicadores(id) ON DELETE CASCADE,
   cliente_id uuid REFERENCES public.clientes(id) ON DELETE SET NULL,
   pi_id uuid REFERENCES public.pis(id) ON DELETE SET NULL,
-  transacao_id uuid REFERENCES public.transacoes_financeiras(id) ON DELETE SET NULL,
+  transacao_id uuid REFERENCES public.financeiro_transacoes(id) ON DELETE SET NULL,
   valor_base numeric(12, 2) NOT NULL DEFAULT 0.00,
   percentual numeric(5, 2) NOT NULL DEFAULT 5.00,
   valor_comissao numeric(12, 2) NOT NULL DEFAULT 0.00,

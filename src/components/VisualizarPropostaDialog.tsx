@@ -202,7 +202,19 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                         {(p.itens ?? []).map((it, i) => (
                           <TableRow key={i}>
                             <TableCell>{it.tipo}</TableCell>
-                            <TableCell>{it.programa || "—"}</TableCell>
+                            <TableCell>
+                              <div className="font-medium">{it.programa || "—"}</div>
+                              {((it as any).parceiro_nome || (it as any).parceiro_cnpj) && (
+                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
+                                  <span>🤝 {(it as any).parceiro_nome}</span>
+                                  {(it as any).parceiro_cnpj && (
+                                    <span className="font-mono text-[10px] text-muted-foreground">
+                                      ({(it as any).parceiro_cnpj})
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell>{(it as any).horario || "—"}</TableCell>
                             <TableCell>{it.formato || "—"}</TableCell>
                             <TableCell className="text-right">{it.insercoes_dia}</TableCell>

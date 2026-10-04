@@ -50,6 +50,11 @@ type Item = {
   latitude?: number | null;
   longitude?: number | null;
   fotos?: string[] | null;
+  produto_id?: string | null;
+  parceiro_id?: string | null;
+  parceiro_nome?: string | null;
+  parceiro_cnpj?: string | null;
+  comissao_inquilino_pct?: number | null;
 };
 
 const MESES_BR = [
@@ -115,6 +120,10 @@ function detalhesProduto(it: Item, opts?: { mostrarEndereco?: boolean }): string
   if (p) partes.push(p);
   const d = formatDias(it);
   if (d) partes.push(d);
+
+  if (it.parceiro_nome) {
+    partes.push(`🤝 Parceiro: ${it.parceiro_nome}${it.parceiro_cnpj ? ` (${it.parceiro_cnpj})` : ""}`);
+  }
 
   const showEnd = opts?.mostrarEndereco !== false;
   if (showEnd && it.endereco_ponto) {

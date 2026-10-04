@@ -26,6 +26,11 @@ const ItemSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => (v && v.length ? v : null)),
+  produto_id: z.string().uuid().nullable().optional(),
+  parceiro_id: z.string().uuid().nullable().optional(),
+  parceiro_nome: z.string().max(200).nullable().optional(),
+  parceiro_cnpj: z.string().max(30).nullable().optional(),
+  comissao_inquilino_pct: z.number().min(0).max(100).nullable().optional(),
 });
 
 const PropostaSchema = z.object({
@@ -149,7 +154,7 @@ export const getProposta = createServerFn({ method: "POST" })
     if (prop?.itens && Array.isArray(prop.itens) && prop.itens.length > 0) {
       try {
         const { data: prods } = await (context.supabase.from("produtos") as any).select(
-          "id, nome, programa, tipo, endereco_ponto, latitude, longitude, fotos",
+          "id, nome, programa, tipo, endereco_ponto, latitude, longitude, fotos, parceiro_id, parceiro_nome, parceiro_cnpj, comissao_inquilino_pct",
         );
         if (prods && prods.length > 0) {
           const prodsMap = new Map<string, any>();
@@ -183,6 +188,11 @@ export const getProposta = createServerFn({ method: "POST" })
               endereco_ponto: it.endereco_ponto || matched?.endereco_ponto || null,
               latitude: it.latitude ?? matched?.latitude ?? null,
               longitude: it.longitude ?? matched?.longitude ?? null,
+              parceiro_id: it.parceiro_id || matched?.parceiro_id || null,
+              parceiro_nome: it.parceiro_nome || matched?.parceiro_nome || null,
+              parceiro_cnpj: it.parceiro_cnpj || matched?.parceiro_cnpj || null,
+              comissao_inquilino_pct:
+                it.comissao_inquilino_pct ?? matched?.comissao_inquilino_pct ?? null,
               fotos,
             };
           });
@@ -295,9 +305,22 @@ export const upsertProposta = createServerFn({ method: "POST" })
       }
     }
     if (itens.length > 0) {
-      const { error: itErr } = await supabase
-        .from("proposta_itens")
-        .insert(itens.map((it) => ({ ...it, proposta_id: propId })) as never);
+      const rowsPayload = itens.map((it) => ({ ...it, proposta_id: propId }));
+      let { error: itErr } = await supabase.from("proposta_itens").insert(rowsPayload as never);
+      if (
+        itErr &&
+        (itErr.message.toLowerCase().includes("parceiro") ||
+          itErr.message.toLowerCase().includes("comissao") ||
+          itErr.message.toLowerCase().includes("produto_id"))
+      ) {
+        // Fallback defensivo removendo colunas novas caso o cache do PostgREST ainda não tenha sincronizado
+        const fallbackRows = rowsPayload.map((r: any) => {
+          const { parceiro_id, parceiro_nome, parceiro_cnpj, comissao_inquilino_pct, produto_id, ...safe } = r;
+          return safe;
+        });
+        const resFallback = await supabase.from("proposta_itens").insert(fallbackRows as never);
+        itErr = resFallback.error;
+      }
       if (itErr) throw new Error(itErr.message);
     }
     return { id: propId };
@@ -376,6 +399,23 @@ export const converterPropostaEmPi = createServerFn({ method: "POST" })
     if (piErr) throw new Error(piErr.message);
 
     if (itensRaw.length > 0) {
+      // Tentar enriquecer itens que ainda não tenham parceiro registrado
+      let prodsLookup = new Map<string, any>();
+      try {
+        const { data: prods } = await (supabase.from("produtos") as any).select(
+          "id, nome, programa, parceiro_id, parceiro_nome, parceiro_cnpj, comissao_inquilino_pct",
+        );
+        if (prods) {
+          prods.forEach((p: any) => {
+            if (p.id) prodsLookup.set(p.id, p);
+            if (p.programa) prodsLookup.set(p.programa.trim().toLowerCase(), p);
+            if (p.nome) prodsLookup.set(p.nome.trim().toLowerCase(), p);
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+
       await supabase.from("pi_itens").insert(
         itensRaw.map((it) => {
           const {
@@ -387,8 +427,27 @@ export const converterPropostaEmPi = createServerFn({ method: "POST" })
             id?: string;
             proposta_id?: string;
             created_at?: string;
+            produto_id?: string;
+            programa?: string;
+            parceiro_id?: string;
+            parceiro_nome?: string;
+            parceiro_cnpj?: string;
+            comissao_inquilino_pct?: number;
           };
-          return { ...rest, pi_id: pi.id } as never;
+
+          const matchedProd =
+            (rest.produto_id ? prodsLookup.get(rest.produto_id as string) : null) ||
+            (rest.programa ? prodsLookup.get((rest.programa as string).trim().toLowerCase()) : null);
+
+          return {
+            ...rest,
+            pi_id: pi.id,
+            parceiro_id: rest.parceiro_id || matchedProd?.parceiro_id || null,
+            parceiro_nome: rest.parceiro_nome || matchedProd?.parceiro_nome || null,
+            parceiro_cnpj: rest.parceiro_cnpj || matchedProd?.parceiro_cnpj || null,
+            comissao_inquilino_pct:
+              rest.comissao_inquilino_pct ?? matchedProd?.comissao_inquilino_pct ?? null,
+          } as never;
         }) as never,
       );
     }

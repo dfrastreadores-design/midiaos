@@ -8,6 +8,7 @@ export type PricingItemInput = {
 
 export type ProductDatabaseItem = {
   id: string;
+  nome?: string;
   tipo: string;
   programa: string;
   formato: string;
@@ -16,6 +17,10 @@ export type ProductDatabaseItem = {
   insercoes_padrao?: number;
   link_modelo?: string;
   ativo: boolean;
+  parceiro_id?: string | null;
+  parceiro_nome?: string | null;
+  parceiro_cnpj?: string | null;
+  comissao_inquilino_pct?: number | null;
 };
 
 export function findDatabaseProduct(item: PricingItemInput, products: ProductDatabaseItem[]) {
@@ -29,11 +34,12 @@ export function findDatabaseProduct(item: PricingItemInput, products: ProductDat
 
     const pTipo = normalize(p.tipo);
     const pProg = normalize(p.programa);
+    const pNome = normalize(p.nome);
     const pForm = normalize(p.formato);
 
-    const matchTipo = pTipo === tipoNorm;
-    const matchProg = pProg === progNorm;
-    const matchForm = !pForm || pForm === formNorm;
+    const matchTipo = !tipoNorm || pTipo === tipoNorm;
+    const matchProg = pProg === progNorm || (pNome && pNome === progNorm);
+    const matchForm = !pForm || !formNorm || pForm === formNorm;
 
     return matchTipo && matchProg && matchForm;
   });

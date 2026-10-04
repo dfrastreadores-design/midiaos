@@ -106,7 +106,7 @@ BEGIN
     v_allow_override := current_setting('app.allow_mass_delete', true);
   EXCEPTION WHEN OTHERS THEN
     v_allow_override := 'false';
-  END IF;
+  END;
 
   -- Se for super_admin ou se a flag foi configurada, permite
   IF v_allow_override = 'true' THEN

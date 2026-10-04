@@ -23,6 +23,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Handshake,
+  Building2,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -70,6 +72,11 @@ export type CalcItemOut = {
   total_insercoes: number;
   dias_veiculacao?: number | null;
   link_modelo?: string | null;
+  produto_id?: string | null;
+  parceiro_id?: string | null;
+  parceiro_nome?: string | null;
+  parceiro_cnpj?: string | null;
+  comissao_inquilino_pct?: number | null;
 };
 
 export type CalcTotals = {
@@ -110,6 +117,11 @@ type Item = {
   valorUnitOverride?: number | null;
   diasVeiculacao?: number | null;
   linkModelo?: string | null;
+  produtoId?: string | null;
+  parceiroId?: string | null;
+  parceiroNome?: string | null;
+  parceiroCnpj?: string | null;
+  comissaoInquilinoPct?: number | null;
 };
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -131,6 +143,11 @@ const newItem = (mes: number | null, ano: number | null): Item => ({
   valorUnitOverride: null,
   diasVeiculacao: null,
   linkModelo: null,
+  produtoId: null,
+  parceiroId: null,
+  parceiroNome: null,
+  parceiroCnpj: null,
+  comissaoInquilinoPct: null,
 });
 
 function totalInsercoesItem(it: Item): number {
@@ -159,6 +176,11 @@ function calcItemsSignature(items?: CalcItemOut[]) {
       total_insercoes: it.total_insercoes ?? 0,
       dias_veiculacao: it.dias_veiculacao ?? null,
       link_modelo: it.link_modelo ?? null,
+      produto_id: it.produto_id ?? null,
+      parceiro_id: it.parceiro_id ?? null,
+      parceiro_nome: it.parceiro_nome ?? null,
+      parceiro_cnpj: it.parceiro_cnpj ?? null,
+      comissao_inquilino_pct: it.comissao_inquilino_pct ?? null,
     })),
   );
 }
@@ -249,6 +271,10 @@ export function PriceCalculator({
       const override = Math.abs(calcPorPct - negociadoSalvo) > 0.01 ? negociadoSalvo : null;
       const totalInsercoes = it.total_insercoes || 0;
       const insercoesManual = diasCount === 0 && totalInsercoes > 0 ? totalInsercoes : null;
+      const matchedInit = findDatabaseProduct(
+        { tipo: it.tipo || "VT", programa: progNormalizado, formato: formatoNormalizado },
+        allDbProdutos,
+      );
       return {
         id: crypto.randomUUID(),
         tipo: it.tipo || "VT",
@@ -273,6 +299,11 @@ export function PriceCalculator({
         valorUnitOverride,
         diasVeiculacao: it.dias_veiculacao ?? null,
         linkModelo: (it as any).link_modelo ?? null,
+        produtoId: (it as any).produto_id || matchedInit?.id || null,
+        parceiroId: (it as any).parceiro_id || matchedInit?.parceiro_id || null,
+        parceiroNome: (it as any).parceiro_nome || matchedInit?.parceiro_nome || null,
+        parceiroCnpj: (it as any).parceiro_cnpj || matchedInit?.parceiro_cnpj || null,
+        comissaoInquilinoPct: (it as any).comissao_inquilino_pct ?? matchedInit?.comissao_inquilino_pct ?? null,
       };
     });
   };
@@ -318,15 +349,21 @@ export function PriceCalculator({
             if (p?.ativo === false) return false;
             const pTipo = normalize(p.tipo);
             const pProg = normalize(p.programa);
+            const pNome = normalize(p.nome);
             const pForm = normalize(p.formato);
 
-            const matchTipo = pTipo === normalize(next.tipo);
-            const matchProg = pProg === normalize(next.programa);
-            const matchForm = !pForm || pForm === normalize(next.formato);
+            const matchTipo = !next.tipo || pTipo === normalize(next.tipo);
+            const matchProg = pProg === normalize(next.programa) || (pNome && pNome === normalize(next.programa));
+            const matchForm = !pForm || !next.formato || pForm === normalize(next.formato);
 
             return matchTipo && matchProg && matchForm;
           });
           if (dbMatch) {
+            next.produtoId = dbMatch.id || null;
+            next.parceiroId = dbMatch.parceiro_id || null;
+            next.parceiroNome = dbMatch.parceiro_nome || null;
+            next.parceiroCnpj = dbMatch.parceiro_cnpj || null;
+            next.comissaoInquilinoPct = dbMatch.comissao_inquilino_pct ?? null;
             if (
               it.mes != null &&
               it.ano != null &&
@@ -350,6 +387,11 @@ export function PriceCalculator({
             }
             next.linkModelo = dbMatch.link_modelo ?? null;
           } else {
+            next.produtoId = null;
+            next.parceiroId = null;
+            next.parceiroNome = null;
+            next.parceiroCnpj = null;
+            next.comissaoInquilinoPct = null;
             const row =
               next.programa && next.formato
                 ? findPrice(next.tipo as any, next.programa, next.formato)
@@ -603,6 +645,11 @@ export function PriceCalculator({
             total_insercoes: g.dias_mes.length || (grupos.length === 1 ? t.totalInsercoes : 0),
             dias_veiculacao: it.diasVeiculacao ?? null,
             link_modelo: it.linkModelo ?? null,
+            produto_id: it.produtoId || null,
+            parceiro_id: it.parceiroId || null,
+            parceiro_nome: it.parceiroNome || null,
+            parceiro_cnpj: it.parceiroCnpj || null,
+            comissao_inquilino_pct: it.comissaoInquilinoPct ?? null,
           };
         });
       }),
@@ -1102,6 +1149,7 @@ function FieldWithCustom({
   showAddButton,
   initialData,
   isLoading,
+  optionSubtitles,
 }: {
   label: string;
   value: string;
@@ -1112,6 +1160,7 @@ function FieldWithCustom({
   showAddButton?: boolean;
   initialData?: any;
   isLoading?: boolean;
+  optionSubtitles?: Record<string, string>;
 }) {
   const knownIncludes = options.includes(value);
   const [custom, setCustom] = useState(!!value && !knownIncludes);
@@ -1191,11 +1240,21 @@ function FieldWithCustom({
             <SelectValue placeholder={isLoading ? "Carregando..." : (placeholder ?? "Selecione")} />
           </SelectTrigger>
           <SelectContent>
-            {options.map((o) => (
-              <SelectItem key={o} value={o}>
-                {o}
-              </SelectItem>
-            ))}
+            {options.map((o) => {
+              const subtitle = optionSubtitles?.[o];
+              return (
+                <SelectItem key={o} value={o}>
+                  <div className="flex flex-col text-left py-0.5">
+                    <span className="font-medium text-xs">{o}</span>
+                    {subtitle && (
+                      <span className="text-[10px] text-muted-foreground leading-tight">
+                        {subtitle}
+                      </span>
+                    )}
+                  </div>
+                </SelectItem>
+              );
+            })}
             <SelectItem value={CUSTOM}>+ Cadastrar novo…</SelectItem>
           </SelectContent>
         </Select>
@@ -1243,10 +1302,27 @@ function ItemRow({
     const normalize = (s: string) => (s || "").trim().toLowerCase();
     const itemTipoNorm = normalize(item.tipo);
     const dbProgs = dbProdutos
-      .filter((p) => normalize(p.tipo) === itemTipoNorm)
-      .map((p) => p.programa)
+      .filter((p) => !item.tipo || normalize(p.tipo) === itemTipoNorm)
+      .map((p) => p.programa || p.nome)
       .filter(Boolean);
     return Array.from(new Set([...staticProgs, ...dbProgs])).sort();
+  }, [item.tipo, dbProdutos]);
+
+  const programaSubtitles = useMemo(() => {
+    const normalize = (s: string) => (s || "").trim().toLowerCase();
+    const itemTipoNorm = normalize(item.tipo);
+    const map: Record<string, string> = {};
+    for (const p of dbProdutos) {
+      const progName = p.programa || p.nome;
+      if (!progName) continue;
+      if (item.tipo && normalize(p.tipo) !== itemTipoNorm) continue;
+      if (p.parceiro_nome) {
+        map[progName] = `🤝 Parceiro: ${p.parceiro_nome}${p.parceiro_cnpj ? ` • CNPJ: ${p.parceiro_cnpj}` : ""}`;
+      } else {
+        map[progName] = "🏢 Inventário Próprio";
+      }
+    }
+    return map;
   }, [item.tipo, dbProdutos]);
 
   const formatos = useMemo(() => {
@@ -1256,7 +1332,7 @@ function ItemRow({
     const itemTipoNorm = normalize(item.tipo);
     const itemProgNorm = normalize(item.programa);
     const dbForms = dbProdutos
-      .filter((p) => normalize(p.tipo) === itemTipoNorm && normalize(p.programa) === itemProgNorm)
+      .filter((p) => (!item.tipo || normalize(p.tipo) === itemTipoNorm) && (normalize(p.programa) === itemProgNorm || normalize(p.nome) === itemProgNorm))
       .map((p) => p.formato)
       .filter(Boolean);
     return Array.from(new Set([...staticForms, ...dbForms])).sort();
@@ -1403,6 +1479,7 @@ function ItemRow({
           label="Programa"
           value={item.programa}
           options={programas}
+          optionSubtitles={programaSubtitles}
           onChange={(v) => onChange({ programa: v, formato: "" })}
           isLoading={isLoading}
         />
@@ -1430,6 +1507,41 @@ function ItemRow({
           }}
         />
       </div>
+
+      {/* Informações do Parceiro Fornecedor do Produto */}
+      {(matchedProduto?.parceiro_nome || item.parceiroNome) ? (
+        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-950 dark:text-emerald-200">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">🤝</span>
+            <div>
+              <div className="font-semibold text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2 flex-wrap">
+                <span>Parceiro Fornecedor:</span>
+                <span className="font-bold underline decoration-emerald-500/50">
+                  {matchedProduto?.parceiro_nome || item.parceiroNome}
+                </span>
+                {(matchedProduto?.parceiro_cnpj || item.parceiroCnpj) && (
+                  <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-medium">
+                    CNPJ: {matchedProduto?.parceiro_cnpj || item.parceiroCnpj}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+                Produto comercializado em parceria. Vinculado ao CNPJ do fornecedor para proposta, faturamento e prestação de contas.
+              </p>
+            </div>
+          </div>
+          {(matchedProduto?.comissao_inquilino_pct != null || item.comissaoInquilinoPct != null) && (
+            <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs shrink-0 py-1">
+              Remuneração: {matchedProduto?.comissao_inquilino_pct ?? item.comissaoInquilinoPct}%
+            </Badge>
+          )}
+        </div>
+      ) : item.programa ? (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 border border-border/50 text-muted-foreground text-xs">
+          <span>🏢</span>
+          <span><strong>Inventário Próprio:</strong> Produto da grade própria do veículo / emissora (sem intermediação de parceiro externo).</span>
+        </div>
+      ) : null}
 
       <div className="grid sm:grid-cols-4 gap-3">
         <div className="space-y-1.5">

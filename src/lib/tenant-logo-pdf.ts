@@ -28,8 +28,9 @@ export async function getMyTenantLogoDataUrl(): Promise<string | null> {
     const b = await getMyTenantBranding();
     const path = b?.logo_url;
     if (!path) {
-      cache = { value: null, at: Date.now() };
-      return null;
+      const nexoFallback = await urlToDataUrl("/logo-nexo.jpg");
+      cache = { value: nexoFallback, at: Date.now() };
+      return nexoFallback;
     }
     const signed = await getLogoSignedUrl(path);
     if (!signed) {

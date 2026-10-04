@@ -346,3 +346,65 @@ body {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
+
+/* ==========================================================================
+   Validação Visual em Vermelho de Campos Obrigatórios e Inválidos
+   ========================================================================== */
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"],
+[data-invalid="true"],
+.is-invalid,
+.has-error input,
+.has-error textarea,
+.has-error select {
+  border-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.06) !important;
+  box-shadow: 0 0 0 1.5px #ef4444 !important;
+}
+
+input[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus,
+.is-invalid:focus {
+  outline: none !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
+
+.dark input[aria-invalid="true"],
+.dark textarea[aria-invalid="true"],
+.dark select[aria-invalid="true"],
+.dark [data-invalid="true"],
+.dark .is-invalid,
+.dark .has-error input,
+.dark .has-error textarea,
+.dark .has-error select {
+  border-color: #f87171 !important;
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  box-shadow: 0 0 0 1.5px #f87171 !important;
+}
+
+/* Validação nativa do formulário ao tentar submeter */
+form.was-validated input:invalid,
+form.was-validated textarea:invalid,
+form.was-validated select:invalid,
+input:user-invalid,
+textarea:user-invalid,
+select:user-invalid {
+  border-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.06) !important;
+  box-shadow: 0 0 0 1.5px #ef4444 !important;
+}
+
+.dark form.was-validated input:invalid,
+.dark form.was-validated textarea:invalid,
+.dark form.was-validated select:invalid,
+.dark input:user-invalid,
+.dark textarea:user-invalid,
+.dark select:user-invalid {
+  border-color: #f87171 !important;
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  box-shadow: 0 0 0 1.5px #f87171 !important;
+}
+

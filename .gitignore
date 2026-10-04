@@ -42,3 +42,8 @@ hostinger/
 backups/
 *.backup.json
 
+# Heavy assets & temp files
+*.pdf
+*.xlsx
+supabase/.temp/
+

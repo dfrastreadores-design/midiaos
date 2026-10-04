@@ -22,6 +22,8 @@ type Props = {
   onCreate?: (v: string) => void | Promise<void>;
   creating?: boolean;
   disabled?: boolean;
+  error?: boolean | string;
+  className?: string;
 };
 
 /**
@@ -36,6 +38,8 @@ export function CreatableCombobox({
   onCreate,
   creating = false,
   disabled = false,
+  error,
+  className,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -62,8 +66,15 @@ export function CreatableCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-invalid={Boolean(error)}
+          data-invalid={Boolean(error) ? "true" : undefined}
           disabled={disabled}
-          className={cn("w-full justify-between font-normal", !value && "text-muted-foreground")}
+          className={cn(
+            "w-full justify-between font-normal",
+            !value && "text-muted-foreground",
+            error && "!border-red-500 !bg-red-50/70 dark:!bg-red-950/20 !ring-2 !ring-red-500/40 text-red-950 dark:text-red-200",
+            className
+          )}
         >
           {value || placeholder}
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />

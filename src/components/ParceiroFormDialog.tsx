@@ -34,8 +34,6 @@ import {
   Instagram,
   Linkedin,
   Facebook,
-  Copy,
-  Check,
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -48,7 +46,12 @@ import {
 import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
 import { lookupCep, formatCEP } from "@/lib/geocode.functions";
 import { traduzirErro } from "@/lib/error-translator";
-import { SQL_PARCEIROS_SETUP } from "@/lib/parceiros-sql-setup";
+import {
+  FormFieldError,
+  errorLabelClass,
+  errorInputClass,
+  scrollToFirstError,
+} from "@/lib/form-errors";
 
 type Props = {
   open: boolean;
@@ -65,6 +68,9 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
   const [searchingCnpj, setSearchingCnpj] = useState(false);
   const [searchingCep, setSearchingCep] = useState(false);
   const [customSegmento, setCustomSegmento] = useState("");
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [wasValidated, setWasValidated] = useState(false);
 
   const [form, setForm] = useState<Partial<Parceiro>>({
     razao_social: "",
@@ -92,19 +98,10 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
     ativo: true,
   });
 
-  const [missingTableError, setMissingTableError] = useState(false);
-  const [copiedSql, setCopiedSql] = useState(false);
-
-  const handleCopySql = () => {
-    navigator.clipboard.writeText(SQL_PARCEIROS_SETUP);
-    setCopiedSql(true);
-    toast.success("Script SQL copiado com sucesso! Cole no SQL Editor do Supabase.");
-    setTimeout(() => setCopiedSql(false), 3000);
-  };
-
   useEffect(() => {
     if (open) {
-      setMissingTableError(false);
+      setErrors({});
+      setWasValidated(false);
       setForm(
         initial || {
           razao_social: "",
@@ -222,11 +219,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
       if (onSuccess) onSuccess(saved);
     },
     onError: (e: Error) => {
-      const msg = traduzirErro(e);
-      if (msg.includes("tabela de Parceiros") || msg.includes("não está criada")) {
-        setMissingTableError(true);
-      }
-      toast.error(msg);
+      toast.error(traduzirErro(e));
     },
   });
 
@@ -247,51 +240,35 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            const errs: Record<string, string> = {};
             if (!form.razao_social?.trim()) {
-              toast.error("Informe a Razão Social do parceiro.");
+              errs.razao_social = "Informe a Razão Social do parceiro.";
+            }
+            if (form.cnpj?.trim()) {
+              const digits = onlyDigits(form.cnpj);
+              if (digits.length > 0 && digits.length !== 14) {
+                errs.cnpj = "CNPJ incompleto (deve conter 14 dígitos).";
+              }
+            }
+            if (form.contato_email?.trim()) {
+              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contato_email.trim())) {
+                errs.contato_email = "Formato de e-mail inválido.";
+              }
+            }
+
+            if (Object.keys(errs).length > 0) {
+              setErrors(errs);
+              setWasValidated(true);
+              toast.error("Por favor, preencha os campos obrigatórios destacados em vermelho.");
+              scrollToFirstError(errs);
               return;
             }
+
+            setErrors({});
             saveMut.mutate(form);
           }}
-          className="space-y-4 pt-2"
+          className={`space-y-4 pt-2 ${wasValidated ? "was-validated" : ""}`}
         >
-          {missingTableError && (
-            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3.5 space-y-2">
-              <div className="flex items-start gap-2.5">
-                <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
-                <div className="text-xs space-y-1">
-                  <p className="font-semibold text-destructive">
-                    A tabela de Parceiros ainda precisa ser criada no banco de dados Supabase.
-                  </p>
-                  <p className="text-muted-foreground text-[11px]">
-                    Para ativar o cadastro de parceiros, copie o script de migração abaixo, abra o{" "}
-                    <strong>SQL Editor</strong> do Supabase e clique em <strong>RUN</strong>. Em
-                    seguida, clique em "Cadastrar Parceiro" novamente.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="default"
-                  className="h-8 text-xs gap-1.5 bg-destructive hover:bg-destructive/90 text-white"
-                  onClick={handleCopySql}
-                >
-                  {copiedSql ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                  {copiedSql ? "Script Copiado!" : "Copiar Script SQL do Supabase"}
-                </Button>
-                <a
-                  href="https://supabase.com/dashboard/project/odgowgvhjhvpeazglsly/sql/new"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs underline text-destructive hover:opacity-80"
-                >
-                  Abrir SQL Editor do Supabase ↗
-                </a>
-              </div>
-            </div>
-          )}
 
           {/* Identificação e CNPJ */}
           <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
@@ -301,13 +278,27 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
             </Label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">CNPJ</Label>
+              <div data-field="cnpj">
+                <Label htmlFor="parceiro-cnpj" className={errorLabelClass(!!errors.cnpj, "text-xs")}>
+                  CNPJ
+                </Label>
                 <div className="flex gap-1.5 mt-1">
                   <Input
+                    id="parceiro-cnpj"
+                    name="cnpj"
+                    error={errors.cnpj}
                     placeholder="00.000.000/0000-00"
                     value={form.cnpj ?? ""}
-                    onChange={(e) => set({ cnpj: formatCNPJ(e.target.value) })}
+                    onChange={(e) => {
+                      set({ cnpj: formatCNPJ(e.target.value) });
+                      if (errors.cnpj) {
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.cnpj;
+                          return next;
+                        });
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -333,6 +324,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                     Receita
                   </Button>
                 </div>
+                <FormFieldError message={errors.cnpj} />
               </div>
 
               <div>
@@ -345,15 +337,33 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <Label className="text-xs">Razão Social *</Label>
+              <div className="sm:col-span-2" data-field="razao_social">
+                <Label
+                  htmlFor="parceiro-razao-social"
+                  className={errorLabelClass(!!errors.razao_social, "text-xs")}
+                >
+                  Razão Social *
+                </Label>
                 <Input
+                  id="parceiro-razao-social"
+                  name="razao_social"
                   required
+                  error={errors.razao_social}
                   className="mt-1 text-xs"
                   placeholder="Nome empresarial completo da empresa parceira"
                   value={form.razao_social ?? ""}
-                  onChange={(e) => set({ razao_social: e.target.value })}
+                  onChange={(e) => {
+                    set({ razao_social: e.target.value });
+                    if (errors.razao_social) {
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.razao_social;
+                        return next;
+                      });
+                    }
+                  }}
                 />
+                <FormFieldError message={errors.razao_social} />
               </div>
             </div>
           </div>
@@ -537,15 +547,33 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                   onChange={(e) => set({ contato_telefone: e.target.value })}
                 />
               </div>
-              <div>
-                <Label className="text-xs">E-mail Comercial</Label>
+              <div data-field="contato_email">
+                <Label
+                  htmlFor="parceiro-contato-email"
+                  className={errorLabelClass(!!errors.contato_email, "text-xs")}
+                >
+                  E-mail Comercial
+                </Label>
                 <Input
+                  id="parceiro-contato-email"
+                  name="contato_email"
                   type="email"
                   className="mt-1 text-xs"
                   placeholder="comercial@parceiro.com.br"
                   value={form.contato_email ?? ""}
-                  onChange={(e) => set({ contato_email: e.target.value })}
+                  error={errors.contato_email}
+                  onChange={(e) => {
+                    set({ contato_email: e.target.value });
+                    if (errors.contato_email) {
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.contato_email;
+                        return next;
+                      });
+                    }
+                  }}
                 />
+                <FormFieldError message={errors.contato_email} />
               </div>
 
               <div className="sm:col-span-1">
@@ -721,6 +749,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
               Parceiro Ativo (produtos disponíveis no catálogo para comercialização)
             </Label>
           </div>
+
 
           <DialogFooter className="pt-3">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -89,7 +89,7 @@ CREATE POLICY "tenant_isolation_delete_financeiro_transacoes" ON public.financei
 DROP TRIGGER IF EXISTS trg_audit_financeiro_transacoes ON public.financeiro_transacoes;
 CREATE TRIGGER trg_audit_financeiro_transacoes
   AFTER INSERT OR UPDATE OR DELETE ON public.financeiro_transacoes
-  FOR EACH ROW EXECUTE FUNCTION public.trg_audit_log();
+  FOR EACH ROW EXECUTE FUNCTION public.log_alteracao();
 
 DROP TRIGGER IF EXISTS trg_trash_financeiro_transacoes ON public.financeiro_transacoes;
 CREATE TRIGGER trg_trash_financeiro_transacoes

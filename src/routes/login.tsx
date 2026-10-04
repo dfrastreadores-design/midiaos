@@ -33,8 +33,23 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: "/" });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      const now = Date.now();
+      const expiresAt = data.session.expires_at ? data.session.expires_at * 1000 : 0;
+      if (expiresAt && expiresAt <= now) {
+        try {
+          const { data: refreshed, error } = await supabase.auth.refreshSession();
+          if (error || !refreshed?.session) {
+            await supabase.auth.signOut({ scope: "local" });
+            return;
+          }
+        } catch {
+          await supabase.auth.signOut({ scope: "local" });
+          return;
+        }
+      }
+      nav({ to: "/" });
     });
   }, [nav]);
 

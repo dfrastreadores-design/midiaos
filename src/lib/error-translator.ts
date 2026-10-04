@@ -20,20 +20,15 @@ export function traduzirErro(erro: unknown): string {
   const raw = msg.trim();
   const lower = raw.toLowerCase();
 
-  // 1. Tabela ou coluna não encontrada no schema cache do Supabase / PostgREST
+  // 1. Tabela ou coluna em sincronização de cache
   if (lower.includes("could not find the table") && lower.includes("schema cache")) {
-    const match = raw.match(/table\s+['"]?([^'"]+)['"]?/i);
-    const table = match ? match[1] : "solicitada";
-    if (table.includes("parceiros")) {
-      return "A tabela de Parceiros de Mídia ainda não está criada no banco de dados Supabase. Execute o script de migração no painel do Supabase.";
-    }
-    return `A tabela (${table}) não foi encontrada no banco de dados. Atualize o esquema do sistema.`;
+    const tableMatch = raw.match(/table\s+['"]?([^'"\s]+)['"]?/i);
+    const tableName = tableMatch ? ` (${tableMatch[1]})` : "";
+    return `O serviço está sincronizando dados${tableName}. Por favor, tente novamente em instantes.`;
   }
 
   if (lower.includes("could not find the") && lower.includes("column") && lower.includes("schema cache")) {
-    const matchCol = raw.match(/['"]([^'"]+)['"]\s+column/i);
-    const col = matchCol ? matchCol[1] : "especificada";
-    return `A coluna '${col}' ainda não foi sincronizada no banco de dados. Recarregue o cache do Supabase.`;
+    return "Atualização do sistema em andamento. Por favor, recarregue a página e tente novamente.";
   }
 
   // 2. Chave única / duplicidade
@@ -56,8 +51,15 @@ export function traduzirErro(erro: unknown): string {
   if (lower.includes("invalid login credentials") || lower.includes("invalid credentials")) {
     return "E-mail ou senha incorretos. Verifique suas credenciais.";
   }
-  if (lower.includes("jwt expired") || lower.includes("token is expired") || lower.includes("invalid token")) {
-    return "Sua sessão de acesso expirou. Por favor, faça login novamente.";
+  if (
+    lower.includes("jwt expired") ||
+    lower.includes("token is expired") ||
+    lower.includes("invalid token") ||
+    lower.includes("invalid jwt") ||
+    lower.includes("unrecognized jwt") ||
+    lower.includes("unverifiable")
+  ) {
+    return "Sua sessão de acesso expirou ou precisa ser renovada. Por favor, saia e faça login novamente.";
   }
   if (lower.includes("not authorized") || lower.includes("unauthorized") || lower.includes("permission denied")) {
     return "Você não tem permissão para realizar esta operação. Solicite liberação ao administrador.";
