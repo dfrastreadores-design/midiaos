@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "node scripts/build-quick.mjs",
+    "build": "node scripts/build.mjs",
     "build:vite": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "node .output/server/index.mjs",

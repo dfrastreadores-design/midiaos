@@ -43,7 +43,16 @@ const skipBuild = args.includes("--skip-build");
 const startTime = Date.now();
 
 // [1/4] Build da aplicação
-if (!skipBuild) {
+let shouldSkip = skipBuild;
+if (!shouldSkip && fs.existsSync(".output/server/index.mjs")) {
+  const mtime = fs.statSync(".output/server/index.mjs").mtimeMs;
+  if (Date.now() - mtime < 3 * 60 * 1000) {
+    console.log("\n⚡ [1/4] Build recente detectado em .output (< 3 min). Reutilizando compilação existente...");
+    shouldSkip = true;
+  }
+}
+
+if (!shouldSkip) {
   if (fs.existsSync("D:\\midiaos_build")) {
     console.log("\n📦 [1/4] Compilando a aplicação em disco rápido (D:\\midiaos_build)...");
     execSync("node scripts/build-quick.mjs", { stdio: "inherit" });

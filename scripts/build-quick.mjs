@@ -40,9 +40,8 @@ for (const item of itemsToSync) {
   }
 }
 
-console.log("\n🚀 [2/3] Compilando aplicação (npm run build)...");
-const npmCmd = process.platform === "win32" ? "cmd /c npm" : "npm";
-execSync(`${npmCmd} run build`, {
+console.log("\n🚀 [2/3] Compilando aplicação (npx vite build)...");
+execSync("npx vite build", {
   cwd: buildDir,
   stdio: "inherit",
   env: {
