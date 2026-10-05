@@ -1,5 +1,7 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "midia-os",
+  "version": "2.6.0",
+  "description": "Mídia.OS — Plataforma SaaS Multi-Tenant Omnichannel & White-Label de Gestão Comercial e Operações de Mídia",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -87,6 +89,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@lovable.dev/vite-tanstack-config": "^2.25.1",
     "@types/node": "^22.16.5",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.0",
@@ -102,9 +105,8 @@
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^7.3.5",
-    "vitest": "^4.1.9",
-    "@lovable.dev/vite-tanstack-config": "^2.25.1"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.9"
   },
   "pnpm": {
     "overrides": {
