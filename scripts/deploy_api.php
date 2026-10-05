@@ -250,15 +250,9 @@ if ($action === 'extract') {
         @file_put_contents($preloadFile, "// Mídia.OS Preload\nconsole.log('Mídia.OS Server boot:', new Date().toISOString());\n");
     }
 
-    // 3.2 Garante que .htaccess sempre tenha a configuração correta do Passenger, reescrita, MIME types e compressão
+    // 3.2 Garante que .htaccess sempre tenha a configuração correta do Passenger e MIME types
     $htaccessFile = $pubHtml . '/.htaccess';
-    $htaccessContent = "# Ativar o motor de reescrita\n" .
-        "RewriteEngine On\n\n" .
-        "# 1. Não interceptar se o arquivo ou diretório físico existir no disco\n" .
-        "RewriteCond %{REQUEST_FILENAME} -f [OR]\n" .
-        "RewriteCond %{REQUEST_FILENAME} -d\n" .
-        "RewriteRule ^ - [L]\n\n" .
-        "# 2. Configurações do ambiente Node.js / Passenger (Hostinger)\n" .
+    $htaccessContent = "# Configurações do ambiente Node.js / Passenger (Hostinger)\n" .
         "PassengerAppRoot /home/u233352823/domains/midiaos.online/hbuilds/current/nodejs\n" .
         "PassengerAppType node\n" .
         "PassengerNodejs /opt/alt/alt-nodejs22/root/bin/node\n" .
@@ -271,14 +265,10 @@ if ($action === 'extract') {
         "SetEnv SUPABASE_PUBLISHABLE_KEY \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmlhd3l3ZXltdXRqaXlieHlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NzkwNTcsImV4cCI6MjEwNjQ1NTA1N30.4SyTIJH3ZZzTN-fX4MjTsuR2Ez-8rF6zyytqZvnxtoQ\"\n" .
         "SetEnv VITE_SUPABASE_URL \"https://tvniawyweymutjiybxyo.supabase.co\"\n" .
         "SetEnv VITE_SUPABASE_PUBLISHABLE_KEY \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmlhd3l3ZXltdXRqaXlieHlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NzkwNTcsImV4cCI6MjEwNjQ1NTA1N30.4SyTIJH3ZZzTN-fX4MjTsuR2Ez-8rF6zyytqZvnxtoQ\"\n\n" .
-        "# 3. Forçar tipos MIME corretos para módulos JavaScript e CSS\n" .
+        "# Tipos MIME corretos para módulos JavaScript e CSS\n" .
         "<IfModule mod_mime.c>\n" .
         "  AddType application/javascript .js .mjs .cjs\n" .
         "  AddType text/css .css\n" .
-        "</IfModule>\n\n" .
-        "# 4. Habilitar compressão para performance de carregamento dos assets\n" .
-        "<IfModule mod_deflate.c>\n" .
-        "  AddOutputFilterByType DEFLATE application/javascript text/css text/html application/json\n" .
         "</IfModule>\n";
     @file_put_contents($htaccessFile, $htaccessContent);
 

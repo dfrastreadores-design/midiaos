@@ -1,5 +1,5 @@
 // Service Worker — Mídia.OS PWA
-const CACHE_NAME = "midiaos-cache-v4";
+const CACHE_NAME = "midiaos-cache-v5";
 const STATIC_ASSETS = [
   "/favicon.png",
   "/pwa-192x192.png",
@@ -33,6 +33,9 @@ self.addEventListener("fetch", (event) => {
 
   // Não interceptar requisições para Supabase API ou terceiros
   if (url.origin !== self.location.origin) return;
+
+  // Não interceptar assets Vite compilados (/assets/*) — devem sempre vir direto do servidor HTTP sem interferência
+  if (url.pathname.startsWith("/assets/")) return;
 
   // Páginas HTML e chamadas de API: sempre tentar rede primeiro para garantir dados de produção atualizados
   if (event.request.mode === "navigate") {

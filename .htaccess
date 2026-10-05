@@ -1,12 +1,4 @@
-# Ativar o motor de reescrita
-RewriteEngine On
-
-# 1. Não interceptar se o arquivo ou diretório físico existir no disco
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
-# 2. Configurações do ambiente Node.js / Passenger (Hostinger)
+# Configurações do ambiente Node.js / Passenger (Hostinger)
 PassengerAppRoot /home/u233352823/domains/midiaos.online/hbuilds/current/nodejs
 PassengerAppType node
 PassengerNodejs /opt/alt/alt-nodejs22/root/bin/node
@@ -20,13 +12,9 @@ SetEnv SUPABASE_PUBLISHABLE_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOi
 SetEnv VITE_SUPABASE_URL "https://tvniawyweymutjiybxyo.supabase.co"
 SetEnv VITE_SUPABASE_PUBLISHABLE_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmlhd3l3ZXltdXRqaXlieHlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NzkwNTcsImV4cCI6MjEwNjQ1NTA1N30.4SyTIJH3ZZzTN-fX4MjTsuR2Ez-8rF6zyytqZvnxtoQ"
 
-# 3. Forçar tipos MIME corretos para módulos JavaScript e CSS (evita erros de importação Vite)
+# Forçar tipos MIME corretos para módulos JavaScript e CSS
 <IfModule mod_mime.c>
   AddType application/javascript .js .mjs .cjs
   AddType text/css .css
 </IfModule>
 
-# 4. Habilitar compressão para performance de carregamento dos assets
-<IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE application/javascript text/css text/html application/json
-</IfModule>

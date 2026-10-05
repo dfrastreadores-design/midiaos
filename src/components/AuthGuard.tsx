@@ -14,11 +14,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isDemo, setIsDemo] = useState(false);
   const [tick, setTick] = useState(0);
 
-  // Timeout de segurança global: nunca travar na tela de carregamento por mais de 2.5 segundos
+  const lastCheckedUserId = useRef<string | null>(null);
+
+  // Timeout de segurança global: nunca travar na tela de carregamento por mais de 2.0 segundos
   useEffect(() => {
     const timer = setTimeout(() => {
       setChecking(false);
-    }, 2500);
+    }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -37,6 +39,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       setChecking(false);
       return;
     }
+
+    if (lastCheckedUserId.current === user.id && tick === 0) {
+      setChecking(false);
+      return;
+    }
+    lastCheckedUserId.current = user.id;
 
     let cancelled = false;
     (async () => {
@@ -76,7 +84,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, loading, nav, tick]);
+  }, [user?.id, user?.email, loading, tick]);
 
   if (loading || (user && checking)) {
     return (
