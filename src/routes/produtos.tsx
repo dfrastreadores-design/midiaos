@@ -47,6 +47,7 @@ import {
   Download,
   FileSpreadsheet,
   Camera,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -69,6 +70,7 @@ import { ProdutoFormDialog, type Produto } from "@/components/ProdutoFormDialog"
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/produtos")({
   head: () => ({ meta: [{ title: "Produtos — Mídia.OS" }] }),
@@ -118,6 +120,7 @@ function ProdutosPage() {
   const fetchTipos = useServerFn(listProdutoTipos);
 
   const searchParams = Route.useSearch();
+  const { isNexo } = useCurrentOrg();
   const [tab, setTab] = useState<Midia>("TV");
   const [search, setSearch] = useState(searchParams.parceiro || "");
   const [filtroTipo, setFiltroTipo] = useState<string>("__all__");

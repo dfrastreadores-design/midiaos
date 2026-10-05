@@ -733,12 +733,12 @@ export function ParceirosPage() {
       {/* Modal Universal de Anexos do Parceiro */}
       {anexoParceiro && (
         <UniversalAnexosModal
-          open={!!anexoParceiro}
-          onOpenChange={(open) => !open && setAnexoParceiro(null)}
+          isOpen={!!anexoParceiro}
+          onClose={() => setAnexoParceiro(null)}
           entidadeTipo="parceiro"
           entidadeId={anexoParceiro.id}
-          titulo={`Documentos & Mídia Kit — ${anexoParceiro.nome_fantasia || anexoParceiro.razao_social}`}
-          descricao="Gerencie Mídia Kits em PDF, tabelas de preço, propostas, contratos assinados e materiais técnicos deste parceiro."
+          entidadeNome={anexoParceiro.nome_fantasia || anexoParceiro.razao_social}
+          tituloCustomizado={`Documentos & Mídia Kit — ${anexoParceiro.nome_fantasia || anexoParceiro.razao_social}`}
         />
       )}
 
