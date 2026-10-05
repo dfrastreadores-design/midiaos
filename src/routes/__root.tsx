@@ -43,6 +43,20 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error("Erro capturado no Root Error Boundary:", error);
   const router = useRouter();
 
+  if (typeof window !== "undefined") {
+    try {
+      fetch("/client_log.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: error?.message,
+          stack: error?.stack,
+          url: window.location.href,
+        }),
+      }).catch(() => {});
+    } catch {}
+  }
+
   // Stale chunk or initialization error after a new deploy — auto-reload once to fetch the new bundle.
   if (
     typeof window !== "undefined" &&
@@ -95,11 +109,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         </p>
 
         {error?.message && !isAuthError && (
-          <details className="mt-4 text-left p-3 rounded-lg bg-muted text-xs font-mono text-muted-foreground overflow-auto max-h-32">
+          <details open className="mt-4 text-left p-3 rounded-lg bg-muted text-xs font-mono text-muted-foreground overflow-auto max-h-48 select-text">
             <summary className="cursor-pointer font-semibold mb-1 text-foreground">
               Detalhes técnicos do erro
             </summary>
-            {error.message}
+            <div className="font-bold text-destructive mb-1">{error.message}</div>
+            {error.stack && (
+              <pre className="mt-1 whitespace-pre-wrap text-[10px] leading-tight text-foreground/80">{error.stack}</pre>
+            )}
           </details>
         )}
 
@@ -119,6 +136,29 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           >
             Voltar ao Início
           </a>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                if ("serviceWorker" in navigator) {
+                  navigator.serviceWorker.getRegistrations().then((regs) => {
+                    regs.forEach((r) => r.unregister());
+                  });
+                }
+                if ("caches" in window) {
+                  window.caches.keys().then((names) => {
+                    names.forEach((n) => window.caches.delete(n));
+                  });
+                }
+                sessionStorage.clear();
+                localStorage.removeItem("midiaos:chunk-reload");
+                window.location.href = "/";
+              }
+            }}
+            className="inline-flex items-center justify-center rounded-md border border-input bg-muted px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Limpar Cache & Recarregar
+          </button>
           <a
             href="/login"
             className="inline-flex items-center justify-center rounded-md border border-input bg-muted px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"

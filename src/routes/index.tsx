@@ -57,7 +57,7 @@ import {
 import { WelcomeHero } from "@/components/WelcomeHero";
 import { DashboardCalendarWidget } from "@/components/DashboardCalendarWidget";
 
-import { getDashboard, getVendasMes } from "@/lib/dashboard.functions";
+import { getDashboard, type DrillFilter } from "@/lib/dashboard.functions";
 import { listUsuarios } from "@/lib/usuarios.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserRoles } from "@/hooks/use-roles";
@@ -69,13 +69,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DrillDownDialog } from "@/components/DrillDownDialog";
+import { DrillDownDialog, type DrillDownState } from "@/components/DrillDownDialog";
 import { setActingAsExecutivo, useActingAsExecutivo } from "@/hooks/use-acting-as";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Início — Mídia.OS" }] }),
-  component: () => <Dashboard />,
+  component: Dashboard,
+  errorComponent: DashboardError,
 });
+
+function DashboardError({ error, reset }: { error: Error; reset: () => void }) {
+  return (
+    <AppShell>
+      <div className="p-8 max-w-xl mx-auto my-12 text-center rounded-2xl border bg-card shadow-sm space-y-4">
+        <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto font-bold text-xl">
+          !
+        </div>
+        <h2 className="text-xl font-bold tracking-tight">Instabilidade ao carregar o Dashboard</h2>
+        <p className="text-sm text-muted-foreground">
+          Ocorreu um erro ao carregar os dados desta tela. Você pode tentar atualizar.
+        </p>
+        {error?.message && (
+          <div className="p-3 rounded-lg bg-muted text-xs font-mono text-destructive text-left overflow-auto max-h-32">
+            {error.message}
+          </div>
+        )}
+        <div className="pt-2 flex justify-center gap-3">
+          <Button onClick={() => reset()} className="rounded-md">
+            Recarregar Dashboard
+          </Button>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Atualizar Página
+          </Button>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
 
 const formatBRL = (n: number) =>
   (n || 0).toLocaleString("pt-BR", {
@@ -282,14 +312,14 @@ function Dashboard() {
   const [dragId, setDragId] = useState<WidgetId | null>(null);
   const [overId, setOverId] = useState<WidgetId | null>(null);
 
-  const [drill, setDrill] = useState<import("@/components/DrillDownDialog").DrillDownState>({
+  const [drill, setDrill] = useState<DrillDownState>({
     open: false,
     title: "",
     filter: {},
   });
   const openDrill = (
     title: string,
-    filter: import("@/lib/dashboard.functions").DrillFilter,
+    filter: DrillFilter,
     subtitle?: string,
   ) => setDrill({ open: true, title, subtitle, filter: { executivoId: filterId, ...filter } });
   const { data, isLoading } = useQuery({
