@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { isMasterEmail } from "@/lib/master-user";
 
 const RoleEnum = z.enum([
   "admin",
@@ -16,7 +17,7 @@ const RoleEnum = z.enum([
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data: userAuth } = await supabase.auth.getUser();
-  if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
+  if (isMasterEmail(userAuth?.user?.email)) {
     return;
   }
   const { data, error } = await supabase
@@ -78,7 +79,7 @@ export const listUsuarios = createServerFn({ method: "GET" })
       supabase.auth.getUser(),
       supabase.from("profiles").select("tenant_id").eq("id", userId).maybeSingle(),
     ]);
-    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const isSuper = isMasterEmail(userAuth?.user?.email);
     const myTenant = (meProfile as any)?.tenant_id ?? null;
 
     let query = supabase.from("profiles").select("*").order("created_at", { ascending: false });
@@ -114,10 +115,10 @@ export const setUserRole = createServerFn({ method: "POST" })
     await assertAdmin(supabase, userId);
 
     const { data: userAuth } = await supabase.auth.getUser();
-    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const isSuper = isMasterEmail(userAuth?.user?.email);
     if (data.role === ("super_admin" as any) && !isSuper) {
       throw new Error(
-        "Apenas o proprietário da plataforma (rafaelrodrigo.as@gmail.com) pode gerenciar a função super_admin",
+        "Apenas o proprietário da plataforma pode gerenciar a função super_admin",
       );
     }
 
@@ -201,7 +202,7 @@ export const createUsuario = createServerFn({ method: "POST" })
     await assertAdmin(supabase, userId);
 
     const { data: userAuth } = await supabase.auth.getUser();
-    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const isSuper = isMasterEmail(userAuth?.user?.email);
 
     // Bloqueia qualquer tentativa de conceder super_admin
     if (data.roles.includes("super_admin" as any) && !isSuper) {

@@ -43,17 +43,25 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error("Erro capturado no Root Error Boundary:", error);
   const router = useRouter();
 
-  // Stale chunk after a new deploy — auto-reload once to fetch the new bundle.
+  // Stale chunk or initialization error after a new deploy — auto-reload once to fetch the new bundle.
   if (
     typeof window !== "undefined" &&
-    /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError/i.test(
+    /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|before initialization/i.test(
       String(error?.message ?? ""),
     )
   ) {
     const KEY = "midiaos:chunk-reload";
     if (sessionStorage.getItem(KEY) !== "1") {
       sessionStorage.setItem(KEY, "1");
-      window.location.reload();
+      if ("caches" in window) {
+        window.caches.keys().then((names) => {
+          names.forEach((name) => window.caches.delete(name));
+        }).finally(() => {
+          window.location.reload();
+        });
+      } else {
+        window.location.reload();
+      }
       return null;
     }
   }

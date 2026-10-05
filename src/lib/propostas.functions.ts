@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { isMasterEmail } from "@/lib/master-user";
 
 const ItemSchema = z.object({
   tipo: z.string().max(100),
@@ -72,7 +73,7 @@ export const listPropostas = createServerFn({ method: "GET" })
     const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
 
     const { data: userAuth } = await supabase.auth.getUser();
-    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const isSuper = isMasterEmail(userAuth?.user?.email);
     const hasBroadRole =
       isSuper || roles.some((r: string) => ["admin", "diretoria", "super_admin"].includes(r));
 

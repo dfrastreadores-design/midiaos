@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isMasterEmail } from "@/lib/master-user";
 
 const MidiaEnum = z.string().min(1).max(80);
 
@@ -200,7 +201,7 @@ export const listProdutos = createServerFn({ method: "GET" })
     const rows = (data ?? []).map(normalizeProdutoRow);
 
     // O super-administrador global tem visibilidade irrestrita
-    const isSuperAdminUser = userEmail === "rafaelrodrigo.as@gmail.com";
+    const isSuperAdminUser = isMasterEmail(userEmail);
     if (isSuperAdminUser) {
       return rows;
     }

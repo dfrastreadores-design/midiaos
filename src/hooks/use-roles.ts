@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, type AppRole } from "@/hooks/use-auth";
+import { isMasterEmail } from "@/lib/master-user";
 
 // Mapeamento de rota → chave de permissão de módulo.
 // Rotas sem mapeamento (ex.: "/", "/minha-conta") são liberadas para qualquer usuário autenticado.
@@ -78,7 +79,7 @@ export function useUserRoles() {
     };
   }, [user, loading]);
 
-  const isSuperAdmin = user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+  const isSuperAdmin = isMasterEmail(user?.email);
   const isAdmin = isSuperAdmin || roles.includes("admin") || roles.includes("super_admin");
   const isDiretoria = isSuperAdmin || roles.includes("diretoria");
   const isParceiroComercial = !isSuperAdmin && roles.includes("parceiro_comercial");

@@ -74,7 +74,7 @@ import { setActingAsExecutivo, useActingAsExecutivo } from "@/hooks/use-acting-a
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Início — Mídia.OS" }] }),
-  component: Dashboard,
+  component: () => <Dashboard />,
 });
 
 const formatBRL = (n: number) =>
@@ -365,7 +365,7 @@ function Dashboard() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os executivos</SelectItem>
-                    {usuarios.map((u: any) => (
+                    {(usuarios ?? []).map((u: any) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.nome || u.email}
                       </SelectItem>

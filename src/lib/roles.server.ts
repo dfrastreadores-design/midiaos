@@ -15,13 +15,15 @@ type SupabaseClient = {
   };
 };
 
+import { isMasterEmail } from "@/lib/master-user";
+
 export async function assertAnyRole(
   supabase: any,
   userId: string,
   allowed: string[],
 ): Promise<void> {
   const { data: userAuth } = (await supabase.auth?.getUser?.()) ?? { data: null };
-  if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
+  if (isMasterEmail(userAuth?.user?.email)) {
     return;
   }
 

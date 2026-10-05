@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { isMasterEmail } from "@/lib/master-user";
 
 export type Plano = {
   id: string;
@@ -29,13 +30,13 @@ export const MODULOS_DISPONIVEIS: { key: string; label: string; desc?: string }[
 
 async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
   const { data: userAuth } = await ctx.supabase.auth.getUser();
-  if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
+  if (isMasterEmail(userAuth?.user?.email)) {
     return;
   }
   const { data, error } = await ctx.supabase.rpc("is_super_admin", { _user_id: ctx.userId });
   if (error) throw new Error(error.message);
   if (!data)
-    throw new Error("Acesso restrito ao proprietário da plataforma (rafaelrodrigo.as@gmail.com)");
+    throw new Error("Acesso restrito ao proprietário da plataforma");
 }
 
 /** Lista planos (qualquer autenticado lê o catálogo). */

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isMasterEmail } from "@/lib/master-user";
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -7,10 +8,10 @@ export const getDashboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data?: { executivoId?: string | null }) => data ?? {})
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { supabase, userId, claims } = context;
     const execFilter = data?.executivoId || null;
-    // Authorize: only admins can filter by another executivo
-    if (execFilter && execFilter !== userId) {
+    // Authorize: only admins or master users can filter by another executivo
+    if (execFilter && execFilter !== userId && !isMasterEmail(claims?.email)) {
       const { data: isAdminRow } = await supabase.rpc("has_role", {
         _user_id: userId,
         _role: "admin",
@@ -291,10 +292,10 @@ export const getVendasMes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { ano: number; mes: number; executivoId?: string | null }) => data)
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { supabase, userId, claims } = context;
     const { ano, mes } = data;
     const execFilter = data.executivoId || null;
-    if (execFilter && execFilter !== userId) {
+    if (execFilter && execFilter !== userId && !isMasterEmail(claims?.email)) {
       const { data: isAdminRow } = await supabase.rpc("has_role", {
         _user_id: userId,
         _role: "admin",

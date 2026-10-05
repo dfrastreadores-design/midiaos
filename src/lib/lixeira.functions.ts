@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isMasterEmail } from "@/lib/master-user";
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data: userAuth } = await supabase.auth.getUser();
-  if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
+  if (isMasterEmail(userAuth?.user?.email)) {
     return;
   }
   const { data } = await supabase

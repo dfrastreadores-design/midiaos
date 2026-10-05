@@ -1,7 +1,6 @@
 // Service Worker — Mídia.OS PWA
-const CACHE_NAME = "midiaos-cache-v1";
+const CACHE_NAME = "midiaos-cache-v2";
 const STATIC_ASSETS = [
-  "/",
   "/favicon.png",
   "/pwa-192x192.png",
   "/pwa-512x512.png",

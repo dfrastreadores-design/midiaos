@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchCnpj, onlyDigits } from "@/lib/cnpj";
 import { assertAnyRole } from "@/lib/roles.server";
+import { isMasterEmail } from "@/lib/master-user";
 
 type SupabaseLike = {
   from: (t: string) => {
@@ -203,7 +204,7 @@ export const listPis = createServerFn({ method: "GET" })
 
     // Verificar se o usuário possui acesso amplo ou se é executivo restrito aos seus próprios PIs
     const { data: userAuth } = await supabase.auth.getUser();
-    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const isSuper = isMasterEmail(userAuth?.user?.email);
     const hasBroadRole =
       isSuper ||
       roles.some((r: string) =>

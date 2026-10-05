@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isMasterEmail } from "@/lib/master-user";
 
 export type PlatformConfig = {
   /** true = multi-empresa (várias emissoras/CNPJs); false = uma única empresa */
@@ -43,7 +44,7 @@ export const savePlatformConfig = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { data: userAuth } = await context.supabase.auth.getUser();
-    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const isSuper = isMasterEmail(userAuth?.user?.email);
     if (!isSuper) {
       const { data: sa, error: eSa } = await context.supabase.rpc("is_super_admin", {
         _user_id: context.userId,
@@ -51,7 +52,7 @@ export const savePlatformConfig = createServerFn({ method: "POST" })
       if (eSa) throw new Error(eSa.message);
       if (!sa)
         throw new Error(
-          "Apenas o proprietário da plataforma (rafaelrodrigo.as@gmail.com) pode alterar esta configuração.",
+          "Apenas o proprietário da plataforma pode alterar esta configuração.",
         );
     }
     const { error } = await context.supabase

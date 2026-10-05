@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getInteligenciaRegiaoDF, PILARES_360, type RegiaoDFInteligencia } from "./df-regioes-inteligencia";
+import { isMasterEmail } from "@/lib/master-user";
 
 export interface ItemPlano360 {
   id: string;
@@ -222,7 +223,7 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
       .eq("ativo", true);
 
     const { data: dbProdutos = [] } = await q;
-    const isSuperAdmin = userEmail === "rafaelrodrigo.as@gmail.com";
+    const isSuperAdmin = isMasterEmail(userEmail);
 
     // Filtragem Multi-tenant: Produtos próprios da Nexo só são visíveis para a Nexo
     const todosProdutos = (dbProdutos || []).filter((p: any) => {

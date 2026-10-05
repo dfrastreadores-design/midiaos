@@ -1,15 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isMasterEmail } from "@/lib/master-user";
 
 async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
   const { data: userAuth } = await ctx.supabase.auth.getUser();
-  if (userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com") {
+  if (isMasterEmail(userAuth?.user?.email)) {
     return;
   }
   const { data, error } = await ctx.supabase.rpc("is_super_admin", { _user_id: ctx.userId });
   if (error) throw new Error(error.message);
   if (!data)
-    throw new Error("Acesso restrito ao proprietário da plataforma (rafaelrodrigo.as@gmail.com)");
+    throw new Error("Acesso restrito ao proprietário da plataforma");
 }
 
 export type TenantInput = {
@@ -670,7 +671,7 @@ export const updateMeuTenantPerfil = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: userAuth } = await supabase.auth.getUser();
-    const isSuper = userAuth?.user?.email?.toLowerCase() === "rafaelrodrigo.as@gmail.com";
+    const isSuper = isMasterEmail(userAuth?.user?.email);
     if (!isSuper) {
       const { data: roles } = await supabase
         .from("user_roles")
