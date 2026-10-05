@@ -67,7 +67,7 @@ function LoginPage() {
       return;
     }
     toast.success("Login realizado");
-    nav({ to: "/" });
+    window.location.href = "/";
   };
 
   return (

@@ -47,32 +47,45 @@ export function useUserRoles() {
       setRolesLoading(loading);
       return;
     }
+    if (isMasterEmail(user.email)) {
+      setRoles(["admin", "super_admin", "diretoria", "executivo"]);
+      setPerms(new Set(["*"]));
+      setAdminManaged(false);
+      setRolesLoading(false);
+      return;
+    }
+
     setRolesLoading(true);
     (async () => {
-      const { data: roleRows } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      const userRoles = (roleRows ?? []).map((r) => r.role as AppRole);
-      let permKeys = new Set<string>();
-      if (userRoles.length > 0) {
-        const { data: rp } = await supabase
+      try {
+        const { data: roleRows } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        const userRoles = (roleRows ?? []).map((r) => r.role as AppRole);
+        let permKeys = new Set<string>();
+        if (userRoles.length > 0) {
+          const { data: rp } = await supabase
+            .from("role_permissions")
+            .select("permission_key")
+            .in("role", userRoles);
+          permKeys = new Set((rp ?? []).map((r) => r.permission_key as string));
+        }
+        // Verifica se o perfil admin foi configurado (alguma linha em role_permissions)
+        const { data: adminRows } = await supabase
           .from("role_permissions")
           .select("permission_key")
-          .in("role", userRoles);
-        permKeys = new Set((rp ?? []).map((r) => r.permission_key as string));
+          .eq("role", "admin")
+          .limit(1);
+        if (!active) return;
+        setRoles(userRoles);
+        setPerms(permKeys);
+        setAdminManaged((adminRows?.length ?? 0) > 0);
+      } catch (err) {
+        console.warn("useUserRoles: erro ao carregar permissões:", err);
+      } finally {
+        if (active) setRolesLoading(false);
       }
-      // Verifica se o perfil admin foi configurado (alguma linha em role_permissions)
-      const { data: adminRows } = await supabase
-        .from("role_permissions")
-        .select("permission_key")
-        .eq("role", "admin")
-        .limit(1);
-      if (!active) return;
-      setRoles(userRoles);
-      setPerms(permKeys);
-      setAdminManaged((adminRows?.length ?? 0) > 0);
-      setRolesLoading(false);
     })();
     return () => {
       active = false;

@@ -23,18 +23,39 @@ export function useAuth() {
   const lastTouchRef = useRef(0);
 
   useEffect(() => {
+    let resolved = false;
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
       setLoading(false);
+      resolved = true;
     });
-    return () => subscription.unsubscribe();
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+      })
+      .catch((err) => {
+        console.warn("useAuth getSession error:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+        resolved = true;
+      });
+
+    // Timeout de segurança: nunca travar em loading por mais de 1.5s
+    const timer = setTimeout(() => {
+      if (!resolved) setLoading(false);
+    }, 1500);
+
+    return () => {
+      clearTimeout(timer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Atualiza last_active_at + força logout após 5 dias contínuos
