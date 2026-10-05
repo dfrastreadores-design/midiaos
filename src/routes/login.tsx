@@ -33,24 +33,50 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) return;
-      const now = Date.now();
-      const expiresAt = data.session.expires_at ? data.session.expires_at * 1000 : 0;
-      if (expiresAt && expiresAt <= now) {
-        try {
-          const { data: refreshed, error } = await supabase.auth.refreshSession();
-          if (error || !refreshed?.session) {
+    if (typeof window !== "undefined" && window.location.search.includes("logout=1")) {
+      supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      return;
+    }
+
+    let isMounted = true;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) return;
+
+        const now = Date.now();
+        const expiresAt = data.session.expires_at ? data.session.expires_at * 1000 : 0;
+        if (expiresAt && expiresAt <= now) {
+          try {
+            const { data: refreshed, error } = await supabase.auth.refreshSession();
+            if (error || !refreshed?.session) {
+              await supabase.auth.signOut({ scope: "local" });
+              return;
+            }
+          } catch {
             await supabase.auth.signOut({ scope: "local" });
             return;
           }
-        } catch {
-          await supabase.auth.signOut({ scope: "local" });
+        }
+
+        // Validação ativa no servidor para evitar redirect loop com token órfão
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData?.user) {
+          await supabase.auth.signOut({ scope: "local" }).catch(() => {});
           return;
         }
+
+        if (isMounted) {
+          nav({ to: "/", replace: true });
+        }
+      } catch (err) {
+        console.warn("login.tsx: erro ao verificar sessão:", err);
       }
-      nav({ to: "/" });
-    });
+    })();
+
+    return () => {
+      isMounted = false;
+    };
   }, [nav]);
 
   const handleLogin = async (e: React.FormEvent) => {
