@@ -110,5 +110,9 @@
     "overrides": {
       "entities": "4.5.0"
     }
+  },
+  "overrides": {
+    "brace-expansion": "^2.0.1",
+    "undici": "^6.21.1"
   }
 }
