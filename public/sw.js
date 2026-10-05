@@ -1,5 +1,5 @@
 // Service Worker — Mídia.OS PWA
-const CACHE_NAME = "midiaos-cache-v3";
+const CACHE_NAME = "midiaos-cache-v4";
 const STATIC_ASSETS = [
   "/favicon.png",
   "/pwa-192x192.png",
@@ -68,8 +68,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Padrão: rede com fallback para cache
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+  // Padrão: rede com fallback para cache seguro (sem lançar TypeError caso cache.match retorne undefined)
+  event.respondWith(
+    fetch(event.request).catch(async () => {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+      return new Response("Offline ou recurso indisponível", {
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+    }),
+  );
 });
 
 // ============================================================================
