@@ -209,9 +209,10 @@ if ($action === 'extract') {
     $numFiles = $zip->numFiles;
 
     // 1. Extrai diretamente para hbuilds/current/nodejs (onde o Passenger roda server/index.mjs)
-    if (file_exists($hbuildsNodejs)) {
-        $zip->extractTo($hbuildsNodejs);
+    if (!file_exists($hbuildsNodejs)) {
+        @mkdir($hbuildsNodejs, 0755, true);
     }
+    $zip->extractTo($hbuildsNodejs);
 
     // 2. Extrai também para public_html e public_html/.output
     $zip->extractTo($pubHtml);
@@ -223,12 +224,33 @@ if ($action === 'extract') {
     $zip->extractTo($pubOutput);
     $zip->close();
 
+    // 2.1 Garante cópia de public/assets diretamente em public_html/assets
+    if (file_exists($pubHtml . '/public/assets')) {
+        if (!file_exists($pubHtml . '/assets')) {
+            @mkdir($pubHtml . '/assets', 0755, true);
+        }
+        foreach (scandir($pubHtml . '/public/assets') as $a) {
+            if ($a === '.' || $a === '..') continue;
+            @copy($pubHtml . '/public/assets/' . $a, $pubHtml . '/assets/' . $a);
+        }
+    }
+
     // 3. Garante que .env esteja em hbuilds/current/nodejs
-    if (file_exists($pubHtml . '/.env') && file_exists($hbuildsNodejs)) {
+    if (file_exists($pubHtml . '/.env')) {
         @copy($pubHtml . '/.env', $hbuildsNodejs . '/.env');
     }
 
-    // 3.1 Garante que .htaccess sempre tenha a configuração correta do Passenger e variáveis de ambiente
+    // 3.1 Garante existência de preload-timestamp.js
+    $configDir = '/home/u233352823/domains/midiaos.online/hbuilds/config';
+    if (!file_exists($configDir)) {
+        @mkdir($configDir, 0755, true);
+    }
+    $preloadFile = $configDir . '/preload-timestamp.js';
+    if (!file_exists($preloadFile)) {
+        @file_put_contents($preloadFile, "// Mídia.OS Preload\nconsole.log('Mídia.OS Server boot:', new Date().toISOString());\n");
+    }
+
+    // 3.2 Garante que .htaccess sempre tenha a configuração correta do Passenger e variáveis de ambiente
     $htaccessFile = $pubHtml . '/.htaccess';
     $htaccessContent = "PassengerAppRoot /home/u233352823/domains/midiaos.online/hbuilds/current/nodejs\n" .
         "PassengerAppType node\n" .
