@@ -222,7 +222,10 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
           net_vehicle_amount: split.netVehicleAmount,
           checking_status: "pending_upload",
           status: "in_broadcast", // Inicia em veiculação
+          campaign_name: data.campaign_title,
           campaign_title: data.campaign_title,
+          campaign_start_date: data.period_start || new Date().toISOString().split("T")[0],
+          campaign_end_date: data.period_end || new Date().toISOString().split("T")[0],
           period_start: data.period_start || null,
           period_end: data.period_end || null,
           notes: data.notes || null,
@@ -248,7 +251,10 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
           representative_commission_rate: split.commissionRate,
           representative_commission_amount: split.commissionAmount,
           net_vehicle_amount: split.netVehicleAmount,
+          campaign_name: data.campaign_title,
           campaign_title: data.campaign_title,
+          campaign_start_date: data.period_start || new Date().toISOString().split("T")[0],
+          campaign_end_date: data.period_end || new Date().toISOString().split("T")[0],
           period_start: data.period_start || null,
           period_end: data.period_end || null,
           notes: data.notes || null,
@@ -278,9 +284,11 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
         insertions_count: it.insertions_count,
         unit_price: it.unit_price,
         total_price: it.total_price,
+        vehicle_commission_rate: split.commissionRate,
+        vehicle_commission_amount: Math.round((it.total_price - it.vehicle_net_amount) * 100) / 100,
         vehicle_net_amount: it.vehicle_net_amount,
-        period_start: it.period_start,
-        period_end: it.period_end,
+        period_start: it.period_start || new Date().toISOString().split("T")[0],
+        period_end: it.period_end || new Date().toISOString().split("T")[0],
       }));
 
       const { error: itemsError } = await (client.from("pi_items") as any).insert(itemsPayload);
@@ -315,6 +323,8 @@ async function syncInitialSettlements(
 
   const settlements: any[] = [];
 
+  const defaultDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
   if (billingType === "REPRESENTATIVE_BILLING") {
     // Modalidade 1: Faturamento via Representante
     // 1. Recebível do Cliente pelo valor total bruto
@@ -325,6 +335,7 @@ async function syncInitialSettlements(
       payer_type: "client",
       receiver_type: "representative",
       amount: split.grossAmount,
+      due_date: defaultDueDate,
       status: "pending_checking",
       notes: "Fatura integral contra o anunciante via Representante.",
     });
@@ -340,6 +351,7 @@ async function syncInitialSettlements(
           receiver_type: "vehicle",
           vehicle_id: it.vehicle_id,
           amount: it.vehicle_net_amount,
+          due_date: defaultDueDate,
           status: "pending_checking",
           notes: "Repasse do saldo líquido após recebimento do Cliente.",
         });
@@ -358,6 +370,7 @@ async function syncInitialSettlements(
           receiver_type: "vehicle",
           vehicle_id: it.vehicle_id,
           amount: it.total_price,
+          due_date: defaultDueDate,
           status: "pending_checking",
           notes: "Faturamento direto do veículo contra o anunciante.",
         });
@@ -372,6 +385,7 @@ async function syncInitialSettlements(
       payer_type: "vehicle",
       receiver_type: "representative",
       amount: split.commissionAmount,
+      due_date: defaultDueDate,
       status: "pending_checking",
       notes: "Comissão de representação devida após liquidação do Cliente.",
     });
