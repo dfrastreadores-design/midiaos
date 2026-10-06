@@ -77,6 +77,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getInicio } from "@/lib/inicio.functions";
 import { Badge } from "@/components/ui/badge";
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, modulo: null },
   { to: "/centralizadores", label: "Centralizadores & Planejadores", icon: Compass, modulo: "centralizadores" },
@@ -113,9 +115,11 @@ const nav = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard>
-      <AppShellInner>{children}</AppShellInner>
-    </AuthGuard>
+    <ErrorBoundary>
+      <AuthGuard>
+        <AppShellInner>{children}</AppShellInner>
+      </AuthGuard>
+    </ErrorBoundary>
   );
 }
 
@@ -125,6 +129,17 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { can, loading: rolesLoading, isSuperAdmin, isAdmin } = useUserRoles();
   const actingAs = useActingAsExecutivo();
   const [impersonateOpen, setImpersonateOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [installDialogOpen, setInstallDialogOpen] = useState(false);
+  const { logoSrc: tenantLogo, nome: tenantNome } = useTenantBranding();
+  const { isNexo, nome: orgNome, siteUrl: orgSiteUrl } = useCurrentOrg();
+  const { hasModulo } = useTenantModulos();
+  const { data: inicioData } = useQuery({
+    queryKey: ["inicio"],
+    queryFn: () => getInicio(),
+    staleTime: 5 * 60_000,
+  });
+
   const displayName =
     (user?.user_metadata?.nome as string) || user?.email?.split("@")[0] || "Usuário";
   const initials = displayName
@@ -133,12 +148,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const { data: inicioData } = useQuery({
-    queryKey: ["inicio"],
-    queryFn: () => getInicio(),
-    staleTime: 5 * 60_000,
-  });
-  const { hasModulo } = useTenantModulos();
+
   const visibleNav = nav
     .filter((item) => {
       if (item.to === "/lixeira") return isAdmin;
@@ -171,10 +181,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         ? !can(matchedNavItem.to) ||
           (matchedNavItem.modulo != null && !hasModulo(matchedNavItem.modulo))
         : false));
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [installDialogOpen, setInstallDialogOpen] = useState(false);
-  const { logoSrc: tenantLogo, nome: tenantNome } = useTenantBranding();
-  const { isNexo, nome: orgNome, siteUrl: orgSiteUrl } = useCurrentOrg();
+
   const brandLogo = tenantLogo ?? logoMidiaOS;
   const brandAlt = tenantNome ?? "mídia.OS";
 

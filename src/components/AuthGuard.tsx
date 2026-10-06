@@ -36,7 +36,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading && !timedOut) return;
+    if (timedOut) {
+      setChecking(false);
+      return;
+    }
+
+    if (loading) return;
 
     if (!user) {
       // Redireciona com replace para evitar loops no histórico de navegação
