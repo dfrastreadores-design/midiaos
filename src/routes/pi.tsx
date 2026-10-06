@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import React, { useState } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PiEcosystemSection } from "@/components/pi/PiEcosystemSection";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -401,6 +402,7 @@ function PIPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const routeSearch = Route.useSearch();
+  const [secaoAtiva, setSecaoAtiva] = useState<"pi360" | "historico_classico">("pi360");
   const [apenasRenovacao10d, setApenasRenovacao10d] = useState(
     routeSearch?.filtro === "renovacao_10d",
   );
@@ -813,26 +815,62 @@ function PIPage() {
             Pedidos de Inserção (PI)
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Numeração automática · cancelar/substituir · histórico
+            Ordens de compra formal · Checking pericial de veiculação · Liquidação bimodal e repasses
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setPdfOpen(true)}>
-            <Sparkles className="size-4 mr-2" />
-            Importar PDF (IA)
-          </Button>
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setPrefill(undefined);
-              setFormOpen(true);
-            }}
-          >
-            <Plus className="size-4 mr-2" />
-            Novo PI
-          </Button>
+        <div className="flex items-center gap-2">
+          <div className="bg-muted p-1 rounded-lg flex items-center border">
+            <button
+              type="button"
+              onClick={() => setSecaoAtiva("pi360")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                secaoAtiva === "pi360"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileCheck2 className="size-3.5 text-primary" />
+              PI 360° & Liquidação Bimodal
+            </button>
+            <button
+              type="button"
+              onClick={() => setSecaoAtiva("historico_classico")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                secaoAtiva === "historico_classico"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <HistoryIcon className="size-3.5" />
+              PIs Clássicos / Histórico
+            </button>
+          </div>
+          {secaoAtiva === "historico_classico" && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setPdfOpen(true)}>
+                <Sparkles className="size-4 mr-2" />
+                Importar PDF (IA)
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditing(null);
+                  setPrefill(undefined);
+                  setFormOpen(true);
+                }}
+              >
+                <Plus className="size-4 mr-2" />
+                Novo PI Clássico
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {secaoAtiva === "pi360" ? (
+        <PiEcosystemSection />
+      ) : (
+        <>
 
       {(() => {
         const now = new Date();
@@ -1886,6 +1924,8 @@ function PIPage() {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
 
       <PiFormDialog
         key={editing?.id ?? (renovadoDeId ? `renovar-${renovadoDeId}` : "novo")}
