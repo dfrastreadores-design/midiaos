@@ -51,10 +51,12 @@ import {
   Image as ImageIcon,
   X,
   Loader2,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/mock-data";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentOrg } from "@/hooks/use-current-org";
 import {
   gerarPdfPropostaExecutivaCoBranding,
   type PropostaApresentacao,
@@ -122,7 +124,11 @@ export function SimuladorPropostaModal({
     enabled: open,
   });
 
+  const currentOrg = useCurrentOrg();
+
   // State
+  const [documentType, setDocumentType] = useState<"completa" | "direta">("completa");
+  const [mediaLayout, setMediaLayout] = useState<"com_fotos" | "sem_fotos">("com_fotos");
   const [clientName, setClientName] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
   const [clientLogoUrl, setClientLogoUrl] = useState<string>("");
@@ -443,8 +449,12 @@ export function SimuladorPropostaModal({
         id: proposalId || "temp",
         numero: proposalId?.slice(0, 8).toUpperCase() || "SIMULAÇÃO",
         titulo: campaignTitle || "Plano Comercial Estratégico Multiveículos",
+        tipo_documento: documentType,
+        layout_midia: mediaLayout,
+        mostrar_fotos: mediaLayout === "com_fotos",
         client_name: clientName,
         client_logo_url: clientLogoUrl || null,
+        organizacao: currentOrg.org,
         cliente: {
           id: clientId || undefined,
           nome_fantasia: clientName,
@@ -751,6 +761,140 @@ export function SimuladorPropostaModal({
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Seletor de Modo de Proposta & Layout de Mídia */}
+            <div className="mt-3 p-3 rounded-xl border border-border/80 bg-background/60 shadow-2xs">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                {/* Tipo de Documento (md:col-span-7) */}
+                <div className="md:col-span-7 space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                    <FileText className="w-3.5 h-3.5 text-primary" />
+                    Escopo & Formato do Documento
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDocumentType("completa")}
+                      className={cn(
+                        "flex items-start gap-2.5 p-2 rounded-lg border text-left transition-all cursor-pointer",
+                        documentType === "completa"
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                          : "border-border/70 bg-card hover:bg-muted/40 text-muted-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="docType"
+                        checked={documentType === "completa"}
+                        onChange={() => setDocumentType("completa")}
+                        className="mt-0.5 text-primary focus:ring-primary shrink-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground leading-tight flex items-center gap-1">
+                          Apresentação Completa
+                          <Badge className="bg-primary/20 text-primary hover:bg-primary/20 text-[9px] px-1 py-0">
+                            Deck 8-10 pág
+                          </Badge>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                          Mídia Kit Institucional + Plano de Mídia + Defesa + Fechamento com Aceite
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDocumentType("direta")}
+                      className={cn(
+                        "flex items-start gap-2.5 p-2 rounded-lg border text-left transition-all cursor-pointer",
+                        documentType === "direta"
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                          : "border-border/70 bg-card hover:bg-muted/40 text-muted-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="docType"
+                        checked={documentType === "direta"}
+                        onChange={() => setDocumentType("direta")}
+                        className="mt-0.5 text-primary focus:ring-primary shrink-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground leading-tight">
+                          Proposta Comercial Direta
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                          Cotação executiva direta (Apenas Capa, Grade dos Espaços e Fechamento)
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Seletor de Layout das Mídias (md:col-span-5) */}
+                <div className="md:col-span-5 space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                    <Sparkles className="w-3.5 h-3.5 text-secondary" />
+                    Layout da Grade de Mídia
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMediaLayout("com_fotos")}
+                      className={cn(
+                        "flex items-start gap-2 p-2 rounded-lg border text-left transition-all cursor-pointer",
+                        mediaLayout === "com_fotos"
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                          : "border-border/70 bg-card hover:bg-muted/40 text-muted-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="mediaLayout"
+                        checked={mediaLayout === "com_fotos"}
+                        onChange={() => setMediaLayout("com_fotos")}
+                        className="mt-0.5 text-primary focus:ring-primary shrink-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground leading-tight">
+                          Com Fotos dos Pontos
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          Cards com fotos reais, mapa e CPM
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMediaLayout("sem_fotos")}
+                      className={cn(
+                        "flex items-start gap-2 p-2 rounded-lg border text-left transition-all cursor-pointer",
+                        mediaLayout === "sem_fotos"
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                          : "border-border/70 bg-card hover:bg-muted/40 text-muted-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="mediaLayout"
+                        checked={mediaLayout === "sem_fotos"}
+                        onChange={() => setMediaLayout("sem_fotos")}
+                        className="mt-0.5 text-primary focus:ring-primary shrink-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground leading-tight">
+                          Sem Fotos
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          Tabela executiva compacta
+                        </div>
+                      </div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1094,14 +1238,20 @@ export function SimuladorPropostaModal({
                 onClick={handleExportExecutivePdf}
                 disabled={generatingPdf || items.length === 0}
                 className="gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/10 flex-1 sm:flex-initial"
-                title="Gera o PDF Executivo oficial com co-branding do anunciante"
+                title={
+                  documentType === "completa"
+                    ? "Gera a Apresentação Institucional Completa e Mídia Kit com 8-10 slides"
+                    : "Gera a Proposta Comercial Direta para fechamento rápido"
+                }
               >
                 {generatingPdf ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <Printer className="w-3.5 h-3.5" />
                 )}
-                Exportar PDF Executivo
+                {documentType === "completa"
+                  ? "Exportar Apresentação Completa"
+                  : "Exportar Proposta Direta"}
               </Button>
 
               <Button

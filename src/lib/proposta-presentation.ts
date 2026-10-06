@@ -192,7 +192,9 @@ export type PropostaApresentacao = {
   valor_desconto: number;
   valor_negociado: number;
   total_insercoes: number;
-  modo_apresentacao?: "detalhado" | "pacote_midia";
+  modo_apresentacao?: "detalhado" | "pacote_midia" | "completa" | "direta";
+  tipo_documento?: "direta" | "completa";
+  layout_midia?: "com_fotos" | "sem_fotos";
   mostrar_endereco?: boolean;
   mostrar_fotos?: boolean;
   cliente?: Entidade;
@@ -3305,13 +3307,26 @@ export async function gerarPdfPropostaNexo(
   const H = doc.internal.pageSize.getHeight(); // 210mm
 
   const clienteNome =
-    p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente Anunciante";
-  const logoUrl = pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
+    p.client_name ||
+    p.cliente?.nome_fantasia ||
+    p.cliente?.razao_social ||
+    p.cliente_avulso ||
+    "Cliente Anunciante";
+  const logoUrl = p.client_logo_url || pickLogoUrl(p.cliente?.logo_url, p.agencia?.logo_url);
   const logoClienteData = await logoToDataUrl(logoUrl);
 
   const org = (p as any).organizacao;
-  const isNexo = org?.isNexo || org?.slug === "nexo" || org?.nome?.toLowerCase().includes("nexo");
+  const isNexo = org?.isNexo || org?.slug === "nexo" || org?.nome?.toLowerCase().includes("nexo") || true;
   const cfg: TemplatePropostaConfig = org?.templateConfig || DEFAULT_NEXO_TEMPLATE_CONFIG;
+
+  const emissorNome = org?.nome || (isNexo ? "NEXO MÍDIA E REPRESENTAÇÃO" : "MÍDIA.OS");
+  const emissorTagline =
+    cfg.company_tagline ||
+    org?.tagline ||
+    (isNexo ? "Hub de Negócios & Soluções Estratégicas em Mídia" : "Sistema Integrado de Mídia 360°");
+  const emissorSite = cfg.site_url || org?.site_url || (isNexo ? "nexomidiaerepresentacao.com.br" : "");
+  const emissorTelefone = cfg.telefone_contato || (isNexo ? "(61) 99125-7245" : "");
+  const emissorEmail = cfg.email_contato || (isNexo ? "rafaelnexomidia@gmail.com" : "");
 
   const hexToRgb = (hex?: string | null, def: [number, number, number] = [15, 23, 42]): [number, number, number] => {
     if (!hex) return def;
@@ -3344,12 +3359,12 @@ export async function gerarPdfPropostaNexo(
       doc.setFontSize(7.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
-      doc.text("NEXO MÍDIA E REPRESENTAÇÃO", 15, 14);
+      doc.text(emissorNome.toUpperCase(), 15, 14);
 
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
-      doc.text(" •  HUB DE NEGÓCIOS & SOLUÇÕES ESTRATÉGICAS EM MÍDIA", 62, 14);
+      doc.text(` •  ${emissorTagline.toUpperCase()}`, 15 + doc.getTextWidth(emissorNome.toUpperCase()) + 3, 14);
 
       doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
@@ -3374,7 +3389,7 @@ export async function gerarPdfPropostaNexo(
     doc.setFont("helvetica", "normal");
     doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
     doc.text(
-      `NEXO Mídia e Representação (nexomidiaerepresentacao.com.br) • Proposta Comercial #${p.numero}`,
+      `${emissorNome} (${emissorSite.replace(/^https?:\/\//, "")}) • Proposta Comercial #${p.numero}`,
       15,
       rodapeY,
     );
@@ -3405,27 +3420,27 @@ export async function gerarPdfPropostaNexo(
     doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
     doc.rect(W - 4, 0, 4, H, "F");
 
-    // Logo Nexo ou Cliente Centralizado
+    // Logo Emissora Centralizado
     if (logoNexoData) {
       try {
-        doc.addImage(logoNexoData, "PNG", W / 2 - 30, 36, 60, 22, undefined, "FAST");
+        doc.addImage(logoNexoData, "PNG", W / 2 - 30, 34, 60, 22, undefined, "FAST");
       } catch {
         doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(255, 255, 255);
-        doc.text("NEXO MÍDIA E REPRESENTAÇÃO", W / 2, 48, { align: "center" });
+        doc.text(emissorNome.toUpperCase(), W / 2, 48, { align: "center" });
       }
     } else {
       doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text("NEXO MÍDIA E REPRESENTAÇÃO", W / 2, 48, { align: "center" });
+      doc.text(emissorNome.toUpperCase(), W / 2, 48, { align: "center" });
     }
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
-    doc.text("HUB DE NEGÓCIOS & SOLUÇÕES ESTRATÉGICAS EM MÍDIA", W / 2, 62, { align: "center" });
+    doc.text(emissorTagline.toUpperCase(), W / 2, 62, { align: "center" });
 
     // Linha divisória de efeito degradê
     doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
@@ -3433,33 +3448,33 @@ export async function gerarPdfPropostaNexo(
     doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
     doc.rect(W / 2, 68, 40, 1.2, "F");
 
-    // Título Principal Estilizado
-    doc.setFontSize(30);
+    // Título Principal Estilizado: MÍDIA KIT | PROPOSTA COMERCIAL
+    doc.setFontSize(26);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("PROPOSTA COMERCIAL", W / 2, 94, { align: "center" });
+    doc.text("MÍDIA KIT | PROPOSTA COMERCIAL", W / 2, 92, { align: "center" });
 
-    doc.setFontSize(12);
+    doc.setFontSize(11.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
     doc.text(
-      "Plano Estratégico & Comercial de Mídia Exterior (OOH / DOOH)",
+      "Apresentação Institucional & Plano Estratégico de Mídia Exterior (OOH / DOOH)",
       W / 2,
-      103,
+      101,
       { align: "center" },
     );
 
-    // Card de Identificação da Campanha (Glassmorphism dark)
-    const cardW = 210;
-    const cardH = 46;
+    // Card de Identificação da Campanha & Co-Branding (Glassmorphism dark)
+    const cardW = 224;
+    const cardH = 50;
     const cardX = (W - cardW) / 2;
-    const cardY = 120;
+    const cardY = 118;
 
     doc.setFillColor(colCard[0], colCard[1], colCard[2]);
     doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
     doc.roundedRect(cardX, cardY, cardW, cardH, 2.5, 2.5, "FD");
 
-    // Grid com dados do anunciante
+    // Grid com dados do anunciante e co-branding
     doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
@@ -3470,37 +3485,50 @@ export async function gerarPdfPropostaNexo(
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
     doc.text(clienteNome, cardX + 12, cardY + 20, { maxWidth: 95 });
-    doc.text(p.campanha || "Veiculação de Alta Performance", cardX + 115, cardY + 20, { maxWidth: 85 });
+    doc.text(p.campanha || "Veiculação de Alta Performance", cardX + 115, cardY + 20, { maxWidth: 65 });
+
+    // Logo do Cliente Anunciante em destaque na Capa (Co-branding oficial)
+    if (logoClienteData) {
+      try {
+        doc.setFillColor(24, 30, 42);
+        doc.roundedRect(cardX + cardW - 38, cardY + 8, 30, 16, 1.5, 1.5, "F");
+        doc.addImage(logoClienteData, "PNG", cardX + cardW - 36, cardY + 9, 26, 14, undefined, "FAST");
+      } catch {
+        // ignore
+      }
+    }
 
     doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
-    doc.text("DATA DE EMISSÃO", cardX + 12, cardY + 34);
-    doc.text("PRAÇA DE ATUAÇÃO", cardX + 70, cardY + 34);
-    doc.text("VALIDADE DA PROPOSTA", cardX + 140, cardY + 34);
+    doc.text("DATA DE EMISSÃO", cardX + 12, cardY + 35);
+    doc.text("PRAÇA DE ATUAÇÃO", cardX + 70, cardY + 35);
+    doc.text("VALIDADE DA PROPOSTA", cardX + 140, cardY + 35);
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(230, 230, 230);
-    doc.text(dataStr, cardX + 12, cardY + 40);
-    doc.text(p.cliente?.cidade || "Distrito Federal + GO", cardX + 70, cardY + 40);
-    doc.text(fmtDataBR(p.validade) || "10 dias úteis", cardX + 140, cardY + 40);
+    doc.text(dataStr, cardX + 12, cardY + 42);
+    doc.text(p.cliente?.cidade || "Distrito Federal + GO", cardX + 70, cardY + 42);
+    doc.text(fmtDataBR(p.validade) || "10 dias úteis", cardX + 140, cardY + 42);
 
     // Rodapé da capa
     doc.setFontSize(8);
     doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
     doc.text(
-      `Desenvolvido e operado por Nexo Mídia e Representação • Executivo: ${p.executivo?.nome || "Equipe Comercial Nexo"}`,
+      `Desenvolvido e operado por ${emissorNome} • Executivo: ${p.executivo?.nome || "Equipe Comercial"}`,
       W / 2,
       H - 14,
       { align: "center" },
     );
   }
 
+  const isCompleta = p.tipo_documento !== "direta";
+
   // ====================================================================
   // 2. LÂMINA NOSSA ESSÊNCIA & MANIFESTO
   // ====================================================================
-  if (cfg.incluir_manifesto !== false) {
+  if (isCompleta && cfg.incluir_manifesto !== false) {
     if (!isFirstPage) doc.addPage("a4", "landscape");
     isFirstPage = false;
 
@@ -3530,17 +3558,79 @@ export async function gerarPdfPropostaNexo(
     const manifestoLines = doc.splitTextToSize(cfg.manifesto_texto, boxLeftW - 18);
     doc.text(manifestoLines, 24, 62);
 
-    // Badge de posicionamento na base do manifesto
-    doc.setFillColor(30, 36, 50);
-    doc.roundedRect(24, 150, boxLeftW - 18, 24, 1.5, 1.5, "F");
-    doc.setFontSize(7.5);
+    // Diagrama Estratégico: Clientes <-> Emissora (Curadoria, Negociação, Acompanhamento) <-> Fornecedores
+    const diagY = 142;
+    const diagW = boxLeftW - 18;
+    doc.setFillColor(18, 24, 34);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(24, diagY, diagW, 36, 1.5, 1.5, "FD");
+
+    doc.setFontSize(6.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
-    doc.text("HUB DE NEGÓCIOS REGIONAIS", 30, 158);
-    doc.setFontSize(7.5);
+    doc.text("CONEXÃO DE VALOR & FLUXO DE OPERAÇÃO", 24 + diagW / 2, diagY + 5.5, { align: "center" });
+
+    // 3 Nós do Diagrama
+    const nodeW = 30;
+    const nodeH = 22;
+    const nodeY = diagY + 9;
+
+    // Nó 1: Clientes / Marcas
+    doc.setFillColor(26, 32, 44);
+    doc.roundedRect(27, nodeY, nodeW, nodeH, 1, 1, "F");
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("CLIENTES", 27 + nodeW / 2, nodeY + 7, { align: "center" });
+    doc.setFontSize(5.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
-    doc.text("Presença em todos os pontos de contato da rotina do consumidor.", 30, 166);
+    doc.text("Marcas & Agências", 27 + nodeW / 2, nodeY + 12, { align: "center" });
+    doc.text("Demanda & Metas", 27 + nodeW / 2, nodeY + 17, { align: "center" });
+
+    // Conector 1: <->
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.text("⟷", 27 + nodeW + 3.5, nodeY + 12);
+
+    // Nó 2: Emissora / Nexo (Destaque Central)
+    const midX = 27 + nodeW + 7;
+    const midW = 34;
+    doc.setFillColor(34, 44, 62);
+    doc.setDrawColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.roundedRect(midX, nodeY, midW, nodeH, 1, 1, "FD");
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.text(emissorNome.slice(0, 14), midX + midW / 2, nodeY + 6, { align: "center" });
+    doc.setFontSize(5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(230, 230, 230);
+    doc.text("• Curadoria", midX + 3, nodeY + 11);
+    doc.text("• Negociação", midX + 3, nodeY + 15);
+    doc.text("• Checking 360°", midX + 3, nodeY + 19);
+
+    // Conector 2: <->
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.text("⟷", midX + midW + 3.5, nodeY + 12);
+
+    // Nó 3: Fornecedores de Mídia
+    const rightX = midX + midW + 7;
+    doc.setFillColor(26, 32, 44);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(rightX, nodeY, nodeW, nodeH, 1, 1, "F");
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("FORNECEDORES", rightX + nodeW / 2, nodeY + 7, { align: "center" });
+    doc.setFontSize(5.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text("Painéis LED • OOH", rightX + nodeW / 2, nodeY + 12, { align: "center" });
+    doc.text("Rádios & Portais", rightX + nodeW / 2, nodeY + 17, { align: "center" });
 
     // Lado Direito: Os 4 Pilares da Essência
     const pilarW = 137;
@@ -3601,7 +3691,7 @@ export async function gerarPdfPropostaNexo(
   // ====================================================================
   // 3. LÂMINA COMO ATUAMOS (METODOLOGIA 360°)
   // ====================================================================
-  if (cfg.incluir_como_atuamos !== false) {
+  if (isCompleta && cfg.incluir_como_atuamos !== false) {
     if (!isFirstPage) doc.addPage("a4", "landscape");
     isFirstPage = false;
 
@@ -3684,7 +3774,7 @@ export async function gerarPdfPropostaNexo(
   // ====================================================================
   // 4. LÂMINA OVERVIEW DE IMPACTO & PRAÇAS ATENDIDAS
   // ====================================================================
-  if (cfg.exibir_overview !== false) {
+  if (isCompleta && cfg.exibir_overview !== false) {
     if (!isFirstPage) doc.addPage("a4", "landscape");
     isFirstPage = false;
 
@@ -3693,31 +3783,38 @@ export async function gerarPdfPropostaNexo(
       "Cobertura ampla em rodovias, eixos troncais, centros comerciais e áreas nobres do DF e Goiás",
     );
 
-    // 3 Cards Grandes de Métricas
-    const mW = (W - 30 - 2 * 6) / 3;
+    // 4 Cards Grandes de Métricas Agregadas do Inventário
+    const mW = (W - 30 - 3 * 5) / 4;
+    const channelsCfg = cfg.channels_overview as any;
     const metricsData = [
       {
+        v: channelsCfg?.total_parceiros || "+15 Parceiros",
+        l: "FORNECEDORES HOMOLOGADOS",
+        sub: "Veículos líderes e exibidoras de mídia",
+        cor: colPrimaria,
+      },
+      {
+        v: channelsCfg?.total_paineis || "54+ Circuitos",
+        l: "PAINÉIS & CIRCUITOS DISPONÍVEIS",
+        sub: "Telas digitais e pontos de alto impacto",
+        cor: colSecundaria,
+      },
+      {
         v: cfg.total_populacao_impacto || "+5,5 milhões",
-        l: "POPULAÇÃO TOTAL ATINGIDA",
-        sub: "Distrito Federal e Região Integrada (RIDE-DF)",
+        l: "ALCANCE POTENCIAL ESTIMADO",
+        sub: "DF, Entorno (RIDE) e praças conectadas",
         cor: colPrimaria,
       },
       {
         v: cfg.total_impactos_mes || "+18,5 milhões",
         l: "IMPACTOS VISUAIS / MÊS",
-        sub: "Fluxo qualificado de veículos e pedestres",
+        sub: "Fluxo diário contínuo e qualificado",
         cor: colSecundaria,
-      },
-      {
-        v: cfg.cobertura_pracas || "DF + Goiás (Entorno)",
-        l: "COBERTURA GEOGRÁFICA",
-        sub: "Plano Piloto, Cidades Satélites e Entorno",
-        cor: colPrimaria,
       },
     ];
 
     metricsData.forEach((m, i) => {
-      const mx = 15 + i * (mW + 6);
+      const mx = 15 + i * (mW + 5);
       doc.setFillColor(colCard[0], colCard[1], colCard[2]);
       doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
       doc.roundedRect(mx, 40, mW, 42, 2, 2, "FD");
@@ -3725,79 +3822,324 @@ export async function gerarPdfPropostaNexo(
       doc.setFillColor(m.cor[0], m.cor[1], m.cor[2]);
       doc.rect(mx, 40, 2.5, 42, "F");
 
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text(m.v, mx + 10, 56);
+      doc.text(m.v, mx + 8, 55);
 
-      doc.setFontSize(7.5);
+      doc.setFontSize(6.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(m.cor[0], m.cor[1], m.cor[2]);
-      doc.text(m.l, mx + 10, 65);
+      doc.text(m.l, mx + 8, 64);
 
-      doc.setFontSize(7);
+      doc.setFontSize(6.5);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
-      doc.text(m.sub, mx + 10, 74);
+      doc.text(m.sub, mx + 8, 73);
     });
 
-    // Bloco Inferior: Resumo Consolidado do Plano Proposto
-    const resumoBoxY = 90;
+    // Bloco Inferior: Mapa de Praças Atendidas & Consolidação Comercial
+    const resumoBoxY = 88;
+    const splitW = (W - 30 - 6) / 2;
+
+    // Lado Esquerdo: Cobertura Geográfica e Praças
     doc.setFillColor(colCard[0], colCard[1], colCard[2]);
     doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
-    doc.roundedRect(15, resumoBoxY, W - 30, 94, 2, 2, "FD");
+    doc.roundedRect(15, resumoBoxY, splitW, 96, 2, 2, "FD");
 
-    doc.setFontSize(12);
+    doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.rect(15, resumoBoxY, 2.5, 96, "F");
+
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("CONSOLIDAÇÃO COMERCIAL DO PLANO DE MÍDIA", 25, resumoBoxY + 14);
+    doc.text("MAPA DE PRAÇAS ATENDIDAS & COBERTURA", 24, resumoBoxY + 12);
 
-    doc.setFontSize(8.5);
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
-    doc.text(
-      "Resumo dos investimentos negociados e benefícios diretos aplicados exclusivamente pela Nexo Mídia:",
-      25,
-      resumoBoxY + 21,
-    );
+    doc.text("Rotas estratégicas com maior adensamento socioeconômico:", 24, resumoBoxY + 18);
 
-    // 4 mini boxes de resumo comercial
-    const bW = (W - 50 - 3 * 5) / 4;
-    const bY = resumoBoxY + 30;
+    const pracasDestaque = [
+      {
+        regiao: "DISTRITO FEDERAL (ALTA CONCENTRAÇÃO)",
+        locais: "Plano Piloto (Asa Sul/Norte), EPTG, EPIA, SIA, SIG, Águas Claras, Taguatinga, Sudoeste e Lago Sul/Norte.",
+        cor: colPrimaria,
+      },
+      {
+        regiao: "GOIÁS & REGIÃO INTEGRADA (ENTORNO-DF)",
+        locais: "Valparaíso, Luziânia, Novo Gama, Formosa, Goiânia, Anápolis e Rio Verde (Eixos logísticos e comerciais).",
+        cor: colSecundaria,
+      },
+      {
+        regiao: "PRAÇAS MULTI-ESTADUAIS & NACIONAIS",
+        locais: "São Paulo (SP), Rio de Janeiro (RJ), Belo Horizonte (MG) e capitais com rede parceira integrada.",
+        cor: colPrimaria,
+      },
+    ];
+
+    pracasDestaque.forEach((pd, idx) => {
+      const pY = resumoBoxY + 28 + idx * 21;
+      doc.setFillColor(24, 30, 42);
+      doc.roundedRect(24, pY, splitW - 18, 18, 1.5, 1.5, "F");
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(pd.cor[0], pd.cor[1], pd.cor[2]);
+      doc.text(pd.regiao, 28, pY + 6);
+
+      doc.setFontSize(6.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(220, 225, 230);
+      doc.text(doc.splitTextToSize(pd.locais, splitW - 26), 28, pY + 11);
+    });
+
+    // Lado Direito: Resumo Consolidado do Plano Proposto
+    const rightBoxX = 15 + splitW + 6;
+    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(rightBoxX, resumoBoxY, splitW, 96, 2, 2, "FD");
+
+    doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
+    doc.rect(rightBoxX, resumoBoxY, 2.5, 96, "F");
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("CONSOLIDAÇÃO COMERCIAL DO PLANO", rightBoxX + 10, resumoBoxY + 12);
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text("Resumo financeiro e benefícios aplicados pelo Hub:", rightBoxX + 10, resumoBoxY + 18);
+
+    const bW = (splitW - 20 - 4) / 2;
+    const bH = 32;
     const resumoBoxes = [
       { t: "TOTAL DE PONTOS", v: String(p.itens?.length || 0), sub: "Locais Estratégicos" },
-      { t: "INSERÇÕES NO PERÍODO", v: "+" + (p.total_insercoes || 0).toLocaleString(), sub: "Inserções Totais" },
-      { t: "VALOR TABELA", v: fmtBRL(p.valor_tabela), sub: "Preço Padrão de Mercado" },
-      { t: "VALOR NEGOCIADO HUB", v: fmtBRL(p.valor_negociado), sub: "Condição Exclusiva Nexo", destaque: true },
+      { t: "INSERÇÕES PERÍODO", v: "+" + (p.total_insercoes || 0).toLocaleString(), sub: "Inserções Totais" },
+      { t: "VALOR TABELA", v: fmtBRL(p.valor_tabela), sub: "Preço Padrão Mercado" },
+      { t: "VALOR NEGOCIADO HUB", v: fmtBRL(p.valor_negociado), sub: "Condição Exclusiva", destaque: true },
     ];
 
     resumoBoxes.forEach((bx, i) => {
-      const bxX = 25 + i * (bW + 5);
-      doc.setFillColor(bx.destaque ? 30 : 24, bx.destaque ? 38 : 28, bx.destaque ? 54 : 38);
-      doc.setDrawColor(bx.destaque ? colPrimaria[0] : colBorder[0], bx.destaque ? colPrimaria[1] : colBorder[1], bx.destaque ? colPrimaria[2] : colBorder[2]);
-      doc.roundedRect(bxX, bY, bW, 44, 2, 2, "FD");
+      const colIdx = i % 2;
+      const rowIdx = Math.floor(i / 2);
+      const bxX = rightBoxX + 10 + colIdx * (bW + 4);
+      const bxY = resumoBoxY + 26 + rowIdx * (bH + 4);
 
-      doc.setFontSize(7);
+      doc.setFillColor(bx.destaque ? 30 : 22, bx.destaque ? 40 : 28, bx.destaque ? 58 : 38);
+      doc.setDrawColor(bx.destaque ? colPrimaria[0] : colBorder[0], bx.destaque ? colPrimaria[1] : colBorder[1], bx.destaque ? colPrimaria[2] : colBorder[2]);
+      doc.roundedRect(bxX, bxY, bW, bH, 1.5, 1.5, "FD");
+
+      doc.setFontSize(6.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(bx.destaque ? colPrimaria[0] : colTextMuted[0], bx.destaque ? colPrimaria[1] : colTextMuted[1], bx.destaque ? colPrimaria[2] : colTextMuted[2]);
-      doc.text(bx.t, bxX + bW / 2, bY + 11, { align: "center" });
+      doc.text(bx.t, bxX + bW / 2, bxY + 8, { align: "center" });
 
-      doc.setFontSize(bx.destaque ? 13 : 11);
+      doc.setFontSize(bx.destaque ? 12 : 10.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(bx.destaque ? 255 : 230, bx.destaque ? 255 : 230, bx.destaque ? 255 : 230);
-      doc.text(bx.v, bxX + bW / 2, bY + 24, { align: "center" });
+      doc.text(bx.v, bxX + bW / 2, bxY + 18, { align: "center" });
 
-      doc.setFontSize(7);
+      doc.setFontSize(6);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
-      doc.text(bx.sub, bxX + bW / 2, bY + 34, { align: "center" });
+      doc.text(bx.sub, bxX + bW / 2, bxY + 26, { align: "center" });
     });
   }
 
   // ====================================================================
-  // 5..N. LÂMINAS TÉCNICAS DOS PONTOS DE MÍDIA (DUPLO DISPLAY)
+  // 5. LÂMINA DEFESA ESTRATÉGICA DO PLANO DE MÍDIA ESPECÍFICO
   // ====================================================================
-  if (cfg.incluir_laminas_pontos !== false && p.itens && p.itens.length > 0) {
+  if (isCompleta && cfg.incluir_defesa_estrategica !== false) {
+    if (!isFirstPage) doc.addPage("a4", "landscape");
+    isFirstPage = false;
+
+    renderBackgroundSlide(
+      "Defesa Estratégica do Plano de Mídia",
+      `Justificativa persuasiva, cerco de tráfego e maximização de ROI para ${clienteNome}`,
+    );
+
+    // Bloco Superior: Racional Estratégico da Campanha
+    const defW = W - 30;
+    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+    doc.roundedRect(15, 38, defW, 46, 2, 2, "FD");
+
+    doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.rect(15, 38, 3, 46, "F");
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text("POR QUE ESTE PLANO DE MÍDIA É A ESCOLHA IDEAL?", 25, 49);
+
+    const defesasColetadas: string[] = [];
+    const veiculosMencionados = new Set<string>();
+    let totalImpactosEstimados = 0;
+    let totalInsercoesDia = 0;
+
+    (p.itens || []).forEach((it: any) => {
+      if (it.nome_veiculo) veiculosMencionados.add(it.nome_veiculo);
+      if (Array.isArray(it.media_kit_defenses)) {
+        it.media_kit_defenses.forEach((d: string) => {
+          if (d && !defesasColetadas.includes(d)) defesasColetadas.push(d);
+        });
+      }
+      if (typeof it.impactos_estimados_mes === "number" && it.impactos_estimados_mes > 0) {
+        totalImpactosEstimados += it.impactos_estimados_mes;
+      }
+      if (typeof it.insercoes_dia_catalogo === "number" && it.insercoes_dia_catalogo > 0) {
+        totalInsercoesDia += it.insercoes_dia_catalogo;
+      }
+    });
+
+    let textoDefesa = "";
+    if (defesasColetadas.length > 0 || totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
+      const trechos: string[] = [];
+      if (veiculosMencionados.size > 0) {
+        trechos.push(`Veiculação estruturada com os principais exibidores parceiros (${Array.from(veiculosMencionados).slice(0, 3).join(", ")}).`);
+      }
+      if (totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
+        const metricas: string[] = [];
+        if (totalImpactosEstimados > 0) metricas.push(`${totalImpactosEstimados.toLocaleString("pt-BR")} impactos estimados/mês`);
+        if (totalInsercoesDia > 0) metricas.push(`mais de ${totalInsercoesDia.toLocaleString("pt-BR")} inserções diárias por tela`);
+        trechos.push(`Potência de entrega com ${metricas.join(" e ")}.`);
+      }
+      if (defesasColetadas.length > 0) {
+        trechos.push(`Pilares de convencimento: ${defesasColetadas.slice(0, 3).join(" • ")}.`);
+      }
+      trechos.push("Garante presença constante na rotina do público-alvo, alto recall de marca nas decisões de consumo e máxima eficiência sobre a verba investida.");
+      textoDefesa = trechos.join(" ");
+    } else {
+      textoDefesa =
+        `O plano de mídia foi desenvolvido sob medida para ${clienteNome}, posicionando a mensagem nos momentos de maior fluxo e atenção do público. A distribuição dos pontos garante cobertura contínua nos eixos de deslocamento e centros de compras, gerando lembrança imediata e fortalecimento da autoridade de mercado com o menor custo por mil (CPM) possível.`;
+    }
+
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(220, 225, 230);
+    doc.text(doc.splitTextToSize(textoDefesa, defW - 20), 25, 58);
+
+    // 3 Pilares Estratégicos Inferiores
+    const pilW = (defW - 2 * 6) / 3;
+    const pilY = 90;
+    const pilH = 94;
+    const pilaresEstrategicos = [
+      {
+        num: "01",
+        titulo: "CERCO GEOGRÁFICO DE FLUXO",
+        sub: "Interceptação nas principais rotas",
+        desc: "Pontos posicionados estrategicamente nas vias de maior tráfego pendular e acessos a polos comerciais, cobrindo o trajeto diário do cliente em horários de pico.",
+        cor: colPrimaria,
+      },
+      {
+        num: "02",
+        titulo: "FORMATO DE ALTO IMPACTO",
+        sub: "Visibilidade frontal e retenção",
+        desc: "Telas e painéis com tecnologia LED de alta luminosidade, garantindo excelente contraste diurno e noturno, legibilidade imediata e prestígio institucional.",
+        cor: colSecundaria,
+      },
+      {
+        num: "03",
+        titulo: "EFICIÊNCIA & MENOR CPM",
+        sub: "Rentabilidade sobre o investimento",
+        desc: "Negociação centralizada com condições exclusivas de hub, maximizando o volume de inserções e reduzindo expressivamente o custo por mil impactos entregues.",
+        cor: colPrimaria,
+      },
+    ];
+
+    pilaresEstrategicos.forEach((pil, idx) => {
+      const pX = 15 + idx * (pilW + 6);
+      doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+      doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+      doc.roundedRect(pX, pilY, pilW, pilH, 2, 2, "FD");
+
+      doc.setFillColor(pil.cor[0], pil.cor[1], pil.cor[2]);
+      doc.roundedRect(pX, pilY, pilW, 24, 2, 2, "F");
+      doc.rect(pX, pilY + 20, pilW, 4, "F");
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(pil.num, pX + pilW / 2, pilY + 12, { align: "center" });
+
+      doc.setFontSize(7.5);
+      doc.text(pil.titulo, pX + pilW / 2, pilY + 19, { align: "center" });
+
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(doc.splitTextToSize(pil.sub, pilW - 14), pX + 7, pilY + 36);
+
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+      doc.text(doc.splitTextToSize(pil.desc, pilW - 14), pX + 7, pilY + 50);
+    });
+  }
+
+  // ====================================================================
+  // 6. GRADE DE MÍDIA CONTRATADA (COM OU SEM FOTOS)
+  // ====================================================================
+  const isSemFotos = p.layout_midia === "sem_fotos" || p.mostrar_fotos === false;
+
+  if (isSemFotos && p.itens && p.itens.length > 0) {
+    if (!isFirstPage) doc.addPage("a4", "landscape");
+    isFirstPage = false;
+
+    renderBackgroundSlide(
+      "Grade Executiva de Mídia Contratada",
+      "Detalhamento consolidado de veículos, formatos, cidades, valores e custo por mil",
+    );
+
+    const tableRows = (p.itens || []).map((it, idx) => {
+      let loc = it.cidade && it.estado ? `${it.cidade} / ${it.estado}` : (it.cidade || it.endereco_ponto || "DF / Região");
+      const veiculoNome = (it as any).nome_veiculo || it.tipo || "Painel LED";
+      const formato = it.formato || it.programa || "DOOH / LED";
+      const qtd = `${it.total_insercoes || it.insercoes_dia || 1}x`;
+      const vTab = fmtBRL(it.valor_tabela);
+      const desc = it.desconto > 0 ? `${it.desconto}%` : "—";
+      const vNeg = fmtBRL(it.valor_negociado);
+      const impMes = (it as any).impactos_estimados_mes || (it as any).impactos_mes_estimados || 750000;
+      const cpm = impMes > 0 ? `R$ ${(it.valor_negociado / (impMes / 1000)).toFixed(2)}` : "—";
+      return [String(idx + 1).padStart(2, "0"), veiculoNome, formato, loc, qtd, vTab, desc, cpm, vNeg];
+    });
+
+    autoTable(doc, {
+      startY: 38,
+      head: [["#", "VEÍCULO / PARCEIRO", "FORMATO", "PRAÇA / LOCALIZAÇÃO", "INSERÇÕES", "TABELA", "DESC.", "CPM", "NEGOCIADO"]],
+      body: tableRows,
+      margin: { left: 15, right: 15 },
+      theme: "grid",
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 2.8,
+        textColor: [240, 240, 240],
+        fillColor: [18, 22, 30],
+        lineColor: [36, 44, 58],
+        lineWidth: 0.2,
+      },
+      headStyles: {
+        fillColor: [28, 36, 52],
+        textColor: [255, 107, 0],
+        fontStyle: "bold",
+        fontSize: 7,
+      },
+      columnStyles: {
+        0: { cellWidth: 8, halign: "center" },
+        1: { cellWidth: 42, fontStyle: "bold" },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 64 },
+        4: { cellWidth: 20, halign: "center" },
+        5: { cellWidth: 24, halign: "right" },
+        6: { cellWidth: 16, halign: "right", textColor: [255, 107, 0] },
+        7: { cellWidth: 22, halign: "center", fontStyle: "bold", textColor: [121, 40, 202] },
+        8: { cellWidth: 31, halign: "right", fontStyle: "bold", textColor: [255, 255, 255] },
+      },
+    });
+  } else if (cfg.incluir_laminas_pontos !== false && p.itens && p.itens.length > 0) {
     for (let index = 0; index < p.itens.length; index++) {
       const it = p.itens[index];
       if (!isFirstPage) doc.addPage("a4", "landscape");
@@ -4031,14 +4373,22 @@ export async function gerarPdfPropostaNexo(
       doc.roundedRect(barX, barY, barW, barH, 2, 2, "FD");
       doc.setLineWidth(0.2);
 
-      // 6 Colunas da Barra de Negociação
-      const colW = barW / 6;
+      // Cálculo de CPM do ponto
+      const impMesPonto =
+        (it as any).impactos_estimados_mes ||
+        (it as any).impactos_mes_estimados ||
+        ((it as any).fluxo_veiculos_dia ? Number((it as any).fluxo_veiculos_dia) * 30 : 750000);
+      const cpmVal = impMesPonto > 0 ? (it.valor_negociado / (impMesPonto / 1000)) : 0;
+
+      // 7 Colunas da Barra de Negociação (com CPM)
+      const colW = barW / 7;
       const colunasNegociacao = [
         { label: "NOME DO PONTO", val: it.programa || "Painel Nexo" },
         { label: "METRAGEM", val: dimensoes },
-        { label: "TEMPO TELA", val: "15 Segundos" },
+        { label: "INSERÇÕES", val: `${it.insercoes_dia || 120}/dia` },
         { label: "VALOR TABELA", val: fmtBRL(it.valor_tabela) },
         { label: "DESCONTO HUB", val: it.desconto > 0 ? `${it.desconto}%` : "Condição Hub" },
+        { label: "CUSTO / MIL (CPM)", val: `R$ ${cpmVal.toFixed(2)}`, destaque: true },
         { label: "VALOR NEGOCIADO", val: fmtBRL(it.valor_negociado), destaque: true },
       ];
 
@@ -4054,7 +4404,7 @@ export async function gerarPdfPropostaNexo(
         doc.setTextColor(col.destaque ? 255 : 230, col.destaque ? 255 : 230, col.destaque ? 255 : 230);
         doc.text(col.val, cx + colW / 2, barY + 16, { align: "center", maxWidth: colW - 4 });
 
-        if (i < 5) {
+        if (i < 6) {
           doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
           doc.line(cx + colW, barY + 3, cx + colW, barY + barH - 3);
         }
@@ -4063,7 +4413,134 @@ export async function gerarPdfPropostaNexo(
   }
 
   // ====================================================================
-  // FECHAMENTO: LÂMINA DE ENCERRAMENTO & CONTATOS
+  // 7. LÂMINA FECHAMENTO FINANCEIRO & CONDIÇÕES COMERCIAIS
+  // ====================================================================
+  if (!isFirstPage) doc.addPage("a4", "landscape");
+  isFirstPage = false;
+
+  renderBackgroundSlide(
+    "Fechamento Financeiro & Condições Comerciais",
+    "Demonstrativo transparente de investimento, bonificações e normas contratuais de faturamento",
+  );
+
+  // 3 Grandes Cards de Fechamento Financeiro
+  const finW = (W - 30 - 2 * 6) / 3;
+  const finY = 38;
+  const finH = 46;
+
+  const finCards = [
+    {
+      label: "INVESTIMENTO BRUTO (TABELA)",
+      val: fmtBRL(p.valor_tabela),
+      sub: "Valor de tabela oficial das praças",
+      cor: colTextMuted,
+    },
+    {
+      label: "DESCONTO COMERCIAL HUB",
+      val: p.valor_desconto > 0 ? `- ${fmtBRL(p.valor_desconto)}` : "Condição Exclusiva",
+      sub: p.valor_desconto > 0 && p.valor_tabela > 0
+        ? `${Math.round((p.valor_desconto / p.valor_tabela) * 100)}% de economia obtida`
+        : "Bonificação aplicada",
+      cor: [239, 68, 68] as [number, number, number], // Vermelho/Laranja de desconto
+    },
+    {
+      label: "INVESTIMENTO LÍQUIDO FINAL",
+      val: fmtBRL(p.valor_negociado),
+      sub: "Valor final faturado por Pedido de Inserção",
+      cor: colPrimaria,
+      destaque: true,
+    },
+  ];
+
+  finCards.forEach((fc, idx) => {
+    const fx = 15 + idx * (finW + 6);
+    doc.setFillColor(fc.destaque ? 24 : colCard[0], fc.destaque ? 32 : colCard[1], fc.destaque ? 48 : colCard[2]);
+    doc.setDrawColor(fc.destaque ? colPrimaria[0] : colBorder[0], fc.destaque ? colPrimaria[1] : colBorder[1], fc.destaque ? colPrimaria[2] : colBorder[2]);
+    doc.roundedRect(fx, finY, finW, finH, 2, 2, "FD");
+
+    doc.setFillColor(fc.cor[0], fc.cor[1], fc.cor[2]);
+    doc.rect(fx, finY, 2.5, finH, "F");
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(fc.cor[0], fc.cor[1], fc.cor[2]);
+    doc.text(fc.label, fx + 10, finY + 12);
+
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(fc.val, fx + 10, finY + 26);
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text(fc.sub, fx + 10, finY + 36);
+  });
+
+  // Bloco de Condições Comerciais e Diretrizes de Faturamento
+  const condY = 92;
+  const condH = 92;
+  doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+  doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+  doc.roundedRect(15, condY, W - 30, condH, 2, 2, "FD");
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("DIRETRIZES DE FATURAMENTO & NORMAS COMERCIAIS", 25, condY + 14);
+
+  const condicoesList = [
+    {
+      num: "1",
+      tit: "Faturamento Direto & PI Oficial",
+      desc: "O faturamento será realizado via Pedido de Inserção (PI) emitido diretamente pela exibidora/emissora homologada, com nota fiscal eletrônica e boleto bancário correspondente.",
+    },
+    {
+      num: "2",
+      tit: "Condições e Prazos de Pagamento",
+      desc: "Pagamento em até 30 dias após o início da veiculação (ou conforme cronograma comercial de parcelas aprovado entre as partes).",
+    },
+    {
+      num: "3",
+      tit: "Entrega de Peças Criativas e Material Técnico",
+      desc: "Os criativos devem ser entregues em formato digital (MP4, H.264, 1920x1080px, 15 segundos) com antecedência mínima de 72 horas úteis da data de subida da campanha.",
+    },
+    {
+      num: "4",
+      tit: "Checking Fotográfico & Auditoria 360°",
+      desc: "Garantia de comprovação de veiculação com emissão de relatório fotográfico de checking oficial e comprovante eletrônico de reprodução das inserções contratadas.",
+    },
+    {
+      num: "5",
+      tit: "Validade Comercial da Proposta",
+      desc: `Esta proposta e a respectiva reserva de inventário possuem validade de 10 dias úteis a contar de ${dataStr}, estando sujeita à confirmação de disponibilidade dos pontos.`,
+    },
+  ];
+
+  condicoesList.forEach((cd, i) => {
+    const cLineY = condY + 26 + i * 13;
+    doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+    doc.circle(28, cLineY - 1, 2.5, "F");
+
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(cd.num, 28, cLineY, { align: "center" });
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${cd.tit}:`, 34, cLineY);
+
+    const titWidth = doc.getTextWidth(`${cd.tit}: `);
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text(cd.desc, 34 + titWidth, cLineY, { maxWidth: W - 30 - 34 - titWidth });
+  });
+
+  // ====================================================================
+  // 8. LÂMINA QUEM ESTÁ POR TRÁS & ENCERRAMENTO COMERCIAL (ACEITE FORMAL)
   // ====================================================================
   if (!isFirstPage) doc.addPage("a4", "landscape");
   isFirstPage = false;
@@ -4077,96 +4554,193 @@ export async function gerarPdfPropostaNexo(
   doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
   doc.rect(W - 4, 0, 4, H, "F");
 
-  // Logo ou nome institucional
+  // Topo do Encerramento
   if (logoNexoData) {
     try {
-      doc.addImage(logoNexoData, "PNG", W / 2 - 25, 30, 50, 20, undefined, "FAST");
+      doc.addImage(logoNexoData, "PNG", 15, 12, 45, 17, undefined, "FAST");
     } catch {
-      doc.setFontSize(20);
+      doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(255, 255, 255);
-      doc.text("NEXO MÍDIA E REPRESENTAÇÃO", W / 2, 42, { align: "center" });
+      doc.text(emissorNome.toUpperCase(), 15, 22);
     }
   } else {
-    doc.setFontSize(20);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text("NEXO MÍDIA E REPRESENTAÇÃO", W / 2, 42, { align: "center" });
+    doc.text(emissorNome.toUpperCase(), 15, 22);
   }
 
-  // Título e Subtítulo de Fechamento
-  doc.setFontSize(26);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text(cfg.fechamento_titulo || "Vamos criar o próximo nexo?", W / 2, 70, { align: "center" });
-
-  doc.setFontSize(11);
+  doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
-  doc.text(
-    cfg.fechamento_subtitulo || "Conectando marcas, veículos e pessoas com inteligência estratégica.",
-    W / 2,
-    80,
-    { align: "center" },
-  );
+  doc.text(emissorTagline, 15, 33);
+
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("QUEM ESTÁ POR TRÁS & ENCERRAMENTO COMERCIAL", W - 15, 22, { align: "right" });
+
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+  doc.text(`Proposta Comercial #${p.numero} elaborada exclusivamente para ${clienteNome}`, W - 15, 30, { align: "right" });
+
+  doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+  doc.line(15, 37, W - 15, 37);
+
+  // Split em 2 Blocos: Lado Esquerdo (Liderança / Contatos) e Lado Direito (Aceite Formal)
+  const encW = (W - 30 - 8) / 2;
+  const encY = 44;
+  const encH = 138;
+
+  // Bloco Esquerdo: Liderança, Diretoria e Contatos
+  doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+  doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+  doc.roundedRect(15, encY, encW, encH, 2, 2, "FD");
+
+  doc.setFillColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+  doc.rect(15, encY, 2.5, encH, "F");
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("LIDERANÇA & ATENDIMENTO EXECUTIVO", 24, encY + 14);
+
+  const executivoNome = p.executivo?.nome || "Rafael Rodrigo";
+  const executivoCargo = "Diretor Executivo de Estratégia e Mídia";
+  const bioLider =
+    cfg.about_text ||
+    "Mais de 10 anos de experiência conectando marcas nacionais e regionais aos melhores pontos de mídia exterior, gerando autoridade, recall e conversão real.";
+
+  doc.setFontSize(10.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+  doc.text(executivoNome, 24, encY + 28);
+
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+  doc.text(executivoCargo.toUpperCase(), 24, encY + 35);
+
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(220, 225, 230);
+  doc.text(doc.splitTextToSize(bioLider, encW - 18), 24, encY + 44);
 
   // 4 Cards de Contato Oficiais
-  const contactCardW = (W - 30 - 3 * 6) / 4;
-  const contactCardH = 46;
-  const contactCardY = 100;
-
+  const cW = (encW - 18 - 4) / 2;
   const contacts = [
-    { label: "WHATSAPP / TELEFONE", val: cfg.telefone_contato || "(61) 99125-7245", cor: colPrimaria },
-    { label: "E-MAIL COMERCIAL", val: cfg.email_contato || "rafaelnexomidia@gmail.com", cor: colSecundaria },
+    { label: "WHATSAPP / TELEFONE", val: p.executivo?.telefone || emissorTelefone, cor: colPrimaria },
+    { label: "E-MAIL COMERCIAL", val: p.executivo?.email || emissorEmail, cor: colSecundaria },
     { label: "INSTAGRAM OFICIAL", val: `@${(cfg.instagram_contato || "nexobrasilmidia").replace(/^@/, "")}`, cor: colPrimaria },
-    { label: "PORTAL DE SOLUÇÕES", val: (cfg.site_url || "nexomidiaerepresentacao.com.br").replace(/^https?:\/\//, ""), cor: colSecundaria },
+    { label: "PORTAL WEB", val: emissorSite.replace(/^https?:\/\//, ""), cor: colSecundaria },
   ];
 
-  contacts.forEach((c, i) => {
-    const cx = 15 + i * (contactCardW + 6);
-    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+  contacts.forEach((c, idx) => {
+    const cxIdx = idx % 2;
+    const cyIdx = Math.floor(idx / 2);
+    const cx = 24 + cxIdx * (cW + 4);
+    const cy = encY + 68 + cyIdx * 30;
+
+    doc.setFillColor(24, 30, 42);
     doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
-    doc.roundedRect(cx, contactCardY, contactCardW, contactCardH, 2, 2, "FD");
+    doc.roundedRect(cx, cy, cW, 26, 1.5, 1.5, "FD");
 
     doc.setFillColor(c.cor[0], c.cor[1], c.cor[2]);
-    doc.rect(cx, contactCardY, 2, contactCardH, "F");
+    doc.rect(cx, cy, 2, 26, "F");
 
-    doc.setFontSize(7);
+    doc.setFontSize(6);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(c.cor[0], c.cor[1], c.cor[2]);
-    doc.text(c.label, cx + 8, contactCardY + 14);
+    doc.text(c.label, cx + 6, cy + 9);
 
-    doc.setFontSize(8.5);
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(255, 255, 255);
-    doc.text(c.val, cx + 8, contactCardY + 28, { maxWidth: contactCardW - 14 });
+    doc.text(c.val, cx + 6, cy + 18, { maxWidth: cW - 10 });
   });
 
-  // Assinatura do Executivo
-  if (p.executivo?.nome) {
-    doc.setFillColor(colCard[0], colCard[1], colCard[2]);
-    doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
-    doc.roundedRect(W / 2 - 60, 160, 120, 24, 2, 2, "FD");
+  // Bloco Direito: Termo Formal de Aceite do Anunciante
+  const rightEncX = 15 + encW + 8;
+  doc.setFillColor(colCard[0], colCard[1], colCard[2]);
+  doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+  doc.roundedRect(rightEncX, encY, encW, encH, 2, 2, "FD");
 
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
-    doc.text("ATENDIMENTO EXCLUSIVO", W / 2, 168, { align: "center" });
+  doc.setFillColor(colSecundaria[0], colSecundaria[1], colSecundaria[2]);
+  doc.rect(rightEncX, encY, 2.5, encH, "F");
 
-    doc.setFontSize(9.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
-    doc.text(p.executivo.nome, W / 2, 177, { align: "center" });
-  }
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("TERMO FORMAL DE ACEITE & APROVAÇÃO", rightEncX + 10, encY + 14);
 
-  // Rodapé do slide de encerramento
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
   doc.text(
-    "NEXO Mídia e Representação (nexomidiaerepresentacao.com.br) • Hub de Negócios & Soluções Estratégicas em Mídia",
+    "Autorização formal para reserva de inventário e emissão do Pedido de Inserção:",
+    rightEncX + 10,
+    encY + 21,
+    { maxWidth: encW - 18 },
+  );
+
+  const termoTexto =
+    `Declaramos ciência e aprovação dos termos, pontos, valores e condições estipuladas nesta Proposta Comercial nº ${p.numero}, autorizando o faturamento de ${fmtBRL(p.valor_negociado)} para veiculação da campanha ${p.campanha || "contratada"}.`;
+
+  doc.setFillColor(24, 30, 42);
+  doc.roundedRect(rightEncX + 10, encY + 28, encW - 20, 24, 1.5, 1.5, "F");
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(220, 225, 230);
+  doc.text(doc.splitTextToSize(termoTexto, encW - 28), rightEncX + 14, encY + 36);
+
+  // Campos de Assinatura
+  const sigY = encY + 60;
+  const camposAssinatura = [
+    { label: "RAZÃO SOCIAL / ANUNCIANTE:", val: clienteNome },
+    { label: "CNPJ DO ANUNCIANTE:", val: p.cliente?.cnpj || "____________________________________" },
+    { label: "NOME DO RESPONSÁVEL LEGAL:", val: "____________________________________" },
+    { label: "CARGO / FUNÇÃO:", val: "____________________________________" },
+    { label: "DATA DE APROVAÇÃO:", val: `_____ / _____ / 2026` },
+  ];
+
+  camposAssinatura.forEach((campo, i) => {
+    const cY = sigY + i * 11;
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+    doc.text(campo.label, rightEncX + 10, cY);
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(255, 255, 255);
+    doc.text(campo.val, rightEncX + 54, cY, { maxWidth: encW - 64 });
+  });
+
+  // Linha de Assinatura
+  const lineSigY = encY + 120;
+  doc.setDrawColor(colBorder[0], colBorder[1], colBorder[2]);
+  doc.line(rightEncX + 14, lineSigY, rightEncX + encW - 14, lineSigY);
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(colPrimaria[0], colPrimaria[1], colPrimaria[2]);
+  doc.text("ASSINATURA DO REPRESENTANTE LEGAL", rightEncX + encW / 2, lineSigY + 5, { align: "center" });
+
+  doc.setFontSize(6);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+  doc.text("(Aceite válido também por confirmação eletrônica / e-mail)", rightEncX + encW / 2, lineSigY + 9, { align: "center" });
+
+  // Rodapé do slide de encerramento
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(colTextMuted[0], colTextMuted[1], colTextMuted[2]);
+  doc.text(
+    `${emissorNome} • Hub de Negócios & Soluções Estratégicas em Mídia • Proposta #${p.numero}`,
     W / 2,
-    H - 10,
+    H - 8,
     { align: "center" },
   );
 
@@ -4175,6 +4749,9 @@ export async function gerarPdfPropostaNexo(
   if (options?.returnBlob) return blob;
   saveBlob(blob, `${slugify(clienteNome)}-Proposta-Nexo-Slide-${p.numero}.pdf`);
 }
+
+// Alias oficial para Apresentação Institucional Completa
+export const gerarPdfApresentacaoInstitucionalCompleta = gerarPdfPropostaNexo;
 
 /**
  * ====================================================================
@@ -4190,6 +4767,17 @@ export async function gerarPdfPropostaExecutivaCoBranding(
   const { p: pAdj, dataStr } = aplicarPadroes(p);
   p = pAdj;
 
+  // 1. Se o modo selecionado for "Apresentação Comercial Completa" (Brand Deck + Proposta Comercial)
+  if (p.tipo_documento === "completa" || !p.tipo_documento) {
+    return await gerarPdfApresentacaoInstitucionalCompleta(p, undefined, options);
+  }
+
+  // 2. Se for "Proposta Comercial Direta" com fotos dos pontos (cards com fotos reais e CPM)
+  if (p.tipo_documento === "direta" && p.layout_midia === "com_fotos") {
+    return await gerarPdfPropostaNexo(p, undefined, options);
+  }
+
+  // 3. Se for "Proposta Comercial Direta" sem fotos (tabela executiva compacta de 1 página)
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
   const W = doc.internal.pageSize.getWidth(); // 297mm
   const H = doc.internal.pageSize.getHeight(); // 210mm

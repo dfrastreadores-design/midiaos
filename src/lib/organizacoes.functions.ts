@@ -27,6 +27,10 @@ export type TemplatePropostaConfig = {
   total_populacao_impacto: string;
   total_impactos_mes: string;
   cobertura_pracas: string;
+  company_tagline?: string | null;
+  about_text?: string | null;
+  leadership_info?: any;
+  channels_overview?: any;
 };
 
 export const DEFAULT_NEXO_TEMPLATE_CONFIG: TemplatePropostaConfig = {
@@ -37,6 +41,25 @@ export const DEFAULT_NEXO_TEMPLATE_CONFIG: TemplatePropostaConfig = {
   email_contato: "rafaelnexomidia@gmail.com",
   instagram_contato: "nexobrasilmidia",
   site_url: "https://nexomidiaerepresentacao.com.br",
+  company_tagline: "Estratégia • Mídia • Representação",
+  about_text:
+    "A Nexo Mídia e Representação atua como a ponte estratégica entre anunciantes e as maiores oportunidades de mídia no Distrito Federal, Goiás e praças nacionais. Conectamos marcas consagradas aos veículos de maior credibilidade e audiência.",
+  leadership_info: [
+    {
+      nome: "Rafael Rodrigo",
+      cargo: "Diretor Comercial & Estratégia",
+      telefone: "(61) 99125-7245",
+      email: "rafaelnexomidia@gmail.com",
+      bio: "Especialista em inteligência de mídia OOH/DOOH e planejamento comercial de alta performance.",
+    },
+  ],
+  channels_overview: {
+    total_parceiros: 15,
+    total_paineis: 54,
+    populacao_impacto: "+5,5 milhões de habitantes",
+    total_impactos_mes: "+18,5 milhões de impactos/mês",
+    cobertura: "Distrito Federal + Goiás (Entorno) e Praças Nacionais",
+  },
   manifesto_titulo: "O significado de Nexo",
   manifesto_texto:
     "No dicionário, nexo significa conexão, ligação, vínculo entre partes. No mercado de comunicação do Distrito Federal e entorno, a Nexo Mídia e Representação é a ponte estratégica que une marcas, veículos de alto impacto e consumidores em momentos decisivos da sua jornada diária.",
