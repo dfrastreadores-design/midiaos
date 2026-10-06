@@ -116,6 +116,7 @@ export const saveProposal = createServerFn({ method: "POST" })
       id?: string;
       client_name: string;
       client_id?: string | null;
+      client_logo_url?: string | null;
       campaign_title?: string | null;
       status?: string;
       notes?: string | null;
@@ -180,6 +181,7 @@ export const saveProposal = createServerFn({ method: "POST" })
         .update({
           client_name: data.client_name,
           client_id: data.client_id || null,
+          client_logo_url: data.client_logo_url || null,
           campaign_title: data.campaign_title || null,
           total_gross: totals.totalGross,
           total_discount: totals.totalDiscount,
@@ -203,6 +205,7 @@ export const saveProposal = createServerFn({ method: "POST" })
           tenant_id: tenantId,
           client_name: data.client_name,
           client_id: data.client_id || null,
+          client_logo_url: data.client_logo_url || null,
           campaign_title: data.campaign_title || null,
           total_gross: totals.totalGross,
           total_discount: totals.totalDiscount,

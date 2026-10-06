@@ -269,6 +269,18 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
       toast.error("Erro ao gerar PDF: " + (e as Error).message);
     }
   };
+  const exportarPdfExecutivoCoBranding = async () => {
+    const p = propostaParaExport();
+    if (!p) return;
+    try {
+      const { gerarPdfPropostaExecutivaCoBranding } = await import("@/lib/proposta-presentation");
+      await gerarPdfPropostaExecutivaCoBranding(p);
+      toast.success("PDF Executivo Co-Branding gerado com sucesso!");
+    } catch (e) {
+      console.error("Erro exportarPdfExecutivoCoBranding:", e);
+      toast.error("Erro ao gerar PDF Co-Branding: " + (e as Error).message);
+    }
+  };
   const visualizar = async () => {
     const p = propostaParaExport();
     if (!p) return;
@@ -708,6 +720,15 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
             </Button>
             <Button variant="secondary" disabled={!proposta || carregando} onClick={exportarPdf}>
               <FileText className="size-4 mr-2" /> Baixar PDF
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!proposta || carregando}
+              onClick={exportarPdfExecutivoCoBranding}
+              className="border-primary/40 text-primary hover:bg-primary/10"
+              title="Gera o PDF Executivo sob medida com o co-branding do anunciante"
+            >
+              <Sparkles className="size-4 mr-2" /> PDF Co-Branding
             </Button>
             <Button disabled={!proposta || carregando} onClick={exportarPptx}>
               <Presentation className="size-4 mr-2" /> Baixar PPTX

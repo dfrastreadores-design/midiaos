@@ -184,6 +184,8 @@ export type PropostaApresentacao = {
   created_at?: string | null;
   observacao?: string | null;
   cliente_avulso?: string | null;
+  client_name?: string | null;
+  client_logo_url?: string | null;
   valor_tabela: number;
   valor_desconto: number;
   valor_negociado: number;
@@ -4170,5 +4172,331 @@ export async function gerarPdfPropostaNexo(
   const blob = doc.output("blob") as Blob;
   if (options?.returnBlob) return blob;
   saveBlob(blob, `${slugify(clienteNome)}-Proposta-Nexo-Slide-${p.numero}.pdf`);
+}
+
+/**
+ * ====================================================================
+ * GERADOR DE PDF EXECUTIVO COM CO-BRANDING PERSONALIZADO
+ * Emissor no topo esquerdo + Área de Co-branding com Logomarca do Cliente
+ * Cards de impacto, defesa estratégica, tabela com links maps e aceite
+ * ====================================================================
+ */
+export async function gerarPdfPropostaExecutivaCoBranding(
+  p: PropostaApresentacao,
+  options?: { returnBlob?: boolean },
+): Promise<Blob | void> {
+  const { p: pAdj, dataStr } = aplicarPadroes(p);
+  p = pAdj;
+
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  const W = doc.internal.pageSize.getWidth(); // 297mm
+  const H = doc.internal.pageSize.getHeight(); // 210mm
+
+  const clienteNome =
+    p.client_name ||
+    p.cliente?.nome_fantasia ||
+    p.cliente?.razao_social ||
+    p.cliente_avulso ||
+    "Cliente Anunciante";
+
+  const logoClienteUrl = p.client_logo_url || p.cliente?.logo_url || null;
+  let logoClienteData: string | null = null;
+  if (logoClienteUrl) {
+    try {
+      logoClienteData = await logoToDataUrl(logoClienteUrl);
+    } catch {
+      logoClienteData = null;
+    }
+  }
+
+  const org = (p as any).organizacao;
+  const isNexo = org?.isNexo || org?.slug === "nexo" || org?.nome?.toLowerCase().includes("nexo") || true;
+  const cfg: TemplatePropostaConfig = org?.templateConfig || DEFAULT_NEXO_TEMPLATE_CONFIG;
+
+  const emissorNome = org?.nome || (isNexo ? "NEXO MÍDIA E REPRESENTAÇÃO" : "MÍDIA.OS");
+  const emissorTagline = org?.tagline || (isNexo ? "Hub de Negócios & Soluções Estratégicas em Mídia" : "Sistema Integrado de Gestão Comercial e Mídia 360°");
+  const emissorSite = cfg?.site_url || org?.site_url || (isNexo ? "nexomidiaerepresentacao.com.br" : "");
+  const emissorTelefone = cfg?.telefone_contato || (isNexo ? "(61) 99125-7245" : "");
+  const emissorEmail = cfg?.email_contato || (isNexo ? "rafaelnexomidia@gmail.com" : "");
+
+  let logoEmissorData: string | null = null;
+  if (cfg.logo_url) {
+    try {
+      logoEmissorData = await logoToDataUrl(cfg.logo_url);
+    } catch {
+      logoEmissorData = null;
+    }
+  }
+
+  // Cores
+  const COR_PRIMARY: [number, number, number] = [255, 107, 0]; // #FF6B00
+  const COR_SECONDARY: [number, number, number] = [121, 40, 202]; // #7928CA
+  const COR_DARK: [number, number, number] = [15, 23, 42]; // #0F172A
+  const COR_MUTED: [number, number, number] = [100, 116, 139]; // #64748B
+  const COR_CARD: [number, number, number] = [248, 250, 252]; // #F8FAFC
+  const COR_BORDER: [number, number, number] = [226, 232, 240]; // #E2E8F0
+
+  // 1. Barra de destaque no topo (Degradê institucional Laranja / Roxo)
+  doc.setFillColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
+  doc.rect(0, 0, W * 0.6, 2.5, "F");
+  doc.setFillColor(COR_SECONDARY[0], COR_SECONDARY[1], COR_SECONDARY[2]);
+  doc.rect(W * 0.6, 0, W * 0.4, 2.5, "F");
+
+  // 2. CABEÇALHO COM CO-BRANDING
+  // LADO ESQUERDO: Empresa Emissora
+  if (logoEmissorData) {
+    try {
+      doc.addImage(logoEmissorData, "PNG", 15, 8, 42, 16, undefined, "FAST");
+    } catch {
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(COR_DARK[0], COR_DARK[1], COR_DARK[2]);
+      doc.text(emissorNome.toUpperCase(), 15, 17);
+    }
+  } else {
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(COR_DARK[0], COR_DARK[1], COR_DARK[2]);
+    doc.text(emissorNome.toUpperCase(), 15, 17);
+  }
+
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COR_MUTED[0], COR_MUTED[1], COR_MUTED[2]);
+  doc.text(emissorTagline, 15, 28);
+
+  const contatoStr = [
+    emissorSite.replace(/^https?:\/\//, ""),
+    emissorTelefone,
+    emissorEmail,
+  ].filter(Boolean).join("  •  ");
+
+  doc.setFontSize(7);
+  doc.text(contatoStr, 15, 32);
+
+  // LADO DIREITO: Co-branding com o Cliente Anunciante
+  const cobrandBoxW = 100;
+  const cobrandBoxH = 26;
+  const cobrandBoxX = W - 15 - cobrandBoxW;
+  const cobrandBoxY = 7;
+
+  doc.setFillColor(COR_CARD[0], COR_CARD[1], COR_CARD[2]);
+  doc.setDrawColor(COR_BORDER[0], COR_BORDER[1], COR_BORDER[2]);
+  doc.roundedRect(cobrandBoxX, cobrandBoxY, cobrandBoxW, cobrandBoxH, 2, 2, "FD");
+
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
+  doc.text("PROPOSTA EXCLUSIVA DESENVOLVIDA PARA:", cobrandBoxX + 6, cobrandBoxY + 6);
+
+  if (logoClienteData) {
+    try {
+      doc.addImage(logoClienteData, "PNG", cobrandBoxX + 6, cobrandBoxY + 8, 38, 15, undefined, "FAST");
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(COR_DARK[0], COR_DARK[1], COR_DARK[2]);
+      doc.text(clienteNome, cobrandBoxX + 48, cobrandBoxY + 16, { maxWidth: 48 });
+    } catch {
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(COR_DARK[0], COR_DARK[1], COR_DARK[2]);
+      doc.text(clienteNome.toUpperCase(), cobrandBoxX + 6, cobrandBoxY + 17, { maxWidth: cobrandBoxW - 12 });
+    }
+  } else {
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(COR_DARK[0], COR_DARK[1], COR_DARK[2]);
+    doc.text(clienteNome.toUpperCase(), cobrandBoxX + 6, cobrandBoxY + 17, { maxWidth: cobrandBoxW - 12 });
+  }
+
+  // Linha separadora do cabeçalho
+  doc.setDrawColor(COR_BORDER[0], COR_BORDER[1], COR_BORDER[2]);
+  doc.line(15, 36, W - 15, 36);
+
+  // 3. CARDS DE IMPACTO NO TOPO
+  const cardY = 40;
+  const cardW = (W - 30 - 9) / 4; // 4 cards com espaçamento de 3mm
+  const cardH = 17;
+
+  const cardsData = [
+    {
+      label: "IMPACTO ESTIMADO",
+      val: "2.400.000+",
+      sub: "visualizações/mês estimadas",
+      cor: COR_PRIMARY,
+    },
+    {
+      label: "PRAÇAS & COBERTURA",
+      val: p.cliente?.cidade || "DF & Entorno",
+      sub: "alta densidade urbana",
+      cor: COR_DARK,
+    },
+    {
+      label: "PONTOS CONTRATADOS",
+      val: `${p.itens?.length || 1} espaço(s)`,
+      sub: `${p.total_insercoes || 30} exibições programadas`,
+      cor: COR_SECONDARY,
+    },
+    {
+      label: "INVESTIMENTO NEGOCIADO",
+      val: fmtBRL(p.valor_negociado),
+      sub: p.valor_desconto > 0 ? `desc. de ${fmtBRL(p.valor_desconto)}` : "condição comercial exclusiva",
+      cor: [16, 185, 129] as [number, number, number], // emerald
+    },
+  ];
+
+  cardsData.forEach((c, idx) => {
+    const cx = 15 + idx * (cardW + 3);
+    doc.setFillColor(COR_CARD[0], COR_CARD[1], COR_CARD[2]);
+    doc.setDrawColor(COR_BORDER[0], COR_BORDER[1], COR_BORDER[2]);
+    doc.roundedRect(cx, cardY, cardW, cardH, 1.5, 1.5, "FD");
+
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(COR_MUTED[0], COR_MUTED[1], COR_MUTED[2]);
+    doc.text(c.label, cx + 4, cardY + 5);
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(c.cor[0], c.cor[1], c.cor[2]);
+    doc.text(c.val, cx + 4, cardY + 11);
+
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(COR_MUTED[0], COR_MUTED[1], COR_MUTED[2]);
+    doc.text(c.sub, cx + 4, cardY + 15);
+  });
+
+  // 4. BLOCO DE DEFESA ESTRATÉGICA
+  const defesaY = 60;
+  const defesaH = 14;
+  doc.setFillColor(254, 243, 199); // Âmbar clarinho suave
+  doc.setDrawColor(251, 191, 36);
+  doc.roundedRect(15, defesaY, W - 30, defesaH, 1.5, 1.5, "FD");
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(180, 83, 9);
+  doc.text("🎯 DEFESA ESTRATÉGICA DO PLANO DE MÍDIA & BLINDAGEM DE MARCA:", 19, defesaY + 4.5);
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(69, 26, 3);
+  const textoDefesa =
+    "Este pacote publicitário foi estrategicamente configurado para captar o fluxo de tráfego qualificado do público-alvo nos momentos decisivos da rotina diária. A combinação de pontos garante cobertura contínua, alto recall de marca, presença memorável e máxima rentabilidade sobre o investimento comercial.";
+  doc.text(textoDefesa, 19, defesaY + 9, { maxWidth: W - 38 });
+
+  // 5. GRADE DA TABELA DE MÍDIA
+  const tableY = 77;
+  const tableData = (p.itens || []).map((it, idx) => {
+    const loc = it.endereco_ponto || "Ponto Estratégico Homologado";
+    const formato = it.formato || it.programa || it.tipo || "DOOH / LED";
+    const qtd = `${it.total_insercoes || it.insercoes_dia || 1}x`;
+    const vTab = fmtBRL(it.valor_tabela);
+    const desc = it.desconto > 0 ? `${it.desconto}%` : "—";
+    const vNeg = fmtBRL(it.valor_negociado);
+    return [String(idx + 1).padStart(2, "0"), formato, loc, qtd, vTab, desc, vNeg];
+  });
+
+  autoTable(doc, {
+    startY: tableY,
+    head: [["#", "MEIO / FORMATO", "LOCALIZAÇÃO & PONTO FÍSICO", "QTD / PERÍODO", "VALOR TABELA", "DESCONTO", "TOTAL FATURADO"]],
+    body: tableData,
+    margin: { left: 15, right: 15 },
+    theme: "grid",
+    styles: {
+      fontSize: 7.5,
+      cellPadding: 2.2,
+      textColor: [30, 41, 59],
+      lineColor: [226, 232, 240],
+      lineWidth: 0.2,
+    },
+    headStyles: {
+      fillColor: COR_DARK,
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 7,
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: 55, fontStyle: "bold" },
+      2: { cellWidth: 90 },
+      3: { cellWidth: 26, halign: "center" },
+      4: { cellWidth: 28, halign: "right" },
+      5: { cellWidth: 22, halign: "right", textColor: [225, 29, 72] },
+      6: { cellWidth: 36, halign: "right", fontStyle: "bold", textColor: [15, 23, 42] },
+    },
+    didDrawCell: (data) => {
+      // Se for a coluna de localização e tiver coordenadas ou maps, adiciona link ativo
+      if (data.section === "body" && data.column.index === 2) {
+        const itemObj = (p.itens || [])[data.row.index];
+        if (itemObj) {
+          const lat = itemObj.latitude;
+          const lng = itemObj.longitude;
+          const mapUrl = itemObj.link_maps || (lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : null);
+          if (mapUrl) {
+            doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
+              url: mapUrl,
+            });
+          }
+        }
+      }
+    },
+  });
+
+  // 6. BLOCO DE FECHAMENTO & ASSINATURAS
+  const finalY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 8 : 160;
+  const blockH = 26;
+
+  // Box 1: Aceite Formal do Cliente
+  doc.setFillColor(COR_CARD[0], COR_CARD[1], COR_CARD[2]);
+  doc.setDrawColor(COR_BORDER[0], COR_BORDER[1], COR_BORDER[2]);
+  doc.roundedRect(15, finalY, (W - 30) / 2 - 4, blockH, 2, 2, "FD");
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(COR_PRIMARY[0], COR_PRIMARY[1], COR_PRIMARY[2]);
+  doc.text("DE ACORDO & APROVAÇÃO DO ANUNCIANTE", 20, finalY + 6);
+
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COR_MUTED[0], COR_MUTED[1], COR_MUTED[2]);
+  doc.text(`Cliente: ${clienteNome}`, 20, finalY + 11);
+  doc.text("Responsável: ___________________________   Cargo: _______________", 20, finalY + 17);
+  doc.text("Assinatura:  ___________________________   Data:   ___/___/2026", 20, finalY + 22);
+
+  // Box 2: Atendimento Exclusivo da Agência
+  const box2X = 15 + (W - 30) / 2 + 4;
+  doc.setFillColor(COR_CARD[0], COR_CARD[1], COR_CARD[2]);
+  doc.setDrawColor(COR_BORDER[0], COR_BORDER[1], COR_BORDER[2]);
+  doc.roundedRect(box2X, finalY, (W - 30) / 2 - 4, blockH, 2, 2, "FD");
+
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(COR_SECONDARY[0], COR_SECONDARY[1], COR_SECONDARY[2]);
+  doc.text("ATENDIMENTO & EMISSÃO EXCLUSIVA", box2X + 5, finalY + 6);
+
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COR_DARK[0], COR_DARK[1], COR_DARK[2]);
+  doc.text(`Executivo(a): ${p.executivo?.nome || "Equipe Comercial"}`, box2X + 5, finalY + 11);
+  doc.text(`E-mail: ${p.executivo?.email || emissorEmail}`, box2X + 5, finalY + 16);
+  doc.text(`Telefone: ${p.executivo?.telefone || emissorTelefone}`, box2X + 5, finalY + 21);
+
+  // Rodapé sutil da página
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(COR_MUTED[0], COR_MUTED[1], COR_MUTED[2]);
+  doc.text(
+    `${emissorNome} • Proposta Comercial #${p.numero || "SIMULAÇÃO"} • Documento confidencial elaborado sob medida para ${clienteNome}`,
+    W / 2,
+    H - 6,
+    { align: "center" },
+  );
+
+  applyTrialWatermark(doc);
+  const blob = doc.output("blob") as Blob;
+  if (options?.returnBlob) return blob;
+  saveBlob(blob, `${slugify(clienteNome)}-Proposta-Comercial-${p.numero || "Simulacao"}.pdf`);
 }
 

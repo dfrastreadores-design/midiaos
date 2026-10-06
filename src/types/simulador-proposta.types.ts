@@ -79,6 +79,7 @@ export interface Proposal {
   tenant_id?: string;
   client_name: string;
   client_id?: string | null;
+  client_logo_url?: string | null;
   campaign_title?: string | null;
   total_gross: number;
   total_discount: number;

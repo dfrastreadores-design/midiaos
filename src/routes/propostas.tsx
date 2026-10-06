@@ -27,6 +27,8 @@ import {
   Handshake,
   FileCheck2,
   TrendingUp,
+  Printer,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
@@ -52,7 +54,12 @@ import {
   listProposals,
   deleteProposal,
   convertProposalToPi,
+  getProposalById,
 } from "@/lib/simulador-propostas.functions";
+import {
+  gerarPdfPropostaExecutivaCoBranding,
+  type PropostaApresentacao,
+} from "@/lib/proposta-presentation";
 import {
   PROPOSAL_STATUS_LABELS,
   Proposal,
@@ -118,6 +125,55 @@ function Propostas() {
     },
     onError: (err: any) => toast.error(err.message),
   });
+
+  const getProposalByIdFn = useServerFn(getProposalById);
+  const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
+
+  const handleDownloadCoBrandingPdf = async (simPropId: string) => {
+    setDownloadingPdfId(simPropId);
+    try {
+      const full = await getProposalByIdFn({ data: { id: simPropId } });
+      const propApres: PropostaApresentacao = {
+        id: full.id,
+        numero: full.id.slice(0, 8).toUpperCase(),
+        titulo: full.campaign_title || "Plano Comercial Estratégico",
+        client_name: full.client_name,
+        client_logo_url: full.client_logo_url || null,
+        cliente: {
+          id: full.client_id || undefined,
+          nome_fantasia: full.client_name,
+          razao_social: full.client_name,
+          logo_url: full.client_logo_url || null,
+        },
+        valor_tabela: full.total_gross,
+        valor_negociado: full.total_gross - full.total_discount,
+        valor_desconto: full.total_discount,
+        total_insercoes: (full.items || []).reduce((acc, it) => acc + (it.quantity || 1), 0),
+        itens: (full.items || []).map((it) => ({
+          tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Veículo Parceiro"),
+          programa: it.product_name,
+          formato: it.billing_type,
+          insercoes_dia: it.quantity,
+          total_insercoes: it.quantity,
+          valor_unit: it.unit_price,
+          valor_tabela: it.gross_price,
+          desconto: it.discount_percent,
+          valor_negociado: it.net_client_val,
+          endereco_ponto: it.media_service?.cidade
+            ? `${it.media_service?.cidade}/${it.media_service?.estado || ""}`
+            : undefined,
+        })),
+        observacoes: full.notes,
+      };
+
+      await gerarPdfPropostaExecutivaCoBranding(propApres);
+      toast.success("PDF Executivo Co-Branding gerado com sucesso!");
+    } catch (err: any) {
+      toast.error("Erro ao gerar PDF: " + (err?.message || "falha na geração"));
+    } finally {
+      setDownloadingPdfId(null);
+    }
+  };
 
   const totalSimFaturado = simulatedProposals.reduce(
     (acc, p) => acc + (Number(p.total_gross) - Number(p.total_discount)),
@@ -602,6 +658,20 @@ function Propostas() {
                                 title="Ver Espelho da Proposta"
                               >
                                 <Eye className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-primary hover:bg-primary/10"
+                                onClick={() => handleDownloadCoBrandingPdf(p.id)}
+                                disabled={downloadingPdfId === p.id}
+                                title="Baixar PDF Executivo Co-Branding"
+                              >
+                                {downloadingPdfId === p.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Printer className="w-3.5 h-3.5" />
+                                )}
                               </Button>
                               {p.status !== "converted_to_pi" && (
                                 <Button

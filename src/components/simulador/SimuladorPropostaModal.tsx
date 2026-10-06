@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -47,9 +47,18 @@ import {
   CheckCircle2,
   Layers,
   ArrowRight,
+  Upload,
+  Image as ImageIcon,
+  X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatBRL } from "@/lib/mock-data";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  gerarPdfPropostaExecutivaCoBranding,
+  type PropostaApresentacao,
+} from "@/lib/proposta-presentation";
 import {
   Proposal,
   ProposalSimulationItemInput,
@@ -106,6 +115,10 @@ export function SimuladorPropostaModal({
   // State
   const [clientName, setClientName] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
+  const [clientLogoUrl, setClientLogoUrl] = useState<string>("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [campaignTitle, setCampaignTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<string>("draft");
@@ -122,6 +135,7 @@ export function SimuladorPropostaModal({
         .then((prop) => {
           setClientName(prop.client_name || "");
           setClientId(prop.client_id || null);
+          setClientLogoUrl(prop.client_logo_url || "");
           setCampaignTitle(prop.campaign_title || "");
           setNotes(prop.notes || "");
           setStatus(prop.status || "draft");
@@ -151,6 +165,7 @@ export function SimuladorPropostaModal({
     } else if (!proposalId && open) {
       setClientName("");
       setClientId(null);
+      setClientLogoUrl("");
       setCampaignTitle("");
       setNotes("");
       setStatus("draft");
@@ -163,6 +178,51 @@ export function SimuladorPropostaModal({
       }
     }
   }, [proposalId, open, initialCatalogItem]);
+
+  // Upload de logomarca do anunciante
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).");
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const fileName = `client-logo-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const path = `logos/${fileName}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("partner-logos")
+        .upload(path, file, { contentType: file.type, upsert: true });
+
+      if (!upErr) {
+        const { data: pubData } = supabase.storage.from("partner-logos").getPublicUrl(path);
+        if (pubData?.publicUrl) {
+          setClientLogoUrl(pubData.publicUrl);
+          toast.success("Logomarca do anunciante enviada com sucesso!");
+          return;
+        }
+      }
+
+      // Fallback: codifica em base64 DataURL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setClientLogoUrl(base64);
+        toast.success("Logomarca carregada com sucesso!");
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      toast.error("Falha ao carregar logo: " + (err?.message || "erro"));
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   // Função para adicionar item do catálogo
   const addItemFromCatalog = (cat: MediaServiceCatalogItem) => {
@@ -265,6 +325,7 @@ export function SimuladorPropostaModal({
           id: proposalId || undefined,
           client_name: clientName || "Cliente em Negociação",
           client_id: clientId,
+          client_logo_url: clientLogoUrl || null,
           campaign_title: campaignTitle || "Campanha Multiveículos",
           status: targetStatus || status,
           notes,
@@ -289,6 +350,7 @@ export function SimuladorPropostaModal({
           id: proposalId || undefined,
           client_name: clientName || "Cliente em Negociação",
           client_id: clientId,
+          client_logo_url: clientLogoUrl || null,
           campaign_title: campaignTitle || "Campanha Multiveículos",
           status: "approved",
           notes,
@@ -310,6 +372,62 @@ export function SimuladorPropostaModal({
     },
     onError: (err: any) => toast.error(err.message || "Erro ao converter em PI"),
   });
+
+  // Exportar PDF Executivo Co-Branding
+  const handleExportExecutivePdf = async () => {
+    if (!clientName.trim()) {
+      toast.error("Informe o Nome / Razão Social do Anunciante antes de gerar o PDF.");
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("Adicione ao menos um espaço publicitário para gerar a proposta executiva.");
+      return;
+    }
+
+    setGeneratingPdf(true);
+    try {
+      const propApres: PropostaApresentacao = {
+        id: proposalId || "temp",
+        numero: proposalId?.slice(0, 8).toUpperCase() || "SIMULAÇÃO",
+        titulo: campaignTitle || "Plano Comercial Estratégico Multiveículos",
+        client_name: clientName,
+        client_logo_url: clientLogoUrl || null,
+        cliente: {
+          id: clientId || undefined,
+          nome_fantasia: clientName,
+          razao_social: clientName,
+          logo_url: clientLogoUrl || null,
+        },
+        valor_tabela: totals.totalGross,
+        valor_negociado: totals.totalNetClient,
+        valor_desconto: totals.totalDiscount,
+        total_insercoes: items.reduce((acc, it) => acc + (it.quantity || 1), 0),
+        itens: calculated.map((it) => ({
+          tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Veículo Parceiro"),
+          programa: it.product_name,
+          formato: TIPOS_COBRANCA_LABELS[it.billing_type] || it.billing_type,
+          insercoes_dia: it.quantity,
+          total_insercoes: it.quantity,
+          valor_unit: it.unit_price,
+          valor_tabela: it.gross_price,
+          desconto: it.fin.discountPercent,
+          valor_negociado: it.net_client_val,
+          endereco_ponto: it.media_service?.cidade
+            ? `${it.media_service?.cidade}/${it.media_service?.estado || ""}`
+            : undefined,
+        })),
+        observacoes: notes,
+      };
+
+      await gerarPdfPropostaExecutivaCoBranding(propApres);
+      toast.success("PDF Executivo Co-Branding gerado com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao gerar PDF Co-Branding:", err);
+      toast.error("Erro ao gerar PDF: " + (err?.message || "falha na renderização"));
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   // Filtro de itens no modal de busca do catálogo
   const filteredCatalogForPicker = useMemo(() => {
@@ -390,7 +508,12 @@ export function SimuladorPropostaModal({
                       onValueChange={(val) => {
                         setClientId(val);
                         const c = (clientesList as any[]).find((x) => x.id === val);
-                        if (c) setClientName(c.nome_fantasia || c.razao_social || c.nome);
+                        if (c) {
+                          setClientName(c.nome_fantasia || c.razao_social || c.nome);
+                          if (c.logo_url) {
+                            setClientLogoUrl(c.logo_url);
+                          }
+                        }
                       }}
                     >
                       <SelectTrigger className="h-8 w-24 text-[11px] shrink-0">
@@ -431,6 +554,106 @@ export function SimuladorPropostaModal({
                     <SelectItem value="rejected">Recusada</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Bloco de Co-Branding Executivo & Personalização Visual */}
+            <div className="mt-3 p-3 rounded-xl border border-border/80 bg-muted/20">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                {/* Upload & URL da Logo (md:col-span-6) */}
+                <div className="md:col-span-6 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                      <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                      Logomarca do Anunciante
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        (Opcional - Co-branding no PDF)
+                      </span>
+                    </Label>
+                    {clientLogoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setClientLogoUrl("")}
+                        className="h-5 px-1.5 text-[10px] text-destructive hover:bg-destructive/10"
+                      >
+                        <X className="w-3 h-3 mr-1" /> Remover Logo
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 items-center">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingLogo}
+                      className="h-8 text-xs gap-1.5 shrink-0 bg-background"
+                    >
+                      {uploadingLogo ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5" />
+                      )}
+                      {uploadingLogo ? "Enviando..." : "Carregar Imagem"}
+                    </Button>
+                    <Input
+                      placeholder="Ou cole o link direto da logomarca (https://...)"
+                      value={clientLogoUrl}
+                      onChange={(e) => setClientLogoUrl(e.target.value)}
+                      className="h-8 text-xs bg-background flex-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Card de Preview em Tempo Real do Co-Branding (md:col-span-6) */}
+                <div className="md:col-span-6">
+                  <div className="rounded-lg border border-primary/20 bg-card p-2.5 shadow-xs flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[9px] font-bold tracking-wider uppercase text-primary flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Preview do Co-Branding Executivo
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        PROPOSTA EXCLUSIVA DESENVOLVIDA PARA:
+                      </div>
+                      <div className="text-xs font-bold text-foreground truncate mt-0.5">
+                        {clientName || "Nome do Cliente Anunciante"}
+                      </div>
+                    </div>
+
+                    <div className="w-28 h-12 rounded border bg-muted/40 flex items-center justify-center p-1 overflow-hidden shrink-0">
+                      {clientLogoUrl ? (
+                        <img
+                          src={clientLogoUrl}
+                          alt="Logo Anunciante"
+                          className="max-h-full max-w-full object-contain"
+                          onError={() => {
+                            toast.error("Não foi possível carregar a prévia da logo pela URL.");
+                          }}
+                        />
+                      ) : (
+                        <div className="text-center px-1">
+                          <span className="text-[10px] font-bold text-muted-foreground line-clamp-1">
+                            {clientName ? clientName.slice(0, 14) : "SEM LOGO"}
+                          </span>
+                          <span className="text-[8px] text-muted-foreground/70 block">
+                            Tipografia Padrão
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </DialogHeader>
@@ -766,6 +989,22 @@ export function SimuladorPropostaModal({
             </Button>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportExecutivePdf}
+                disabled={generatingPdf || items.length === 0}
+                className="gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/10 flex-1 sm:flex-initial"
+                title="Gera o PDF Executivo oficial com co-branding do anunciante"
+              >
+                {generatingPdf ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Printer className="w-3.5 h-3.5" />
+                )}
+                Exportar PDF Executivo
+              </Button>
+
               <Button
                 type="button"
                 variant="outline"
