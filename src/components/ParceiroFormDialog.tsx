@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -39,6 +39,9 @@ import {
   Upload,
   Trash2,
   Image as ImageIcon,
+  FileSpreadsheet,
+  FileText,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,12 +57,22 @@ import { enriquecerParceiroPorUrl } from "@/lib/parceiro-scraper.functions";
 import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
 import { lookupCep, formatCEP } from "@/lib/geocode.functions";
 import { traduzirErro } from "@/lib/error-translator";
+import { cn } from "@/lib/utils";
 import {
   FormFieldError,
   errorLabelClass,
   errorInputClass,
   scrollToFirstError,
 } from "@/lib/form-errors";
+import { ModalPreviewImportacaoMidiaKit } from "@/components/parceiros/ModalPreviewImportacaoMidiaKit";
+import { processarArquivoImportacao } from "@/lib/documento-importer";
+import {
+  extrairProdutosDeMidiaKit,
+  salvarProdutosExtraidosMidiaKit,
+  type ResultadoExtracaoMidiaKit,
+  type ProdutoExtraidoMidiaKit,
+  type RegraDescontoExtraida,
+} from "@/lib/midia-kit-ai.functions";
 
 type Props = {
   open: boolean;
@@ -82,6 +95,13 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [wasValidated, setWasValidated] = useState(false);
+
+  // Estados de Importação Inteligente de Mídia Kit (Excel / PDF)
+  const fileMidiaKitRef = useRef<HTMLInputElement>(null);
+  const [processingFile, setProcessingFile] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [resultadoExtracao, setResultadoExtracao] = useState<ResultadoExtracaoMidiaKit | null>(null);
+  const [savingImport, setSavingImport] = useState(false);
 
   const [form, setForm] = useState<Partial<Parceiro>>({
     razao_social: "",
@@ -111,12 +131,16 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
     cep: "",
     observacoes: "",
     ativo: true,
+    media_kit_defenses: [],
+    commercial_discounts_rules: [],
   });
 
   useEffect(() => {
     if (open) {
       setErrors({});
       setWasValidated(false);
+      setResultadoExtracao(null);
+      setPreviewModalOpen(false);
       setForm(
         initial
           ? {
@@ -128,6 +152,8 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                 initial.comissao_padrao_percentual ?? initial.comissao_padrao_pct ?? 20.0,
               comissao_padrao_pct:
                 initial.comissao_padrao_pct ?? initial.comissao_padrao_percentual ?? 20.0,
+              media_kit_defenses: initial.media_kit_defenses ?? [],
+              commercial_discounts_rules: initial.commercial_discounts_rules ?? [],
             }
           : {
               razao_social: "",
@@ -157,6 +183,8 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
               cep: "",
               observacoes: "",
               ativo: true,
+              media_kit_defenses: [],
+              commercial_discounts_rules: [],
             },
       );
       setCustomSegmento("");
@@ -196,6 +224,161 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
     } finally {
       setUploadingLogo(false);
       e.target.value = "";
+    }
+  };
+
+  const handleUploadMidiaKit = async (file: File) => {
+    if (!file) return;
+    if (file.size > 30 * 1024 * 1024) {
+      toast.error("O arquivo deve ter no máximo 30MB.");
+      return;
+    }
+
+    setProcessingFile(true);
+    try {
+      // 1. Processar arquivo (detecta se é XLSX/CSV tabular ou PDF)
+      const docRes = await processarArquivoImportacao(file);
+      if (!docRes.sucesso) {
+        toast.error(docRes.erro || "Falha ao ler conteúdo do arquivo.");
+        return;
+      }
+
+      // 2. Extrair dados estruturados (Produtos, Métricas, Defesas, Descontos)
+      let extracaoRes: ResultadoExtracaoMidiaKit;
+      if (docRes.dadosTabela && docRes.dadosTabela.length > 0) {
+        extracaoRes = await extrairProdutosDeMidiaKit({
+          tipo: "planilha",
+          dadosTabela: docRes.dadosTabela,
+          nomeArquivo: file.name,
+          partnerId: form.id,
+        });
+      } else {
+        extracaoRes = await extrairProdutosDeMidiaKit({
+          tipo: "pdf",
+          texto: docRes.textoExtraido,
+          nomeArquivo: file.name,
+          partnerId: form.id,
+        });
+      }
+
+      if (!extracaoRes.sucesso || extracaoRes.produtos.length === 0) {
+        toast.error(
+          extracaoRes.erro ||
+            "Não foi possível identificar produtos ou pontos de mídia no arquivo. Verifique o formato.",
+        );
+        return;
+      }
+
+      // Pre-preencher campos do formulário caso estejam vazios e detectados no Mídia Kit
+      if (extracaoRes.parceiroDetectado) {
+        const pd = extracaoRes.parceiroDetectado;
+        setForm((prev) => ({
+          ...prev,
+          razao_social: prev.razao_social || pd.razao_social || "",
+          nome_fantasia: prev.nome_fantasia || pd.nome_fantasia || pd.razao_social || "",
+          cnpj: prev.cnpj || pd.cnpj || "",
+          cidade: prev.cidade || pd.cidade || "",
+          uf: prev.uf || pd.uf || "",
+          site: prev.site || pd.site || "",
+          tipo_veiculo: (prev.tipo_veiculo as any) || (pd.tipo_veiculo as any) || "Painel OOH/DOOH",
+          media_kit_defenses: Array.from(
+            new Set([...(prev.media_kit_defenses || []), ...extracaoRes.defesasComerciais]),
+          ),
+          commercial_discounts_rules:
+            extracaoRes.regrasDesconto?.length > 0
+              ? extracaoRes.regrasDesconto
+              : prev.commercial_discounts_rules,
+        }));
+      }
+
+      setResultadoExtracao(extracaoRes);
+      setPreviewModalOpen(true);
+      toast.success(
+        `Mídia Kit lido com sucesso! ${extracaoRes.produtos.length} produtos e ${extracaoRes.defesasComerciais.length} defesas comerciais identificados.`,
+      );
+    } catch (err: any) {
+      toast.error(`Erro ao analisar arquivo: ${err?.message || "Arquivo corrompido ou protegido"}`);
+    } finally {
+      setProcessingFile(false);
+      if (fileMidiaKitRef.current) {
+        fileMidiaKitRef.current.value = "";
+      }
+    }
+  };
+
+  const handleConfirmarImportacao = async (
+    produtosSelecionados: ProdutoExtraidoMidiaKit[],
+    defesas: string[],
+    regras: RegraDescontoExtraida[],
+  ) => {
+    setSavingImport(true);
+    try {
+      let partnerId = form.id;
+
+      // Se o parceiro ainda não foi cadastrado no banco, salvar primeiro
+      if (!partnerId) {
+        const razao =
+          form.razao_social?.trim() ||
+          resultadoExtracao?.parceiroDetectado?.razao_social ||
+          resultadoExtracao?.parceiroDetectado?.nome_fantasia ||
+          `Veículo Parceiro ${new Date().toLocaleDateString("pt-BR")}`;
+
+        const partnerPayload = {
+          ...form,
+          razao_social: razao,
+          nome_fantasia:
+            form.nome_fantasia || resultadoExtracao?.parceiroDetectado?.nome_fantasia || razao,
+          cidade: form.cidade || resultadoExtracao?.parceiroDetectado?.cidade || "",
+          uf: form.uf || resultadoExtracao?.parceiroDetectado?.uf || "",
+          site: form.site || resultadoExtracao?.parceiroDetectado?.site || "",
+          media_kit_defenses: defesas,
+          commercial_discounts_rules: regras,
+        };
+
+        const novoParceiro = await upsertFn({ data: partnerPayload });
+        partnerId = novoParceiro.id;
+        setForm((prev) => ({
+          ...prev,
+          ...novoParceiro,
+          media_kit_defenses: defesas,
+          commercial_discounts_rules: regras,
+        }));
+      } else {
+        // Atualiza defesas no state local do formulário
+        setForm((prev) => ({
+          ...prev,
+          media_kit_defenses: defesas,
+          commercial_discounts_rules: regras,
+        }));
+      }
+
+      // Persiste os produtos no catálogo e as defesas no registro do parceiro
+      const resPersist = await salvarProdutosExtraidosMidiaKit({
+        partnerId,
+        produtos: produtosSelecionados,
+        defesas,
+        regrasDesconto: regras,
+      });
+
+      if (!resPersist.sucesso) {
+        toast.error(resPersist.erro || "Falha ao gravar inventário importado.");
+        return;
+      }
+
+      toast.success(
+        `Importação concluída com sucesso! ${resPersist.totalSalvos} produtos/pontos e ${defesas.length} defesas registradas.`,
+      );
+
+      qc.invalidateQueries({ queryKey: ["parceiros"] });
+      qc.invalidateQueries({ queryKey: ["partners"] });
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+      qc.invalidateQueries({ queryKey: ["media-catalog"] });
+
+      setPreviewModalOpen(false);
+    } catch (err: any) {
+      toast.error(`Erro ao salvar importação: ${err?.message || "Tente novamente"}`);
+    } finally {
+      setSavingImport(false);
     }
   };
 
@@ -393,6 +576,77 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
           }}
           className={`space-y-4 pt-2 ${wasValidated ? "was-validated" : ""}`}
         >
+
+          {/* Importação Rápida de Inventário & Argumentos (Mídia Kit) */}
+          <div className="rounded-xl border-2 border-dashed border-primary/30 p-4 bg-primary/5 space-y-3 relative overflow-hidden transition-colors hover:border-primary/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary animate-pulse" />
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Importação Rápida de Inventário & Argumentos (Mídia Kit)
+                  </h3>
+                  <Badge variant="outline" className="text-[10px] bg-background border-primary/20 text-primary">
+                    Excel & PDF via IA
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Carregue planilhas de inventário (.xlsx, .xls, .csv) ou o Mídia Kit institucional (.pdf).
+                  O Mídia.OS extrai automaticamente produtos, telas, métricas de fluxo e defesas comerciais com preview.
+                </p>
+              </div>
+
+              <div>
+                <input
+                  ref={fileMidiaKitRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadMidiaKit(file);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  disabled={processingFile}
+                  onClick={() => fileMidiaKitRef.current?.click()}
+                  className="gap-2 shrink-0 shadow-sm font-medium"
+                >
+                  {processingFile ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Analisando Mídia Kit...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="size-4" />
+                      Importar Planilha / PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] text-muted-foreground border-t border-border/40">
+              <span className="flex items-center gap-1">
+                <FileSpreadsheet className="size-3.5 text-emerald-600" />
+                Planilhas OOH/DOOH (Preços & Formatos)
+              </span>
+              <span className="flex items-center gap-1">
+                <FileText className="size-3.5 text-rose-500" />
+                Mídia Kits em PDF (Métricas & Defesas)
+              </span>
+              {Array.isArray(form.media_kit_defenses) && form.media_kit_defenses.length > 0 && (
+                <span className="flex items-center gap-1 text-primary font-medium sm:ml-auto">
+                  <CheckCircle2 className="size-3.5 text-primary" />
+                  {form.media_kit_defenses.length} argumentos de defesa cadastrados
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Logomarca do Veículo Parceiro */}
           <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
@@ -1009,6 +1263,17 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Modal de Conferência e Preview de Importação de Mídia Kit */}
+      <ModalPreviewImportacaoMidiaKit
+        open={previewModalOpen}
+        onOpenChange={setPreviewModalOpen}
+        resultado={resultadoExtracao}
+        nomeParceiro={form.nome_fantasia || form.razao_social || "Parceiro"}
+        onConfirmar={handleConfirmarImportacao}
+        loading={savingImport}
+      />
     </Dialog>
   );
 }
+

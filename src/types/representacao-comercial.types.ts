@@ -37,6 +37,8 @@ export interface Partner {
   uf?: string | null;
   cep?: string | null;
   redes_sociais?: Record<string, any> | null;
+  media_kit_defenses?: string[] | { titulo: string; descricao?: string; metricas?: string }[] | null;
+  commercial_discounts_rules?: { periodo: string; desconto_pct: number; condicoes?: string }[] | Record<string, any> | null;
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -91,6 +93,8 @@ export interface MediaServiceCatalogItem {
   comissao_percentual_especifica?: number | null;
   quantidade_disponivel: number;
   estoque_espacos: number;
+  impactos_estimados_mes?: number | null;
+  insercoes_dia?: number | null;
   endereco?: string | null;
   bairro?: string | null;
   cidade?: string | null;
@@ -114,6 +118,7 @@ export interface MediaServiceCatalogItem {
     logo_url?: string | null;
     tipo_veiculo?: string | null;
     comissao_padrao_percentual: number;
+    media_kit_defenses?: string[] | null;
   } | null;
 }
 

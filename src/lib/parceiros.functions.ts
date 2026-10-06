@@ -86,6 +86,8 @@ export const ParceiroSchema = z.object({
   uf: nullableString(10),
   cep: nullableString(20),
   observacoes: nullableString(2000),
+  media_kit_defenses: z.any().optional().nullable(),
+  commercial_discounts_rules: z.any().optional().nullable(),
   ativo: z.boolean().default(true),
 });
 
@@ -320,6 +322,8 @@ export const upsertParceiro = createServerFn({ method: "POST" })
         uf: res.data.uf,
         cep: res.data.cep,
         observacoes: res.data.observacoes,
+        media_kit_defenses: res.data.media_kit_defenses ?? null,
+        commercial_discounts_rules: res.data.commercial_discounts_rules ?? null,
         updated_at: new Date().toISOString(),
       };
       await (supabaseAdmin.from("partners") as any).upsert(partnerPayload);

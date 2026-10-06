@@ -4421,9 +4421,51 @@ export async function gerarPdfPropostaExecutivaCoBranding(
     doc.text(c.sub, cx + 4, cardY + 15);
   });
 
-  // 4. BLOCO DE DEFESA ESTRATÉGICA
+  // 4. BLOCO DE DEFESA ESTRATÉGICA (INTEGRAÇÃO COM DADOS REAIS DO MÍDIA KIT)
+  const defesasColetadas: string[] = [];
+  const veiculosMencionados = new Set<string>();
+  let totalImpactosEstimados = 0;
+  let totalInsercoesDia = 0;
+
+  (p.itens || []).forEach((it: any) => {
+    if (it.nome_veiculo) veiculosMencionados.add(it.nome_veiculo);
+    if (Array.isArray(it.media_kit_defenses)) {
+      it.media_kit_defenses.forEach((d: string) => {
+        if (d && !defesasColetadas.includes(d)) defesasColetadas.push(d);
+      });
+    }
+    if (typeof it.impactos_estimados_mes === "number" && it.impactos_estimados_mes > 0) {
+      totalImpactosEstimados += it.impactos_estimados_mes;
+    }
+    if (typeof it.insercoes_dia_catalogo === "number" && it.insercoes_dia_catalogo > 0) {
+      totalInsercoesDia += it.insercoes_dia_catalogo;
+    }
+  });
+
+  let textoDefesa = "";
+  if (defesasColetadas.length > 0 || totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
+    const trechos: string[] = [];
+    if (veiculosMencionados.size > 0) {
+      trechos.push(`Veiculação através de exibidores homologados de alta performance (${Array.from(veiculosMencionados).slice(0, 3).join(", ")}).`);
+    }
+    if (totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
+      const metricas: string[] = [];
+      if (totalImpactosEstimados > 0) metricas.push(`${totalImpactosEstimados.toLocaleString("pt-BR")} impactos estimados/mês`);
+      if (totalInsercoesDia > 0) metricas.push(`mais de ${totalInsercoesDia.toLocaleString("pt-BR")} inserções diárias por tela`);
+      trechos.push(`Potência de entrega com ${metricas.join(" e ")}.`);
+    }
+    if (defesasColetadas.length > 0) {
+      trechos.push(`Pilares de convencimento: ${defesasColetadas.slice(0, 3).join(" • ")}.`);
+    }
+    trechos.push("Garante cobertura ininterrupta, alto recall de marca nos momentos de maior fluxo e máxima rentabilidade sobre o investimento comercial.");
+    textoDefesa = trechos.join(" ");
+  } else {
+    textoDefesa =
+      "Este pacote publicitário foi estrategicamente configurado para captar o fluxo de tráfego qualificado do público-alvo nos momentos decisivos da rotina diária. A combinação de pontos garante cobertura contínua, alto recall de marca, presença memorável e máxima rentabilidade sobre o investimento comercial.";
+  }
+
   const defesaY = 60;
-  const defesaH = 14;
+  const defesaH = 15;
   doc.setFillColor(254, 243, 199); // Âmbar clarinho suave
   doc.setDrawColor(251, 191, 36);
   doc.roundedRect(15, defesaY, W - 30, defesaH, 1.5, 1.5, "FD");
@@ -4433,12 +4475,10 @@ export async function gerarPdfPropostaExecutivaCoBranding(
   doc.setTextColor(180, 83, 9);
   doc.text("🎯 DEFESA ESTRATÉGICA DO PLANO DE MÍDIA & BLINDAGEM DE MARCA:", 19, defesaY + 4.5);
 
-  doc.setFontSize(7);
+  doc.setFontSize(6.8);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(69, 26, 3);
-  const textoDefesa =
-    "Este pacote publicitário foi estrategicamente configurado para captar o fluxo de tráfego qualificado do público-alvo nos momentos decisivos da rotina diária. A combinação de pontos garante cobertura contínua, alto recall de marca, presença memorável e máxima rentabilidade sobre o investimento comercial.";
-  doc.text(textoDefesa, 19, defesaY + 9, { maxWidth: W - 38 });
+  doc.text(textoDefesa, 19, defesaY + 8.5, { maxWidth: W - 38 });
 
   // 5. GRADE DA TABELA DE MÍDIA
   const tableY = 77;

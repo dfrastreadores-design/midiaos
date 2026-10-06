@@ -239,7 +239,7 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
 
     // Buscar também catálogo de serviços e representação comercial (media_services_catalog)
     let qCat = (supabase.from("media_services_catalog") as any)
-      .select("*, partner:partners(id, nome_fantasia, razao_social, tipo_veiculo, comissao_padrao_percentual)")
+      .select("*, partner:partners(id, nome_fantasia, razao_social, tipo_veiculo, comissao_padrao_percentual, media_kit_defenses)")
       .eq("ativo", true);
     if (tenantId) {
       qCat = qCat.or(`tenant_id.is.null,tenant_id.eq.${tenantId}`);
@@ -273,7 +273,7 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
         praca: cat.cidade,
         estado: cat.estado,
         bairro: cat.bairro,
-        fluxo_veiculos_dia: 75000,
+        fluxo_veiculos_dia: cat.impactos_estimados_mes ? Math.round(cat.impactos_estimados_mes / 30) : 75000,
         is_own_product: cat.is_own_product,
       },
       valor_unit: Number(cat.valor_tabela || 1000),
@@ -283,6 +283,9 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
         cat.partner?.nome_fantasia ||
         cat.partner?.razao_social ||
         (cat.is_own_product ? "Mídia.OS Portfólio Próprio" : "Veículo Parceiro"),
+      media_kit_defenses: cat.partner?.media_kit_defenses || [],
+      impactos_mes_estimados: cat.impactos_estimados_mes || 750000,
+      insercoes_dia: cat.insercoes_dia || 100,
     }));
 
     const isSuperAdmin = isMasterEmail(userEmail);
@@ -665,6 +668,21 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
       ? "ÂMBITO NACIONAL (BRASIL)"
       : `${data.regiao_desafio.toUpperCase()} — ${data.estado_uf.toUpperCase()}`;
 
+    // Coletar argumentos de defesa comercial cadastrados no Mídia Kit dos parceiros
+    const defesasDosParceiros: string[] = [];
+    todosProdutos.forEach((p: any) => {
+      if (Array.isArray(p.media_kit_defenses)) {
+        p.media_kit_defenses.forEach((d: string) => {
+          if (d && !defesasDosParceiros.includes(d)) defesasDosParceiros.push(d);
+        });
+      }
+    });
+
+    const blocoDefesaVeiculos =
+      defesasDosParceiros.length > 0
+        ? `\n\n5. DIFERENCIAIS TÉCNICOS & DEFESAS DO VEÍCULO (MÍDIA KIT):\n${defesasDosParceiros.slice(0, 4).map((d) => `• ${d}`).join("\n")}`
+        : "";
+
     const defesaComercial = isNexo
       ? `DEFESA ESTRATÉGICA 360° — NEXO MÍDIA E REPRESENTAÇÃO
 Cliente / Solicitante: ${data.cliente_nome.toUpperCase()}
@@ -680,7 +698,7 @@ ${intel.perfilPredominante}
 Nossa estratégia não depende de um único canal isolado. O público é impactado no momento do deslocamento nas vias e corredores estratégicos (${intel.viasTransbordamento[0]?.via || "principais vias troncais"}), é reimpactado nos momentos de moradia e rotina, encontra a marca em polos de convivência e compras, experiencia a autoridade da ativação ao vivo no PDV e tem o fechamento imediato na palma da mão pelo digital.
 
 4. EFICIÊNCIA DE INVESTIMENTO (HUB NEXO):
-Com investimento total negociado de R$ ${totalNegociado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, geramos mais de ${totalImpactos.toLocaleString("pt-BR")} impactos qualificados no mês, resultando em um CPM altamente competitivo de R$ ${cpmConsolidado.toFixed(2)}.`
+Com investimento total negociado de R$ ${totalNegociado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, geramos mais de ${totalImpactos.toLocaleString("pt-BR")} impactos qualificados no mês, resultando em um CPM altamente competitivo de R$ ${cpmConsolidado.toFixed(2)}.${blocoDefesaVeiculos}`
       : `DEFESA COMERCIAL ESTRATÉGICA 360° — ${data.cliente_nome.toUpperCase()}
 Praça / Território: ${localidadeTitulo} | Público: ${data.classes.join(", ")} (${data.estilos_vida.join(", ")})
 
@@ -691,7 +709,7 @@ ${intel.perfilPredominante}
 Nossa estratégia não depende de um único canal isolado. O público é impactado no momento do deslocamento nas vias e corredores estratégicos (${intel.viasTransbordamento[0]?.via || "principais vias troncais"}), é reimpactado nos momentos de moradia e rotina, encontra a marca em polos de convivência e compras, experiencia a autoridade da ativação ao vivo no PDV e tem o fechamento imediato na palma da mão pelo digital.
 
 3. EFICIÊNCIA DE INVESTIMENTO:
-Com investimento de R$ ${totalNegociado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, geramos mais de ${totalImpactos.toLocaleString("pt-BR")} impactos qualificados no mês, resultando em um CPM altamente competitivo de R$ ${cpmConsolidado.toFixed(2)}.`;
+Com investimento de R$ ${totalNegociado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, geramos mais de ${totalImpactos.toLocaleString("pt-BR")} impactos qualificados no mês, resultando em um CPM altamente competitivo de R$ ${cpmConsolidado.toFixed(2)}.${blocoDefesaVeiculos}`;
 
     return {
       regiao_desafio: data.regiao_desafio,

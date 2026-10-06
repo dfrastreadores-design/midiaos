@@ -302,7 +302,10 @@ export function SimuladorPropostaModal({
         cidade: cat.cidade,
         estado: cat.estado,
         imagem_url: cat.imagem_url,
-      },
+        impactos_estimados_mes: cat.impactos_estimados_mes,
+        insercoes_dia: cat.insercoes_dia,
+        partner: cat.partner,
+      } as any,
     };
 
     setItems((prev) => [...prev, newItem]);
@@ -463,6 +466,7 @@ export function SimuladorPropostaModal({
           } else if (it.is_own_product) {
             endPonto = "Cobertura Nacional";
           }
+          const partnerObj = it.partner || (it as any).media_service?.partner;
           return {
             tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Veículo Parceiro"),
             programa: it.product_name,
@@ -476,6 +480,10 @@ export function SimuladorPropostaModal({
             cidade: cid,
             estado: uf,
             endereco_ponto: endPonto,
+            media_kit_defenses: partnerObj?.media_kit_defenses,
+            impactos_estimados_mes: (it as any).media_service?.impactos_estimados_mes,
+            insercoes_dia_catalogo: (it as any).media_service?.insercoes_dia,
+            nome_veiculo: partnerObj?.nome_fantasia || partnerObj?.razao_social,
           };
         }),
         observacoes: notes,

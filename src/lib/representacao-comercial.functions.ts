@@ -43,6 +43,8 @@ export const PartnerSchema = z.object({
   uf: nullableString(10),
   cep: nullableString(20),
   redes_sociais: z.record(z.any()).optional().nullable(),
+  media_kit_defenses: z.any().optional().nullable(),
+  commercial_discounts_rules: z.any().optional().nullable(),
 });
 
 export const MediaCatalogItemSchema = z.object({
@@ -59,6 +61,8 @@ export const MediaCatalogItemSchema = z.object({
   comissao_percentual_especifica: z.number().min(0).max(100).optional().nullable(),
   quantidade_disponivel: z.number().int().min(0).default(1),
   estoque_espacos: z.number().int().min(0).default(1),
+  impactos_estimados_mes: z.number().int().min(0).optional().nullable(),
+  insercoes_dia: z.number().int().min(0).optional().nullable(),
   endereco: nullableString(300),
   bairro: nullableString(150),
   cidade: nullableString(100),
@@ -256,6 +260,8 @@ export const upsertPartner = createServerFn({ method: "POST" })
         cidade: data.cidade,
         uf: data.uf,
         cep: data.cep,
+        media_kit_defenses: data.media_kit_defenses,
+        commercial_discounts_rules: data.commercial_discounts_rules,
         updated_at: new Date().toISOString(),
       };
       await (client.from("parceiros") as any).upsert(legPayload);
@@ -329,7 +335,7 @@ export const listMediaCatalog = createServerFn({ method: "GET" })
 
     // Consulta à tabela media_services_catalog
     let query = (supabase.from("media_services_catalog") as any)
-      .select("*, partner:partners(id, nome_fantasia, razao_social, logo_url, tipo_veiculo, comissao_padrao_percentual)")
+      .select("*, partner:partners(id, nome_fantasia, razao_social, logo_url, tipo_veiculo, comissao_padrao_percentual, media_kit_defenses, commercial_discounts_rules)")
       .order("created_at", { ascending: false });
 
     if (tenantId) {
