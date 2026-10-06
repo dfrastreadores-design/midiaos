@@ -155,6 +155,10 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
         total_price?: number;
         period_start?: string | null;
         period_end?: string | null;
+        item_type?: "MEDIA" | "PRODUCTION";
+        display_mode?: "ITEMIZED" | "EMBEDDED";
+        parent_media_item_id?: string | null;
+        is_commissionable?: boolean;
       }>;
     }) => d,
   )
@@ -169,9 +173,10 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const tenantId = profile?.tenant_id || null;
+    const rate = Math.round((Number(data.representative_commission_rate) || 0) * 100) / 100;
 
-    // Calcular itens e totais com precisão decimal
-    const parsedItems = (data.items || []).map((it) => {
+    // Atribuir IDs únicos e mapear itens de produção
+    const rawItems = (data.items || []).map((it) => {
       const unit = Math.round((Number(it.unit_price) || 0) * 100) / 100;
       const count = Math.max(1, Math.round(Number(it.insertions_count) || 1));
       const tot =
@@ -179,24 +184,70 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
           ? Math.round(Number(it.total_price) * 100) / 100
           : Math.round(unit * count * 100) / 100;
 
-      const rate = Math.round((Number(data.representative_commission_rate) || 0) * 100) / 100;
-      const itemNetVehicle = Math.max(0, Math.round((tot * (1 - rate / 100)) * 100) / 100);
+      const itemType = it.item_type || "MEDIA";
+      const displayMode = it.display_mode || "ITEMIZED";
+      const isComm = it.is_commissionable !== false;
+
+      // Cálculo de comissão: se is_commissionable == false, comissão é zero e 100% repassado ao executor
+      const commAmount = isComm ? Math.round(tot * (rate / 100) * 100) / 100 : 0;
+      const netAmount = Math.max(0, Math.round((tot - commAmount) * 100) / 100);
 
       return {
-        id: it.id,
+        id: it.id || crypto.randomUUID(),
         vehicle_id: it.vehicle_id || null,
-        format_description: it.format_description || "Inserção de Mídia",
+        format_description: it.format_description || (itemType === "PRODUCTION" ? "Produção de Material" : "Inserção de Mídia"),
         insertions_count: count,
         unit_price: unit,
         total_price: tot,
-        vehicle_net_amount: itemNetVehicle,
+        vehicle_commission_rate: isComm ? rate : 0,
+        vehicle_commission_amount: commAmount,
+        vehicle_net_amount: netAmount,
         period_start: it.period_start || data.period_start || null,
         period_end: it.period_end || data.period_end || null,
+        item_type: itemType,
+        display_mode: displayMode,
+        parent_media_item_id: it.parent_media_item_id || null,
+        is_commissionable: isComm,
       };
     });
 
+    // Calcular custos embutidos nos itens de mídia pais
+    const parsedItems = rawItems.map((it) => {
+      if (it.item_type === "MEDIA") {
+        const embeddedProds = rawItems.filter(
+          (p) =>
+            p.item_type === "PRODUCTION" &&
+            p.display_mode === "EMBEDDED" &&
+            p.parent_media_item_id === it.id,
+        );
+        const embeddedTotal = embeddedProds.reduce((acc, p) => acc + p.total_price, 0);
+
+        return {
+          ...it,
+          media_raw_cost: it.total_price,
+          embedded_production_cost: embeddedTotal,
+          client_facing_total: Math.round((it.total_price + embeddedTotal) * 100) / 100,
+        };
+      } else {
+        return {
+          ...it,
+          media_raw_cost: 0,
+          embedded_production_cost: 0,
+          client_facing_total: it.display_mode === "EMBEDDED" ? 0 : it.total_price,
+        };
+      }
+    });
+
     const grossAmount = parsedItems.reduce((acc, it) => acc + it.total_price, 0);
-    const split = calculatePiSplits(grossAmount, data.representative_commission_rate, parsedItems);
+    const totalCommission = parsedItems.reduce((acc, it) => acc + it.vehicle_commission_amount, 0);
+    const totalNetVehicle = parsedItems.reduce((acc, it) => acc + it.vehicle_net_amount, 0);
+
+    const split = {
+      grossAmount: Math.round(grossAmount * 100) / 100,
+      commissionRate: rate,
+      commissionAmount: Math.round(totalCommission * 100) / 100,
+      netVehicleAmount: Math.round(totalNetVehicle * 100) / 100,
+    };
 
     let piId = data.id;
     let piNumber = "";
@@ -277,6 +328,7 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
     // Gravar itens do PI
     if (parsedItems.length > 0) {
       const itemsPayload = parsedItems.map((it) => ({
+        id: it.id,
         tenant_id: tenantId,
         pi_id: piId,
         vehicle_id: it.vehicle_id,
@@ -284,11 +336,18 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
         insertions_count: it.insertions_count,
         unit_price: it.unit_price,
         total_price: it.total_price,
-        vehicle_commission_rate: split.commissionRate,
-        vehicle_commission_amount: Math.round((it.total_price - it.vehicle_net_amount) * 100) / 100,
+        vehicle_commission_rate: it.vehicle_commission_rate,
+        vehicle_commission_amount: it.vehicle_commission_amount,
         vehicle_net_amount: it.vehicle_net_amount,
         period_start: it.period_start || new Date().toISOString().split("T")[0],
         period_end: it.period_end || new Date().toISOString().split("T")[0],
+        item_type: it.item_type,
+        display_mode: it.display_mode,
+        parent_media_item_id: it.parent_media_item_id,
+        is_commissionable: it.is_commissionable,
+        media_raw_cost: it.media_raw_cost,
+        embedded_production_cost: it.embedded_production_cost,
+        client_facing_total: it.client_facing_total,
       }));
 
       const { error: itemsError } = await (client.from("pi_items") as any).insert(itemsPayload);
@@ -312,7 +371,13 @@ async function syncInitialSettlements(
   tenantId: string | null,
   billingType: BillingType,
   split: { grossAmount: number; commissionAmount: number; netVehicleAmount: number },
-  items: Array<{ vehicle_id: string | null; total_price: number; vehicle_net_amount: number }>,
+  items: Array<{
+    vehicle_id: string | null;
+    total_price: number;
+    vehicle_net_amount: number;
+    item_type?: string;
+    format_description?: string;
+  }>,
 ) {
   // Limpar títulos pendentes anteriores não pagos
   await client
@@ -343,6 +408,7 @@ async function syncInitialSettlements(
     // 2. Repasses para cada veículo (líquido)
     items.forEach((it) => {
       if (it.vehicle_id) {
+        const isProd = it.item_type === "PRODUCTION";
         settlements.push({
           tenant_id: tenantId,
           pi_id: piId,
@@ -353,7 +419,9 @@ async function syncInitialSettlements(
           amount: it.vehicle_net_amount,
           due_date: defaultDueDate,
           status: "pending_checking",
-          notes: "Repasse do saldo líquido após recebimento do Cliente.",
+          notes: isProd
+            ? `Repasse de Produção: ${it.format_description || "Material Publicitário"}`
+            : `Repasse de Mídia: ${it.format_description || "Saldo Líquido"}`,
         });
       }
     });

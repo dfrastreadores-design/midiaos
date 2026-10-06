@@ -50,6 +50,7 @@ import {
   Loader2,
   AlertTriangle,
   Clock,
+  Clapperboard,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -271,6 +272,8 @@ export function PiCheckingModule({ pi, onRefresh, onDossierGenerated }: Props) {
         return <ImageIcon className="size-4 text-emerald-600" />;
       case "video":
         return <Video className="size-4 text-purple-600" />;
+      case "material_producao":
+        return <Clapperboard className="size-4 text-pink-600" />;
       case "irradiacao":
         return <Radio className="size-4 text-amber-600" />;
       case "relatorio":
@@ -604,10 +607,11 @@ export function PiCheckingModule({ pi, onRefresh, onDossierGenerated }: Props) {
                   }));
                 }}
               >
-                <option value="">Selecione a linha de mídia...</option>
+                <option value="">Selecione a linha do PI...</option>
                 {items.map((it) => (
                   <option key={it.id} value={it.id}>
-                    {it.vehicle?.nome_fantasia || "Veículo"} — {it.format_description} ({it.insertions_count} inserções)
+                    {it.item_type === "PRODUCTION" ? "🎬 [PRODUÇÃO] " : "📡 [MÍDIA] "}
+                    {it.vehicle?.nome_fantasia || "Veículo"} — {it.format_description} {it.item_type !== "PRODUCTION" ? `(${it.insertions_count} inserções)` : ""}
                   </option>
                 ))}
               </select>
@@ -625,6 +629,7 @@ export function PiCheckingModule({ pi, onRefresh, onDossierGenerated }: Props) {
                 >
                   <option value="foto">Foto / Print de Tela</option>
                   <option value="video">Vídeo de Exibição</option>
+                  <option value="material_producao">Material Produzido (Áudio/Spot/Vídeo/Arte Final)</option>
                   <option value="irradiacao">Certidão de Irradiação (Rádio/TV)</option>
                   <option value="relatorio">Relatório Consolidado</option>
                   <option value="clipping">Clipping de Notícia / Matéria</option>

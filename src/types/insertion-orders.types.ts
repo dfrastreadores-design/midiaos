@@ -33,13 +33,24 @@ export type CheckingFileType =
   | "relatorio"
   | "clipping"
   | "link"
-  | "nf";
+  | "nf"
+  | "material_producao";
+
+export type PiItemType = "MEDIA" | "PRODUCTION";
+export type PiDisplayMode = "ITEMIZED" | "EMBEDDED";
 
 export interface PiItem {
   id: string;
   tenant_id?: string;
   pi_id: string;
   vehicle_id?: string | null;
+  item_type?: PiItemType;
+  display_mode?: PiDisplayMode;
+  parent_media_item_id?: string | null;
+  is_commissionable?: boolean;
+  media_raw_cost?: number;
+  embedded_production_cost?: number;
+  client_facing_total?: number;
   period_start?: string | null;
   period_end?: string | null;
   format_description: string;
@@ -64,6 +75,7 @@ export interface PiItem {
 
   // Checkings vinculados a este item
   checkings?: PiChecking[];
+  embedded_productions?: PiItem[];
 }
 
 export interface PiChecking {
@@ -321,5 +333,74 @@ export function calculatePiSplits(
     commissionRate: rate,
     commissionAmount,
     netVehicleAmount,
+  };
+}
+
+export interface PiItemCalcInput {
+  item_type?: PiItemType;
+  display_mode?: PiDisplayMode;
+  parent_media_item_id?: string | null;
+  is_commissionable?: boolean;
+  unit_price: number;
+  insertions_count: number;
+  total_price?: number;
+}
+
+export function calculatePiSplitsWithProduction(
+  items: PiItemCalcInput[],
+  representativeCommissionRate: number,
+) {
+  const rate = Math.round((Number(representativeCommissionRate) || 0) * 100) / 100;
+
+  let grossAmount = 0;
+  let commissionableGross = 0;
+  let nonCommissionableGross = 0;
+  let totalCommission = 0;
+  let totalNetVehicle = 0;
+
+  const processed = items.map((it) => {
+    const isComm = it.is_commissionable !== false;
+    const count = Math.max(1, Number(it.insertions_count) || 1);
+    const unit = Math.round((Number(it.unit_price) || 0) * 100) / 100;
+    const tot =
+      it.total_price !== undefined
+        ? Math.round(Number(it.total_price) * 100) / 100
+        : Math.round(unit * count * 100) / 100;
+
+    grossAmount += tot;
+
+    let commAmount = 0;
+    let netAmount = tot;
+
+    if (isComm) {
+      commissionableGross += tot;
+      commAmount = Math.round(tot * (rate / 100) * 100) / 100;
+      netAmount = Math.max(0, Math.round((tot - commAmount) * 100) / 100);
+    } else {
+      nonCommissionableGross += tot;
+      commAmount = 0;
+      netAmount = tot;
+    }
+
+    totalCommission += commAmount;
+    totalNetVehicle += netAmount;
+
+    return {
+      ...it,
+      total_price: tot,
+      vehicle_commission_rate: isComm ? rate : 0,
+      vehicle_commission_amount: commAmount,
+      vehicle_net_amount: netAmount,
+    };
+  });
+
+  return {
+    grossAmount: Math.round(grossAmount * 100) / 100,
+    commissionRate: rate,
+    commissionAmount: Math.round(totalCommission * 100) / 100,
+    netVehicleAmount: Math.round(totalNetVehicle * 100) / 100,
+    commissionableGross: Math.round(commissionableGross * 100) / 100,
+    nonCommissionableGross: Math.round(nonCommissionableGross * 100) / 100,
+    items: processed,
   };
 }
