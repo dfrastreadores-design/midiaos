@@ -1,7 +1,20 @@
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Building2, Mail, Phone, Globe, Instagram, Linkedin, Facebook, Cake } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Building2,
+  Mail,
+  Phone,
+  Globe,
+  Instagram,
+  Linkedin,
+  Facebook,
+  Cake,
+  Share2,
+} from "lucide-react";
+import { ClienteRedesTrafegoTab } from "@/components/social/ClienteRedesTrafegoTab";
 
 type Contato = {
   nome?: string;
@@ -33,6 +46,7 @@ export type ClienteDetalhes = {
   data_aniversario?: string | null;
   observacao?: string | null;
   status?: string | null;
+  logo_url?: string | null;
   contatos?: Contato[] | null;
   agencia?: { razao_social: string; nome_fantasia: string | null } | null;
 };
@@ -60,15 +74,33 @@ export function ClienteDetalhesDialog({
   const contatos = (cliente.contatos ?? []) as Contato[];
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="size-5" />
+            <Building2 className="size-5 text-primary" />
             {cliente.nome_fantasia || cliente.razao_social}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <Tabs defaultValue="redes_trafego" className="w-full">
+          <TabsList className="mb-4 bg-muted/50 p-1">
+            <TabsTrigger value="redes_trafego" className="text-xs gap-1.5 font-semibold">
+              <Share2 className="w-3.5 h-3.5 text-primary" /> Redes & Tráfego Pago
+            </TabsTrigger>
+            <TabsTrigger value="cadastro" className="text-xs gap-1.5">
+              <Building2 className="w-3.5 h-3.5" /> Dados Cadastrais & Contatos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="redes_trafego" className="space-y-4 pt-1">
+            <ClienteRedesTrafegoTab
+              clientId={cliente.id}
+              clientName={cliente.nome_fantasia || cliente.razao_social}
+              clientLogoUrl={cliente.logo_url}
+            />
+          </TabsContent>
+
+          <TabsContent value="cadastro" className="space-y-6">
           <section>
             <h3 className="text-sm font-semibold mb-2">Dados cadastrais</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -210,8 +242,9 @@ export function ClienteDetalhesDialog({
               </section>
             </>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </TabsContent>
+      </Tabs>
+    </DialogContent>
+  </Dialog>
   );
 }
