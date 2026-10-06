@@ -57,6 +57,10 @@ export const ParceiroSchema = z.object({
   razao_social: z.string().min(1, "Razão Social é obrigatória").max(200),
   nome_fantasia: nullableString(200),
   cnpj: nullableString(30),
+  logo_url: nullableString(1000),
+  tipo_veiculo: z.string().default("Painel OOH/DOOH"),
+  status: z.enum(["ativo", "inativo", "em_negociacao"]).default("ativo"),
+  comissao_padrao_percentual: z.number().min(0).max(100).default(20.0),
   site: nullableString(300),
   instagram: nullableString(150),
   linkedin: nullableString(300),
@@ -295,6 +299,34 @@ export const upsertParceiro = createServerFn({ method: "POST" })
       }
     }
 
+    // Sincroniza também na tabela partners
+    try {
+      const partnerPayload: any = {
+        id: res.data.id,
+        tenant_id: tenantId,
+        razao_social: res.data.razao_social,
+        nome_fantasia: res.data.nome_fantasia,
+        cnpj: res.data.cnpj,
+        logo_url: res.data.logo_url,
+        contato_nome: res.data.contato_nome,
+        email: res.data.contato_email,
+        telefone: res.data.contato_telefone,
+        site: res.data.site,
+        tipo_veiculo: res.data.tipo_veiculo || "Painel OOH/DOOH",
+        comissao_padrao_percentual: Number(res.data.comissao_padrao_pct || res.data.comissao_padrao_percentual || 20),
+        status: res.data.status || (res.data.ativo === false ? "inativo" : "ativo"),
+        endereco: res.data.endereco,
+        cidade: res.data.cidade,
+        uf: res.data.uf,
+        cep: res.data.cep,
+        observacoes: res.data.observacoes,
+        updated_at: new Date().toISOString(),
+      };
+      await (supabaseAdmin.from("partners") as any).upsert(partnerPayload);
+    } catch (e) {
+      // Ignora se tabela partners estiver em transição
+    }
+
     return res.data;
   });
 
@@ -307,6 +339,7 @@ export const deleteParceiro = createServerFn({ method: "POST" })
     // Desvincula produtos deste parceiro antes de remover
     try {
       await supabaseAdmin.from("produtos").update({ parceiro_id: null }).eq("parceiro_id", data.id);
+      await (supabaseAdmin.from("partners") as any).delete().eq("id", data.id);
     } catch {
       // ignora
     }

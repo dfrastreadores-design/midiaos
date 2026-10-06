@@ -52,8 +52,19 @@ import {
   Instagram,
   Linkedin,
   Facebook,
+  LayoutGrid,
+  Table as TableIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { LogoImg } from "@/components/LogoImg";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { UniversalAnexosModal } from "@/components/anexos/UniversalAnexosModal";
 import {
   listParceiros,
@@ -83,6 +94,7 @@ export function ParceirosPage() {
   const [search, setSearch] = useState("");
   const [segmentoFiltro, setSegmentoFiltro] = useState<string>("todos");
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativos" | "inativos">("todos");
+  const [viewMode, setViewMode] = useState<"cards" | "tabela">("cards");
 
   // Dialogs
   const [formOpen, setFormOpen] = useState(false);
@@ -332,6 +344,36 @@ export function ParceirosPage() {
                   Inativos ({stats.total - stats.ativos})
                 </button>
               </div>
+
+              {/* Alternador de Visualização Cards / Tabela */}
+              <div className="inline-flex rounded-lg border bg-muted/40 p-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("cards")}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    viewMode === "cards"
+                      ? "bg-background text-primary shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Visualização em Cards"
+                >
+                  <LayoutGrid className="size-3.5" />
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("tabela")}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    viewMode === "tabela"
+                      ? "bg-background text-primary shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Visualização em Tabela"
+                >
+                  <TableIcon className="size-3.5" />
+                  Tabela
+                </button>
+              </div>
             </div>
           </div>
 
@@ -400,6 +442,126 @@ export function ParceirosPage() {
               )}
             </div>
           </Card>
+        ) : viewMode === "tabela" ? (
+          <Card className="border-border/70 overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="w-14 text-center">Logo</TableHead>
+                    <TableHead>Veículo / Parceiro</TableHead>
+                    <TableHead>Tipo de Mídia</TableHead>
+                    <TableHead>CNPJ</TableHead>
+                    <TableHead className="text-center">Espaços Vinculados</TableHead>
+                    <TableHead className="text-right">Comissão Padrão</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Cidade / UF</TableHead>
+                    <TableHead className="text-right pr-4">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtrados.map((parceiro) => (
+                    <TableRow key={parceiro.id} className="hover:bg-muted/30">
+                      <TableCell className="text-center">
+                        <div className="size-9 rounded-lg bg-muted/60 border border-border flex items-center justify-center overflow-hidden mx-auto shadow-xs">
+                          {parceiro.logo_url ? (
+                            <LogoImg
+                              stored={parceiro.logo_url}
+                              alt={parceiro.nome_fantasia || parceiro.razao_social}
+                              className="size-full object-contain p-1 bg-white"
+                            />
+                          ) : (
+                            <span className="font-bold text-[10px] text-purple-700 dark:text-purple-300">
+                              {(parceiro.nome_fantasia || parceiro.razao_social).slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-bold text-xs text-foreground">
+                          {parceiro.nome_fantasia || parceiro.razao_social}
+                        </div>
+                        {parceiro.nome_fantasia && (
+                          <div className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                            {parceiro.razao_social}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800 font-medium"
+                        >
+                          {parceiro.tipo_veiculo || "Painel OOH/DOOH"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-[11px] text-muted-foreground">
+                        {parceiro.cnpj || "—"}
+                      </TableCell>
+                      <TableCell className="text-center font-bold text-xs text-purple-700 dark:text-purple-300">
+                        {parceiro.produtos_count || 0}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                        {parceiro.comissao_padrao_percentual || parceiro.comissao_padrao_pct || 20}%
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={parceiro.status === "ativo" || parceiro.ativo ? "default" : "secondary"}
+                          className={`text-[10px] ${
+                            parceiro.status === "em_negociacao"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 font-semibold"
+                              : parceiro.status === "inativo" || !parceiro.ativo
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold"
+                          }`}
+                        >
+                          {parceiro.status === "em_negociacao"
+                            ? "Em Negociação"
+                            : parceiro.ativo || parceiro.status === "ativo"
+                              ? "Ativo"
+                              : "Inativo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {parceiro.cidade ? `${parceiro.cidade}${parceiro.uf ? `/${parceiro.uf}` : ""}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => {
+                              setEditingParceiro(parceiro);
+                              setFormOpen(true);
+                            }}
+                          >
+                            <Pencil className="size-3.5 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setAnexoParceiro(parceiro)}
+                          >
+                            <Paperclip className="size-3.5 mr-1 text-blue-600" />
+                            Anexos
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" asChild>
+                            <Link to="/produtos" search={{ parceiro: parceiro.razao_social } as any}>
+                              Mídias
+                              <ExternalLink className="size-3 ml-1" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtrados.map((parceiro) => {
@@ -417,10 +579,20 @@ export function ParceirosPage() {
                     {/* Header do Card: Status & Ações */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center font-bold text-purple-700 dark:text-purple-300 text-sm border border-purple-200 dark:border-purple-800">
-                          {parceiro.nome_fantasia
-                            ? parceiro.nome_fantasia.slice(0, 2).toUpperCase()
-                            : parceiro.razao_social.slice(0, 2).toUpperCase()}
+                        <div className="size-11 rounded-xl bg-muted/60 flex items-center justify-center font-bold text-purple-700 dark:text-purple-300 text-sm border border-purple-200 dark:border-purple-800 overflow-hidden shrink-0 shadow-xs">
+                          {parceiro.logo_url ? (
+                            <LogoImg
+                              stored={parceiro.logo_url}
+                              alt={parceiro.nome_fantasia || parceiro.razao_social}
+                              className="size-full object-contain p-1 bg-white"
+                            />
+                          ) : (
+                            <span>
+                              {parceiro.nome_fantasia
+                                ? parceiro.nome_fantasia.slice(0, 2).toUpperCase()
+                                : parceiro.razao_social.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
                         </div>
                         <div className="min-w-0">
                           <h4
@@ -445,16 +617,28 @@ export function ParceirosPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-col items-end gap-1 shrink-0">
                         <Badge
-                          variant={parceiro.ativo ? "default" : "secondary"}
+                          variant="outline"
+                          className="text-[10px] bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800 font-medium"
+                        >
+                          {parceiro.tipo_veiculo || "Painel OOH/DOOH"}
+                        </Badge>
+                        <Badge
+                          variant={parceiro.status === "ativo" || parceiro.ativo ? "default" : "secondary"}
                           className={`text-[10px] ${
-                            parceiro.ativo
-                              ? "bg-emerald-100 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                              : "bg-muted text-muted-foreground"
+                            parceiro.status === "em_negociacao"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 font-semibold"
+                              : parceiro.status === "inativo" || !parceiro.ativo
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold"
                           }`}
                         >
-                          {parceiro.ativo ? "Ativo" : "Inativo"}
+                          {parceiro.status === "em_negociacao"
+                            ? "Em Negociação"
+                            : parceiro.ativo || parceiro.status === "ativo"
+                              ? "Ativo"
+                              : "Inativo"}
                         </Badge>
 
                         {canManage && (

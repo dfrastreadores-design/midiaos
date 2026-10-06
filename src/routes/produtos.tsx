@@ -48,6 +48,7 @@ import {
   FileSpreadsheet,
   Camera,
   Sparkles,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -69,6 +70,7 @@ import { ProdutoFotoGalleryModal } from "@/components/ProdutoFotoGalleryModal";
 import { ProdutoFormDialog, type Produto } from "@/components/ProdutoFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
+import { CatalogoEspacosTab } from "@/components/CatalogoEspacosTab";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
 import { cn } from "@/lib/utils";
 
@@ -121,6 +123,7 @@ function ProdutosPage() {
 
   const searchParams = Route.useSearch();
   const { isNexo } = useCurrentOrg();
+  const [mainView, setMainView] = useState<"catalogo" | "tabela">("catalogo");
   const [tab, setTab] = useState<Midia>("TV");
   const [search, setSearch] = useState(searchParams.parceiro || "");
   const [filtroTipo, setFiltroTipo] = useState<string>("__all__");
@@ -365,7 +368,44 @@ function ProdutosPage() {
         </div>
       </div>
 
-      {currentCfg && (currentCfg.cnpj || currentCfg.razao_social) && (
+      {/* Switcher de Visão Principal */}
+      <div className="flex items-center gap-2 border rounded-xl p-1 bg-muted/40 w-fit mb-6 shadow-xs">
+        <button
+          type="button"
+          onClick={() => setMainView("catalogo")}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2",
+            mainView === "catalogo"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Layers className="size-4 text-primary" />
+          <span>Catálogo & Representação Comercial</span>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary">
+            Nexo Hub
+          </Badge>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainView("tabela")}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2",
+            mainView === "tabela"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <FileSpreadsheet className="size-4" />
+          <span>Grade por Mídia (TV, Rádio, DOOH)</span>
+        </button>
+      </div>
+
+      {mainView === "catalogo" ? (
+        <CatalogoEspacosTab initialPartnerId={searchParams.parceiro} />
+      ) : (
+        <>
+          {currentCfg && (currentCfg.cnpj || currentCfg.razao_social) && (
         <Card className="mb-4">
           <CardContent className="py-3 px-4 text-sm flex flex-wrap gap-x-6 gap-y-1">
             <span>
@@ -849,6 +889,8 @@ function ProdutosPage() {
           </TabsContent>
         ))}
       </Tabs>
+        </>
+      )}
 
       <ProdutoFormDialog
         open={open}

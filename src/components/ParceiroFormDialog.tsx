@@ -36,8 +36,14 @@ import {
   Facebook,
   AlertCircle,
   Sparkles,
+  Upload,
+  Trash2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { LogoImg } from "@/components/LogoImg";
+import { TIPOS_VEICULO_LIST, STATUS_PARTNER_CONFIG } from "@/types/representacao-comercial.types";
 import {
   upsertParceiro,
   SEGMENTOS_MIDIA,
@@ -73,6 +79,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
   const [enriching, setEnriching] = useState(false);
   const [customSegmento, setCustomSegmento] = useState("");
 
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [wasValidated, setWasValidated] = useState(false);
 
@@ -80,6 +87,10 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
     razao_social: "",
     nome_fantasia: "",
     cnpj: "",
+    logo_url: "",
+    tipo_veiculo: "Painel OOH/DOOH",
+    status: "ativo",
+    comissao_padrao_percentual: 20.0,
     site: "",
     instagram: "",
     linkedin: "",
@@ -107,35 +118,86 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
       setErrors({});
       setWasValidated(false);
       setForm(
-        initial || {
-          razao_social: "",
-          nome_fantasia: "",
-          cnpj: "",
-          site: "",
-          instagram: "",
-          linkedin: "",
-          facebook: "",
-          segmentos: [],
-          modelo_remuneracao: "comissao_percentual",
-          comissao_padrao_pct: 20.0,
-          prazo_repasse: "30 dias após emissão da fatura",
-          condicoes_comerciais: "",
-          contato_nome: "",
-          contato_email: "",
-          contato_telefone: "",
-          chave_pix: "",
-          dados_bancarios: "",
-          endereco: "",
-          cidade: "",
-          uf: "",
-          cep: "",
-          observacoes: "",
-          ativo: true,
-        },
+        initial
+          ? {
+              ...initial,
+              logo_url: initial.logo_url ?? "",
+              tipo_veiculo: initial.tipo_veiculo ?? "Painel OOH/DOOH",
+              status: initial.status ?? (initial.ativo === false ? "inativo" : "ativo"),
+              comissao_padrao_percentual:
+                initial.comissao_padrao_percentual ?? initial.comissao_padrao_pct ?? 20.0,
+              comissao_padrao_pct:
+                initial.comissao_padrao_pct ?? initial.comissao_padrao_percentual ?? 20.0,
+            }
+          : {
+              razao_social: "",
+              nome_fantasia: "",
+              cnpj: "",
+              logo_url: "",
+              tipo_veiculo: "Painel OOH/DOOH",
+              status: "ativo",
+              comissao_padrao_percentual: 20.0,
+              site: "",
+              instagram: "",
+              linkedin: "",
+              facebook: "",
+              segmentos: [],
+              modelo_remuneracao: "comissao_percentual",
+              comissao_padrao_pct: 20.0,
+              prazo_repasse: "30 dias após emissão da fatura",
+              condicoes_comerciais: "",
+              contato_nome: "",
+              contato_email: "",
+              contato_telefone: "",
+              chave_pix: "",
+              dados_bancarios: "",
+              endereco: "",
+              cidade: "",
+              uf: "",
+              cep: "",
+              observacoes: "",
+              ativo: true,
+            },
       );
       setCustomSegmento("");
     }
   }, [open, initial]);
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("O arquivo de logo deve ter no máximo 5MB");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `partner_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      let bucket = "partner-logos";
+      let { error } = await supabase.storage.from(bucket).upload(path, file, {
+        upsert: true,
+        contentType: file.type,
+      });
+      if (error) {
+        bucket = "client-logos";
+        const r2 = await supabase.storage.from(bucket).upload(path, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+        if (r2.error) throw r2.error;
+      }
+      const { data: pubData } = supabase.storage.from(bucket).getPublicUrl(path);
+      const url = pubData?.publicUrl || path;
+      set({ logo_url: url });
+      toast.success("Logomarca do veículo parceiro enviada com sucesso!");
+    } catch (err: any) {
+      toast.error(`Erro no upload: ${err?.message || "Tente novamente"}`);
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
 
   const set = (patch: Partial<Parceiro>) => setForm((prev) => ({ ...prev, ...patch }));
 
@@ -332,6 +394,74 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
           className={`space-y-4 pt-2 ${wasValidated ? "was-validated" : ""}`}
         >
 
+          {/* Logomarca do Veículo Parceiro */}
+          <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
+            <Label className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
+              <ImageIcon className="size-3.5 text-primary" />
+              Logomarca do Veículo / Exibidor Parceiro
+            </Label>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="size-20 rounded-xl border border-dashed border-border bg-background flex items-center justify-center overflow-hidden shrink-0 relative group shadow-xs">
+                {form.logo_url ? (
+                  <div className="size-full flex items-center justify-center p-1.5 bg-white">
+                    <LogoImg
+                      stored={form.logo_url}
+                      alt={form.nome_fantasia || form.razao_social || "Logo"}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center p-2 text-muted-foreground">
+                    <Building2 className="size-7 mx-auto opacity-40 mb-1" />
+                    <span className="text-[10px] block font-medium">Sem logo</span>
+                  </div>
+                )}
+                {uploadingLogo && (
+                  <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                    <Loader2 className="size-5 animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-1.5 text-center sm:text-left">
+                <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                  <label
+                    htmlFor="logo-partner-upload"
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs"
+                  >
+                    <Upload className="size-3.5" />
+                    {uploadingLogo ? "Enviando..." : form.logo_url ? "Alterar Logomarca" : "Enviar Logomarca"}
+                  </label>
+                  <input
+                    id="logo-partner-upload"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    disabled={uploadingLogo}
+                    onChange={handleUploadLogo}
+                  />
+
+                  {form.logo_url && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/30 gap-1"
+                      onClick={() => set({ logo_url: "" })}
+                    >
+                      <Trash2 className="size-3.5" />
+                      Remover
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  PNG, JPG, WebP ou SVG (máx. 5MB). A logomarca será exibida nos cards, no catálogo e nas propostas comerciais enviadas aos anunciantes.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Identificação e CNPJ */}
           <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
             <Label className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
@@ -426,6 +556,48 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                   }}
                 />
                 <FormFieldError message={errors.razao_social} />
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium">Tipo de Veículo / Mídia Principal *</Label>
+                <Select
+                  value={form.tipo_veiculo || "Painel OOH/DOOH"}
+                  onValueChange={(v) => set({ tipo_veiculo: v })}
+                >
+                  <SelectTrigger className="mt-1 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_VEICULO_LIST.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo} className="text-xs">
+                        {tipo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium">Status da Parceria</Label>
+                <Select
+                  value={(form.status as any) || (form.ativo ? "ativo" : "inativo")}
+                  onValueChange={(v) => set({ status: v as any, ativo: v === "ativo" })}
+                >
+                  <SelectTrigger className="mt-1 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativo" className="text-xs text-emerald-600 font-medium">
+                      ● Ativo (Inventário disponível)
+                    </SelectItem>
+                    <SelectItem value="em_negociacao" className="text-xs text-amber-600 font-medium">
+                      ● Em Negociação (Contrato pendente)
+                    </SelectItem>
+                    <SelectItem value="inativo" className="text-xs text-slate-500 font-medium">
+                      ● Inativo (Pausado temporariamente)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

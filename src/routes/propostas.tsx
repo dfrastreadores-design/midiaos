@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Plus,
   Pencil,
@@ -19,7 +22,13 @@ import {
   Paperclip,
   Sliders,
   Compass,
+  Calculator,
+  Sparkles,
+  Handshake,
+  FileCheck2,
+  TrendingUp,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
 import {
   Table,
@@ -37,6 +46,18 @@ import { GerarApresentacaoDialog } from "@/components/GerarApresentacaoDialog";
 import { VisualizarPropostaDialog } from "@/components/VisualizarPropostaDialog";
 import { LayoutManagerDialog } from "@/components/LayoutManagerDialog";
 import { RecusarPropostaDialog } from "@/components/RecusarPropostaDialog";
+import { SimuladorPropostaModal } from "@/components/simulador/SimuladorPropostaModal";
+import { EspelhoPropostaModal } from "@/components/simulador/EspelhoPropostaModal";
+import {
+  listProposals,
+  deleteProposal,
+  convertProposalToPi,
+} from "@/lib/simulador-propostas.functions";
+import {
+  PROPOSAL_STATUS_LABELS,
+  Proposal,
+} from "@/types/simulador-proposta.types";
+import { formatBRL } from "@/lib/mock-data";
 import { useUserRoles } from "@/hooks/use-roles";
 import { usePropostas } from "@/hooks/use-propostas";
 import { PROPOSTA_STATUS_CONFIG, formatCurrency } from "@/lib/services/proposta-utils";
@@ -61,6 +82,55 @@ function Propostas() {
   const [visualizando, setVisualizando] = useState<Proposta | null>(null);
   const [recusando, setRecusando] = useState<Proposta | null>(null);
   const [planejamento360Open, setPlanejamento360Open] = useState(false);
+
+  // Estados e Queries do Simulador de Propostas
+  const qc = useQueryClient();
+  const [mainTab, setMainTab] = useState<"formais" | "simulador">("formais");
+  const [simuladorOpen, setSimuladorOpen] = useState(false);
+  const [editingSimuladorId, setEditingSimuladorId] = useState<string | null>(null);
+  const [espelhoProposalId, setEspelhoProposalId] = useState<string | null>(null);
+  const [simuladorSearch, setSimuladorSearch] = useState("");
+
+  const fetchSimulationsFn = useServerFn(listProposals);
+  const deleteSimPropFn = useServerFn(deleteProposal);
+  const convertSimToPiFn = useServerFn(convertProposalToPi);
+
+  const { data: simulatedProposals = [], isLoading: isLoadingSimulations } = useQuery({
+    queryKey: ["proposals"],
+    queryFn: () => fetchSimulationsFn({ data: {} }),
+  });
+
+  const deleteSimMutation = useMutation({
+    mutationFn: (id: string) => deleteSimPropFn({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+      toast.success("Simulação de proposta removida");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const convertSimMutation = useMutation({
+    mutationFn: (id: string) => convertSimToPiFn({ data: { proposal_id: id } }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+      qc.invalidateQueries({ queryKey: ["pis"] });
+      toast.success(`Pedido de Inserção gerado com sucesso! (${res.pi_numero})`);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const totalSimFaturado = simulatedProposals.reduce(
+    (acc, p) => acc + (Number(p.total_gross) - Number(p.total_discount)),
+    0,
+  );
+  const totalSimAgencia = simulatedProposals.reduce(
+    (acc, p) => acc + Number(p.total_net_agency),
+    0,
+  );
+  const totalSimVeiculos = simulatedProposals.reduce(
+    (acc, p) => acc + Number(p.total_payout_partners),
+    0,
+  );
 
   const totalBruto = propostas.reduce((s, p) => s + Number(p.valor_tabela || 0), 0);
   const totalLiquido = propostas.reduce((s, p) => s + Number(p.valor_negociado || 0), 0);
@@ -157,6 +227,19 @@ function Propostas() {
           >
             <FileUp className="size-4 mr-2" /> Importar PDF / PPTX
           </Button>
+
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
+            onClick={() => {
+              setEditingSimuladorId(null);
+              setSimuladorOpen(true);
+            }}
+            title="Simulador Multiveículos de Mídia com rateio de comissões e repasses aos parceiros"
+          >
+            <Calculator className="size-4" />
+            Simulador de Propostas
+          </Button>
+
           <Button
             onClick={() => {
               setEditing(null);
@@ -167,6 +250,23 @@ function Propostas() {
           </Button>
         </div>
       </div>
+
+      {/* Switcher de Visão: Propostas Formais vs Simulador */}
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as any)} className="space-y-4">
+        <TabsList className="bg-muted/50 p-1 rounded-xl">
+          <TabsTrigger value="formais" className="gap-2 text-xs">
+            <span>📋 Propostas Formais ({propostas.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="simulador" className="gap-2 text-xs">
+            <Calculator className="w-3.5 h-3.5 text-primary" />
+            <span>⚡ Simulador & Pacotes Multiveículos ({simulatedProposals.length})</span>
+            <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-primary/10 text-primary">
+              Comissões
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="formais" className="space-y-4 mt-0">
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Card>
@@ -345,6 +445,198 @@ function Propostas() {
           </Table>
         </CardContent>
       </Card>
+      </TabsContent>
+
+      {/* ABA: SIMULADOR & PACOTES MULTIVEÍCULOS */}
+      <TabsContent value="simulador" className="space-y-4 mt-0">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground uppercase font-medium">
+                Total de Simulações
+              </div>
+              <div className="text-2xl font-bold mt-1 text-foreground">
+                {simulatedProposals.length}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground uppercase font-medium">
+                Faturamento Total Cliente
+              </div>
+              <div className="text-2xl font-bold mt-1 text-foreground">
+                {formatBRL(totalSimFaturado)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-900/50">
+            <CardContent className="p-4">
+              <div className="text-xs text-emerald-700 dark:text-emerald-400 uppercase font-medium">
+                Receita da Agência (Comissões)
+              </div>
+              <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-300">
+                {formatBRL(totalSimAgencia)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-purple-50/40 dark:bg-purple-950/20 border-purple-200/60 dark:border-purple-900/50">
+            <CardContent className="p-4">
+              <div className="text-xs text-purple-700 dark:text-purple-400 uppercase font-medium">
+                Repasses a Veículos
+              </div>
+              <div className="text-2xl font-bold mt-1 text-purple-700 dark:text-purple-300">
+                {formatBRL(totalSimVeiculos)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            <div className="p-4 border-b flex items-center justify-between gap-3">
+              <Input
+                placeholder="Buscar simulação por cliente ou campanha..."
+                value={simuladorSearch}
+                onChange={(e) => setSimuladorSearch(e.target.value)}
+                className="max-w-md text-xs"
+              />
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingSimuladorId(null);
+                  setSimuladorOpen(true);
+                }}
+                className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Nova Simulação de Pacote
+              </Button>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="text-xs bg-muted/30">
+                  <TableHead>Cliente / Anunciante</TableHead>
+                  <TableHead>Campanha</TableHead>
+                  <TableHead className="text-center">Espaços</TableHead>
+                  <TableHead className="text-right">Faturado Cliente</TableHead>
+                  <TableHead className="text-right">Receita Agência</TableHead>
+                  <TableHead className="text-right">Repasse Veículos</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-center w-[140px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingSimulations ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground text-xs">
+                      Carregando propostas simuladas...
+                    </TableCell>
+                  </TableRow>
+                ) : simulatedProposals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-xs">
+                      Nenhuma simulação multiveículos salva ainda.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  simulatedProposals
+                    .filter((p) => {
+                      if (!simuladorSearch) return true;
+                      const q = simuladorSearch.toLowerCase();
+                      return (
+                        p.client_name.toLowerCase().includes(q) ||
+                        (p.campaign_title && p.campaign_title.toLowerCase().includes(q))
+                      );
+                    })
+                    .map((p) => {
+                      const netClient = Number(p.total_gross) - Number(p.total_discount);
+                      const st = PROPOSAL_STATUS_LABELS[p.status] || PROPOSAL_STATUS_LABELS.draft;
+                      return (
+                        <TableRow key={p.id} className="text-xs hover:bg-muted/30">
+                          <TableCell className="font-semibold text-foreground">
+                            {p.client_name}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {p.campaign_title || "—"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="text-[10px]">
+                              {p.items_count} espaço(s)
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-foreground">
+                            {formatBRL(netClient)}
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-emerald-700 dark:text-emerald-400">
+                            {formatBRL(p.total_net_agency)}
+                            <span className="text-[10px] text-muted-foreground block font-normal">
+                              ({p.profit_margin_percent}%)
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-purple-700 dark:text-purple-300">
+                            {formatBRL(p.total_payout_partners)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={st.bgBadge}>{st.label}</Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-primary hover:bg-primary/10"
+                                onClick={() => {
+                                  setEditingSimuladorId(p.id);
+                                  setSimuladorOpen(true);
+                                }}
+                                title="Editar Simulação"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 hover:bg-muted"
+                                onClick={() => setEspelhoProposalId(p.id)}
+                                title="Ver Espelho da Proposta"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </Button>
+                              {p.status !== "converted_to_pi" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                  onClick={() => convertSimMutation.mutate(p.id)}
+                                  disabled={convertSimMutation.isPending}
+                                  title="Gerar Pedido de Inserção (PI)"
+                                >
+                                  <FileCheck2 className="w-3.5 h-3.5" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                onClick={() => deleteSimMutation.mutate(p.id)}
+                                disabled={deleteSimMutation.isPending}
+                                title="Excluir Simulação"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      </Tabs>
 
       {formOpen && (
         <PropostaFormDialog
@@ -411,6 +703,20 @@ function Propostas() {
         open={planejamento360Open}
         onOpenChange={setPlanejamento360Open}
         onAplicarAoPlano={handleAplicarPlano360Direto}
+      />
+
+      {/* Modais do Simulador de Propostas */}
+      <SimuladorPropostaModal
+        open={simuladorOpen}
+        onOpenChange={setSimuladorOpen}
+        proposalId={editingSimuladorId}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ["proposals"] })}
+      />
+
+      <EspelhoPropostaModal
+        open={!!espelhoProposalId}
+        onOpenChange={(op) => !op && setEspelhoProposalId(null)}
+        proposalId={espelhoProposalId}
       />
     </AppShell>
   );

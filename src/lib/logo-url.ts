@@ -19,11 +19,18 @@ export async function getLogoSignedUrl(
   stored: string | null | undefined,
   expiresInSeconds = 3600,
 ): Promise<string | null> {
+  if (!stored) return null;
+  if (stored.startsWith("http://") || stored.startsWith("https://") || stored.startsWith("data:")) {
+    return stored;
+  }
   const path = logoStoragePath(stored);
   if (!path) return null;
   const { data, error } = await supabase.storage
     .from("client-logos")
     .createSignedUrl(path, expiresInSeconds);
-  if (error) return null;
+  if (error) {
+    const { data: pubData } = supabase.storage.from("partner-logos").getPublicUrl(path);
+    return pubData?.publicUrl || null;
+  }
   return data.signedUrl;
 }
