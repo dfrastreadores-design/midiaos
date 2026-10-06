@@ -915,3 +915,35 @@ export const confirmarLiquidacaoRepasse = createServerFn({ method: "POST" })
 
     return { success: true, all_settled: pendingSettlements.length === 0 };
   });
+
+/**
+ * 10. OBTER ITENS DO PI NA VISÃO DO CLIENTE (ESPELHO COMERCIAL COM PRODUÇÕES EMBUTIDAS CONSOLIDADAS)
+ */
+export const getClientFacingPiItems = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: { pi_id: string }) => z.object({ pi_id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    const client = supabaseAdmin || supabase;
+
+    const { data: items, error } = await (client.from("view_client_pi_items") as any)
+      .select(`
+        *,
+        vehicle:partners(id, nome_fantasia, razao_social, tipo_veiculo)
+      `)
+      .eq("pi_id", data.pi_id);
+
+    if (error) {
+      console.warn("[getClientFacingPiItems] Fallback da view:", error);
+      const { data: rawItems } = await (client.from("pi_items") as any)
+        .select(`
+          *,
+          vehicle:partners(id, nome_fantasia, razao_social, tipo_veiculo)
+        `)
+        .eq("pi_id", data.pi_id)
+        .eq("display_mode", "ITEMIZED");
+      return rawItems || [];
+    }
+
+    return items || [];
+  });
