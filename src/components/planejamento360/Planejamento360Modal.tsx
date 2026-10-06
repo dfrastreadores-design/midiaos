@@ -86,6 +86,7 @@ export function Planejamento360Modal({
   clienteId = null,
   onAplicarAoPlano,
 }: Props) {
+  const { isNexo } = useCurrentOrg();
   const gerarPlanoFn = useServerFn(gerarPlano360Comercial);
   const salvarDemandaFn = useServerFn(salvarDemandaCaptacao);
   const getDistinctLocsFn = useServerFn(getDistinctPracasECidades);
