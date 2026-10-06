@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { getInteligenciaRegiaoDF, PILARES_360, type RegiaoDFInteligencia } from "./df-regioes-inteligencia";
+import {
+  getInteligenciaRegiaoDF,
+  getInteligenciaGeografica,
+  PILARES_360,
+  type RegiaoDFInteligencia,
+} from "./df-regioes-inteligencia";
 import { isMasterEmail } from "@/lib/master-user";
 
 export interface ItemPlano360 {
@@ -111,7 +116,6 @@ export const salvarDemandaCaptacao = createServerFn({ method: "POST" })
 
       if (error) {
         console.warn("Aviso ao salvar em demandas_captacao:", error.message);
-        // Fallback seguro em memória caso a migração ainda esteja rodando
         return {
           ok: true,
           id: crypto.randomUUID(),
@@ -167,7 +171,11 @@ export const listDemandasCaptacao = createServerFn({ method: "GET" })
 const GerarPlano360Schema = z.object({
   cliente_id: z.string().uuid().nullable().optional(),
   cliente_nome: z.string().default("Cliente em Reunião"),
-  regiao_desafio: z.string().min(1, "Selecione a Região Administrativa do Desafio"),
+  tipo_abrangencia: z.enum(["local", "regional", "nacional"]).default("local"),
+  estado_uf: z.string().default("DF"),
+  cidade: z.string().default("Brasília"),
+  regiao_desafio: z.string().min(1, "Selecione a Região Administrativa ou Praça do Desafio"),
+  bairro_regiao: z.string().nullable().optional(),
   classes: z.array(z.string()).default(["Classe B/C"]),
   estilos_vida: z.array(z.string()).default(["Famílias/Moradores Locais"]),
   historico_sucesso: z.array(z.string()).default([]),
@@ -183,8 +191,13 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<Plano360Resultado> => {
     const { supabase, userId } = context;
 
-    // 1. Obter Inteligência Geográfica da RA selecionada
-    const intel = getInteligenciaRegiaoDF(data.regiao_desafio);
+    // 1. Obter Inteligência Geográfica adaptada (DF, Regional / Outros Estados ou Nacional)
+    const intel = getInteligenciaGeografica(
+      data.regiao_desafio,
+      data.estado_uf,
+      data.tipo_abrangencia,
+    );
+
 
     // 2. Buscar produtos com isolamento Multi-tenant estrito (Nexo vs Neutro)
     const { data: prof } = await supabase
@@ -218,15 +231,64 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     let q = supabase
       .from("produtos")
       .select(
-        "id, tenant_id, organizacao_id, origem_produto, nome, programa, tipo, formato, midia, canal_macro, endereco_ponto, latitude, longitude, link_maps, sentido_via, ponto_referencia, detalhes_venda, valor_unit, valor_tabela, parceiro_id, parceiro_nome",
+        "id, tenant_id, organizacao_id, origem_produto, nome, programa, tipo, formato, midia, canal_macro, endereco_ponto, latitude, longitude, link_maps, sentido_via, ponto_referencia, detalhes_venda, valor_unit, valor_tabela, parceiro_id, parceiro_nome, cidade, estado",
       )
       .eq("ativo", true);
 
     const { data: dbProdutos = [] } = await q;
+
+    // Buscar também catálogo de serviços e representação comercial (media_services_catalog)
+    let qCat = (supabase.from("media_services_catalog") as any)
+      .select("*, partner:partners(id, nome_fantasia, razao_social, tipo_veiculo, comissao_padrao_percentual)")
+      .eq("ativo", true);
+    if (tenantId) {
+      qCat = qCat.or(`tenant_id.is.null,tenant_id.eq.${tenantId}`);
+    }
+    const { data: dbCatalog = [] } = await qCat;
+
+    const catalogFormatados = (dbCatalog || []).map((cat: any) => ({
+      id: cat.id,
+      tenant_id: cat.tenant_id,
+      organizacao_id: cat.tenant_id,
+      origem_produto: cat.is_own_product ? "PROPRIO" : "PARCEIRO",
+      is_own_product: !!cat.is_own_product,
+      nome: cat.nome_produto,
+      programa: cat.nome_produto,
+      tipo: cat.categoria_midia || "DOOH",
+      formato: cat.tipo_cobranca || "insercao",
+      midia: cat.categoria_midia || "DOOH",
+      canal_macro: cat.categoria_midia === "Digital" ? "ON" : "OFF",
+      cidade: cat.cidade,
+      estado: cat.estado,
+      endereco_ponto: cat.endereco || (cat.cidade ? `${cat.cidade}/${cat.estado || ""}` : null),
+      latitude: cat.latitude,
+      longitude: cat.longitude,
+      link_maps:
+        cat.latitude && cat.longitude
+          ? `https://www.google.com/maps?q=${cat.latitude},${cat.longitude}`
+          : null,
+      sentido_via: cat.bairro,
+      ponto_referencia: cat.bairro,
+      detalhes_venda: {
+        praca: cat.cidade,
+        estado: cat.estado,
+        bairro: cat.bairro,
+        fluxo_veiculos_dia: 75000,
+        is_own_product: cat.is_own_product,
+      },
+      valor_unit: Number(cat.valor_tabela || 1000),
+      valor_tabela: Number(cat.valor_tabela || 1000),
+      parceiro_id: cat.partner_id,
+      parceiro_nome:
+        cat.partner?.nome_fantasia ||
+        cat.partner?.razao_social ||
+        (cat.is_own_product ? "Mídia.OS Portfólio Próprio" : "Veículo Parceiro"),
+    }));
+
     const isSuperAdmin = isMasterEmail(userEmail);
 
     // Filtragem Multi-tenant: Produtos próprios da Nexo só são visíveis para a Nexo
-    const todosProdutos = (dbProdutos || []).filter((p: any) => {
+    const produtosFiltrados = (dbProdutos || []).filter((p: any) => {
       if (isSuperAdmin) return true;
       const origem = p.origem_produto || (p.parceiro_id || p.parceiro_nome ? "PARCEIRO" : "PROPRIO");
       if (origem === "PROPRIO") {
@@ -241,17 +303,60 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
       return true; // Veículos parceiros representados são compartilhados
     });
 
-    // 3. Filtrar produtos que correspondem DIRETAMENTE à região
+    const todosProdutos = [...produtosFiltrados, ...catalogFormatados];
+
+    // 3. Filtrar produtos que correspondem à região / abrangência geográfica
+    const isNacional =
+      data.tipo_abrangencia === "nacional" ||
+      data.estado_uf === "BR" ||
+      data.regiao_desafio.toLowerCase().includes("nacional") ||
+      data.regiao_desafio.toLowerCase().includes("brasil");
     const regiaoTermo = data.regiao_desafio.toLowerCase();
+    const cidadeTermo = (data.cidade || "").toLowerCase();
+    const ufTermo = (data.estado_uf || "").toLowerCase();
     const apelidos = intel.apelidos.map((a) => a.toLowerCase());
 
     const pontosDiretos = todosProdutos.filter((p: any) => {
+      // REGRA DE PRIORIDADE MÁXIMA: Produtos próprios da representação sempre elegíveis com margem de 100%
+      if (p.is_own_product || p.origem_produto === "PROPRIO") {
+        return true;
+      }
+
+      if (isNacional) {
+        // Campanha Nacional: prioriza mídias digitais, TVs/rádios e inventários em capitais
+        const isDigitalOuRede =
+          p.midia === "DIGITAL" ||
+          p.canal_macro === "ON" ||
+          p.midia === "TV" ||
+          p.midia === "RADIO";
+        const isCapitais =
+          (p.cidade || "").toLowerCase().includes("brasília") ||
+          (p.cidade || "").toLowerCase().includes("são paulo") ||
+          (p.cidade || "").toLowerCase().includes("rio de janeiro") ||
+          (p.cidade || "").toLowerCase().includes("goiânia");
+        return isDigitalOuRede || isCapitais;
+      }
+
       const end = (p.endereco_ponto || "").toLowerCase();
       const prog = (p.programa || "").toLowerCase();
       const nome = (p.nome || "").toLowerCase();
-      const praca = (p.detalhes_venda?.praca || p.detalhes_venda?.regiao || "").toLowerCase();
+      const praca = (p.detalhes_venda?.praca || p.cidade || "").toLowerCase();
+      const est = (p.detalhes_venda?.estado || p.estado || "").toLowerCase();
       const ref = (p.ponto_referencia || "").toLowerCase();
 
+      // Fora do DF (ex: Luziânia-GO, Valparaíso, Goiânia, São Paulo, etc.)
+      if (ufTermo && ufTermo !== "df") {
+        const matchUf = est === ufTermo || end.includes(ufTermo);
+        const matchCidade =
+          cidadeTermo &&
+          (praca.includes(cidadeTermo) ||
+            end.includes(cidadeTermo) ||
+            nome.includes(cidadeTermo) ||
+            ref.includes(cidadeTermo));
+        return matchCidade || (matchUf && !cidadeTermo);
+      }
+
+      // Dentro do DF
       const matchRegiao =
         end.includes(regiaoTermo) ||
         prog.includes(regiaoTermo) ||
@@ -274,11 +379,9 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     const radarAcionado = !temPontosDiretos;
 
     // 4. Buscar pontos de TRANSBORDAMENTO / VIAS TRONCAIS se acionado o radar
-    // Ex: EPTG, Estrutural, EPIA, Pistão Sul, EPNB, BR-020
     const viasChaves = intel.viasTransbordamento.map((v) => v.via.toLowerCase());
 
     const pontosTransbordamento = todosProdutos.filter((p: any) => {
-      // Ignora se já estiver nos pontos diretos
       if (pontosDiretos.some((pd: any) => pd.id === p.id)) return false;
 
       const end = (p.endereco_ponto || "").toLowerCase();
@@ -294,13 +397,12 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
           nome.includes(via) ||
           sentido.includes(via) ||
           ref.includes(via) ||
-          // Busca pelas rodovias estruturais clássicas do DF
           (via.includes("eptg") && (end.includes("eptg") || ref.includes("eptg"))) ||
           (via.includes("estrutural") && (end.includes("estrutural") || ref.includes("estrutural"))) ||
           (via.includes("epia") && (end.includes("epia") || ref.includes("epia"))) ||
           (via.includes("epnb") && (end.includes("epnb") || ref.includes("epnb"))) ||
-          (via.includes("pistão") && (end.includes("pistão") || ref.includes("pistão"))) ||
-          (via.includes("br-020") && (end.includes("br-020") || end.includes("colorado"))),
+          (via.includes("br-040") && (end.includes("br-040") || end.includes("luziânia") || end.includes("valparaíso"))) ||
+          (via.includes("br-060") && (end.includes("br-060") || end.includes("goiânia"))),
       );
     });
 
@@ -314,7 +416,6 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
       digital: [],
     };
 
-    // Helper para criar item plano
     const adicionarItem = (
       pilarId: "deslocamento" | "moradia" | "lazer_consumo" | "ativacao_eventos" | "digital",
       item: ItemPlano360,
@@ -324,7 +425,6 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     };
 
     // PILAR 1: DESLOCAMENTO & RODOVIAS
-    // Se temos pontos diretos rodoviários ou de transbordamento, usa-os:
     const candRodovias = [...pontosDiretos, ...pontosTransbordamento].filter(
       (p: any) =>
         p.midia === "DOOH" ||
@@ -349,22 +449,28 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
         localizacao:
           topRodovia.endereco_ponto ||
           (isDireto
-            ? `${data.regiao_desafio} — Eixo de Acesso Principal`
+            ? `${data.regiao_desafio} (${data.estado_uf}) — Eixo de Acesso Principal`
             : `${intel.viasTransbordamento[0]?.via || "Via Troncal"} (Eixo de Transbordamento para ${data.regiao_desafio})`),
-        regiao: isDireto ? data.regiao_desafio : intel.viasTransbordamento[0]?.via || "DF Conexão",
+        regiao: isDireto ? data.regiao_desafio : intel.viasTransbordamento[0]?.via || `${data.estado_uf} Conexão`,
         via_troncal: intel.viasTransbordamento[0]?.via,
         latitude: topRodovia.latitude,
         longitude: topRodovia.longitude,
-        link_maps: topRodovia.link_maps || (topRodovia.latitude && topRodovia.longitude ? `https://www.google.com/maps?q=${topRodovia.latitude},${topRodovia.longitude}` : null),
-        sentido_via: topRodovia.sentido_via || `Sentido ${data.regiao_desafio} / Plano Piloto`,
-        ponto_referencia: topRodovia.ponto_referencia || `Via de retenção diária utilizada por moradores de ${data.regiao_desafio}`,
+        link_maps:
+          topRodovia.link_maps ||
+          (topRodovia.latitude && topRodovia.longitude
+            ? `https://www.google.com/maps?q=${topRodovia.latitude},${topRodovia.longitude}`
+            : null),
+        sentido_via: topRodovia.sentido_via || `Sentido ${data.regiao_desafio} / Eixo Central`,
+        ponto_referencia:
+          topRodovia.ponto_referencia ||
+          `Via de retenção diária utilizada pelo público de ${data.regiao_desafio}`,
         impactos_mes_estimados: Number(topRodovia.detalhes_venda?.fluxo_veiculos_dia || 85000) * 30,
         valor_tabela: Number(topRodovia.valor_tabela || topRodovia.valor_unit || 16000),
         valor_negociado: Number(topRodovia.valor_unit || 11500),
         desconto_pct: 28,
         insercoes_mes: 2880,
         justificativa_estrategica: isDireto
-          ? `Presença dominante e contínua dentro da geografia de ${data.regiao_desafio}, capturando o olhar de decisores no momento do trânsito.`
+          ? `Presença dominante e contínua dentro da geografia de ${data.regiao_desafio} (${data.estado_uf}), capturando o olhar de decisores no momento do trânsito.`
           : `Impacto indireto de alta eficácia na via troncal ${intel.viasTransbordamento[0]?.via || "principal"}, por onde quem mora em ${data.regiao_desafio} transita obrigatoriamente todos os dias.`,
         parceiro_nome: topRodovia.parceiro_nome || "Mídia.OS Rede Homologada",
       });
@@ -376,7 +482,7 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
         pilar_id: "deslocamento",
         pilar_nome: "1. Deslocamento & Rodovias",
         tipo_origem: "oportunidade_mapeamento",
-        nome: `Face de Retenção & Fluxo: ${intel.viasTransbordamento[0]?.via || "Rodovia de Acesso a " + data.regiao_desafio}`,
+        nome: `Face de Retenção & Fluxo: ${intel.viasTransbordamento[0]?.via || "Via de Acesso a " + data.regiao_desafio}`,
         tipo: "Painel LED / Front Light Rodoviário",
         formato: "Estático ou Vídeo Digital 10s",
         localizacao: `${intel.viasTransbordamento[0]?.via || "Rodovia Troncal"} — Ponto Estratégico em Mapeamento`,
@@ -387,12 +493,12 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
         valor_negociado: 10500,
         desconto_pct: 30,
         insercoes_mes: 2400,
-        justificativa_estrategica: `[Reserva Técnica 360°] Mapeamento exclusivo da melhor face rodoviária na via de transbordamento ${intel.viasTransbordamento[0]?.via || "troncal"} para capturar o fluxo de ida e volta da região.`,
+        justificativa_estrategica: `[Reserva Técnica 360°] Mapeamento exclusivo da melhor face rodoviária na via ${intel.viasTransbordamento[0]?.via || "troncal"} para capturar o fluxo de ida e volta da região de ${data.regiao_desafio}.`,
         parceiro_nome: "Oportunidade em Captação Sob Demanda",
       });
     }
 
-    // PILAR 2: MORADIA & ROTINA (ELEVADORES)
+    // PILAR 2: MORADIA & ROTINA (ELEVADORES / CONDOMÍNIOS)
     const candElevadores = todosProdutos.filter(
       (p: any) =>
         p.tipo?.toLowerCase().includes("elevador") ||
@@ -410,7 +516,7 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
       nome: `Circuito de Telas em Elevadores Residenciais — ${data.regiao_desafio}`,
       tipo: "Mídia em Elevador Residencial",
       formato: "Vídeo 15s Full HD + QR Code",
-      localizacao: `Condomínios Residenciais Verticais de ${data.regiao_desafio}`,
+      localizacao: `Condomínios Residenciais Verticais de ${data.regiao_desafio} (${data.estado_uf})`,
       regiao: data.regiao_desafio,
       impactos_mes_estimados: 450000,
       valor_tabela: 9500,
@@ -445,7 +551,9 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     });
 
     // PILAR 4: ATIVAÇÃO PRESENCIAL & EVENTOS (BLITZ NO PDV + RÁDIO)
-    const candRadio = todosProdutos.filter((p: any) => p.midia === "RADIO" || p.tipo?.toLowerCase().includes("rádio"));
+    const candRadio = todosProdutos.filter(
+      (p: any) => p.midia === "RADIO" || p.tipo?.toLowerCase().includes("rádio"),
+    );
     const radioBase = candRadio[0];
 
     adicionarItem("ativacao_eventos", {
@@ -469,7 +577,13 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
       parceiro_nome: radioBase?.parceiro_nome || radioBase?.nome || "Emissora de Rádio FM Parceira",
     });
 
-    // PILAR 5: CONEXÃO DIGITAL (TV CAR COM QR CODE + POSTS EM CANAIS DE GRANDE AUDIÊNCIA)
+    // PILAR 5: CONEXÃO DIGITAL & SOLUÇÕES PRÓPRIAS (100% MARGEM)
+    // REGRA DE PRIORIDADE MÁXIMA PARA PRODUTOS PRÓPRIOS DA REPRESENTAÇÃO
+    const candProprios = todosProdutos.filter(
+      (p: any) => p.is_own_product || p.origem_produto === "PROPRIO",
+    );
+    const topProprio = candProprios[0];
+
     const candDigital = todosProdutos.filter(
       (p: any) =>
         p.midia === "DIGITAL" ||
@@ -479,26 +593,49 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     );
     const digBase = candDigital[0];
 
-    adicionarItem("digital", {
-      id: crypto.randomUUID(),
-      produto_id: digBase?.id || null,
-      pilar_id: "digital",
-      pilar_nome: "5. Conexão Digital & Cross-Media",
-      tipo_origem: "confirmado",
-      nome: `TV Car com QR Code Interativo + Posts de Grande Audiência no DF`,
-      tipo: "TV Car & Digital Cross-Media",
-      formato: "Telão de LED Móvel com QR Code + Post Patrocinado Instagram",
-      localizacao: `Avenidas Comerciais de ${data.regiao_desafio} e Redes Digitais`,
-      regiao: data.regiao_desafio,
-      impactos_mes_estimados: 780000,
-      valor_tabela: 9500,
-      valor_negociado: 6800,
-      desconto_pct: 28,
-      insercoes_mes: 1800,
-      justificativa_estrategica:
-        "O elo final do funil de conversão: o consumidor vê o anúncio na rua e imediatamente escaneia o QR Code ou vê a marca nas redes para iniciar uma conversa no WhatsApp.",
-      parceiro_nome: digBase?.parceiro_nome || "Veículo Digital & TV Car Parceiro",
-    });
+    if (topProprio) {
+      adicionarItem("digital", {
+        id: crypto.randomUUID(),
+        produto_id: topProprio.id || null,
+        pilar_id: "digital",
+        pilar_nome: "5. Conexão Digital & Solução Própria da Representação",
+        tipo_origem: "confirmado",
+        nome: `${topProprio.nome} — Curadoria Estratégica & Inteligência Comercial`,
+        tipo: topProprio.tipo || "Mídia Programática & Planejamento",
+        formato: topProprio.formato || "Campanha Multi-Canal / Gestão 360°",
+        localizacao: `Cobertura em ${data.regiao_desafio} (${data.estado_uf}) e Ecossistema Digital`,
+        regiao: data.regiao_desafio,
+        impactos_mes_estimados: 850000,
+        valor_tabela: Number(topProprio.valor_tabela || 9500),
+        valor_negociado: Number(topProprio.valor_unit || 6800),
+        desconto_pct: 28,
+        insercoes_mes: 2000,
+        justificativa_estrategica:
+          "Solução própria da representação comercial com 100% de margem retida e entrega direta de alta performance, unificando inteligência de dados, tráfego e retargeting digital.",
+        parceiro_nome: "Mídia.OS Portfólio Próprio (100% Margem)",
+      });
+    } else {
+      adicionarItem("digital", {
+        id: crypto.randomUUID(),
+        produto_id: digBase?.id || null,
+        pilar_id: "digital",
+        pilar_nome: "5. Conexão Digital & Cross-Media",
+        tipo_origem: "confirmado",
+        nome: `TV Car com QR Code Interativo + Posts de Grande Audiência em ${data.estado_uf}`,
+        tipo: "TV Car & Digital Cross-Media",
+        formato: "Telão de LED Móvel com QR Code + Post Patrocinado Instagram",
+        localizacao: `Avenidas Comerciais de ${data.regiao_desafio} e Redes Digitais`,
+        regiao: data.regiao_desafio,
+        impactos_mes_estimados: 780000,
+        valor_tabela: 9500,
+        valor_negociado: 6800,
+        desconto_pct: 28,
+        insercoes_mes: 1800,
+        justificativa_estrategica:
+          "O elo final do funil de conversão: o consumidor vê o anúncio na rua e imediatamente escaneia o QR Code ou vê a marca nas redes para iniciar uma conversa no WhatsApp.",
+        parceiro_nome: digBase?.parceiro_nome || "Veículo Digital & TV Car Parceiro",
+      });
+    }
 
     // 6. Métricas Consolidadas
     const totalImpactos = itensResultado.reduce((acc, it) => acc + it.impactos_mes_estimados, 0);
@@ -507,12 +644,12 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     const totalNegociado = itensResultado.reduce((acc, it) => acc + it.valor_negociado, 0);
     const economiaTotal = totalTabela - totalNegociado;
     const descontoMedio = totalTabela > 0 ? (economiaTotal / totalTabela) * 100 : 0;
-    const cpmConsolidado = totalImpactos > 0 ? (totalNegociado / (totalImpactos / 1000)) : 0;
+    const cpmConsolidado = totalImpactos > 0 ? totalNegociado / (totalImpactos / 1000) : 0;
     const totalConfirmados = itensResultado.filter((it) => it.tipo_origem === "confirmado").length;
     const totalRadar = itensResultado.filter((it) => it.tipo_origem !== "confirmado").length;
 
     // 7. Conexão com Histórico de Sucesso
-    let conexaoHistorico = `A estratégia 360° foi calibrada para o perfil das classes ${data.classes.join(", ")} e estilo de vida "${data.estilos_vida.join(", ")}".`;
+    let conexaoHistorico = `A estratégia 360° foi calibrada para o perfil das classes ${data.classes.join(", ")} e estilo de vida "${data.estilos_vida.join(", ")}" em ${data.regiao_desafio} (${data.estado_uf}).`;
     if (data.historico_sucesso.length > 0) {
       conexaoHistorico += ` Identificamos que as ações de [${data.historico_sucesso.join(", ")}] já demonstraram tração comprovada no seu histórico. Por isso, potencializamos esses mesmos canais em sinergia com os novos pilares de retenção física e digital.`;
     }
@@ -524,30 +661,34 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     const pitchConsultor = intel.pitchConsultor;
 
     // 9. Defesa Comercial Executiva (Nexo Hub ou Neutro Mídia.OS)
+    const localidadeTitulo = isNacional
+      ? "ÂMBITO NACIONAL (BRASIL)"
+      : `${data.regiao_desafio.toUpperCase()} — ${data.estado_uf.toUpperCase()}`;
+
     const defesaComercial = isNexo
       ? `DEFESA ESTRATÉGICA 360° — NEXO MÍDIA E REPRESENTAÇÃO
 Cliente / Solicitante: ${data.cliente_nome.toUpperCase()}
-Região Foco: ${data.regiao_desafio} | Público: ${data.classes.join(", ")} (${data.estilos_vida.join(", ")})
+Praça / Território: ${localidadeTitulo} | Público: ${data.classes.join(", ")} (${data.estilos_vida.join(", ")})
 
 1. O PAPEL DA NEXO MÍDIA COMO HUB ESTRATÉGICO:
-A Nexo Mídia e Representação atua como Hub Estratégico conectando marcas aos melhores veículos e soluções 360° no Distrito Federal. Nossa curadoria reúne inventário próprio e veículos homologados em uma defesa comercial unificada e de alta rentabilidade.
+A Nexo Mídia e Representação atua como Hub Estratégico conectando marcas aos melhores veículos e soluções 360° com abrangência regional e nacional. Nossa curadoria reúne inventário próprio de alta rentabilidade (comissão integral) e veículos homologados em uma defesa comercial unificada.
 
 2. DIAGNÓSTICO DO TERRITÓRIO:
 ${intel.perfilPredominante}
 
 3. RACIONAL TÁTICO DOS 5 PILARES INTEGRADOS:
-Nossa estratégia não depende de um único canal isolado. O cliente é impactado no momento do deslocamento matinal nas vias troncais (${intel.viasTransbordamento[0]?.via || "principais rodovias"}), é reimpactado no silêncio do elevador residencial, encontra a marca nos momentos de almoço e lazer, presencia a autoridade da ativação ao vivo no PDV e tem o fechamento imediato na palma da mão pelo digital.
+Nossa estratégia não depende de um único canal isolado. O público é impactado no momento do deslocamento nas vias e corredores estratégicos (${intel.viasTransbordamento[0]?.via || "principais vias troncais"}), é reimpactado nos momentos de moradia e rotina, encontra a marca em polos de convivência e compras, experiencia a autoridade da ativação ao vivo no PDV e tem o fechamento imediato na palma da mão pelo digital.
 
 4. EFICIÊNCIA DE INVESTIMENTO (HUB NEXO):
 Com investimento total negociado de R$ ${totalNegociado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, geramos mais de ${totalImpactos.toLocaleString("pt-BR")} impactos qualificados no mês, resultando em um CPM altamente competitivo de R$ ${cpmConsolidado.toFixed(2)}.`
       : `DEFESA COMERCIAL ESTRATÉGICA 360° — ${data.cliente_nome.toUpperCase()}
-Região Foco: ${data.regiao_desafio} | Público: ${data.classes.join(", ")} (${data.estilos_vida.join(", ")})
+Praça / Território: ${localidadeTitulo} | Público: ${data.classes.join(", ")} (${data.estilos_vida.join(", ")})
 
 1. DIAGNÓSTICO DO TERRITÓRIO:
 ${intel.perfilPredominante}
 
 2. RACIONAL TÁTICO DOS 5 PILARES INTEGRADOS:
-Nossa estratégia não depende de um único canal isolado. O cliente é impactado no momento do deslocamento matinal nas vias troncais (${intel.viasTransbordamento[0]?.via || "principais rodovias"}), é reimpactado no silêncio do elevador residencial, encontra a marca nos momentos de almoço e lazer, presencia a autoridade da ativação ao vivo no PDV e tem o fechamento imediato na palma da mão pelo digital.
+Nossa estratégia não depende de um único canal isolado. O público é impactado no momento do deslocamento nas vias e corredores estratégicos (${intel.viasTransbordamento[0]?.via || "principais vias troncais"}), é reimpactado nos momentos de moradia e rotina, encontra a marca em polos de convivência e compras, experiencia a autoridade da ativação ao vivo no PDV e tem o fechamento imediato na palma da mão pelo digital.
 
 3. EFICIÊNCIA DE INVESTIMENTO:
 Com investimento de R$ ${totalNegociado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}, geramos mais de ${totalImpactos.toLocaleString("pt-BR")} impactos qualificados no mês, resultando em um CPM altamente competitivo de R$ ${cpmConsolidado.toFixed(2)}.`;
@@ -559,7 +700,7 @@ Com investimento de R$ ${totalNegociado.toLocaleString("pt-BR", { minimumFractio
       total_pontos_diretos: pontosDiretos.length,
       radar_acionado: radarAcionado,
       motivo_radar: radarAcionado
-        ? `A região ${data.regiao_desafio} possui inventário restrito no banco direto. O Radar de Expansão ativou automaticamente os pontos nas vias de transbordamento (${intel.viasTransbordamento.map((v) => v.via).join(", ")}) e as oportunidades de captação mapeadas.`
+        ? `A praça ${data.regiao_desafio} (${data.estado_uf}) possui inventário direto em expansão. O Radar Comercial ativou automaticamente os pontos nas vias de conexão (${intel.viasTransbordamento.map((v) => v.via).join(", ")}) e as oportunidades de captação sob demanda.`
         : undefined,
       pitch_consultor_reuniao: pitchConsultor,
       defesa_comercial_executiva: defesaComercial,
@@ -580,3 +721,4 @@ Com investimento de R$ ${totalNegociado.toLocaleString("pt-BR", { minimumFractio
       prospects_prospeccao_sugeridos: intel.prospectsLocaisSugeridos,
     };
   });
+

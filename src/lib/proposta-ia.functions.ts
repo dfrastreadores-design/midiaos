@@ -142,6 +142,12 @@ export const PropostaIaInputSchema = z.object({
   condicoes_pagamento: z.string().max(500).nullable().optional(),
   condicoes_especiais: z.string().max(500).nullable().optional(),
 
+  // Bloco Geográfico: Abrangência e Praça (Multi-Regional & Nacional)
+  tipo_abrangencia: z.enum(["local", "regional", "nacional"]).optional(),
+  estado_uf: z.string().max(10).optional(),
+  cidade: z.string().max(100).optional(),
+  bairro_regiao: z.string().max(150).optional(),
+
   // Campos adicionais / legados
   objetivo: z.string().max(300).nullable().optional(),
   publico: z.string().max(300).nullable().optional(),
@@ -151,6 +157,7 @@ export const PropostaIaInputSchema = z.object({
   foco_horario: z.string().max(100).nullable().optional(),
   observacoes: z.string().max(1000).nullable().optional(),
 });
+
 
 export type PropostaIaInput = z.infer<typeof PropostaIaInputSchema>;
 
@@ -224,6 +231,49 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
       score += 25;
     }
 
+    // REGRA DE PRIORIDADE MÁXIMA PARA PRODUTOS PRÓPRIOS DA REPRESENTAÇÃO (100% DE MARGEM)
+    if (p.is_own_product || p.origem_produto === "PROPRIO") {
+      score += 65;
+    }
+
+    // ABRANGÊNCIA GEOGRÁFICA / NACIONAL
+    const isNac =
+      data.tipo_abrangencia === "nacional" ||
+      (data.estado_uf || "").toUpperCase() === "BR" ||
+      (data.cidade || "").toLowerCase().includes("nacional");
+
+    if (isNac) {
+      if (isProdutoOn(p) || p.midia === "TV" || p.midia === "Radio") {
+        score += 35;
+      }
+      const cidNome = (p.cidade || "").toLowerCase();
+      if (
+        cidNome.includes("brasília") ||
+        cidNome.includes("são paulo") ||
+        cidNome.includes("rio de janeiro") ||
+        cidNome.includes("goiânia")
+      ) {
+        score += 25;
+      }
+    } else {
+      // Praça / Cidade e Estado específicos (DF ou qualquer outro estado do Brasil)
+      const cidFiltro = (data.cidade || "").toLowerCase().trim();
+      const ufFiltro = (data.estado_uf || "").toLowerCase().trim();
+      const pCid = (p.cidade || p.detalhes_venda?.praca || "").toLowerCase();
+      const pUf = (p.estado || p.detalhes_venda?.estado || "").toLowerCase();
+      const pEnd = (p.endereco_ponto || "").toLowerCase();
+
+      if (
+        cidFiltro &&
+        (pCid.includes(cidFiltro) || pEnd.includes(cidFiltro) || nome.includes(cidFiltro))
+      ) {
+        score += 55;
+      }
+      if (ufFiltro && (pUf === ufFiltro || pEnd.includes(ufFiltro))) {
+        score += 35;
+      }
+    }
+
     if (obj.includes("brand") || obj.includes("marca") || obj.includes("institucional")) {
       if (p.midia === "TV" || p.midia === "DOOH") score += 20;
     }
@@ -237,6 +287,7 @@ function gerarSugestaoHeuristica(data: PropostaIaInput, produtos: any[]): Sugest
 
     return { p, score };
   });
+
 
   scored.sort((a, b) => b.score - a.score);
 
@@ -447,16 +498,49 @@ export const sugerirPropostaIA = createServerFn({ method: "POST" })
       .maybeSingle();
     const tenantId = prof?.tenant_id;
 
-    // 2. Buscar produtos do catálogo do inquilino
+    // 2. Buscar produtos do catálogo geral e do catálogo de representação comercial
     let query = supabase.from("produtos").select("*").eq("ativo", true);
     if (tenantId) {
       query = query.eq("tenant_id", tenantId);
     }
-    const { data: produtosDb, error: errProd } = await query.order("valor_unit", {
-      ascending: false,
-    });
+    const { data: produtosRaw = [] } = await query.order("valor_unit", { ascending: false });
 
-    if (errProd) throw new Error(errProd.message);
+    let qCat = (supabase.from("media_services_catalog") as any)
+      .select("*, partner:partners(id, nome_fantasia, razao_social, tipo_veiculo, comissao_padrao_percentual)")
+      .eq("ativo", true);
+    if (tenantId) {
+      qCat = qCat.or(`tenant_id.is.null,tenant_id.eq.${tenantId}`);
+    }
+    const { data: catRaw = [] } = await qCat;
+
+    const catFormatados = (catRaw || []).map((c: any) => ({
+      id: c.id,
+      tenant_id: c.tenant_id,
+      nome: c.nome_produto,
+      programa: c.nome_produto,
+      tipo: c.categoria_midia || "DOOH",
+      formato: c.tipo_cobranca || "insercao",
+      faixa: "Geral",
+      midia: c.categoria_midia || "DOOH",
+      canal_macro: c.categoria_midia === "Digital" ? "ON" : "OFF",
+      valor_unit: Number(c.valor_tabela || 1000),
+      duracao_segundos: (c.especificacoes_tecnicas as any)?.duracao_segundos || 30,
+      insercoes_padrao: 1,
+      cidade: c.cidade,
+      estado: c.estado,
+      bairro: c.bairro,
+      endereco_ponto: c.endereco || (c.cidade ? `${c.cidade}/${c.estado || ""}` : null),
+      is_own_product: !!c.is_own_product,
+      origem_produto: c.is_own_product ? "PROPRIO" : "PARCEIRO",
+      parceiro_nome:
+        c.partner?.nome_fantasia ||
+        c.partner?.razao_social ||
+        (c.is_own_product ? "Mídia.OS Portfólio Próprio" : "Veículo Parceiro"),
+      ativo: true,
+    }));
+
+    const produtosDb = [...(produtosRaw || []), ...catFormatados];
+
     if (!produtosDb || produtosDb.length === 0) {
       throw new Error(
         "Seu catálogo ainda não possui produtos ativos cadastrados. Cadastre seus produtos na página de Produtos para que a IA possa elaborar sugestões sob medida.",
@@ -483,6 +567,9 @@ export const sugerirPropostaIA = createServerFn({ method: "POST" })
           valor_unit: p.valor_unit,
           duracao_segundos: p.duracao_segundos,
           insercoes_padrao: p.insercoes_padrao,
+          cidade: p.cidade,
+          estado: p.estado,
+          is_own_product: !!(p.is_own_product || p.origem_produto === "PROPRIO"),
           parceiro_nome: (p as any).parceiro_nome,
         }));
 
@@ -497,6 +584,12 @@ export const sugerirPropostaIA = createServerFn({ method: "POST" })
         const systemPrompt = `Você é um Diretor Comercial e Especialista em Mídia e Soluções Comerciais da Nexo Mídia e Representação.
 Sua missão é sugerir uma proposta comercial otimizada, estratégica e convincente para o cliente com base no Formulário de Briefing preenchido.
 REGRA FUNDAMENTAL: Você deve selecionar produtos de veiculação EXCLUSIVAMENTE a partir do catálogo fornecido. Não invente produtos que não estejam no catálogo.
+
+DIRETRIZES GEOGRÁFICAS E DE COBERTURA:
+- Se a praça indicada estiver fora do DF (ex: Luziânia-GO, Valparaíso, Goiânia, São Paulo, Rio de Janeiro, etc.), priorize com vigor veículos e inventários daquela localidade específica.
+- Se a campanha for de âmbito "Nacional" (ou multi-estadual), priorize mídias digitais/web, redes de TV/áudio nacional e circuitos de OOH/DOOH em aeroportos e capitais.
+- REGRA DE PRIORIDADE MÁXIMA PARA PRODUTOS PRÓPRIOS: Produtos com is_own_product = true (serviços de criação publicitária, planejamento estratégico, mídia programática própria e gestão de campanhas) possuem margem de 100% de lucro para a agência/representação e DEVEM SEMPRE ter prioridade máxima de recomendação, independentemente da praça do cliente.
+
 SINERGIA 360° (PHYGITAL): Caso a proposta combine produtos de Mídia OFF (pontos de rua, DOOH, outdoors, rádio, TV) e Mídia ON (digital, web, redes, portais), ou a preferência seja HÍBRIDO/TODOS, destaque obrigatoriamente na estratégia e na defesa comercial a sinergia entre o mundo físico (construção de autoridade, recall visual massivo e presença urbana) e o mundo digital (engajamento direto, cliques e conversão rápida via links).
 Retorne SEMPRE um JSON válido no formato especificado.`;
 
@@ -507,6 +600,12 @@ Retorne SEMPRE um JSON válido no formato especificado.`;
 - Nome e Cargo do Contato/Decisor: ${data.contato_decisor || "Não informado"}
 - Segmento de Atuação: ${data.segmento_atuacao || "Não informado"}
 - Momento ou Dor Principal do Cliente: ${data.dor_ou_momento || data.objetivo || "Crescimento de vendas e reconhecimento de marca"}
+
+[BLOCO GEOGRÁFICO: ABRANGÊNCIA E PRAÇA DA CAMPANHA]
+- Tipo de Abrangência: ${data.tipo_abrangencia || "Regional / Estadual"}
+- Estado / UF da Campanha: ${data.estado_uf || "DF"}
+- Cidade / Praça Foco: ${data.cidade || "Brasília"}
+- Bairro / Região Específica: ${data.bairro_regiao || "Ampla cobertura regional"}
 
 [BLOCO 2: SELEÇÃO DE SOLUÇÕES (PORTFÓLIO NEXO)]
 - Soluções Selecionadas: ${titulosSolucoes.length > 0 ? titulosSolucoes.join("; ") : "Mix Comercial Integrado"}
@@ -525,6 +624,7 @@ Retorne SEMPRE um JSON válido no formato especificado.`;
 - Mídias de preferência: ${data.midias && data.midias.length ? data.midias.join(", ") : "Todas do catálogo"}
 - Foco de Horário: ${data.foco_horario || "Equilibrado"}
 - Observações adicionais: ${data.observacoes || "Nenhuma"}
+
 
 CATÁLOGO DE PRODUTOS DISPONÍVEIS:
 ${JSON.stringify(catalogoSimplificado, null, 2)}

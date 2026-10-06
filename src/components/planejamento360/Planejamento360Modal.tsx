@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -62,9 +62,11 @@ import {
 } from "@/lib/planejamento-360.functions";
 import {
   TODAS_RAS_DF,
+  UFS_BRASIL,
   HISTORICO_SUCESSO_OPCOES,
   PILARES_360,
 } from "@/lib/df-regioes-inteligencia";
+import { getDistinctPracasECidades } from "@/lib/representacao-comercial.functions";
 
 type Props = {
   open: boolean;
@@ -86,8 +88,20 @@ export function Planejamento360Modal({
 }: Props) {
   const gerarPlanoFn = useServerFn(gerarPlano360Comercial);
   const salvarDemandaFn = useServerFn(salvarDemandaCaptacao);
+  const getDistinctLocsFn = useServerFn(getDistinctPracasECidades);
 
-  // 1. Briefing Comercial ao Vivo
+  // Consulta de praças e UFs cadastradas dinamicamente
+  const { data: locsData } = useQuery({
+    queryKey: ["distinct_pracas_cidades"],
+    queryFn: () => getDistinctLocsFn(),
+    enabled: open,
+  });
+
+  // 1. Briefing Comercial ao Vivo com Suporte Multi-Regional e Nacional
+  const [tipoAbrangencia, setTipoAbrangencia] = useState<"local" | "regional" | "nacional">("local");
+  const [estadoUf, setEstadoUf] = useState<string>("DF");
+  const [cidade, setCidade] = useState<string>("Brasília");
+  const [bairroRegiao, setBairroRegiao] = useState<string>("Ceilândia");
   const [regiaoDesafio, setRegiaoDesafio] = useState<string>("Ceilândia");
   const [classes, setClasses] = useState<string[]>(["Classe B/C"]);
   const [estilosVida, setEstilosVida] = useState<string[]>([
@@ -103,6 +117,71 @@ export function Planejamento360Modal({
   );
   const [orcamento, setOrcamento] = useState<number>(45000);
   const [duracaoDias, setDuracaoDias] = useState<number>(30);
+
+  // Handlers para troca dinâmica de praça e cobertura
+  const handleSelectTipoAbrangencia = (tipo: "local" | "regional" | "nacional") => {
+    setTipoAbrangencia(tipo);
+    if (tipo === "nacional") {
+      setRegiaoDesafio("Nacional / Todo o Brasil");
+      setEstadoUf("BR");
+      setCidade("Todo o Brasil");
+    } else if (tipo === "regional") {
+      const est = estadoUf === "BR" ? "GO" : estadoUf;
+      if (estadoUf === "BR") setEstadoUf("GO");
+      setRegiaoDesafio(cidade ? `${cidade} (${est})` : `${est} Regional`);
+    } else {
+      if (estadoUf === "BR") setEstadoUf("DF");
+      setRegiaoDesafio(bairroRegiao || cidade || "DF");
+    }
+  };
+
+  const handleSelectUf = (uf: string) => {
+    setEstadoUf(uf);
+    if (uf === "DF") {
+      setCidade("Brasília");
+      setBairroRegiao("Ceilândia");
+      setRegiaoDesafio(tipoAbrangencia === "local" ? "Ceilândia" : "Distrito Federal");
+    } else {
+      const cidadesDesteEstado = locsData?.cidadesPorEstado?.[uf] || [];
+      const primeiraCidade =
+        cidadesDesteEstado[0] ||
+        (uf === "GO" ? "Luziânia" : uf === "SP" ? "São Paulo" : uf === "RJ" ? "Rio de Janeiro" : "");
+      setCidade(primeiraCidade);
+      setBairroRegiao("");
+      setRegiaoDesafio(primeiraCidade ? `${primeiraCidade} (${uf})` : `${uf} Regional`);
+    }
+  };
+
+  const handleCidadeChange = (novaCidade: string) => {
+    setCidade(novaCidade);
+    if (tipoAbrangencia === "regional") {
+      setRegiaoDesafio(novaCidade ? `${novaCidade} (${estadoUf})` : `${estadoUf} Regional`);
+    } else if (tipoAbrangencia === "local") {
+      setRegiaoDesafio(bairroRegiao ? `${bairroRegiao} — ${novaCidade}` : novaCidade);
+    }
+  };
+
+  const handleRaChange = (novaRa: string) => {
+    setBairroRegiao(novaRa);
+    setRegiaoDesafio(novaRa);
+  };
+
+  const handleBairroChange = (novoBairro: string) => {
+    setBairroRegiao(novoBairro);
+    setRegiaoDesafio(novoBairro ? `${novoBairro} (${cidade || estadoUf})` : cidade || estadoUf);
+  };
+
+  // Cidades disponíveis para o estado selecionado
+  const cidadesDisponiveis = useMemo(() => {
+    if (estadoUf === "DF") return ["Brasília", "Taguatinga", "Ceilândia", "Águas Claras"];
+    const doEstado = locsData?.cidadesPorEstado?.[estadoUf] || [];
+    if (doEstado.length > 0) return doEstado;
+    if (estadoUf === "GO") return ["Luziânia", "Valparaíso de Goiás", "Goiânia", "Anápolis", "Águas Lindas"];
+    if (estadoUf === "SP") return ["São Paulo", "Campinas", "Guarulhos", "São Bernardo do Campo"];
+    if (estadoUf === "RJ") return ["Rio de Janeiro", "Niterói", "Duque de Caxias"];
+    if (estadoUf === "MG") return ["Belo Horizonte", "Uberlândia", "Contagem"];
+    return locsData?.cidadesCadastradas || [];
+  }, [estadoUf, locsData]);
 
   // Estado do Resultado
   const [resultado, setResultado] = useState<Plano360Resultado | null>(null);
@@ -122,7 +201,11 @@ export function Planejamento360Modal({
         data: {
           cliente_id: clienteId,
           cliente_nome: clienteNome || "Cliente em Reunião",
+          tipo_abrangencia: tipoAbrangencia,
+          estado_uf: estadoUf,
+          cidade: cidade,
           regiao_desafio: regiaoDesafio,
+          bairro_regiao: bairroRegiao,
           classes,
           estilos_vida: estilosVida,
           historico_sucesso: historicoSucesso,
@@ -141,6 +224,7 @@ export function Planejamento360Modal({
       toast.error(err?.message || "Falha ao gerar o planejamento 360°");
     },
   });
+
 
   // Mutation para Salvar Demanda de Captação no Radar
   const salvarDemandaMutation = useMutation({
@@ -285,45 +369,175 @@ export function Planejamento360Modal({
           {/* ========================================================================= */}
           {abaPrincipal === "diagnostico" && (
             <div className="space-y-6">
-              {/* Bloco 1: Região do Desafio */}
-              <div className="p-4 rounded-xl border bg-card/60 shadow-sm space-y-3">
-                <div className="flex items-center justify-between">
+              {/* Bloco 1: Abrangência Geográfica e Praça do Desafio (Multi-Regional & Nacional) */}
+              <div className="p-4 rounded-xl border bg-card/60 shadow-sm space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <MapPin className="size-4 text-primary" />
                     <Label className="text-sm font-bold text-foreground">
-                      1. Região Administrativa do Desafio (DF)
+                      1. Abrangência Geográfica & Praça da Campanha
                     </Label>
                   </div>
-                  <span className="text-xs text-muted-foreground">35 RAs mapeadas com rotas troncais</span>
+                  <Badge
+                    variant="outline"
+                    className="text-[11px] bg-primary/5 text-primary border-primary/20"
+                  >
+                    DF • Goiás/Entorno • Qualquer Estado do Brasil
+                  </Badge>
                 </div>
 
-                <div className="grid sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <Select value={regiaoDesafio} onValueChange={setRegiaoDesafio}>
-                      <SelectTrigger className="h-10 text-sm font-medium">
-                        <SelectValue placeholder="Selecione a Região do DF" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-72">
-                        {TODAS_RAS_DF.map((ra) => (
-                          <SelectItem key={ra} value={ra} className="text-sm">
-                            📍 {ra}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Input
-                      type="number"
-                      value={orcamento}
-                      onChange={(e) => setOrcamento(Number(e.target.value))}
-                      placeholder="Orçamento Alvo (R$)"
-                      className="h-10 text-sm"
-                    />
-                    <span className="text-[10px] text-muted-foreground mt-0.5 block">Budget Previsto</span>
+                {/* Tipo de Abrangência */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground block">
+                    Tipo de Abrangência da Campanha:
+                  </span>
+                  <div className="grid sm:grid-cols-3 gap-2">
+                    {[
+                      {
+                        id: "local",
+                        label: "Local / Hiperlocal",
+                        desc: "Bairros ou RAs específicas (ex: Ceilândia, Taguatinga, Jardins)",
+                      },
+                      {
+                        id: "regional",
+                        label: "Regional / Estadual",
+                        desc: "Cidades ou Estados (ex: DF, Entorno-GO, Goiânia, SP, MG, RJ)",
+                      },
+                      {
+                        id: "nacional",
+                        label: "Multi-estadual / Nacional",
+                        desc: "Cobertura ampla e simultânea em múltiplas praças e capitais",
+                      },
+                    ].map((tipo) => {
+                      const active = tipoAbrangencia === tipo.id;
+                      return (
+                        <button
+                          key={tipo.id}
+                          type="button"
+                          onClick={() => handleSelectTipoAbrangencia(tipo.id as any)}
+                          className={`p-2.5 rounded-lg border text-left transition-all ${
+                            active
+                              ? "bg-primary/10 border-primary text-primary shadow-xs font-medium"
+                              : "bg-background/80 hover:bg-muted/50 border-border text-muted-foreground"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span>{tipo.label}</span>
+                            {active && <CheckCircle2 className="size-3.5 text-primary" />}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1 leading-snug line-clamp-2">
+                            {tipo.desc}
+                          </p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
+
+                {/* Seleção Dinâmica de Estados e Cidades */}
+                {tipoAbrangencia !== "nacional" ? (
+                  <div className="grid sm:grid-cols-12 gap-3 pt-1">
+                    {/* Estado / UF */}
+                    <div className="sm:col-span-3 space-y-1">
+                      <Label className="text-xs font-medium">Estado / UF</Label>
+                      <Select value={estadoUf} onValueChange={handleSelectUf}>
+                        <SelectTrigger className="h-9 text-xs">
+                          <SelectValue placeholder="Selecione o Estado" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {UFS_BRASIL.map((u) => (
+                            <SelectItem key={u.uf} value={u.uf} className="text-xs">
+                              {u.uf} — {u.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Cidade */}
+                    <div className="sm:col-span-4 space-y-1">
+                      <Label className="text-xs font-medium">Cidade / Praça</Label>
+                      <div className="relative">
+                        <Input
+                          value={cidade}
+                          onChange={(e) => handleCidadeChange(e.target.value)}
+                          placeholder="Digite ou escolha a Cidade..."
+                          className="h-9 text-xs"
+                          list="cidades-planejamento-sugeridas"
+                        />
+                        <datalist id="cidades-planejamento-sugeridas">
+                          {cidadesDisponiveis.map((c) => (
+                            <option key={c} value={c} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
+
+                    {/* Bairro / Região / RA */}
+                    <div className="sm:col-span-3 space-y-1">
+                      <Label className="text-xs font-medium">
+                        {estadoUf === "DF" ? "Região Administrativa (RA)" : "Bairro / Região"}
+                      </Label>
+                      {estadoUf === "DF" ? (
+                        <Select value={bairroRegiao} onValueChange={handleRaChange}>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue placeholder="Selecione a RA" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {TODAS_RAS_DF.map((ra) => (
+                              <SelectItem key={ra} value={ra} className="text-xs">
+                                📍 {ra}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={bairroRegiao}
+                          onChange={(e) => handleBairroChange(e.target.value)}
+                          placeholder="Ex: Centro, Setor Bueno, Zona Sul..."
+                          className="h-9 text-xs"
+                        />
+                      )}
+                    </div>
+
+                    {/* Budget Previsto */}
+                    <div className="sm:col-span-2 space-y-1">
+                      <Label className="text-xs font-medium">Budget Alvo (R$)</Label>
+                      <Input
+                        type="number"
+                        value={orcamento}
+                        onChange={(e) => setOrcamento(Number(e.target.value))}
+                        placeholder="R$ 45.000"
+                        className="h-9 text-xs"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-primary flex items-center gap-1.5">
+                        <Globe className="size-3.5" /> Cobertura Nacional / Todo o Brasil Ativada
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        A IA sugerirá mídias digitais de alta capilaridade, redes de TV/áudio nacional e circuitos de OOH nas maiores capitais e aeroportos, com prioridade máxima para produtos próprios.
+                      </p>
+                    </div>
+                    <div className="w-full sm:w-36 shrink-0">
+                      <Label className="text-[10px] text-muted-foreground block mb-1">
+                        Budget Nacional (R$)
+                      </Label>
+                      <Input
+                        type="number"
+                        value={orcamento}
+                        onChange={(e) => setOrcamento(Number(e.target.value))}
+                        className="h-8 text-xs bg-background"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
+
 
               {/* Bloco 2: Perfil do Público-Alvo */}
               <div className="p-4 rounded-xl border bg-card/60 shadow-sm space-y-4">

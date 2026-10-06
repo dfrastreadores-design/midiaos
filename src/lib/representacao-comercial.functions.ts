@@ -544,3 +544,64 @@ export const getMediaCatalogStats = createServerFn({ method: "GET" })
       totalParceirosNegociacao: partnersList?.filter((p: any) => p.status === "em_negociacao").length || 0,
     };
   });
+
+/**
+ * 8. OBTER PRAÇAS, ESTADOS E CIDADES DINÂMICAS DO CATÁLOGO DE MÍDIAS
+ */
+export const getDistinctPracasECidades = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const tenantId = prof?.tenant_id || null;
+
+    let q = (supabase.from("media_services_catalog") as any)
+      .select("cidade, estado, bairro")
+      .eq("ativo", true);
+
+    if (tenantId) q = q.or(`tenant_id.is.null,tenant_id.eq.${tenantId}`);
+    const { data: catalogLocs } = await q;
+
+    // Também consultar produtos gerais para unificar cobertura
+    let qProd = (supabase.from("produtos") as any)
+      .select("cidade, estado, endereco_ponto, regiao_macro")
+      .eq("ativo", true);
+    if (tenantId) qProd = qProd.or(`tenant_id.is.null,tenant_id.eq.${tenantId}`);
+    const { data: prodLocs } = await qProd;
+
+    const estadosSet = new Set<string>();
+    const cidadesSet = new Set<string>();
+    const cidadesPorEstado: Record<string, string[]> = {};
+
+    const addLocation = (cid?: string | null, est?: string | null) => {
+      const uf = (est || "").trim().toUpperCase();
+      const city = (cid || "").trim();
+      if (uf) estadosSet.add(uf);
+      if (city) {
+        cidadesSet.add(city);
+        if (uf) {
+          if (!cidadesPorEstado[uf]) cidadesPorEstado[uf] = [];
+          if (!cidadesPorEstado[uf].includes(city)) cidadesPorEstado[uf].push(city);
+        }
+      }
+    };
+
+    catalogLocs?.forEach((item: any) => addLocation(item.cidade, item.estado));
+    prodLocs?.forEach((item: any) => addLocation(item.cidade, item.estado));
+
+    const ufsCadastradas = Array.from(estadosSet).sort();
+    const cidadesCadastradas = Array.from(cidadesSet).sort();
+
+    return {
+      ufsCadastradas,
+      cidadesCadastradas,
+      cidadesPorEstado,
+    };
+  });
+

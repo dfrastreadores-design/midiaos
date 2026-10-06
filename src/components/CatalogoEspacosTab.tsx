@@ -124,6 +124,7 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
   const [selectedPartner, setSelectedPartner] = useState<string>(initialPartnerId || "all");
   const [selectedCobranca, setSelectedCobranca] = useState<string>("all");
   const [selectedUF, setSelectedUF] = useState<string>("all");
+  const [selectedCidade, setSelectedCidade] = useState<string>("all");
 
   // Mutations
   const deleteMutation = useMutation({
@@ -147,6 +148,16 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
     });
     return Array.from(set).sort();
   }, [catalogItems]);
+
+  // Unique Cidades list filtered by selectedUF
+  const availableCidades = useMemo(() => {
+    const set = new Set<string>();
+    catalogItems.forEach((item) => {
+      if (selectedUF !== "all" && item.estado?.toUpperCase() !== selectedUF) return;
+      if (item.cidade) set.add(item.cidade.trim());
+    });
+    return Array.from(set).sort();
+  }, [catalogItems, selectedUF]);
 
   // Filtered Items
   const filteredItems = useMemo(() => {
@@ -172,6 +183,11 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
 
       // UF
       if (selectedUF !== "all" && item.estado?.toUpperCase() !== selectedUF) {
+        return false;
+      }
+
+      // Cidade
+      if (selectedCidade !== "all" && item.cidade?.toLowerCase() !== selectedCidade.toLowerCase()) {
         return false;
       }
 
@@ -203,6 +219,7 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
     selectedPartner,
     selectedCobranca,
     selectedUF,
+    selectedCidade,
   ]);
 
   // Statistics
@@ -230,6 +247,7 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
     setSelectedPartner("all");
     setSelectedCobranca("all");
     setSelectedUF("all");
+    setSelectedCidade("all");
   };
 
   const hasActiveFilters =
@@ -238,7 +256,8 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
     selectedOrigem !== "all" ||
     selectedPartner !== "all" ||
     selectedCobranca !== "all" ||
-    selectedUF !== "all";
+    selectedUF !== "all" ||
+    selectedCidade !== "all";
 
   return (
     <div className="space-y-6">
@@ -381,7 +400,7 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
           </div>
 
           {/* Advanced Filter Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1 border-t border-border/50">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1 border-t border-border/50">
             {/* Categoria de Mídia */}
             <Select value={selectedCategoria} onValueChange={setSelectedCategoria}>
               <SelectTrigger className="h-9 text-xs">
@@ -443,15 +462,36 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
             </Select>
 
             {/* UF / Estado */}
-            <Select value={selectedUF} onValueChange={setSelectedUF}>
+            <Select
+              value={selectedUF}
+              onValueChange={(v) => {
+                setSelectedUF(v);
+                setSelectedCidade("all");
+              }}
+            >
               <SelectTrigger className="h-9 text-xs">
-                <SelectValue placeholder="Localização (UF)" />
+                <SelectValue placeholder="UF / Estado" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Estados</SelectItem>
                 {availableUFs.map((uf) => (
                   <SelectItem key={uf} value={uf}>
                     {uf}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Cidade */}
+            <Select value={selectedCidade} onValueChange={setSelectedCidade}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="Cidade / Praça" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Cidades</SelectItem>
+                {availableCidades.map((cid) => (
+                  <SelectItem key={cid} value={cid}>
+                    {cid}
                   </SelectItem>
                 ))}
               </SelectContent>

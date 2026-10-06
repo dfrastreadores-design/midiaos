@@ -698,3 +698,162 @@ export const TODAS_RAS_DF = [
   "Arapoanga",
   "Água Quente",
 ];
+
+export const UFS_BRASIL = [
+  { uf: "DF", nome: "Distrito Federal" },
+  { uf: "GO", nome: "Goiás / Entorno" },
+  { uf: "SP", nome: "São Paulo" },
+  { uf: "RJ", nome: "Rio de Janeiro" },
+  { uf: "MG", nome: "Minas Gerais" },
+  { uf: "BA", nome: "Bahia" },
+  { uf: "PR", nome: "Paraná" },
+  { uf: "RS", nome: "Rio Grande do Sul" },
+  { uf: "SC", nome: "Santa Catarina" },
+  { uf: "PE", nome: "Pernambuco" },
+  { uf: "CE", nome: "Ceará" },
+  { uf: "ES", nome: "Espírito Santo" },
+  { uf: "MT", nome: "Mato Grosso" },
+  { uf: "MS", nome: "Mato Grosso do Sul" },
+  { uf: "AM", nome: "Amazonas" },
+  { uf: "PA", nome: "Pará" },
+  { uf: "MA", nome: "Maranhão" },
+  { uf: "PB", nome: "Paraíba" },
+  { uf: "RN", nome: "Rio Grande do Norte" },
+  { uf: "AL", nome: "Alagoas" },
+  { uf: "SE", nome: "Sergipe" },
+  { uf: "PI", nome: "Piauí" },
+  { uf: "TO", nome: "Tocantins" },
+  { uf: "RO", nome: "Rondônia" },
+  { uf: "AC", nome: "Acre" },
+  { uf: "RR", nome: "Roraima" },
+  { uf: "AP", nome: "Amapá" },
+] as const;
+
+export function getInteligenciaGeografica(
+  regiaoNome: string,
+  estadoUf?: string | null,
+  tipoAbrangencia?: "local" | "regional" | "nacional" | string | null,
+): RegiaoDFInteligencia {
+  const isNacional =
+    tipoAbrangencia === "nacional" ||
+    (estadoUf || "").toUpperCase() === "BR" ||
+    (regiaoNome || "").toLowerCase().includes("nacional") ||
+    (regiaoNome || "").toLowerCase().includes("brasil");
+
+  if (isNacional) {
+    return {
+      nome: "Cobertura Nacional / Todo o Brasil",
+      apelidos: ["Nacional", "Brasil", "Multi-estadual", "Todo o Brasil", "Todas as Praças"],
+      perfilPredominante:
+        "Planejamento com escala de âmbito nacional, integrando canais de massa digitais, portais web, redes de TV/áudio e circuitos estruturais de OOH nas principais capitais brasileiras.",
+      classesSugeridas: ["Classe A/B", "Classe B/C"],
+      estilosVidaSugeridos: ["Executivos/Tomadores de Decisão", "Famílias/Moradores Locais", "Consumo/Comércio"],
+      formatosRecomendados: [
+        {
+          formato: "Mídia Digital & Redes Nacionais (Web / Portais)",
+          icone: "Globe",
+          porQue: "Alcance multi-regional instantâneo com precisão geográfica e mensuração de cliques.",
+        },
+        {
+          formato: "Circuitos DOOH em Capitais & Aeroportos",
+          icone: "Monitor",
+          porQue: "Alta autoridade e impacto visual qualificado no trânsito aéreo e corporativo interestadual.",
+        },
+        {
+          formato: "Veiculação em Redes Nacionais de TV & Rádio",
+          icone: "Tv",
+          porQue: "Cobertura massiva e construção imediata de recall e credibilidade institucional.",
+        },
+      ],
+      viasTransbordamento: [
+        {
+          via: "Circuitos Aeroportuários e Capitais Principais (BSB, SP, RJ, BH, CWB, SSA, REC)",
+          descricao: "Eixos aéreos e rodovias troncais que conectam os principais polos econômicos do país.",
+          fluxoEstimado: "2.500.000+ passageiros/dia",
+          pontosEstrategicos: ["Aeroporto de Brasília", "Congonhas / Guarulhos (SP)", "Santos Dumont / Galeão (RJ)", "Confins (BH)"],
+        },
+      ],
+      prospectsLocaisSugeridos: [
+        {
+          categoria: "Grandes Redes e Marcas Nacionais",
+          exemplos: ["Franquias nacionais", "E-commerces", "Instituições financeiras e fintechs", "Grandes redes varejistas"],
+          contatoDica: "Proposta de cotas integradas de mídia multiplataforma e presença simultânea nos maiores mercados.",
+        },
+      ],
+      pitchConsultor:
+        "Nosso ecossistema opera como um Hub Estratégico de Mídia com cobertura nacional. Combinamos serviços próprios de inteligência e criação com parcerias homologadas em múltiplos estados, entregando escala unificada e rentabilidade comercial máxima.",
+    };
+  }
+
+  const ufUpper = (estadoUf || "").trim().toUpperCase();
+
+  // Se for fora do DF (ex: Goiás, São Paulo, etc.)
+  if (ufUpper && ufUpper !== "DF") {
+    const nomePraça = regiaoNome?.trim() || `Praça Regional (${ufUpper})`;
+    const viasSug =
+      ufUpper === "GO"
+        ? [
+            {
+              via: "BR-040 / BR-060 (Eixo Brasília • Luziânia • Valparaíso • Goiânia)",
+              descricao: `Corredor rodoviário com fluxo intenso de conexão entre o DF e as principais cidades de Goiás (${nomePraça}).`,
+              fluxoEstimado: "120.000+ veículos/dia",
+              pontosEstrategicos: ["Trecho Luziânia / Valparaíso", "Entrada de Goiânia", "Postos de retenção e pedágios"],
+            },
+          ]
+        : ufUpper === "SP"
+        ? [
+            {
+              via: "Marginais Tietê / Pinheiros & Corredores Metropolitanos de SP",
+              descricao: "Vias expressas de maior fluxo comercial e concentração de decisores na Grande São Paulo.",
+              fluxoEstimado: "350.000+ veículos/dia",
+              pontosEstrategicos: ["Av. Paulista", "Faria Lima", "Marginal Pinheiros", "Aeroporto de Congonhas"],
+            },
+          ]
+        : [
+            {
+              via: `Principais Avenidas Comerciais e Rodovias de Acesso — ${nomePraça} (${ufUpper})`,
+              descricao: `Corredores estratégicos de entrada, saída e comércio em ${nomePraça}.`,
+              fluxoEstimado: "65.000+ veículos/dia",
+              pontosEstrategicos: ["Centro Comercial", "Avenida Troncal Principal", "Entrada da Cidade"],
+            },
+          ];
+
+    return {
+      nome: `${nomePraça} — ${ufUpper}`,
+      apelidos: [nomePraça, ufUpper, `${nomePraça} - ${ufUpper}`, `${nomePraça}/${ufUpper}`],
+      perfilPredominante: `Região de forte tração comercial e polo econômico estratégico em ${ufUpper}, com alta circulação diária de moradores, frotas e público consumidor qualificado.`,
+      classesSugeridas: ["Classe B/C", "Classe A/B"],
+      estilosVidaSugeridos: ["Famílias/Moradores Locais", "Consumo/Comércio", "Executivos/Tomadores de Decisão"],
+      formatosRecomendados: [
+        {
+          formato: "Painéis de LED e Outdoors em Vias de Entrada",
+          icone: "Car",
+          porQue: "Impacto dominante na principal via de acesso da cidade com repetição obrigatória diária.",
+        },
+        {
+          formato: "Mídia Digital Local & Portais Regionais",
+          icone: "Globe",
+          porQue: "Hiper-segmentação por cidade com engajamento direto e direcionamento para WhatsApp da loja.",
+        },
+        {
+          formato: "Rádio Local e Ativações Promocionais",
+          icone: "Radio",
+          porQue: "Forte conexão afetiva e liderança de audiência comunitária no comércio da cidade.",
+        },
+      ],
+      viasTransbordamento: viasSug,
+      prospectsLocaisSugeridos: [
+        {
+          categoria: `Rede Lojista e Empresarial de ${nomePraça}`,
+          exemplos: [`CDL / Associação Comercial de ${nomePraça}`, "Concessionárias locais", "Redes de farmácias e supermercados"],
+          contatoDica: "Mapeamento ativo no radar de captação para novos inventários de mídia e contratos exclusivos.",
+        },
+      ],
+      pitchConsultor: `Nossa representação atua como hub completo de soluções em ${nomePraça} e ${ufUpper}. Oferecemos curadoria minuciosa dos melhores pontos da cidade com tabela comercial transparente e consultoria tática de mídia 360°.`,
+    };
+  }
+
+  // Caso padrão: DF
+  return getInteligenciaRegiaoDF(regiaoNome);
+}
+

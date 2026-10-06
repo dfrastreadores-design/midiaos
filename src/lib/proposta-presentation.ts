@@ -64,6 +64,8 @@ type Item = {
   ponto_referencia?: string | null;
   fluxo_veiculos_dia?: number | null;
   tipo_origem?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
 };
 
 const MESES_BR = [
@@ -4318,6 +4320,58 @@ export async function gerarPdfPropostaExecutivaCoBranding(
   const cardW = (W - 30 - 9) / 4; // 4 cards com espaçamento de 3mm
   const cardH = 17;
 
+  // Análise geográfica dinâmica para o resumo executivo
+  const ufsPresentes = new Set<string>();
+  const cidadesPresentes = new Set<string>();
+  let temNacional = false;
+
+  (p.itens || []).forEach((it) => {
+    if (it.estado) {
+      if (it.estado.toUpperCase() === "BR" || it.estado.toLowerCase().includes("nacional")) {
+        temNacional = true;
+      } else {
+        ufsPresentes.add(it.estado.toUpperCase());
+      }
+    }
+    if (it.cidade) {
+      if (it.cidade.toLowerCase().includes("nacional")) {
+        temNacional = true;
+      } else {
+        cidadesPresentes.add(it.cidade);
+      }
+    }
+    if (it.endereco_ponto?.toLowerCase().includes("nacional")) {
+      temNacional = true;
+    }
+  });
+
+  let pracasValor = "DF & Entorno";
+  let pracasSub = "alta densidade urbana";
+
+  if (temNacional || ufsPresentes.size > 3) {
+    pracasValor = "Âmbito Nacional";
+    pracasSub = ufsPresentes.size > 0 ? `${ufsPresentes.size} estados + cobertura digital` : "cobertura em todo o território nacional";
+  } else if (ufsPresentes.size > 0) {
+    const ufsArr = Array.from(ufsPresentes);
+    if (ufsArr.length === 1) {
+      const uf = ufsArr[0];
+      const cidArr = Array.from(cidadesPresentes);
+      if (cidArr.length > 0) {
+        pracasValor = `${cidArr[0]} / ${uf}`;
+        pracasSub = cidArr.length > 1 ? `${cidArr.length} praças em ${uf}` : `polo estratégico em ${uf}`;
+      } else {
+        pracasValor = `Estado de ${uf}`;
+        pracasSub = "cobertura regional";
+      }
+    } else {
+      pracasValor = ufsArr.join(", ");
+      pracasSub = `${ufsArr.length} estados atendidos`;
+    }
+  } else if (p.cliente?.cidade) {
+    pracasValor = p.cliente.uf ? `${p.cliente.cidade} / ${p.cliente.uf}` : p.cliente.cidade;
+    pracasSub = "praça do cliente";
+  }
+
   const cardsData = [
     {
       label: "IMPACTO ESTIMADO",
@@ -4326,9 +4380,9 @@ export async function gerarPdfPropostaExecutivaCoBranding(
       cor: COR_PRIMARY,
     },
     {
-      label: "PRAÇAS & COBERTURA",
-      val: p.cliente?.cidade || "DF & Entorno",
-      sub: "alta densidade urbana",
+      label: "PRAÇAS / ESTADOS ATENDIDOS",
+      val: pracasValor,
+      sub: pracasSub,
       cor: COR_DARK,
     },
     {
@@ -4389,7 +4443,20 @@ export async function gerarPdfPropostaExecutivaCoBranding(
   // 5. GRADE DA TABELA DE MÍDIA
   const tableY = 77;
   const tableData = (p.itens || []).map((it, idx) => {
-    const loc = it.endereco_ponto || "Ponto Estratégico Homologado";
+    let loc = "Ponto Estratégico Homologado";
+    if (it.cidade && it.estado) {
+      loc = `${it.cidade} / ${it.estado}`;
+      if (it.endereco_ponto && !it.endereco_ponto.includes(it.cidade)) {
+        loc += ` • ${it.endereco_ponto}`;
+      }
+    } else if (it.cidade) {
+      loc = it.cidade;
+    } else if (it.endereco_ponto) {
+      loc = it.endereco_ponto;
+    } else if (it.tipo?.toLowerCase().includes("próprio") || it.programa?.toLowerCase().includes("próprio")) {
+      loc = "Cobertura Nacional / Multi-Praça";
+    }
+
     const formato = it.formato || it.programa || it.tipo || "DOOH / LED";
     const qtd = `${it.total_insercoes || it.insercoes_dia || 1}x`;
     const vTab = fmtBRL(it.valor_tabela);
@@ -4400,7 +4467,7 @@ export async function gerarPdfPropostaExecutivaCoBranding(
 
   autoTable(doc, {
     startY: tableY,
-    head: [["#", "MEIO / FORMATO", "LOCALIZAÇÃO & PONTO FÍSICO", "QTD / PERÍODO", "VALOR TABELA", "DESCONTO", "TOTAL FATURADO"]],
+    head: [["#", "MEIO / FORMATO", "PRAÇA / LOCALIZAÇÃO", "QTD / PERÍODO", "VALOR TABELA", "DESCONTO", "TOTAL FATURADO"]],
     body: tableData,
     margin: { left: 15, right: 15 },
     theme: "grid",
@@ -4427,16 +4494,16 @@ export async function gerarPdfPropostaExecutivaCoBranding(
       6: { cellWidth: 36, halign: "right", fontStyle: "bold", textColor: [15, 23, 42] },
     },
     didDrawCell: (data) => {
-      // Se for a coluna de localização e tiver coordenadas ou maps, adiciona link ativo
+      // Se for a coluna de localização e tiver coordenadas ou maps válidos, adiciona link ativo
       if (data.section === "body" && data.column.index === 2) {
         const itemObj = (p.itens || [])[data.row.index];
         if (itemObj) {
           const lat = itemObj.latitude;
           const lng = itemObj.longitude;
           const mapUrl = itemObj.link_maps || (lat && lng ? `https://www.google.com/maps?q=${lat},${lng}` : null);
-          if (mapUrl) {
+          if (mapUrl && typeof mapUrl === "string" && mapUrl.trim().startsWith("http")) {
             doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, {
-              url: mapUrl,
+              url: mapUrl.trim(),
             });
           }
         }

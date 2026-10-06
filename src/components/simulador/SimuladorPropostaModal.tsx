@@ -70,10 +70,13 @@ import {
   getProposalById,
   convertProposalToPi,
 } from "@/lib/simulador-propostas.functions";
-import { listMediaCatalog } from "@/lib/representacao-comercial.functions";
+import { listMediaCatalog, getDistinctPracasECidades } from "@/lib/representacao-comercial.functions";
 import { listClientes } from "@/lib/clientes.functions";
 import { MediaServiceCatalogItem, TIPOS_COBRANCA_LABELS } from "@/types/representacao-comercial.types";
 import { cn } from "@/lib/utils";
+import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
+import { type ItemPlano360 } from "@/lib/planejamento-360.functions";
+import { UFS_BRASIL } from "@/lib/df-regioes-inteligencia";
 
 interface SimuladorPropostaModalProps {
   open: boolean;
@@ -98,6 +101,7 @@ export function SimuladorPropostaModal({
   const convertToPiFn = useServerFn(convertProposalToPi);
   const fetchCatalogFn = useServerFn(listMediaCatalog);
   const fetchClientesFn = useServerFn(listClientes);
+  const fetchPracasFn = useServerFn(getDistinctPracasECidades);
 
   // Queries
   const { data: catalogItems = [] } = useQuery({
@@ -109,6 +113,12 @@ export function SimuladorPropostaModal({
   const { data: clientesList = [] } = useQuery({
     queryKey: ["clientes_simulador"],
     queryFn: () => fetchClientesFn(),
+    enabled: open,
+  });
+
+  const { data: pracasInfo } = useQuery({
+    queryKey: ["pracas_cidades_catalog"],
+    queryFn: () => fetchPracasFn(),
     enabled: open,
   });
 
@@ -124,9 +134,49 @@ export function SimuladorPropostaModal({
   const [status, setStatus] = useState<string>("draft");
   const [items, setItems] = useState<ProposalSimulationItemInput[]>([]);
 
+  // AI Plan 360 State
+  const [aiPlanOpen, setAiPlanOpen] = useState(false);
+
   // Item Picker Modal State
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerUf, setPickerUf] = useState<string>("TODOS");
+  const [pickerCidade, setPickerCidade] = useState<string>("TODAS");
+
+  // Aplicar itens sugeridos pelo Planejamento 360° com IA
+  const handleApplyFromAiPlan = (itensSugeridos: ItemPlano360[]) => {
+    if (!itensSugeridos || itensSugeridos.length === 0) return;
+    const novosItens: ProposalSimulationItemInput[] = itensSugeridos.map((sug) => {
+      const matchCat = catalogItems.find(
+        (c) => c.id === sug.produto_id || c.nome_produto.toLowerCase() === sug.nome_produto.toLowerCase()
+      );
+      return {
+        media_service_id: matchCat?.id || (sug.produto_id.length > 20 ? sug.produto_id : undefined),
+        partner_id: matchCat?.partner_id,
+        product_name: sug.nome_produto,
+        is_own_product: sug.is_own_product ?? (sug.categoria === "Serviço Próprio" || !matchCat?.partner_id),
+        quantity: sug.insercoes || 1,
+        billing_type: (matchCat?.tipo_cobranca as any) || "insercao",
+        unit_price: sug.custo_unitario || (sug.custo_estimado / (sug.insercoes || 1)),
+        discount_type: "percent",
+        discount_value: 0,
+        agency_commission_percent: sug.is_own_product ? 100 : (matchCat?.comissao_parceiro_percentual ?? 20),
+        min_negotiated_unit_price: matchCat?.valor_negociado_minimo ? Number(matchCat.valor_negociado_minimo) : null,
+        partner: matchCat?.partner,
+        media_service: matchCat
+          ? {
+              id: matchCat.id,
+              categoria_midia: matchCat.categoria_midia,
+              cidade: matchCat.cidade,
+              estado: matchCat.estado,
+              imagem_url: matchCat.imagem_url,
+            }
+          : undefined,
+      };
+    });
+    setItems((prev) => [...prev, ...novosItens]);
+    toast.success(`${novosItens.length} itens do Plano Estratégico adicionados ao simulador!`);
+  };
 
   // Loading existing proposal
   useEffect(() => {
@@ -402,20 +452,32 @@ export function SimuladorPropostaModal({
         valor_negociado: totals.totalNetClient,
         valor_desconto: totals.totalDiscount,
         total_insercoes: items.reduce((acc, it) => acc + (it.quantity || 1), 0),
-        itens: calculated.map((it) => ({
-          tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Veículo Parceiro"),
-          programa: it.product_name,
-          formato: TIPOS_COBRANCA_LABELS[it.billing_type] || it.billing_type,
-          insercoes_dia: it.quantity,
-          total_insercoes: it.quantity,
-          valor_unit: it.unit_price,
-          valor_tabela: it.gross_price,
-          desconto: it.fin.discountPercent,
-          valor_negociado: it.net_client_val,
-          endereco_ponto: it.media_service?.cidade
-            ? `${it.media_service?.cidade}/${it.media_service?.estado || ""}`
-            : undefined,
-        })),
+        itens: calculated.map((it) => {
+          const cid = it.media_service?.cidade || null;
+          const uf = it.media_service?.estado || null;
+          let endPonto: string | undefined = undefined;
+          if (cid && uf) {
+            endPonto = `${cid} / ${uf}`;
+          } else if (cid) {
+            endPonto = cid;
+          } else if (it.is_own_product) {
+            endPonto = "Cobertura Nacional";
+          }
+          return {
+            tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Veículo Parceiro"),
+            programa: it.product_name,
+            formato: TIPOS_COBRANCA_LABELS[it.billing_type] || it.billing_type,
+            insercoes_dia: it.quantity,
+            total_insercoes: it.quantity,
+            valor_unit: it.unit_price,
+            valor_tabela: it.gross_price,
+            desconto: it.fin.discountPercent,
+            valor_negociado: it.net_client_val,
+            cidade: cid,
+            estado: uf,
+            endereco_ponto: endPonto,
+          };
+        }),
         observacoes: notes,
       };
 
@@ -432,15 +494,35 @@ export function SimuladorPropostaModal({
   // Filtro de itens no modal de busca do catálogo
   const filteredCatalogForPicker = useMemo(() => {
     const q = pickerSearch.trim().toLowerCase();
-    if (!q) return catalogItems;
-    return catalogItems.filter(
-      (it) =>
-        it.nome_produto.toLowerCase().includes(q) ||
-        it.partner?.nome_fantasia?.toLowerCase().includes(q) ||
-        it.partner?.razao_social.toLowerCase().includes(q) ||
-        it.cidade?.toLowerCase().includes(q),
-    );
-  }, [catalogItems, pickerSearch]);
+    return catalogItems.filter((it) => {
+      if (q) {
+        const matchesQuery =
+          it.nome_produto.toLowerCase().includes(q) ||
+          it.partner?.nome_fantasia?.toLowerCase().includes(q) ||
+          it.partner?.razao_social.toLowerCase().includes(q) ||
+          it.cidade?.toLowerCase().includes(q) ||
+          it.categoria_midia?.toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+      }
+      if (pickerUf !== "TODOS") {
+        if (pickerUf === "NACIONAL") {
+          if (!it.is_own_product && it.estado && it.estado !== "BR" && !it.estado.toLowerCase().includes("nacional")) {
+            return false;
+          }
+        } else {
+          if (it.estado && it.estado.toUpperCase() !== pickerUf.toUpperCase()) {
+            return false;
+          }
+        }
+      }
+      if (pickerCidade !== "TODAS") {
+        if (it.cidade && it.cidade.toLowerCase() !== pickerCidade.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [catalogItems, pickerSearch, pickerUf, pickerCidade]);
 
   const { totals, calculated } = computedItemsWithTotals;
 
@@ -470,6 +552,15 @@ export function SimuladorPropostaModal({
               </div>
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAiPlanOpen(true)}
+                  className="gap-1.5 text-xs h-9 bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Assistente 360° IA
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1032,27 +1123,73 @@ export function SimuladorPropostaModal({
 
       {/* MODAL DE SELEÇÃO DINÂMICA DO CATÁLOGO DE MÍDIAS */}
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
-          <DialogHeader className="p-4 border-b">
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b space-y-3">
             <DialogTitle className="text-base font-bold flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary" />
               Selecionar Espaço Publicitário do Catálogo
             </DialogTitle>
-            <div className="relative mt-2">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Pesquise por nome, veículo parceiro, formato ou cidade..."
-                value={pickerSearch}
-                onChange={(e) => setPickerSearch(e.target.value)}
-                className="pl-9 text-xs"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <div className="relative sm:col-span-6">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquise por nome, veículo parceiro..."
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  className="pl-9 text-xs h-8"
+                />
+              </div>
+              <div className="sm:col-span-3">
+                <Select
+                  value={pickerUf}
+                  onValueChange={(val) => {
+                    setPickerUf(val);
+                    setPickerCidade("TODAS");
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="UF / Âmbito" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    <SelectItem value="TODOS">Todos os Estados / Âmbitos</SelectItem>
+                    <SelectItem value="NACIONAL">Âmbito Nacional / Digital</SelectItem>
+                    {UFS_BRASIL.map((uf) => (
+                      <SelectItem key={uf} value={uf}>
+                        {uf}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="sm:col-span-3">
+                <Select
+                  value={pickerCidade}
+                  onValueChange={setPickerCidade}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Cidade" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    <SelectItem value="TODAS">Todas as Cidades</SelectItem>
+                    {(
+                      pickerUf !== "TODOS" && pickerUf !== "NACIONAL" && pracasInfo?.cidadesPorEstado?.[pickerUf]
+                        ? pracasInfo.cidadesPorEstado[pickerUf]
+                        : pracasInfo?.cidadesCadastradas || []
+                    ).map((cid: string) => (
+                      <SelectItem key={cid} value={cid}>
+                        {cid}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-4 divide-y">
             {filteredCatalogForPicker.length === 0 ? (
               <div className="py-12 text-center text-xs text-muted-foreground">
-                Nenhum espaço encontrado no catálogo com o termo pesquisado.
+                Nenhum espaço encontrado no catálogo com o filtro pesquisado.
               </div>
             ) : (
               filteredCatalogForPicker.map((cat) => (
@@ -1113,6 +1250,14 @@ export function SimuladorPropostaModal({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* MODAL DO PLANEJAMENTO ESTRATÉGICO 360° COM IA */}
+      <Planejamento360Modal
+        open={aiPlanOpen}
+        onOpenChange={setAiPlanOpen}
+        clienteNome={clientName}
+        onAplicarAoPlano={handleApplyFromAiPlan}
+      />
     </>
   );
 }
