@@ -1,0 +1,181 @@
+{
+  "iniciadoEm": "2026-10-06T04:03:08.069Z",
+  "baseUrl": "https://midiaos.online",
+  "passos": [
+    {
+      "nome": "Carregamento da Tela de Login",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:10.399Z",
+      "detalhes": {
+        "title": "Entrar — Mídia.OS"
+      }
+    },
+    {
+      "nome": "Login e Carregamento do Painel sem Loop/ReferenceError",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:12.843Z",
+      "detalhes": {
+        "tdzErrorsCount": 0
+      }
+    },
+    {
+      "nome": "Navegação Rota /clientes",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:17.084Z",
+      "detalhes": {
+        "rota": "/clientes"
+      }
+    },
+    {
+      "nome": "Navegação Rota /agencias",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:19.664Z",
+      "detalhes": {
+        "rota": "/agencias"
+      }
+    },
+    {
+      "nome": "Navegação Rota /parceiros",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:22.314Z",
+      "detalhes": {
+        "rota": "/parceiros"
+      }
+    },
+    {
+      "nome": "Navegação Rota /relatorios",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:25.293Z",
+      "detalhes": {
+        "rota": "/relatorios"
+      }
+    },
+    {
+      "nome": "Navegação Rota /produtos",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:28.969Z",
+      "detalhes": {
+        "rota": "/produtos"
+      }
+    },
+    {
+      "nome": "Módulo de Pedidos de Inserção Carregado",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:32.846Z",
+      "detalhes": {}
+    },
+    {
+      "nome": "Persistência de Dados Digitados em Modais Sobrepostos (UX)",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:33.907Z",
+      "detalhes": {
+        "esperado": "Campanha Homologação E2E Produção 2026",
+        "obtido": "Campanha Homologação E2E Produção 2026"
+      }
+    },
+    {
+      "nome": "Adição de Linha de Custo de Produção",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:34.595Z",
+      "detalhes": {}
+    },
+    {
+      "nome": "Alternância do Modo de Exibição de Produção (EMBEDDED / ITEMIZED)",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:35.633Z",
+      "detalhes": {}
+    },
+    {
+      "nome": "Cálculo de Split e Fechamento Financeiro com Produção",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:35.640Z",
+      "detalhes": {}
+    },
+    {
+      "nome": "Trava Mandatória de Checking Presente e Ativa",
+      "sucesso": true,
+      "timestamp": "2026-10-06T04:03:36.361Z",
+      "detalhes": {}
+    }
+  ],
+  "consoleLogs": [
+    {
+      "type": "log",
+      "text": "Mídia.OS PWA Service Worker registrado: https://midiaos.online/",
+      "url": "https://midiaos.online/login"
+    },
+    {
+      "type": "log",
+      "text": "Mídia.OS PWA Service Worker registrado: https://midiaos.online/",
+      "url": "https://midiaos.online/"
+    },
+    {
+      "type": "log",
+      "text": "Mídia.OS PWA Service Worker registrado: https://midiaos.online/",
+      "url": "https://midiaos.online/clientes"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://midiaos.online/clientes"
+    },
+    {
+      "type": "log",
+      "text": "Mídia.OS PWA Service Worker registrado: https://midiaos.online/",
+      "url": "https://midiaos.online/agencias"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://midiaos.online/agencias"
+    },
+    {
+      "type": "log",
+      "text": "Mídia.OS PWA Service Worker registrado: https://midiaos.online/",
+      "url": "https://midiaos.online/parceiros"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://midiaos.online/parceiros"
+    },
+    {
+      "type": "log",
+      "text": "Mídia.OS PWA Service Worker registrado: https://midiaos.online/",
+      "url": "https://midiaos.online/relatorios"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://midiaos.online/relatorios"
+    },
+    {
+      "type": "log",
+      "text": "Mídia.OS PWA Service Worker registrado: https://midiaos.online/",
+      "url": "https://midiaos.online/produtos"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://midiaos.online/produtos"
+    },
+    {
+      "type": "log",
+      "text": "Mídia.OS PWA Service Worker registrado: https://midiaos.online/",
+      "url": "https://midiaos.online/pi"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://midiaos.online/pi"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://midiaos.online/pi"
+    }
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "statusFinal": "SUCESSO_TOTAL"
+}
