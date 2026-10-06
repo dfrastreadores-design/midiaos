@@ -11,6 +11,7 @@ export interface RegiaoDFInteligencia {
     | "Famílias/Moradores Locais"
     | "Executivos/Tomadores de Decisão"
     | "Estudantes/Jovens"
+    | "Jovens/Estudantes"
     | "Consumo/Comércio"
   )[];
   formatosRecomendados: {
@@ -256,7 +257,7 @@ export const REGIOES_DF_INTELIGENCIA: Record<string, RegiaoDFInteligencia> = {
     apelidos: ["Águas Claras Vertical", "Avenida Castanheiras", "Avenida Araucárias", "Park Way / Águas Claras"],
     perfilPredominante: "Cidade 100% vertical de alto poder aquisitivo, jovem, tecnológica, com forte consumo de delivery, gastronomia e serviços premium.",
     classesSugeridas: ["Classe A/B", "Classe B/C"],
-    estilosVidaSugeridos: ["Famílias/Moradores Locais", "Executivos/Tomadores de Decisão", "Jovens/Estudantes"],
+    estilosVidaSugeridos: ["Famílias/Moradores Locais", "Executivos/Tomadores de Decisão", "Estudantes/Jovens"],
     formatosRecomendados: [
       {
         formato: "Mídia em Elevadores Residenciais (Circuitos Verticais)",
