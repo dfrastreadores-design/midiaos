@@ -805,6 +805,12 @@ export function EntityFormDialog({
               e.preventDefault();
             }
           }}
+          onEscapeKeyDown={(e) => {
+            e.stopPropagation();
+          }}
+          onPointerDownOutside={(e) => {
+            e.stopPropagation();
+          }}
         >
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>

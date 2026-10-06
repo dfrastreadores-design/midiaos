@@ -732,8 +732,8 @@ export function PriceCalculator({
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  // Sync only real external initial data changes. The calculator also emits its
-  // value to the parent; syncing that same emitted value back caused a render loop.
+  // Sincroniza apenas quando initialItems REALMENTE mudar externamente.
+  // Evita reset de itens quando a lista de produtos é invalidada ao cadastrar novo produto.
   useEffect(() => {
     const incomingSignature = calcItemsSignature(initialItems);
     if (
@@ -745,7 +745,7 @@ export function PriceCalculator({
 
     lastInitialSyncSignatureRef.current = incomingSignature;
     setItems(mapInitial());
-  }, [initialItems, allDbProdutos.length]);
+  }, [initialItems]);
 
   useEffect(() => {
     if (items.length > 0) {

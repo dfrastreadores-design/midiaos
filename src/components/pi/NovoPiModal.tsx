@@ -23,6 +23,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useFormDraft } from "@/hooks/use-form-draft";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -116,7 +117,7 @@ export function NovoPiModal({ open, onOpenChange, onSuccess }: Props) {
   const [commissionRate, setCommissionRate] = useState<number>(20);
   const [notes, setNotes] = useState<string>("");
 
-  const [items, setItems] = useState<FormItem[]>([
+  const defaultItems: FormItem[] = [
     {
       id: "media-1",
       vehicle_id: "",
@@ -131,7 +132,109 @@ export function NovoPiModal({ open, onOpenChange, onSuccess }: Props) {
       parent_media_item_id: null,
       is_commissionable: true,
     },
+  ];
+
+  const [items, setItems] = useState<FormItem[]>(defaultItems);
+
+  // Hook de Persistência Segura contra Perda Acidental de Dados
+  interface NovoPiDraftData {
+    clientId: string;
+    agencyId: string;
+    billingType: BillingType;
+    campaignTitle: string;
+    periodStart: string;
+    periodEnd: string;
+    commissionRate: number;
+    notes: string;
+    items: FormItem[];
+  }
+
+  const { loadDraft, saveDraft, clearDraft } = useFormDraft<NovoPiDraftData>({
+    draftKey: "novo_pi_modal_state",
+    initialData: {
+      clientId: "",
+      agencyId: "",
+      billingType: "REPRESENTATIVE_BILLING",
+      campaignTitle: "",
+      periodStart: new Date().toISOString().split("T")[0],
+      periodEnd: "",
+      commissionRate: 20,
+      notes: "",
+      items: defaultItems,
+    },
+  });
+
+  const [draftRestored, setDraftRestored] = useState<boolean>(false);
+  const draftInitializedRef = useRef<boolean>(false);
+
+  // Restaura automaticamente os dados já digitados pelo usuário se a janela foi fechada ou recarregada
+  useEffect(() => {
+    if (!open) return;
+    if (draftInitializedRef.current) return;
+
+    const draft = loadDraft();
+    if (draft && (draft.campaignTitle || draft.clientId || (draft.items && draft.items.length > 0))) {
+      if (draft.clientId) setClientId(draft.clientId);
+      if (draft.agencyId) setAgencyId(draft.agencyId);
+      if (draft.billingType) setBillingType(draft.billingType);
+      if (draft.campaignTitle) setCampaignTitle(draft.campaignTitle);
+      if (draft.periodStart) setPeriodStart(draft.periodStart);
+      if (draft.periodEnd) setPeriodEnd(draft.periodEnd);
+      if (draft.commissionRate !== undefined) setCommissionRate(draft.commissionRate);
+      if (draft.notes) setNotes(draft.notes);
+      if (draft.items && draft.items.length > 0) setItems(draft.items);
+      setDraftRestored(true);
+    }
+    draftInitializedRef.current = true;
+  }, [open, loadDraft]);
+
+  // Persiste em tempo real no localStorage enquanto o usuário digita
+  useEffect(() => {
+    if (!open) return;
+    if (campaignTitle || clientId || items.length > 0 || notes || agencyId) {
+      saveDraft({
+        clientId,
+        agencyId,
+        billingType,
+        campaignTitle,
+        periodStart,
+        periodEnd,
+        commissionRate,
+        notes,
+        items,
+      });
+    }
+  }, [
+    open,
+    clientId,
+    agencyId,
+    billingType,
+    campaignTitle,
+    periodStart,
+    periodEnd,
+    commissionRate,
+    notes,
+    items,
+    saveDraft,
   ]);
+
+  // Limpar / Descartar rascunho
+  const handleDiscardDraft = useCallback(() => {
+    if (window.confirm("Deseja descartar as informações digitadas e reiniciar o formulário?")) {
+      clearDraft();
+      setClientId("");
+      setAgencyId("");
+      setBillingType("REPRESENTATIVE_BILLING");
+      setCampaignTitle("");
+      setPeriodStart(new Date().toISOString().split("T")[0]);
+      setPeriodEnd("");
+      setCommissionRate(20);
+      setNotes("");
+      setItems(defaultItems);
+      setDraftRestored(false);
+      toast.info("Rascunho descartado.");
+    }
+  }, [clearDraft]);
 
   // Lista de itens de mídia elegíveis para serem pais de produções embutidas
   const mediaItems = useMemo(
@@ -259,6 +362,8 @@ export function NovoPiModal({ open, onOpenChange, onSuccess }: Props) {
       });
 
       toast.success(`Pedido de Inserção ${res.pi_number} criado com sucesso!`);
+      clearDraft();
+      setDraftRestored(false);
       onOpenChange(false);
       if (onSuccess) onSuccess(res.id!);
       qc.invalidateQueries({ queryKey: ["insertion_orders"] });
@@ -278,6 +383,7 @@ export function NovoPiModal({ open, onOpenChange, onSuccess }: Props) {
     notes,
     items,
     saveFn,
+    clearDraft,
     onOpenChange,
     onSuccess,
     qc,
@@ -285,7 +391,15 @@ export function NovoPiModal({ open, onOpenChange, onSuccess }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => {
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          e.stopPropagation();
+        }}
+      >
         <DialogHeader className="border-b pb-3">
           <DialogTitle className="text-lg flex items-center gap-2">
             <Layers className="size-5 text-primary" />
@@ -297,6 +411,24 @@ export function NovoPiModal({ open, onOpenChange, onSuccess }: Props) {
         </DialogHeader>
 
         <div className="space-y-5 py-2">
+          {/* AVISO DE RASCUNHO RECUPERADO */}
+          {draftRestored && (
+            <div className="flex items-center justify-between p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-950 dark:text-amber-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-amber-600 shrink-0" />
+                <span>Rascunho recuperado automaticamente. Seus dados e linhas adicionadas estão salvos.</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleDiscardDraft}
+                className="h-7 text-xs border-amber-400 text-amber-800 dark:text-amber-200 hover:bg-amber-500/20"
+              >
+                Descartar Rascunho
+              </Button>
+            </div>
+          )}
           {/* SELETOR DE MODALIDADE DE FATURAMENTO */}
           <div className="p-3.5 rounded-xl border bg-muted/20 space-y-2">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">

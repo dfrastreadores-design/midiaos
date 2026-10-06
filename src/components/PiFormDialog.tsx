@@ -51,6 +51,7 @@ import {
   errorInputClass,
   type FieldErrors,
 } from "@/lib/form-errors";
+import { useFormDraft } from "@/hooks/use-form-draft";
 
 const MESES = [
   "Janeiro",
@@ -216,6 +217,15 @@ export function PiFormDialog({
     return out;
   });
 
+  const draftKey = `pi_form_draft_${initial?.id || "novo"}`;
+  const { loadDraft, saveDraft, clearDraft } = useFormDraft<any>({
+    draftKey,
+    initialData: {},
+    enabled: true,
+  });
+  const lastInitializedIdRef = useRef<string | null | undefined>(undefined);
+  const [draftRestored, setDraftRestored] = useState<boolean>(false);
+
   const { data: clientes = [] } = useQuery({
     queryKey: ["clientes"],
     queryFn: () => listClientes(),
@@ -315,6 +325,47 @@ export function PiFormDialog({
 
   useEffect(() => {
     if (!open) return;
+    // Evita reset de dados já digitados quando o modal apenas ganha foco ou re-renderiza
+    if (lastInitializedIdRef.current === (initial?.id ?? "novo")) return;
+    lastInitializedIdRef.current = initial?.id ?? "novo";
+
+    // 1. Tenta recuperar rascunho salvo do localStorage
+    const savedDraft = loadDraft();
+    if (savedDraft && (savedDraft.campanha || savedDraft.cliente_id || savedDraft.agencia_id)) {
+      setClienteId(savedDraft.cliente_id ?? "");
+      setAgenciaId(savedDraft.agencia_id ?? "");
+      setTemAgencia(!!savedDraft.agencia_id);
+      setCampanha(savedDraft.campanha ?? "");
+      setMes(savedDraft.mes_veiculacao ?? now.getMonth() + 1);
+      setAno(savedDraft.ano_veiculacao ?? now.getFullYear());
+      setObservacao(savedDraft.observacao ?? "");
+      setFatContra(savedDraft.faturamento_contra ?? "");
+      setFatTipo(savedDraft.faturamento_tipo ?? "");
+      setDataFat((savedDraft.data_faturamento ?? "").split("T")[0]);
+      setDataEnvio((savedDraft.data_envio_nota ?? "").split("T")[0]);
+      setDataVenc((savedDraft.data_vencimento_nota ?? "").split("T")[0]);
+      setVencTipo(savedDraft.vencimento_tipo ?? "manual");
+      setPermuta(savedDraft.permuta ?? false);
+      setPermutaDetalhes(savedDraft.permuta_detalhes ?? "");
+      setPermutaValorFaturado(savedDraft.permuta_valor_faturado ?? "");
+      setValorOpec(savedDraft.valor_opec ?? "");
+      setValorManualAtivo(savedDraft.valor_manual_ativo ?? false);
+      setValorManual(savedDraft.valor_manual ?? "");
+      setEmailFaturamento(savedDraft.email_faturamento ?? "");
+      setProducaoTipo(savedDraft.producao_tipo ?? "");
+      setProducaoContato(savedDraft.producao_contato ?? "");
+      setProducaoData(savedDraft.producao_data ?? "");
+      setProducaoMaterial(savedDraft.producao_material_tipo ?? "");
+      setProducaoLocal(savedDraft.producao_localizacao ?? "");
+      setProducaoObs(savedDraft.producao_observacoes ?? "");
+      setEmissoraId(savedDraft.emissora_id ?? "");
+      setSemComissao(!!savedDraft.sem_comissao);
+      if (savedDraft.investimentos_mensais) setInvestimentosMensais(savedDraft.investimentos_mensais);
+      setDraftRestored(true);
+      return;
+    }
+
+    // 2. Fallback: inicializa do objeto initial normalmente
     setClienteId(initial?.cliente_id ?? "");
     setAgenciaId(initial?.agencia_id ?? "");
     setTemAgencia(!!initial?.agencia_id);
@@ -372,7 +423,75 @@ export function PiFormDialog({
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initial?.id, initial?.executivo_id]);
+  }, [open, initial?.id]);
+
+  // Persistência contínua dos dados no localStorage
+  useEffect(() => {
+    if (!open) return;
+    if (campanha || clienteId || agenciaId || observacao) {
+      saveDraft({
+        cliente_id: clienteId,
+        agencia_id: agenciaId,
+        campanha,
+        mes_veiculacao: mes,
+        ano_veiculacao: ano,
+        observacao,
+        faturamento_contra: fatContra,
+        faturamento_tipo: fatTipo,
+        data_faturamento: dataFat,
+        data_envio_nota: dataEnvio,
+        data_vencimento_nota: dataVenc,
+        vencimento_tipo: vencTipo,
+        permuta,
+        permuta_detalhes: permutaDetalhes,
+        permuta_valor_faturado: permutaValorFaturado,
+        valor_opec: valorOpec,
+        valor_manual_ativo: valorManualAtivo,
+        valor_manual: valorManual,
+        email_faturamento: emailFaturamento,
+        producao_tipo: producaoTipo,
+        producao_contato: producaoContato,
+        producao_data: producaoData,
+        producao_material_tipo: producaoMaterial,
+        producao_localizacao: producaoLocal,
+        producao_observacoes: producaoObs,
+        emissora_id: emissoraId,
+        sem_comissao: semComissao,
+        investimentos_mensais: investimentosMensais,
+      });
+    }
+  }, [
+    open,
+    clienteId,
+    agenciaId,
+    campanha,
+    mes,
+    ano,
+    observacao,
+    fatContra,
+    fatTipo,
+    dataFat,
+    dataEnvio,
+    dataVenc,
+    vencTipo,
+    permuta,
+    permutaDetalhes,
+    permutaValorFaturado,
+    valorOpec,
+    valorManualAtivo,
+    valorManual,
+    emailFaturamento,
+    producaoTipo,
+    producaoContato,
+    producaoData,
+    producaoMaterial,
+    producaoLocal,
+    producaoObs,
+    emissoraId,
+    semComissao,
+    investimentosMensais,
+    saveDraft,
+  ]);
 
   useEffect(() => {
     if (vencTipo === "manual") return;
@@ -891,6 +1010,8 @@ export function PiFormDialog({
           console.error("Falha ao regenerar PDF:", e);
         }
       }
+      clearDraft();
+      setDraftRestored(false);
       qc.invalidateQueries({ queryKey: ["pis"] });
       onOpenChange(false);
       if (propostaOrigemId) navigate({ to: "/pi" });
@@ -1113,6 +1234,31 @@ export function PiFormDialog({
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-6">
+          {draftRestored && (
+            <div className="flex items-center justify-between p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-950 dark:text-amber-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Info className="size-4 text-amber-600 shrink-0" />
+                <span>Rascunho recuperado automaticamente. Seus dados e produtos digitados estão seguros.</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (window.confirm("Deseja realmente descartar o rascunho salvo deste PI?")) {
+                    clearDraft();
+                    setDraftRestored(false);
+                    lastInitializedIdRef.current = undefined;
+                    toast.info("Rascunho descartado.");
+                  }
+                }}
+                className="h-7 text-xs border-amber-400 text-amber-800 dark:text-amber-200 hover:bg-amber-500/20"
+              >
+                Descartar Rascunho
+              </Button>
+            </div>
+          )}
+
           {!isProducaoOnly && (
             <>
               {/* 1. Partes envolvidas */}
@@ -1447,7 +1593,7 @@ export function PiFormDialog({
                   hint="Adicione produtos e marque as datas exatas de veiculação no calendário."
                 />
                 <PriceCalculator
-                  key={`${initial?.id || "new"}-${initial?.original_pi_id || ""}-${open ? "o" : "c"}`}
+                  key={`${initial?.id || "new"}-${initial?.original_pi_id || ""}`}
                   title=""
                   description=""
                   mes={mes}

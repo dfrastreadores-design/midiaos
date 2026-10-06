@@ -505,7 +505,15 @@ export function ProdutoFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-xl">
+        <DialogContent
+          className="max-w-xl"
+          onEscapeKeyDown={(e) => {
+            e.stopPropagation();
+          }}
+          onPointerDownOutside={(e) => {
+            e.stopPropagation();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{form.id ? "Editar produto" : "Novo produto"}</DialogTitle>
           </DialogHeader>
