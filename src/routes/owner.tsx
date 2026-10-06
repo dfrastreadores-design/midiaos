@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,6 @@ import { ModelosPropostaManager } from "@/components/owner/ModelosPropostaManage
 import { type ModeloPropostaCliente } from "@/types/modelo-proposta";
 import { AcessoNegadoScreen } from "@/components/AcessoNegadoScreen";
 import { supabase } from "@/integrations/supabase/client";
-import { useRef } from "react";
 import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
 
 import {
@@ -1577,7 +1576,14 @@ function TenantDialog({ editing, onSaved }: { editing: any | null; onSaved: () =
   const submit = async () => {
     if (!form.razao_social.trim()) return toast.error("Informe a razão social");
     try {
-      await save({ data: form });
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      await save({
+        data: form,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      } as any);
       toast.success(editing ? "Empresa atualizada" : "Empresa cadastrada");
       onSaved();
     } catch (e: any) {

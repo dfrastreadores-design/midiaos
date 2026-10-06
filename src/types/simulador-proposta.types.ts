@@ -54,6 +54,10 @@ export interface ProposalItem {
   notes?: string | null;
   created_at?: string;
 
+  photo_url?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+
   // Joined Partner Info
   partner?: {
     id: string;
@@ -70,7 +74,10 @@ export interface ProposalItem {
     cidade?: string | null;
     estado?: string | null;
     imagem_url?: string | null;
+    photo_url?: string | null;
     especificacoes_tecnicas?: any;
+    latitude?: number | null;
+    longitude?: number | null;
   } | null;
 }
 
@@ -81,6 +88,8 @@ export interface Proposal {
   client_id?: string | null;
   client_logo_url?: string | null;
   campaign_title?: string | null;
+  campaign_period?: string | null;
+  media_defense?: string | null;
   total_gross: number;
   total_discount: number;
   total_net_agency: number;

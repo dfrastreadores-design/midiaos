@@ -118,6 +118,8 @@ export const saveProposal = createServerFn({ method: "POST" })
       client_id?: string | null;
       client_logo_url?: string | null;
       campaign_title?: string | null;
+      campaign_period?: string | null;
+      media_defense?: string | null;
       status?: string;
       notes?: string | null;
       items: ProposalSimulationItemInput[];
@@ -183,6 +185,8 @@ export const saveProposal = createServerFn({ method: "POST" })
           client_id: data.client_id || null,
           client_logo_url: data.client_logo_url || null,
           campaign_title: data.campaign_title || null,
+          campaign_period: data.campaign_period || null,
+          media_defense: data.media_defense || null,
           total_gross: totals.totalGross,
           total_discount: totals.totalDiscount,
           total_net_agency: totals.totalNetAgency,
@@ -207,6 +211,8 @@ export const saveProposal = createServerFn({ method: "POST" })
           client_id: data.client_id || null,
           client_logo_url: data.client_logo_url || null,
           campaign_title: data.campaign_title || null,
+          campaign_period: data.campaign_period || null,
+          media_defense: data.media_defense || null,
           total_gross: totals.totalGross,
           total_discount: totals.totalDiscount,
           total_net_agency: totals.totalNetAgency,

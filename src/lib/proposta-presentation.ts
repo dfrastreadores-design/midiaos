@@ -197,6 +197,7 @@ export type PropostaApresentacao = {
   layout_midia?: "com_fotos" | "sem_fotos";
   mostrar_endereco?: boolean;
   mostrar_fotos?: boolean;
+  media_defense?: string | null;
   cliente?: Entidade;
   agencia?: Entidade;
   executivo?: {
@@ -5031,7 +5032,9 @@ export async function gerarPdfPropostaExecutivaCoBranding(
   });
 
   let textoDefesa = "";
-  if (defesasColetadas.length > 0 || totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
+  if (p.media_defense && p.media_defense.trim()) {
+    textoDefesa = p.media_defense.trim();
+  } else if (defesasColetadas.length > 0 || totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
     const trechos: string[] = [];
     if (veiculosMencionados.size > 0) {
       trechos.push(`Veiculação através de exibidores homologados de alta performance (${Array.from(veiculosMencionados).slice(0, 3).join(", ")}).`);

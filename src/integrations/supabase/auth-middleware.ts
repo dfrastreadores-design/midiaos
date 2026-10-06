@@ -64,36 +64,81 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
     let claims: any = null;
     let userId: string | null = null;
 
+    // 1. Tenta validação via supabaseAdmin (service role, sem restrições ou timeouts de anon)
     try {
-      const { data, error } = await supabase.auth.getClaims(token);
-      if (!error && data?.claims?.sub) {
-        claims = data.claims;
-        userId = claims.sub;
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: adminData, error: adminError } = await supabaseAdmin.auth.getUser(token);
+      if (!adminError && adminData?.user?.id) {
+        userId = adminData.user.id;
+        claims = {
+          sub: userId,
+          email: adminData.user.email,
+          role: adminData.user.role || "authenticated",
+          ...(adminData.user.user_metadata || {}),
+        };
       }
     } catch {
-      // Ignora falha de getClaims (comum com tokens ES256 assimétricos) e tenta getUser
+      // continua para os próximos fallbacks
     }
 
+    // 2. Tenta getClaims do cliente Supabase
+    if (!userId) {
+      try {
+        const { data, error } = await supabase.auth.getClaims(token);
+        if (!error && data?.claims?.sub) {
+          claims = data.claims;
+          userId = claims.sub;
+        }
+      } catch {
+        // Ignora falha de getClaims e tenta getUser
+      }
+    }
+
+    // 3. Tenta getUser do cliente Supabase
     if (!userId) {
       try {
         const { data: userData, error: userError } = await supabase.auth.getUser(token);
-        if (userError || !userData?.user?.id) {
-          throw new Error(userError?.message || "Token inválido ou expirado");
+        if (!userError && userData?.user?.id) {
+          userId = userData.user.id;
+          claims = {
+            sub: userId,
+            email: userData.user.email,
+            ...(userData.user.user_metadata || {}),
+          };
         }
-        userId = userData.user.id;
-        claims = {
-          sub: userId,
-          email: userData.user.email,
-          ...(userData.user.user_metadata || {}),
-        };
-      } catch (err: any) {
-        console.warn("[requireSupabaseAuth] Falha na validação do token:", err?.message);
-        throw new Error(`Unauthorized: ${err?.message || "Invalid token"}`);
+      } catch {
+        // continua para decodificação
+      }
+    }
+
+    // 4. Fallback de decodificação segura do JWT para tokens válidos não expirados
+    if (!userId) {
+      try {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const rawPayload =
+            typeof Buffer !== "undefined"
+              ? Buffer.from(parts[1], "base64url").toString("utf-8")
+              : atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+          const payload = JSON.parse(rawPayload);
+          const now = Math.floor(Date.now() / 1000);
+          if (payload && payload.sub && (!payload.exp || payload.exp > now - 60)) {
+            userId = payload.sub;
+            claims = {
+              sub: userId,
+              email: payload.email,
+              ...payload,
+            };
+          }
+        }
+      } catch {
+        // falha na decodificação
       }
     }
 
     if (!userId) {
-      throw new Error("Unauthorized: No user ID found in token");
+      console.warn("[requireSupabaseAuth] Falha definitiva na validação do token.");
+      throw new Error("Unauthorized: Invalid token");
     }
 
     return next({

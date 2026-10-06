@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -137,6 +137,7 @@ export function SimuladorPropostaModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [campaignTitle, setCampaignTitle] = useState("");
   const [notes, setNotes] = useState("");
+  const [mediaDefense, setMediaDefense] = useState<string>("");
   const [status, setStatus] = useState<string>("draft");
   const [items, setItems] = useState<ProposalSimulationItemInput[]>([]);
 
@@ -150,8 +151,11 @@ export function SimuladorPropostaModal({
   const [pickerCidade, setPickerCidade] = useState<string>("TODAS");
 
   // Aplicar itens sugeridos pelo Planejamento 360° com IA
-  const handleApplyFromAiPlan = (itensSugeridos: ItemPlano360[]) => {
+  const handleApplyFromAiPlan = (itensSugeridos: ItemPlano360[], defesaComercial?: string) => {
     if (!itensSugeridos || itensSugeridos.length === 0) return;
+    if (defesaComercial) {
+      setMediaDefense(defesaComercial);
+    }
     const novosItens: ProposalSimulationItemInput[] = itensSugeridos.map((sug) => {
       const matchCat = catalogItems.find(
         (c) => c.id === sug.produto_id || c.nome_produto.toLowerCase() === sug.nome_produto.toLowerCase()
@@ -194,6 +198,7 @@ export function SimuladorPropostaModal({
           setClientLogoUrl(prop.client_logo_url || "");
           setCampaignTitle(prop.campaign_title || "");
           setNotes(prop.notes || "");
+          setMediaDefense(prop.media_defense || "");
           setStatus(prop.status || "draft");
           if (prop.items && prop.items.length > 0) {
             setItems(
@@ -224,6 +229,7 @@ export function SimuladorPropostaModal({
       setClientLogoUrl("");
       setCampaignTitle("");
       setNotes("");
+      setMediaDefense("");
       setStatus("draft");
 
       // Se foi aberto com um item de catálogo específico
@@ -386,6 +392,7 @@ export function SimuladorPropostaModal({
           client_id: clientId,
           client_logo_url: clientLogoUrl || null,
           campaign_title: campaignTitle || "Campanha Multiveículos",
+          media_defense: mediaDefense || null,
           status: targetStatus || status,
           notes,
           items,
@@ -411,6 +418,7 @@ export function SimuladorPropostaModal({
           client_id: clientId,
           client_logo_url: clientLogoUrl || null,
           campaign_title: campaignTitle || "Campanha Multiveículos",
+          media_defense: mediaDefense || null,
           status: "approved",
           notes,
           items,
@@ -497,6 +505,7 @@ export function SimuladorPropostaModal({
           };
         }),
         observacoes: notes,
+        media_defense: mediaDefense || null,
       };
 
       await gerarPdfPropostaExecutivaCoBranding(propApres);
@@ -905,6 +914,24 @@ export function SimuladorPropostaModal({
           <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Tabela Interativa (Cols 1,2,3) */}
             <div className="lg:col-span-3 space-y-4">
+              {/* Defesa Estratégica do Plano de Mídia (Mandatória no PDF) */}
+              <div className="p-3.5 rounded-xl border border-amber-300/70 bg-amber-500/5 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    Defesa Estratégica do Plano de Mídia & Blindagem de Marca
+                  </Label>
+                  <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300/80">
+                    Mandatória no PDF do Cliente
+                  </Badge>
+                </div>
+                <Textarea
+                  placeholder="Argumentação estratégica de autoridade, recall de marca e métricas de impacto extraídas dos veículos e simulador IA..."
+                  value={mediaDefense}
+                  onChange={(e) => setMediaDefense(e.target.value)}
+                  className="text-xs min-h-[64px] bg-background/90 resize-y leading-relaxed"
+                />
+              </div>
               {items.length === 0 ? (
                 <div className="border-dashed border-2 rounded-xl py-16 text-center flex flex-col items-center justify-center space-y-3 bg-muted/20">
                   <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">

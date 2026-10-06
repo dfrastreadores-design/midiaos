@@ -95,6 +95,11 @@ export interface MediaServiceCatalogItem {
   estoque_espacos: number;
   impactos_estimados_mes?: number | null;
   insercoes_dia?: number | null;
+  spot_duration_seconds?: number | null;
+  screen_resolution?: string | null;
+  operating_hours?: string | null;
+  socioeconomic_class?: string | null;
+  photo_url?: string | null;
   endereco?: string | null;
   bairro?: string | null;
   cidade?: string | null;
