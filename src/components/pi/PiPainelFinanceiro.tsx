@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { QuickDateInput } from "@/components/ui/quick-date-input";
 import {
   Table,
   TableBody,
@@ -637,12 +638,11 @@ export function PiPainelFinanceiro({ pi, onRefresh, onOpenDossier }: Props) {
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Data do Pagamento</Label>
-              <Input
-                type="date"
-                className="h-9 text-xs"
+              <QuickDateInput
+                className="h-9"
                 value={pagamentoClienteForm.paid_date}
-                onChange={(e) =>
-                  setPagamentoClienteForm((prev) => ({ ...prev, paid_date: e.target.value }))
+                onChange={(val) =>
+                  setPagamentoClienteForm((prev) => ({ ...prev, paid_date: val }))
                 }
               />
             </div>

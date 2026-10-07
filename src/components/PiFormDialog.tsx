@@ -52,6 +52,7 @@ import {
   type FieldErrors,
 } from "@/lib/form-errors";
 import { useFormDraft } from "@/hooks/use-form-draft";
+import { QuickDateInput } from "@/components/ui/quick-date-input";
 
 const MESES = [
   "Janeiro",
@@ -329,9 +330,9 @@ export function PiFormDialog({
     if (lastInitializedIdRef.current === (initial?.id ?? "novo")) return;
     lastInitializedIdRef.current = initial?.id ?? "novo";
 
-    // 1. Tenta recuperar rascunho salvo do localStorage
+    // 1. Tenta recuperar rascunho salvo do localStorage apenas para NOVO PI
     const savedDraft = loadDraft();
-    if (savedDraft && (savedDraft.campanha || savedDraft.cliente_id || savedDraft.agencia_id)) {
+    if (!initial?.id && savedDraft && (savedDraft.campanha || savedDraft.cliente_id || savedDraft.agencia_id)) {
       setClienteId(savedDraft.cliente_id ?? "");
       setAgenciaId(savedDraft.agencia_id ?? "");
       setTemAgencia(!!savedDraft.agencia_id);
@@ -1908,10 +1909,9 @@ export function PiFormDialog({
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs">Envio da nota</Label>
-                      <Input
-                        type="date"
+                      <QuickDateInput
                         value={dataEnvio}
-                        onChange={(e) => setDataEnvio(e.target.value)}
+                        onChange={setDataEnvio}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -1928,11 +1928,10 @@ export function PiFormDialog({
                           </SelectContent>
                         </Select>
                       </Label>
-                      <Input
-                        type="date"
+                      <QuickDateInput
                         value={dataVenc}
-                        onChange={(e) => {
-                          setDataVenc(e.target.value);
+                        onChange={(val) => {
+                          setDataVenc(val);
                           if (vencTipo !== "manual") setVencTipo("manual");
                         }}
                       />
@@ -2003,10 +2002,9 @@ export function PiFormDialog({
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Data da produção (combinar previamente)</Label>
-                    <Input
-                      type="date"
+                    <QuickDateInput
                       value={producaoData}
-                      onChange={(e) => setProducaoData(e.target.value)}
+                      onChange={setProducaoData}
                     />
                   </div>
                   <div className="space-y-1.5">

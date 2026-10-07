@@ -4,6 +4,7 @@ import { useState } from "react";
 
 const nav = [
   { to: "/site", label: "Início" },
+  { to: "/site/inventario", label: "Inventário OOH" },
   { to: "/site/recursos", label: "Recursos" },
   { to: "/site/precos", label: "Preços" },
   { to: "/site/contato", label: "Contato" },
@@ -147,6 +148,11 @@ export function SiteFooter() {
         <div>
           <h4 className="text-sm font-semibold mb-3 text-white">Produto</h4>
           <ul className="space-y-2 text-sm text-[var(--m-muted)]">
+            <li>
+              <Link to="/site/inventario" className="hover:text-white">
+                Inventário &amp; Mapa OOH
+              </Link>
+            </li>
             <li>
               <Link to="/site/recursos" className="hover:text-white">
                 Recursos

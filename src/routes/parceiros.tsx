@@ -54,6 +54,8 @@ import {
   Facebook,
   LayoutGrid,
   Table as TableIcon,
+  FolderSync,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LogoImg } from "@/components/LogoImg";
@@ -72,14 +74,22 @@ import {
   SEGMENTOS_MIDIA,
   type Parceiro,
 } from "@/lib/parceiros.functions";
+import {
+  PERFIS_COMERCIAIS,
+  type PerfilComercialEntidade,
+} from "@/types/representacao-comercial.types";
 import { ParceiroFormDialog } from "@/components/ParceiroFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
+import { DriveSyncResultModal } from "@/components/DriveSyncResultModal";
+import { sincronizarDriveParceiros } from "@/lib/drive-sync.functions";
+import type { DriveSyncSummary } from "@/types/drive-sync.types";
 import { useUserRoles } from "@/hooks/use-roles";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
+import { CircuitosBundlesManager } from "@/components/circuitos/CircuitosBundlesManager";
 
 export const Route = createFileRoute("/parceiros")({
-  head: () => ({ meta: [{ title: "Parceiros de Mídia — Mídia.OS" }] }),
+  head: () => ({ meta: [{ title: "Parceiros & Entidades — Mídia.OS" }] }),
   component: ParceirosPage,
 });
 
@@ -94,6 +104,7 @@ export function ParceirosPage() {
   const [search, setSearch] = useState("");
   const [segmentoFiltro, setSegmentoFiltro] = useState<string>("todos");
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativos" | "inativos">("todos");
+  const [perfilFiltro, setPerfilFiltro] = useState<string>("todos");
   const [viewMode, setViewMode] = useState<"cards" | "tabela">("cards");
 
   // Dialogs
@@ -105,11 +116,33 @@ export function ParceirosPage() {
   const [anexoParceiro, setAnexoParceiro] = useState<Parceiro | null>(null);
   const [midiaKitOpen, setMidiaKitOpen] = useState(false);
   const [midiaKitParceiroId, setMidiaKitParceiroId] = useState<string | undefined>(undefined);
+  const [driveSyncOpen, setDriveSyncOpen] = useState(false);
+  const [driveSyncSummary, setDriveSyncSummary] = useState<DriveSyncSummary | null>(null);
+  const [circuitosManagerOpen, setCircuitosManagerOpen] = useState(false);
+
+  const syncDriveFn = useServerFn(sincronizarDriveParceiros);
 
   // Queries
   const { data: parceiros = [], isLoading } = useQuery<Parceiro[]>({
     queryKey: ["parceiros"],
     queryFn: () => listFn(),
+  });
+
+  // Mutação de sincronização com o Google Drive
+  const syncDriveMut = useMutation({
+    mutationFn: () => syncDriveFn(),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["parceiros"] });
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+      setDriveSyncSummary(res);
+      setDriveSyncOpen(true);
+      toast.success("Sincronização com o Google Drive concluída!", {
+        description: res.mensagem,
+      });
+    },
+    onError: (e: Error) => {
+      toast.error(e.message || "Erro ao sincronizar com Google Drive");
+    },
   });
 
   // Mutação de exclusão
@@ -146,9 +179,13 @@ export function ParceirosPage() {
         (statusFiltro === "ativos" && p.ativo) ||
         (statusFiltro === "inativos" && !p.ativo);
 
-      return matchSearch && matchSegmento && matchStatus;
+      const matchPerfil =
+        perfilFiltro === "todos" ||
+        ((p as any).perfil_comercial || "VEICULO_EXIBIDOR") === perfilFiltro;
+
+      return matchSearch && matchSegmento && matchStatus && matchPerfil;
     });
-  }, [parceiros, search, segmentoFiltro, statusFiltro]);
+  }, [parceiros, search, segmentoFiltro, statusFiltro, perfilFiltro]);
 
   // Métricas
   const stats = useMemo(() => {
@@ -210,6 +247,25 @@ export function ParceirosPage() {
               </Button>
               <Button
                 variant="outline"
+                className="gap-2 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-xs font-semibold"
+                onClick={() => syncDriveMut.mutate()}
+                disabled={syncDriveMut.isPending}
+                title="Varre a pasta compartilhada do Google Drive, cadastra parceiros ausentes e extrai/atualiza inventário e projetos sem duplicidade"
+              >
+                {syncDriveMut.isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin text-emerald-600" />
+                    Varrendo pastas do Drive e atualizando inventário...
+                  </>
+                ) : (
+                  <>
+                    <FolderSync className="size-4 text-emerald-600" />
+                    Sincronizar Drive de Parceiros
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
                 className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/50"
                 onClick={() => handleOpenImport()}
               >
@@ -227,6 +283,15 @@ export function ParceirosPage() {
               >
                 <Sparkles className="size-4 text-indigo-600" />
                 Importar PDF ou Excel (IA)
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 shadow-xs font-semibold"
+                onClick={() => setCircuitosManagerOpen(true)}
+                title="Gerenciar pacotes de circuitos fechados e regras de desconto para parceiros"
+              >
+                <Layers className="size-4 text-blue-600" />
+                Circuitos & Bundles
               </Button>
               <Button
                 className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
@@ -377,6 +442,32 @@ export function ParceirosPage() {
             </div>
           </div>
 
+          {/* Perfil Comercial Filtros */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-xs font-semibold text-muted-foreground mr-1 shrink-0">Perfil Comercial:</span>
+            <Badge
+              variant={perfilFiltro === "todos" ? "default" : "outline"}
+              className="cursor-pointer text-xs shrink-0 select-none"
+              onClick={() => setPerfilFiltro("todos")}
+            >
+              Todos os Perfis
+            </Badge>
+            {PERFIS_COMERCIAIS.map((p) => (
+              <Badge
+                key={p.value}
+                variant={perfilFiltro === p.value ? "default" : "outline"}
+                className={`cursor-pointer text-xs shrink-0 select-none transition-colors ${
+                  perfilFiltro === p.value
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "hover:bg-muted text-muted-foreground"
+                }`}
+                onClick={() => setPerfilFiltro(perfilFiltro === p.value ? "todos" : p.value)}
+              >
+                {p.label}
+              </Badge>
+            ))}
+          </div>
+
           {/* Segmentos de Mídia Chips */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
             <Badge
@@ -488,12 +579,22 @@ export function ParceirosPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800 font-medium"
-                        >
-                          {parceiro.tipo_veiculo || "Painel OOH/DOOH"}
-                        </Badge>
+                        <div className="flex flex-col gap-1 items-start">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800 font-medium"
+                          >
+                            {parceiro.tipo_veiculo || "Painel OOH/DOOH"}
+                          </Badge>
+                          {parceiro.allows_circuit_bundles && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 font-semibold"
+                            >
+                              ⚡ Circuitos Habilitados
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono text-[11px] text-muted-foreground">
                         {parceiro.cnpj || "—"}
@@ -624,6 +725,22 @@ export function ParceirosPage() {
                         >
                           {parceiro.tipo_veiculo || "Painel OOH/DOOH"}
                         </Badge>
+                        {(parceiro as any).perfil_comercial && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 font-semibold"
+                          >
+                            {PERFIS_COMERCIAIS.find((p) => p.value === (parceiro as any).perfil_comercial)?.label || "Veículo"}
+                          </Badge>
+                        )}
+                        {parceiro.allows_circuit_bundles && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 font-semibold"
+                          >
+                            ⚡ Circuitos Habilitados
+                          </Badge>
+                        )}
                         <Badge
                           variant={parceiro.status === "ativo" || parceiro.ativo ? "default" : "secondary"}
                           className={`text-[10px] ${
@@ -875,7 +992,21 @@ export function ParceirosPage() {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-foreground hover:bg-muted font-medium"
+                          onClick={() => {
+                            setEditingParceiro(parceiro);
+                            setFormOpen(true);
+                          }}
+                          title="Editar cadastro e condições do parceiro"
+                        >
+                          <Pencil className="size-3.5 mr-1 text-purple-600" />
+                          Editar
+                        </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -977,6 +1108,19 @@ export function ParceirosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Resultados da Sincronização Google Drive */}
+      <DriveSyncResultModal
+        open={driveSyncOpen}
+        onOpenChange={setDriveSyncOpen}
+        summary={driveSyncSummary}
+      />
+
+      {/* Modal de Gestão de Circuitos e Bundles */}
+      <CircuitosBundlesManager
+        open={circuitosManagerOpen}
+        onOpenChange={setCircuitosManagerOpen}
+      />
     </AppShell>
   );
 }

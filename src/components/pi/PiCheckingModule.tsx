@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { QuickDateInput } from "@/components/ui/quick-date-input";
 import {
   Dialog,
   DialogContent,
@@ -355,11 +356,22 @@ export function PiCheckingModule({ pi, onRefresh, onDossierGenerated }: Props) {
         <CardHeader className="pb-3 border-b bg-muted/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileCheck className="size-5 text-primary" />
-                Auditoria de Comprovação de Mídia ({checkings.length} Comprovantes)
-              </CardTitle>
-              <CardDescription className="text-xs">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileCheck className="size-5 text-primary" />
+                  Auditoria de Comprovação de Mídia ({checkings.length} Comprovantes)
+                </CardTitle>
+                {pi.status === "draft" || pi.status === "canceled" ? (
+                  <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-300 font-bold text-xs">
+                    <AlertTriangle className="size-3 mr-1" /> Aguardando Emissão de PI para Veiculação
+                  </Badge>
+                ) : (
+                  <Badge className="bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 font-bold text-xs">
+                    <CheckCircle2 className="size-3 mr-1" /> PI Emitido — Veiculação Autorizada
+                  </Badge>
+                )}
+              </div>
+              <CardDescription className="text-xs mt-1">
                 Audite fotos, relatórios, certidões de irradiação e clippings enviados pelos veículos parceiros.
               </CardDescription>
             </div>
@@ -639,11 +651,10 @@ export function PiCheckingModule({ pi, onRefresh, onDossierGenerated }: Props) {
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Data da Veiculação</Label>
-                <Input
-                  type="date"
-                  className="h-9 text-xs"
+                <QuickDateInput
+                  className="h-9"
                   value={uploadForm.broadcast_date}
-                  onChange={(e) => setUploadForm((prev) => ({ ...prev, broadcast_date: e.target.value }))}
+                  onChange={(val) => setUploadForm((prev) => ({ ...prev, broadcast_date: val }))}
                 />
               </div>
             </div>

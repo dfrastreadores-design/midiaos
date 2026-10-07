@@ -30,6 +30,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { QuickDateInput } from "@/components/ui/quick-date-input";
+import { QuickPeriodShortcuts } from "@/components/ui/quick-period-shortcuts";
 import {
   Plus,
   Trash2,
@@ -524,41 +526,54 @@ export function NovoPiModal({ open, onOpenChange, onSuccess }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Início da Veiculação</Label>
-              <Input
-                type="date"
-                className="h-9 text-xs"
-                value={periodStart}
-                onChange={(e) => setPeriodStart(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Fim da Veiculação</Label>
-              <Input
-                type="date"
-                className="h-9 text-xs"
-                value={periodEnd}
-                onChange={(e) => setPeriodEnd(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold flex items-center justify-between">
-                <span>Comissão Representante (%) *</span>
-                <span className="text-emerald-600 font-bold">{commissionRate}%</span>
+          <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Período de Veiculação & Comissão
               </Label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.5"
-                className="h-9 text-xs font-bold"
-                value={commissionRate}
-                onChange={(e) => setCommissionRate(Number(e.target.value) || 0)}
+              <QuickPeriodShortcuts
+                onSelectRange={(start, end) => {
+                  setPeriodStart(start);
+                  setPeriodEnd(end);
+                  toast.info(`Período preenchido: ${start} até ${end}`);
+                }}
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Início da Veiculação</Label>
+                <QuickDateInput
+                  className="h-9"
+                  value={periodStart}
+                  onChange={setPeriodStart}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Fim da Veiculação</Label>
+                <QuickDateInput
+                  className="h-9"
+                  value={periodEnd}
+                  onChange={setPeriodEnd}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold flex items-center justify-between">
+                  <span>Comissão Representante (%) *</span>
+                  <span className="text-emerald-600 font-bold">{commissionRate}%</span>
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  className="h-9 text-xs font-bold"
+                  value={commissionRate}
+                  onChange={(e) => setCommissionRate(Number(e.target.value) || 0)}
+                />
+              </div>
             </div>
           </div>
 

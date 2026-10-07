@@ -60,6 +60,8 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initial?: Partial<MediaServiceCatalogItem> | null;
+  editingItem?: Partial<MediaServiceCatalogItem> | null;
+  partners?: any[];
   onSuccess?: (item: MediaServiceCatalogItem) => void;
 };
 
@@ -67,6 +69,7 @@ export function MediaServiceFormDialog({
   open,
   onOpenChange,
   initial,
+  editingItem,
   onSuccess,
 }: Props) {
   const qc = useQueryClient();
@@ -74,6 +77,8 @@ export function MediaServiceFormDialog({
   const listPartnersFn = useServerFn(listPartners);
   const lookupCepFn = useServerFn(lookupCep);
   const geocodeFn = useServerFn(geocodeAddress);
+
+  const targetItem = initial || editingItem;
 
   const { data: partners = [] } = useQuery({
     queryKey: ["partners_list_select"],
@@ -117,40 +122,40 @@ export function MediaServiceFormDialog({
 
   useEffect(() => {
     if (open) {
-      if (initial) {
+      if (targetItem) {
         setForm({
-          id: initial.id,
-          is_own_product: initial.is_own_product ?? false,
-          partner_id: initial.partner_id ?? null,
-          nome_produto: initial.nome_produto || "",
-          categoria_midia: initial.categoria_midia || "ooh_dooh",
-          tipo_cobranca: (initial.tipo_cobranca as TipoCobrancaRepresentacao) || "insercao",
-          valor_tabela: Number(initial.valor_tabela || 0),
+          id: targetItem.id,
+          is_own_product: targetItem.is_own_product ?? false,
+          partner_id: targetItem.partner_id ?? null,
+          nome_produto: targetItem.nome_produto || "",
+          categoria_midia: targetItem.categoria_midia || "ooh_dooh",
+          tipo_cobranca: (targetItem.tipo_cobranca as TipoCobrancaRepresentacao) || "insercao",
+          valor_tabela: Number(targetItem.valor_tabela || 0),
           valor_negociado_minimo:
-            initial.valor_negociado_minimo != null ? Number(initial.valor_negociado_minimo) : null,
+            targetItem.valor_negociado_minimo != null ? Number(targetItem.valor_negociado_minimo) : null,
           comissao_percentual_especifica:
-            initial.comissao_percentual_especifica != null
-              ? Number(initial.comissao_percentual_especifica)
+            targetItem.comissao_percentual_especifica != null
+              ? Number(targetItem.comissao_percentual_especifica)
               : null,
-          quantidade_disponivel: initial.quantidade_disponivel ?? 1,
-          estoque_espacos: initial.estoque_espacos ?? 1,
-          endereco: initial.endereco || "",
-          bairro: initial.bairro || "",
-          cidade: initial.cidade || "Brasília",
-          estado: initial.estado || "DF",
-          cep: initial.cep || "",
-          latitude: initial.latitude ?? -15.7942,
-          longitude: initial.longitude ?? -47.8822,
-          especificacoes_tecnicas: initial.especificacoes_tecnicas || {
+          quantidade_disponivel: targetItem.quantidade_disponivel ?? 1,
+          estoque_espacos: targetItem.estoque_espacos ?? 1,
+          endereco: targetItem.endereco || "",
+          bairro: targetItem.bairro || "",
+          cidade: targetItem.cidade || "Brasília",
+          estado: targetItem.estado || "DF",
+          cep: targetItem.cep || "",
+          latitude: targetItem.latitude ?? -15.7942,
+          longitude: targetItem.longitude ?? -47.8822,
+          especificacoes_tecnicas: targetItem.especificacoes_tecnicas || {
             resolucao: "1920x1080 Full HD",
             formato_video_audio: "MP4 (H.264)",
             dimensoes_metros_pixels: "",
             duracao_segundos: 15,
             frequencia_loop: "A cada 3 minutos",
           },
-          fotos: initial.fotos || [],
-          imagem_url: initial.imagem_url || "",
-          ativo: initial.ativo ?? true,
+          fotos: targetItem.fotos || [],
+          imagem_url: targetItem.imagem_url || "",
+          ativo: targetItem.ativo ?? true,
         });
       } else {
         setForm({
@@ -316,8 +321,10 @@ export function MediaServiceFormDialog({
   const saveMut = useMutation({
     mutationFn: (data: any) => upsertItemFn({ data }),
     onSuccess: (saved) => {
+      qc.invalidateQueries({ queryKey: ["media_services_catalog"] });
       qc.invalidateQueries({ queryKey: ["media_catalog"] });
       qc.invalidateQueries({ queryKey: ["produtos"] });
+      qc.invalidateQueries({ queryKey: ["public_inventory_assets"] });
       toast.success(
         form.id
           ? "Espaço/Serviço publicitário atualizado!"

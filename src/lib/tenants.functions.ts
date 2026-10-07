@@ -4,13 +4,28 @@ import { isMasterEmail } from "@/lib/master-user";
 
 async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
   const { data: userAuth } = await ctx.supabase.auth.getUser();
-  if (isMasterEmail(userAuth?.user?.email)) {
+  if (
+    isMasterEmail(userAuth?.user?.email) ||
+    userAuth?.user?.user_metadata?.role === "MASTER" ||
+    userAuth?.user?.user_metadata?.is_superadmin === true
+  ) {
+    return;
+  }
+  const { data: prof } = await ctx.supabase
+    .from("profiles")
+    .select("role, is_superadmin")
+    .eq("id", ctx.userId)
+    .maybeSingle();
+  if (
+    prof?.role === "MASTER" ||
+    String(prof?.role).toUpperCase() === "MASTER" ||
+    prof?.is_superadmin === true
+  ) {
     return;
   }
   const { data, error } = await ctx.supabase.rpc("is_super_admin", { _user_id: ctx.userId });
-  if (error) throw new Error(error.message);
-  if (!data)
-    throw new Error("Acesso restrito ao proprietário da plataforma");
+  if (!error && data) return;
+  throw new Error("Acesso restrito ao proprietário da plataforma");
 }
 
 export type TenantInput = {
@@ -329,7 +344,7 @@ export const getTenantDetails = createServerFn({ method: "POST" })
 
     const { data: profiles } = await context.supabase
       .from("profiles")
-      .select("id, nome, email, cargo, ativo, created_at, last_active_at")
+      .select("id, nome, email, cargo, telefone, whatsapp, ativo, created_at, last_active_at")
       .eq("tenant_id", data.id);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -841,5 +856,73 @@ export const desvincularUsuarioTenant = createServerFn({ method: "POST" })
       .update({ tenant_id: null })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Edita os dados cadastrais de um usuário vinculado ao inquilino (Master/SuperAdmin). */
+export const updateTenantUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      user_id: string;
+      nome: string;
+      email?: string;
+      cargo?: string | null;
+      telefone?: string | null;
+      ativo?: boolean;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const nome = (data.nome ?? "").trim();
+    if (nome.length < 3) throw new Error("Informe o nome completo (mínimo de 3 caracteres)");
+
+    const profileUpdates: Record<string, unknown> = {
+      nome,
+      cargo: data.cargo ? data.cargo.trim() : null,
+      telefone: data.telefone ? data.telefone.trim() : null,
+    };
+    if (typeof data.ativo === "boolean") {
+      profileUpdates.ativo = data.ativo;
+    }
+
+    if (data.email) {
+      const email = data.email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("E-mail inválido");
+      profileUpdates.email = email;
+      const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, { email });
+      if (authErr) throw new Error(authErr.message);
+    }
+
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(profileUpdates)
+      .eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+/** Altera a senha de um usuário vinculado ao inquilino (Master/SuperAdmin). */
+export const resetSenhaTenantUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      user_id: string;
+      password: string;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const password = data.password ?? "";
+    if (password.length < 6) throw new Error("A senha deve ter no mínimo 6 caracteres");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      password,
+    });
+    if (error) throw new Error(error.message);
+
     return { ok: true };
   });

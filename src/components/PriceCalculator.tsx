@@ -41,6 +41,9 @@ import {
 import { listProdutos } from "@/lib/produtos.functions";
 import { formatBRL } from "@/lib/mock-data";
 import { NovoProdutoButton } from "@/components/QuickCadastroButtons";
+import { QuickProductSearchAdder } from "@/components/proposta/QuickProductSearchAdder";
+import { QuickPeriodShortcuts } from "@/components/ui/quick-period-shortcuts";
+import { toast } from "sonner";
 
 const MESES = [
   "Janeiro",
@@ -362,6 +365,93 @@ export function PriceCalculator({
     const it = newItem(mesRef, anoRef);
     pendingScrollIdRef.current = it.id;
     setItems((p) => [...p, it]);
+  };
+
+  const addProductDirectly = (prod: any) => {
+    const base = newItem(mesRef, anoRef);
+    const dv = prod.detalhes_venda || {};
+    const unitPrice =
+      prod.valor_unitario ||
+      prod.valor_tabela ||
+      prod.preco_base ||
+      dv.valor_tabela ||
+      null;
+
+    const counts: Record<string, number> = {};
+    const diasNoMes = new Date(anoRef, mesRef, 0).getDate();
+    const padrao = Number(prod.insercoes_padrao) || 1;
+    for (let d = 1; d <= diasNoMes; d++) {
+      const k = `${anoRef}-${String(mesRef).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      counts[k] = padrao;
+    }
+
+    const populated: Item = {
+      ...base,
+      tipo: prod.tipo || "DOOH",
+      programa: prod.programa || prod.nome || "",
+      formato: prod.formato || "",
+      horario: prod.faixa || "Rotativo",
+      produtoId: prod.id || null,
+      parceiroId: prod.parceiro_id || null,
+      parceiroNome: prod.parceiro_nome || null,
+      parceiroCnpj: prod.parceiro_cnpj || null,
+      comissaoInquilinoPct: prod.comissao_inquilino_pct ?? null,
+      canalMacro: prod.canal_macro ?? "OFF",
+      plataformaRede: prod.plataforma_rede ?? null,
+      metricasDigitais: prod.metricas_digitais ?? null,
+      latitude: prod.latitude ?? (dv._latitude != null ? Number(dv._latitude) : null),
+      longitude: prod.longitude ?? (dv._longitude != null ? Number(dv._longitude) : null),
+      linkMaps: prod.link_maps || dv._link_maps || null,
+      sentidoVia: prod.sentido_via || dv._sentido_via || null,
+      pontoReferencia: prod.ponto_referencia || dv._ponto_referencia || null,
+      enderecoPonto: prod.endereco_ponto || null,
+      fluxoVeiculosDia: dv.fluxo_veiculos_dia ?? dv.fluxo_diario ?? null,
+      insercoesDia: padrao,
+      insercoesPorDia: counts,
+      valorUnitOverride: unitPrice ? Number(unitPrice) : null,
+    };
+
+    pendingScrollIdRef.current = populated.id;
+    setItems((prev) => {
+      // Se há apenas 1 item inicial vazio (sem programa preenchido), substitui-o
+      if (prev.length === 1 && !prev[0].programa && !prev[0].produtoId) {
+        return [populated];
+      }
+      return [...prev, populated];
+    });
+
+    toast.success(`Ativo adicionado: ${prod.codigo ? `[${prod.codigo}] ` : ""}${prod.nome || prod.programa}`);
+  };
+
+  const applyOohPresetToAll = (startIso: string, endIso: string, label: string) => {
+    const startDate = new Date(startIso + "T00:00:00");
+    const endDate = new Date(endIso + "T00:00:00");
+
+    setItems((prev) =>
+      prev.map((it) => {
+        const nextPorDia: Record<string, number> = {};
+        const base = Math.max(1, it.insercoesDia || 1);
+
+        const cur = new Date(startDate);
+        while (cur <= endDate) {
+          const cy = cur.getFullYear();
+          const cm = String(cur.getMonth() + 1).padStart(2, "0");
+          const cd = String(cur.getDate()).padStart(2, "0");
+          nextPorDia[`${cy}-${cm}-${cd}`] = base;
+          cur.setDate(cur.getDate() + 1);
+        }
+
+        return {
+          ...it,
+          mes: startDate.getMonth() + 1,
+          ano: startDate.getFullYear(),
+          insercoesPorDia: nextPorDia,
+          insercoesManual: null,
+        };
+      }),
+    );
+
+    toast.info(`Período aplicado a todos os itens: ${label} (${startIso} a ${endIso})`);
   };
 
   useEffect(() => {
@@ -776,6 +866,24 @@ export function PriceCalculator({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Barra de Busca Ágil e Adição com Autocomplete / Enter */}
+        <div className="rounded-xl border border-primary/25 bg-gradient-to-r from-primary/5 via-sky-500/5 to-transparent p-3 space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <span>🚀 Adição Ágil de Ativos OOH</span>
+              <span className="text-[10px] text-muted-foreground font-normal">
+                (digite o código ou nome e aperte Enter)
+              </span>
+            </span>
+            <QuickPeriodShortcuts onSelectRange={applyOohPresetToAll} />
+          </div>
+          <QuickProductSearchAdder
+            produtos={allDbProdutos}
+            onAddProduct={addProductDirectly}
+            placeholder="Digite código (ex: LED-01), nome da face, praça ou parceiro... (pressione Enter para adicionar)"
+          />
+        </div>
+
         {items.length >= 1 && (
           <BulkActions
             showAllExceptDuplicate={items.length > 1}

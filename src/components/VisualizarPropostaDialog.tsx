@@ -40,6 +40,8 @@ import {
   Compass,
   TrendingUp,
   MonitorPlay,
+  Zap,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentOrg } from "@/hooks/use-current-org";
@@ -56,13 +58,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropostaAnexosSection } from "@/components/PropostaAnexosSection";
 
-type Props = { open: boolean; onOpenChange: (v: boolean) => void; propostaId: string | null };
+type Props = {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  propostaId: string | null;
+  onEmitirPis?: (proposta: any) => void;
+};
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 const fmtData = (s?: string | null) => (s ? new Date(s).toLocaleDateString("pt-BR") : "—");
 
-export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Props) {
+export function VisualizarPropostaDialog({ open, onOpenChange, propostaId, onEmitirPis }: Props) {
   const [p, setP] = useState<(PropostaApresentacao & { numero: string; status?: string }) | null>(
     null,
   );
@@ -756,14 +763,14 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="p-3.5 rounded-xl border border-purple-200 dark:border-purple-800/80 bg-purple-50/50 dark:bg-purple-950/20 space-y-1">
                     <div className="text-[10px] uppercase font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                      <span>🤝</span>
-                      <span>Veiculação de Mídia / Espaços Representados</span>
+                      <span>📍</span>
+                      <span>Veiculação de Mídia / Espaços de Impacto</span>
                     </div>
                     <div className="text-lg font-bold text-purple-900 dark:text-purple-200">
                       {fmtBRL(totalRepresentados)}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
-                      Rede Homologada de Painéis LED, OOH & Veículos Parceiros
+                      Rede Homologada de Painéis LED, OOH & Mídia Exterior
                     </div>
                   </div>
 
@@ -856,16 +863,6 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                             <TableCell>{it.tipo}</TableCell>
                             <TableCell>
                               <div className="font-medium">{it.programa || "—"}</div>
-                              {((it as any).parceiro_nome || (it as any).parceiro_cnpj) && (
-                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
-                                  <span>🤝 {(it as any).parceiro_nome}</span>
-                                  {(it as any).parceiro_cnpj && (
-                                    <span className="font-mono text-[10px] text-muted-foreground">
-                                      ({(it as any).parceiro_cnpj})
-                                    </span>
-                                  )}
-                                </div>
-                              )}
                               {/* Dados de Geolocalização / Mídia Exterior */}
                               {((it as any).link_maps ||
                                 (it as any).latitude ||
@@ -1060,6 +1057,35 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
           </div>
 
           <div className="flex gap-2">
+            {p?.status === "aprovada" && onEmitirPis && (
+              <Button
+                variant="default"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-5 font-semibold gap-1.5 shadow-xs"
+                onClick={() => onEmitirPis(p)}
+              >
+                <Zap className="size-4 fill-current" />
+                Gerar PIs Imediatamente
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="gap-1.5 text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium rounded-full px-4"
+              onClick={() => {
+                if (!p) return;
+                const msg = [
+                  `📊 *PROPOSTA COMERCIAL — ${p.numero || "OOH"}*`,
+                  `🎯 *Campanha:* ${p.campanha || "Veiculação de Mídia"}`,
+                  `👤 *Cliente:* ${p.cliente?.nome || "Cliente"}`,
+                  `💰 *Investimento Total:* ${fmtBRL(p.valor_total || 0)}`,
+                  `📍 *Total de Pontos:* ${p.itens?.length || 0} ativo(s)`,
+                  `\nAcesse os detalhes pelo Mídia.OS (midiaos.online)`,
+                ].join("\n");
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, "_blank");
+              }}
+            >
+              <Share2 className="size-4" />
+              WhatsApp
+            </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabaseAdmin, hasServiceRoleKey } from "@/integrations/supabase/client.server";
 import { isMasterEmail } from "@/lib/master-user";
 
 const RoleEnum = z.enum([
@@ -17,7 +17,23 @@ const RoleEnum = z.enum([
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data: userAuth } = await supabase.auth.getUser();
-  if (isMasterEmail(userAuth?.user?.email)) {
+  if (
+    isMasterEmail(userAuth?.user?.email) ||
+    userAuth?.user?.user_metadata?.role === "MASTER" ||
+    userAuth?.user?.user_metadata?.is_superadmin === true
+  ) {
+    return;
+  }
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("role, is_superadmin")
+    .eq("id", userId)
+    .maybeSingle();
+  if (
+    prof?.role === "MASTER" ||
+    String(prof?.role).toUpperCase() === "MASTER" ||
+    prof?.is_superadmin === true
+  ) {
     return;
   }
   const { data, error } = await supabase
@@ -74,12 +90,17 @@ export const listUsuarios = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    // Descobre se é o Super Admin exclusivo (rafaelrodrigo.as@gmail.com) e qual o tenant do solicitante
+    // Descobre se é o Super Admin exclusivo (rafaelrodrigo.as@gmail.com ou MASTER) e qual o tenant do solicitante
     const [{ data: userAuth }, { data: meProfile }] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("profiles").select("tenant_id").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("tenant_id, role, is_superadmin").eq("id", userId).maybeSingle(),
     ]);
-    const isSuper = isMasterEmail(userAuth?.user?.email);
+    const isSuper =
+      isMasterEmail(userAuth?.user?.email) ||
+      meProfile?.is_superadmin === true ||
+      String(meProfile?.role).toUpperCase() === "MASTER" ||
+      userAuth?.user?.user_metadata?.role === "MASTER" ||
+      userAuth?.user?.user_metadata?.is_superadmin === true;
     const myTenant = (meProfile as any)?.tenant_id ?? null;
 
     let query = supabase.from("profiles").select("*").order("created_at", { ascending: false });
@@ -354,10 +375,43 @@ export const adminResetPassword = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertAdmin(supabase, userId);
 
+    let resetSuccess = false;
+    let lastError: string | null = null;
+
+    // Tentativa primária: Supabase Auth Admin API (updateUserById)
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
       password: data.password,
     });
-    if (error) throw new Error(error.message);
+
+    if (!error) {
+      resetSuccess = true;
+    } else {
+      lastError = error.message;
+
+      // Tentativa secundária: RPC com SECURITY DEFINER caso configurada
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc(
+        "admin_reset_user_password" as any,
+        {
+          target_user_id: data.user_id,
+          new_plain_password: data.password,
+        },
+      );
+
+      if (!rpcErr && (rpcRes as any)?.success) {
+        resetSuccess = true;
+      } else {
+        if (error.message.includes("not allowed") || !hasServiceRoleKey()) {
+          lastError =
+            "Erro 'User not allowed': a chave de serviço SUPABASE_SERVICE_ROLE_KEY precisa estar configurada no arquivo .env para permitir a redefinição administrativa de senhas de outros usuários.";
+        } else if (rpcErr && !rpcErr.message.includes("Could not find the function")) {
+          lastError = rpcErr.message;
+        }
+      }
+    }
+
+    if (!resetSuccess) {
+      throw new Error(lastError || "Falha ao redefinir senha do usuário");
+    }
 
     const actor = await getActor(supabase, userId);
     const targetEmail = await getTargetEmail(data.user_id);

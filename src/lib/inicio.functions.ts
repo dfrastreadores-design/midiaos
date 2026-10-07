@@ -25,7 +25,7 @@ export const getInicio = createServerFn({ method: "GET" })
     const hojeStr = hojeIni.toISOString().slice(0, 10);
     const em7Str = em7.toISOString().slice(0, 10);
 
-    const [profRes, reunRes, evRes, propRes, piRes] = await Promise.all([
+    const [profRes, reunRes, evRes, propRes, piRes, propAprovRes, propEnvRes, checkRes] = await Promise.all([
       supabase.from("profiles").select("nome").eq("id", userId).maybeSingle(),
       supabase
         .from("reunioes")
@@ -60,6 +60,23 @@ export const getInicio = createServerFn({ method: "GET" })
         .lte("periodo_fim", em7Str)
         .order("periodo_fim", { ascending: true })
         .limit(200),
+      supabase
+        .from("propostas")
+        .select("id,numero,campanha,valor_negociado,status,created_at,cliente_id,clientes(razao_social,nome_fantasia)")
+        .eq("status", "aprovada")
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("propostas")
+        .select("id,numero,campanha,validade,valor_negociado,status,created_at,cliente_id,clientes(razao_social,nome_fantasia)")
+        .eq("status", "enviada")
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("pi_checkings")
+        .select("id,status,file_name,broadcast_date,pi_id")
+        .in("status", ["PENDING", "UPLOADED"])
+        .limit(50),
     ]);
 
     // Mantém apenas o registro mais recente por cliente/agência
@@ -95,5 +112,11 @@ export const getInicio = createServerFn({ method: "GET" })
       eventosHoje: evRes.data ?? [],
       propostasAVencer: propostasVencendo,
       pisAVencer: piVencendo,
+      radar: {
+        campanhasSemPi: propAprovRes.data ?? [],
+        propostasAguardando: propEnvRes.data ?? [],
+        checkingPendente: checkRes.data ?? [],
+        ativosVencendo: piVencendo,
+      },
     };
   });

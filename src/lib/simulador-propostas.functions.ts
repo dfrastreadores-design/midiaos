@@ -168,6 +168,8 @@ export const saveProposal = createServerFn({ method: "POST" })
         agency_commission_val: fin.agencyCommissionVal,
         partner_payout_val: fin.partnerPayoutVal,
         min_negotiated_unit_price: it.min_negotiated_unit_price || null,
+        circuit_bundle_id: it.circuit_bundle_id || null,
+        bundle_discount_applied: Boolean(it.bundle_discount_applied),
         notes: it.notes || null,
       };
     });
@@ -236,7 +238,15 @@ export const saveProposal = createServerFn({ method: "POST" })
         proposal_id: proposalId,
       }));
 
-      const { error: itemsErr } = await (client.from("proposal_items") as any).insert(itemsToInsert);
+      let { error: itemsErr } = await (client.from("proposal_items") as any).insert(itemsToInsert);
+      if (itemsErr && (itemsErr.message.includes("circuit_bundle_id") || itemsErr.message.includes("bundle_discount_applied"))) {
+        const strippedItems = itemsToInsert.map((item: any) => {
+          const { circuit_bundle_id, bundle_discount_applied, ...rest } = item;
+          return rest;
+        });
+        const retryRes = await (client.from("proposal_items") as any).insert(strippedItems);
+        itemsErr = retryRes.error;
+      }
       if (itemsErr) throw new Error(itemsErr.message);
     }
 

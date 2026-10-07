@@ -114,7 +114,7 @@ function LoginPage() {
 
         <div className="relative z-10 flex items-center gap-3">
           <Link
-            to="/"
+            to="/site"
             className="inline-flex items-center gap-2 text-xs text-white/60 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao site
@@ -161,10 +161,10 @@ function LoginPage() {
       {/* Form panel */}
       <main className="relative flex items-center justify-center p-6 sm:p-10 bg-[#0b0b18] lg:bg-white lg:text-slate-900">
         <Link
-          to="/"
+          to="/site"
           className="lg:hidden absolute top-4 left-4 inline-flex items-center gap-1.5 text-xs text-white/60 hover:text-white"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Voltar
+          <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao site
         </Link>
 
         <div className="w-full max-w-md">

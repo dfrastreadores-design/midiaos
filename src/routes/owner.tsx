@@ -60,6 +60,7 @@ import {
   FileSignature,
   Sparkles,
   Compass,
+  KeyRound,
 } from "lucide-react";
 import { LogoImg } from "@/components/LogoImg";
 import { ModelosPropostaManager } from "@/components/owner/ModelosPropostaManager";
@@ -85,6 +86,8 @@ import {
   createTenantUsuario,
   vincularUsuarioTenant,
   desvincularUsuarioTenant,
+  updateTenantUsuario,
+  resetSenhaTenantUsuario,
   type TenantInput,
 } from "@/lib/tenants.functions";
 import { provisionarTenantDemo } from "@/lib/demo-tenant.functions";
@@ -1031,6 +1034,8 @@ function TenantDetailsDialog({
 
   const [mensagem, setMensagem] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [editingUsuario, setEditingUsuario] = useState<any | null>(null);
+  const [resetPasswordUsuario, setResetPasswordUsuario] = useState<any | null>(null);
 
   // sincroniza ao carregar o tenant (apenas uma vez por tenant)
   useEffect(() => {
@@ -1218,41 +1223,64 @@ function TenantDetailsDialog({
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={async () => {
-                                if (!confirm(`Deslogar "${u.nome ?? u.email}"?`)) return;
-                                try {
-                                  await signOutU({ data: { user_id: u.id } });
-                                  toast.success("Usuário deslogado");
-                                } catch (e: any) {
-                                  toast.error(e.message);
-                                }
-                              }}
-                              title="Deslogar usuário"
-                            >
-                              <LogOut className="size-4 mr-1 text-red-500" /> Deslogar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={async () => {
-                                if (!confirm(`Desvincular "${u.nome ?? u.email}" deste inquilino?`))
-                                  return;
-                                try {
-                                  await desvincularU({ data: { user_id: u.id } });
-                                  toast.success("Usuário desvinculado");
-                                  qc.invalidateQueries({ queryKey: ["owner"] });
-                                } catch (e: any) {
-                                  toast.error(e.message);
-                                }
-                              }}
-                              title="Desvincular do inquilino"
-                            >
-                              <Trash2 className="size-4 mr-1" /> Desvincular
-                            </Button>
+                          <TableCell className="text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1 flex-wrap">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingUsuario(u)}
+                                title="Editar dados do usuário"
+                                className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                              >
+                                <Pencil className="size-3.5 mr-1" /> Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setResetPasswordUsuario(u)}
+                                title="Alterar senha do usuário"
+                                className="h-8 px-2 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                              >
+                                <KeyRound className="size-3.5 mr-1" /> Alterar Senha
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={async () => {
+                                  if (!confirm(`Deslogar "${u.nome ?? u.email}"?`)) return;
+                                  try {
+                                    await signOutU({ data: { user_id: u.id } });
+                                    toast.success("Usuário deslogado");
+                                  } catch (e: any) {
+                                    toast.error(e.message);
+                                  }
+                                }}
+                                title="Deslogar usuário"
+                                className="h-8 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                              >
+                                <LogOut className="size-3.5 mr-1" /> Deslogar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={async () => {
+                                  if (!confirm(`Desvincular "${u.nome ?? u.email}" deste inquilino?`))
+                                    return;
+                                  try {
+                                    await desvincularU({ data: { user_id: u.id } });
+                                    toast.success("Usuário desvinculado");
+                                    qc.invalidateQueries({ queryKey: ["owner"] });
+                                    qc.invalidateQueries({ queryKey: ["owner", "tenant", id] });
+                                  } catch (e: any) {
+                                    toast.error(e.message);
+                                  }
+                                }}
+                                title="Desvincular do inquilino"
+                                className="h-8 px-2 text-xs text-muted-foreground hover:bg-muted"
+                              >
+                                <Trash2 className="size-3.5 mr-1" /> Desvincular
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1297,6 +1325,290 @@ function TenantDetailsDialog({
             </Tabs>
           </div>
         )}
+
+        <EditarTenantUsuarioDialog
+          usuario={editingUsuario}
+          open={!!editingUsuario}
+          onClose={() => setEditingUsuario(null)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["owner"] });
+            qc.invalidateQueries({ queryKey: ["owner", "tenant", id] });
+          }}
+        />
+
+        <AlterarSenhaTenantUsuarioDialog
+          usuario={resetPasswordUsuario}
+          open={!!resetPasswordUsuario}
+          onClose={() => setResetPasswordUsuario(null)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["owner"] });
+            qc.invalidateQueries({ queryKey: ["owner", "tenant", id] });
+          }}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditarTenantUsuarioDialog({
+  usuario,
+  open,
+  onClose,
+  onSaved,
+}: {
+  usuario: any | null;
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const updateFn = useServerFn(updateTenantUsuario);
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [cargo, setCargo] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [ativo, setAtivo] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (usuario) {
+      setNome(usuario.nome ?? "");
+      setEmail(usuario.email ?? "");
+      setCargo(usuario.cargo ?? "");
+      setTelefone(usuario.telefone ?? usuario.whatsapp ?? "");
+      setAtivo(usuario.ativo !== false);
+    }
+  }, [usuario, open]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!usuario) return;
+    if (nome.trim().length < 3) {
+      toast.error("Nome completo deve ter pelo menos 3 caracteres.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await updateFn({
+        data: {
+          user_id: usuario.id,
+          nome: nome.trim(),
+          email: email.trim() || undefined,
+          cargo: cargo.trim() || null,
+          telefone: telefone.trim() || null,
+          ativo,
+        },
+      });
+      toast.success("Usuário atualizado com sucesso!");
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar usuário");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="size-4 text-primary" /> Editar Usuário
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Nome Completo</Label>
+            <Input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex: João da Silva"
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">E-mail de Acesso</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="usuario@empresa.com.br"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Cargo / Função</Label>
+              <Input
+                value={cargo}
+                onChange={(e) => setCargo(e.target.value)}
+                placeholder="Ex: Executivo Comercial"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Telefone / WhatsApp</Label>
+              <Input
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                placeholder="(61) 99999-9999"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 border rounded-lg bg-muted/20">
+            <div>
+              <Label className="text-xs font-semibold block">Status da Conta</Label>
+              <span className="text-[11px] text-muted-foreground">
+                {ativo ? "Usuário pode acessar o sistema normalmente" : "Acesso desativado para este usuário"}
+              </span>
+            </div>
+            <Switch checked={ativo} onCheckedChange={setAtivo} />
+          </div>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading} className="gap-2">
+              {loading && <Loader2 className="size-4 animate-spin" />}
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AlterarSenhaTenantUsuarioDialog({
+  usuario,
+  open,
+  onClose,
+  onSaved,
+}: {
+  usuario: any | null;
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const resetFn = useServerFn(resetSenhaTenantUsuario);
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+
+  useEffect(() => {
+    setNovaSenha("");
+    setConfirmarSenha("");
+    setMostrarSenha(false);
+  }, [open, usuario]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!usuario) return;
+    if (novaSenha.length < 6) {
+      toast.error("A senha deve conter no mínimo 6 caracteres.");
+      return;
+    }
+    if (novaSenha !== confirmarSenha) {
+      toast.error("As senhas não coincidem.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await resetFn({
+        data: {
+          user_id: usuario.id,
+          password: novaSenha,
+        },
+      });
+      toast.success(`Senha de "${usuario.nome ?? usuario.email}" alterada com sucesso!`);
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao alterar senha");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const gerarSenhaAleatoria = () => {
+    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%";
+    let pass = "";
+    for (let i = 0; i < 10; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setNovaSenha(pass);
+    setConfirmarSenha(pass);
+    setMostrarSenha(true);
+    toast.info("Senha gerada! Você pode copiá-la ou ajustá-la.");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <KeyRound className="size-4 text-amber-500" /> Alterar Senha de Acesso
+          </DialogTitle>
+        </DialogHeader>
+        <div className="p-3 bg-muted/30 border rounded-lg text-xs space-y-1 my-1">
+          <p className="text-foreground font-semibold">
+            Usuário: {usuario?.nome ?? "Sem nome"}
+          </p>
+          <p className="text-muted-foreground font-mono">{usuario?.email}</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Nova Senha (mínimo 6 caracteres)</Label>
+              <button
+                type="button"
+                onClick={gerarSenhaAleatoria}
+                className="text-[11px] text-primary hover:underline font-medium"
+              >
+                Gerar Senha Sugerida
+              </button>
+            </div>
+            <Input
+              type={mostrarSenha ? "text" : "password"}
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              placeholder="Digite a nova senha"
+              required
+              minLength={6}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Confirmar Nova Senha</Label>
+            <Input
+              type={mostrarSenha ? "text" : "password"}
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              placeholder="Repita a nova senha"
+              required
+              minLength={6}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-muted-foreground flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={mostrarSenha}
+                onChange={(e) => setMostrarSenha(e.target.checked)}
+                className="rounded border-input text-primary"
+              />
+              Mostrar senha em texto claro
+            </label>
+          </div>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
+              {loading && <Loader2 className="size-4 animate-spin" />}
+              Salvar Nova Senha
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

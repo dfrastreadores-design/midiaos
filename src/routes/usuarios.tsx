@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -35,6 +35,7 @@ import {
   listAuditoriaAcessos,
   adminResetPassword,
   deleteUsuario,
+  updateUsuarioPerfil,
 } from "@/lib/usuarios.functions";
 import { uploadAssinaturaExecutivo, removerAssinaturaExecutivo } from "@/lib/assinaturas.functions";
 import { listPermissions, setRolePermission } from "@/lib/permissions.functions";
@@ -42,7 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/use-roles";
 import { useTenantModulos } from "@/hooks/use-tenant-modulos";
 import { toast } from "sonner";
-import { UserPlus, ShieldAlert, History, PenLine, Trash2, KeyRound, Lock } from "lucide-react";
+import { UserPlus, ShieldAlert, History, PenLine, Trash2, KeyRound, Lock, Pencil, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/usuarios")({
   head: () => ({ meta: [{ title: "Usuários e Perfis — Mídia.OS" }] }),
@@ -284,7 +285,13 @@ function UsuariosPage() {
                       />
                     </TableCell>
                     <TableCell className="text-right">
-                      <ExcluirUsuarioButton userId={u.id} userEmail={u.email} />
+                      <div className="flex items-center justify-end gap-1">
+                        <EditarUsuarioDialog
+                          usuario={u}
+                          onSaved={() => qc.invalidateQueries({ queryKey: ["usuarios"] })}
+                        />
+                        <ExcluirUsuarioButton userId={u.id} userEmail={u.email} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -751,15 +758,61 @@ function RedefinirSenhaDialog({ userId, userEmail }: { userId: string; userEmail
 
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) return toast.error("Mínimo 6 caracteres");
+    if (password.length < 6) return toast.error("A nova senha deve possuir no mínimo 6 caracteres");
     setBusy(true);
+
     try {
-      await resetFn({ data: { user_id: userId, password } });
-      toast.success(`Senha de ${userEmail} alterada com sucesso`);
+      // 1. Obtém token de autenticação da sessão ativa
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        throw new Error("Sessão expirada ou não encontrada. Por favor, realize login novamente.");
+      }
+
+      // 2. Dispara a chamada POST para o endpoint backend dedicado /api/admin/reset-password
+      let succeeded = false;
+      let lastErrorMessage = "";
+
+      try {
+        const res = await fetch("/api/admin/reset-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId,
+            newPassword: password,
+          }),
+        });
+
+        const json = await res.json().catch(() => ({}));
+
+        if (res.ok && json.success !== false) {
+          succeeded = true;
+        } else {
+          lastErrorMessage = json.error || `Erro HTTP ${res.status}`;
+        }
+      } catch (fetchErr: any) {
+        lastErrorMessage = fetchErr?.message || "Falha ao conectar com o endpoint administrativo";
+      }
+
+      // 3. Fallback pela Server Action segura caso o endpoint HTTP encontre restrição de proxy
+      if (!succeeded) {
+        try {
+          await resetFn({ data: { user_id: userId, password } });
+          succeeded = true;
+        } catch (serverFnErr: any) {
+          throw new Error(lastErrorMessage || serverFnErr?.message || "Não foi possível alterar a senha");
+        }
+      }
+
+      toast.success(`Senha de ${userEmail} alterada com sucesso!`);
       setOpen(false);
       setPassword("");
-    } catch (e) {
-      toast.error((e as Error).message);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao alterar a senha do usuário");
     } finally {
       setBusy(false);
     }
@@ -867,6 +920,121 @@ function ExcluirUsuarioButton({ userId, userEmail }: { userId: string; userEmail
             {busy ? "Excluindo…" : "Excluir definitivamente"}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditarUsuarioDialog({
+  usuario,
+  onSaved,
+}: {
+  usuario: any;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [nome, setNome] = useState(usuario.nome ?? "");
+  const [cargo, setCargo] = useState(usuario.cargo ?? "");
+  const [telefone, setTelefone] = useState(usuario.telefone ?? usuario.whatsapp ?? "");
+  const [email, setEmail] = useState(usuario.email ?? "");
+  const [saving, setSaving] = useState(false);
+  const updateFn = useServerFn(updateUsuarioPerfil);
+
+  useEffect(() => {
+    if (open) {
+      setNome(usuario.nome ?? "");
+      setCargo(usuario.cargo ?? "");
+      setTelefone(usuario.telefone ?? usuario.whatsapp ?? "");
+      setEmail(usuario.email ?? "");
+    }
+  }, [open, usuario]);
+
+  const handle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (nome.trim().length < 3) {
+      toast.error("Nome deve ter no mínimo 3 caracteres");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateFn({
+        data: {
+          user_id: usuario.id,
+          nome: nome.trim(),
+          cargo: cargo.trim() || null,
+          telefone: telefone.trim() || null,
+          email: email.trim() || undefined,
+        },
+      });
+      toast.success("Usuário atualizado com sucesso");
+      setOpen(false);
+      onSaved();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar usuário");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" title="Editar dados do usuário">
+          <Pencil className="size-4 text-blue-600" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="size-4 text-primary" /> Editar dados do usuário
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handle} className="space-y-4">
+          <div>
+            <Label>Nome completo</Label>
+            <Input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Nome e sobrenome"
+              required
+            />
+          </div>
+          <div>
+            <Label>Função na empresa (cargo)</Label>
+            <Input
+              value={cargo}
+              onChange={(e) => setCargo(e.target.value)}
+              placeholder="Ex: Executivo de contas, Diretor Comercial…"
+            />
+          </div>
+          <div>
+            <Label>Telefone / WhatsApp</Label>
+            <Input
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              placeholder="(61) 99999-9999"
+            />
+          </div>
+          <div>
+            <Label>E-mail</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving} className="gap-2">
+              {saving && <Loader2 className="size-4 animate-spin" />}
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

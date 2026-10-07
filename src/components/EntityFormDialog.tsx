@@ -60,6 +60,8 @@ import { traduzirErro } from "@/lib/error-translator";
 import { FormFieldError, errorLabelClass, scrollToFirstError } from "@/lib/form-errors";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Building2 } from "lucide-react";
+import { consultarCep } from "@/lib/cep-lookup";
+import { maskCep } from "@/lib/form-masks";
 
 export type Contato = {
   nome: string;
@@ -254,6 +256,7 @@ export function EntityFormDialog({
   const [importResults, setImportResults] = useState<ImportResult[] | null>(null);
   const [isImportingBulk, setIsImportingBulk] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loadingCep, setLoadingCep] = useState(false);
 
   // Quando estiver cadastrando/editando uma agência, listar clientes para vincular.
   const { data: clientesAll = [] } = useQuery({
@@ -1065,11 +1068,13 @@ export function EntityFormDialog({
                           ➕ Cadastrar Novo Indicador...
                         </SelectItem>
                         <SelectItem value="__none">Nenhuma indicação (Cliente Direto / Próprio)</SelectItem>
-                        {(indicadoresList as any[]).map((ind: any) => (
-                          <SelectItem key={ind.id} value={ind.id}>
-                            {ind.nome} ({ind.percentual_comissao_padrao}% padrão)
-                          </SelectItem>
-                        ))}
+                        {(indicadoresList as any[])
+                          .filter((ind: any) => ind.ativo !== false && ind.status !== "blocked" && ind.status !== "inactive")
+                          .map((ind: any) => (
+                            <SelectItem key={ind.id} value={ind.id}>
+                              {ind.nome} ({ind.person_type === "PJ" ? "PJ" : "PF"} — {ind.percentual_comissao_padrao}% comissão)
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1164,7 +1169,7 @@ export function EntityFormDialog({
 
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5 sm:col-span-2">
-                <Label className={errors.razao_social ? errorLabelClass : undefined}>Razão Social *</Label>
+                <Label className={errorLabelClass(!!errors.razao_social)}>Razão Social *</Label>
                 <Input
                   data-field="razao_social"
                   error={errors.razao_social}
@@ -1210,10 +1215,40 @@ export function EntityFormDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>CEP</Label>
+                <div className="flex items-center justify-between">
+                  <Label>CEP</Label>
+                  {loadingCep && (
+                    <span className="text-[10px] text-primary animate-pulse font-medium">
+                      Buscando endereço...
+                    </span>
+                  )}
+                </div>
                 <Input
+                  placeholder="00000-000"
+                  maxLength={9}
                   value={form.cep ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value }))}
+                  onChange={async (e) => {
+                    const masked = maskCep(e.target.value);
+                    setForm((f) => ({ ...f, cep: masked }));
+                    const clean = masked.replace(/\D/g, "");
+                    if (clean.length === 8) {
+                      setLoadingCep(true);
+                      const res = await consultarCep(clean);
+                      setLoadingCep(false);
+                      if (res) {
+                        setForm((f) => ({
+                          ...f,
+                          cep: masked,
+                          endereco: res.logradouro
+                            ? `${res.logradouro}${res.bairro ? ` - ${res.bairro}` : ""}`
+                            : f.endereco,
+                          cidade: res.cidade || f.cidade,
+                          uf: res.uf || f.uf,
+                        }));
+                        toast.success(`Endereço localizado via CEP: ${res.cidade}/${res.uf}`);
+                      }
+                    }
+                  }}
                 />
               </div>
               <div className="space-y-1.5">

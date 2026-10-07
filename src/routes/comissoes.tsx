@@ -45,7 +45,7 @@ import {
   updateApuracaoStatus,
 } from "@/lib/comissoes.functions";
 import { listEmissoras } from "@/lib/emissoras.functions";
-import { IndicadoresTab } from "@/components/indicadores/IndicadoresTab";
+import { PartnersTab } from "@/components/partners/PartnersTab";
 
 export const Route = createFileRoute("/comissoes")({
   head: () => ({ meta: [{ title: "Comissões & Indicadores — Mídia.OS" }] }),
@@ -108,7 +108,7 @@ function ComissoesPage() {
             <DollarSign className="h-4 w-4 mr-1.5" /> Apuração
           </TabsTrigger>
           <TabsTrigger value="indicadores">
-            <UserCheck className="h-4 w-4 mr-1.5" /> Quem Indica (Afiliados)
+            <UserCheck className="h-4 w-4 mr-1.5" /> Indicadores & Vendedores (PF/PJ)
           </TabsTrigger>
           <TabsTrigger value="regras">
             <Percent className="h-4 w-4 mr-1.5" /> Regras Comerciais
@@ -118,7 +118,7 @@ function ComissoesPage() {
           <ApuracaoTab />
         </TabsContent>
         <TabsContent value="indicadores" className="mt-4">
-          <IndicadoresTab />
+          <PartnersTab />
         </TabsContent>
         <TabsContent value="regras" className="mt-4">
           <RegrasTab />

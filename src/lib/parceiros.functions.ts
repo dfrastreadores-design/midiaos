@@ -59,6 +59,10 @@ export const ParceiroSchema = z.object({
   cnpj: nullableString(30),
   logo_url: nullableString(1000),
   tipo_veiculo: z.string().default("Painel OOH/DOOH"),
+  perfil_comercial: z
+    .enum(["VEICULO_EXIBIDOR", "AGENCIA", "REPRESENTANTE", "ANUNCIANTE", "FORNECEDOR_PRODUCAO"])
+    .default("VEICULO_EXIBIDOR")
+    .optional(),
   status: z.enum(["ativo", "inativo", "em_negociacao"]).default("ativo"),
   comissao_padrao_percentual: z.number().min(0).max(100).default(20.0),
   site: nullableString(300),
@@ -88,6 +92,7 @@ export const ParceiroSchema = z.object({
   observacoes: nullableString(2000),
   media_kit_defenses: z.any().optional().nullable(),
   commercial_discounts_rules: z.any().optional().nullable(),
+  allows_circuit_bundles: z.boolean().default(false),
   ativo: z.boolean().default(true),
 });
 
@@ -276,6 +281,19 @@ export const upsertParceiro = createServerFn({ method: "POST" })
       const adminRes = await adminQ;
       if (!adminRes.error && adminRes.data) {
         res = adminRes;
+      }
+    }
+
+    // Se o erro for referente à coluna perfil_comercial ou allows_circuit_bundles ausente no cache do banco:
+    if (res.error && (res.error.message.toLowerCase().includes("perfil_comercial") || res.error.message.toLowerCase().includes("allows_circuit_bundles"))) {
+      if (res.error.message.toLowerCase().includes("perfil_comercial")) delete payload.perfil_comercial;
+      if (res.error.message.toLowerCase().includes("allows_circuit_bundles")) delete payload.allows_circuit_bundles;
+      const retryQ = id
+        ? supabaseAdmin.from("parceiros").update(payload).eq("id", id).select().single()
+        : supabaseAdmin.from("parceiros").insert(payload).select().single();
+      const retryRes = await retryQ;
+      if (!retryRes.error) {
+        res = retryRes;
       }
     }
 

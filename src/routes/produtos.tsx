@@ -49,6 +49,15 @@ import {
   Camera,
   Sparkles,
   Layers,
+  Globe,
+  Newspaper,
+  MapPin,
+  ExternalLink,
+  CheckSquare,
+  Square,
+  CheckCheck,
+  X,
+  SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -58,10 +67,12 @@ import {
   listProdutoTipos,
   upsertProdutoTipo,
   deleteProdutoTipo,
+  batchUpdateProdutos,
 } from "@/lib/produtos.functions";
 import { listMidiaConfig, upsertMidiaConfig } from "@/lib/midia-config.functions";
 import { SUGESTOES_TIPOS_POR_MIDIA } from "@/lib/catalogo-midias";
 import { useUserRoles } from "@/hooks/use-roles";
+import { useTenantSettings } from "@/hooks/use-tenant-settings";
 import { useCurrentOrg } from "@/hooks/use-current-org";
 import { formatBRL } from "@/lib/mock-data";
 import { LogoImg } from "@/components/LogoImg";
@@ -71,6 +82,7 @@ import { ProdutoFormDialog, type Produto } from "@/components/ProdutoFormDialog"
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
 import { CatalogoEspacosTab } from "@/components/CatalogoEspacosTab";
+import { FluxOohSplitScreen } from "@/components/inventory/FluxOohSplitScreen";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +96,19 @@ export const Route = createFileRoute("/produtos")({
 
 type Midia = string;
 
-const midiaLabel: Record<string, string> = { TV: "TV", Radio: "Rádio", DOOH: "DOOH" };
+const midiaLabel: Record<string, string> = {
+  OOH: "OOH",
+  DOOH: "DOOH",
+  Radio: "Rádio",
+  RADIO: "Rádio",
+  Digital: "Digital",
+  DIGITAL: "Digital",
+  Print: "Impresso",
+  PRINT: "Impresso",
+  Impresso: "Impresso",
+  TV: "TV",
+  CUSTOM: "Personalizado",
+};
 const getMidiaLabel = (m: string) => midiaLabel[m] || m;
 
 type MidiaConfig = {
@@ -120,11 +144,12 @@ function ProdutosPage() {
   const fetchConfigs = useServerFn(listMidiaConfig);
   const upsertConfigFn = useServerFn(upsertMidiaConfig);
   const fetchTipos = useServerFn(listProdutoTipos);
+  const batchUpdateFn = useServerFn(batchUpdateProdutos);
 
   const searchParams = Route.useSearch();
   const { isNexo } = useCurrentOrg();
-  const [mainView, setMainView] = useState<"catalogo" | "tabela">("catalogo");
-  const [tab, setTab] = useState<Midia>("TV");
+  const [mainView, setMainView] = useState<"catalogo" | "tabela" | "mapa">("catalogo");
+  const [tab, setTab] = useState<Midia>("DOOH");
   const [search, setSearch] = useState(searchParams.parceiro || "");
   const [filtroTipo, setFiltroTipo] = useState<string>("__all__");
   const [filtroStatus, setFiltroStatus] = useState<"all" | "ativo" | "inativo">("all");
@@ -147,6 +172,30 @@ function ProdutosPage() {
   const [novaMidiaOpen, setNovaMidiaOpen] = useState(false);
   const [novaMidiaNome, setNovaMidiaNome] = useState("");
   const [customMidias, setCustomMidias] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchPriceOpen, setBatchPriceOpen] = useState(false);
+  const [batchPricePercent, setBatchPricePercent] = useState<string>("");
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (items: Produto[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = items.every((i) => prev.has(i.id));
+      if (allSelected) {
+        return new Set();
+      }
+      return new Set(items.map((i) => i.id));
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
 
   const { data, isLoading } = useQuery({ queryKey: ["produtos"], queryFn: () => fetchList() });
   const { data: configs } = useQuery({ queryKey: ["midia_config"], queryFn: () => fetchConfigs() });
@@ -156,15 +205,25 @@ function ProdutosPage() {
   });
 
   const allProdutos = (data as Produto[]) ?? [];
+  const { isMediaTypeActive } = useTenantSettings();
 
   const listaMidias = useMemo<string[]>(() => {
     const fromConfigs = ((configs as MidiaConfig[]) ?? []).map((c) => c.midia).filter(Boolean);
     const fromProdutos = allProdutos.map((p) => p.midia).filter(Boolean);
     const fromTipos = ((todosTipos as ProdutoTipo[]) ?? []).map((t) => t.midia).filter(Boolean);
-    return Array.from(
-      new Set(["TV", "Radio", "DOOH", ...fromConfigs, ...fromProdutos, ...fromTipos, ...customMidias]),
+    const universais = ["OOH", "DOOH", "DIGITAL", "RADIO", "PRINT", "TV", "CUSTOM"];
+    const all = Array.from(
+      new Set([...universais, ...fromConfigs, ...fromProdutos, ...fromTipos, ...customMidias]),
     );
-  }, [configs, allProdutos, todosTipos, customMidias]);
+    const filtered = all.filter((m) => isMediaTypeActive(m));
+    return filtered.length > 0 ? filtered : all;
+  }, [configs, allProdutos, todosTipos, customMidias, isMediaTypeActive]);
+
+  useEffect(() => {
+    if (listaMidias.length > 0 && !listaMidias.includes(tab)) {
+      setTab(listaMidias[0]);
+    }
+  }, [listaMidias, tab]);
 
   useEffect(() => {
     if (searchParams.parceiro && allProdutos.length > 0) {
@@ -193,11 +252,29 @@ function ProdutosPage() {
     mutationFn: (c: any) => upsertConfigFn({ data: c }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["midia_config"] });
-      toast.success("Dados da emissora salvos");
+      toast.success("Dados cadastrais do veículo/canal salvos");
       setCfgOpen(false);
       setCfgEditing(null);
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const batchMut = useMutation({
+    mutationFn: (payload: {
+      ids: string[];
+      status_operacional?: "disponivel" | "reservado" | "bloqueado_comercial";
+      ativo?: boolean;
+      reajuste_percentual?: number;
+      valor_unit_fixo?: number;
+    }) => batchUpdateFn({ data: payload }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+      toast.success(`${res.count} produto(s) atualizado(s) com sucesso!`);
+      clearSelection();
+      setBatchPriceOpen(false);
+      setBatchPricePercent("");
+    },
+    onError: (e: Error) => toast.error(`Erro ao atualizar em lote: ${e.message}`),
   });
 
   const q = search.trim().toLowerCase();
@@ -306,10 +383,22 @@ function ProdutosPage() {
           <p className="text-muted-foreground text-sm mt-1">
             {isNexo
               ? "Catálogo estratégico de inventário comercial: soluções próprias e veículos parceiros homologados no Distrito Federal."
-              : "Cadastro de produtos de TV, Rádio, DOOH e canais digitais (valor, tempo e inserções padrão)."}
+              : "Catálogo de soluções de mídia e inventário comercial: OOH, DOOH, Rádio, Portais/Digital, Mídia Impressa e TV."}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
+          <Button
+            variant="outline"
+            asChild
+            className="gap-2 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-xs"
+            title="Abrir vitrine pública interativa no modelo Flux OOH (White-label seguro)"
+          >
+            <Link to="/site/inventario" target="_blank">
+              <ExternalLink className="size-4 text-emerald-600" />
+              <span>Vitrine Pública OOH</span>
+            </Link>
+          </Button>
+
           <Button
             variant="outline"
             asChild
@@ -357,7 +446,7 @@ function ProdutosPage() {
           {(isAdmin || canManage) && (
             <Button variant="outline" onClick={openCfg} className="gap-2">
               <Building2 className="size-4" />
-              <span>Dados da emissora ({midiaLabel[tab]})</span>
+              <span>Dados cadastrais do veículo ({getMidiaLabel(tab)})</span>
             </Button>
           )}
 
@@ -397,11 +486,29 @@ function ProdutosPage() {
           )}
         >
           <FileSpreadsheet className="size-4" />
-          <span>Grade por Mídia (TV, Rádio, DOOH)</span>
+          <span>Inventário por Canal / Mídia</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMainView("mapa")}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2",
+            mainView === "mapa"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <MapPin className="size-4 text-emerald-600" />
+          <span>Mapa Interativo (Flux OOH)</span>
+          <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
         </button>
       </div>
 
-      {mainView === "catalogo" ? (
+      {mainView === "mapa" ? (
+        <div className="h-[calc(100vh-210px)] min-h-[600px] rounded-2xl overflow-hidden border shadow-sm bg-card">
+          <FluxOohSplitScreen />
+        </div>
+      ) : mainView === "catalogo" ? (
         <CatalogoEspacosTab initialPartnerId={searchParams.parceiro} />
       ) : (
         <>
@@ -409,7 +516,7 @@ function ProdutosPage() {
         <Card className="mb-4">
           <CardContent className="py-3 px-4 text-sm flex flex-wrap gap-x-6 gap-y-1">
             <span>
-              <strong>{midiaLabel[tab]}:</strong> {currentCfg.razao_social ?? "—"}
+              <strong>{getMidiaLabel(tab)}:</strong> {currentCfg.razao_social ?? "—"}
             </span>
             {currentCfg.cnpj && (
               <span>
@@ -435,10 +542,14 @@ function ProdutosPage() {
             <TabsTrigger key={m} value={m} className="gap-1.5">
               {m === "TV" ? (
                 <Tv className="size-4" />
-              ) : m === "Radio" ? (
+              ) : m === "Radio" || m === "RADIO" ? (
                 <Radio className="size-4" />
-              ) : m === "DOOH" ? (
+              ) : m === "DOOH" || m === "OOH" ? (
                 <Monitor className="size-4" />
+              ) : m === "DIGITAL" || m === "Digital" ? (
+                <Globe className="size-4" />
+              ) : m === "PRINT" || m === "Impresso" ? (
+                <Newspaper className="size-4" />
               ) : (
                 <Tags className="size-3.5" />
               )}
@@ -569,7 +680,7 @@ function ProdutosPage() {
             <Card>
               <CardContent className="p-3 flex flex-wrap gap-2 items-center">
                 <Input
-                  placeholder="Pesquisar por nome, tipo, programa, formato ou faixa…"
+                  placeholder="Pesquisar por nome, formato, espaço comercial ou faixa…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="max-w-sm"
@@ -635,9 +746,18 @@ function ProdutosPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-primary focus:ring-primary size-4 cursor-pointer"
+                          checked={list.length > 0 && list.every((p) => selectedIds.has(p.id))}
+                          onChange={() => toggleSelectAll(list)}
+                          aria-label="Selecionar todos os itens da página"
+                        />
+                      </TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead>Origem / Parceiro</TableHead>
-                      <TableHead>Programa / Faixa</TableHead>
+                      <TableHead>Posição / Espaço / Faixa</TableHead>
                       <TableHead className="text-right">Duração</TableHead>
                       <TableHead className="text-right">Inserções</TableHead>
                       <TableHead className="text-right">Valor unit.</TableHead>
@@ -648,7 +768,7 @@ function ProdutosPage() {
                   <TableBody>
                     {isLoading && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                           Carregando…
                         </TableCell>
                       </TableRow>
@@ -660,7 +780,7 @@ function ProdutosPage() {
                         if (totalMidia === 0) {
                           return (
                             <TableRow>
-                              <TableCell colSpan={8} className="py-12">
+                              <TableCell colSpan={9} className="py-12">
                                 <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
                                   <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                                     {tab === "TV" ? (
@@ -701,29 +821,50 @@ function ProdutosPage() {
                         }
                         return (
                           <TableRow>
-                            <TableCell colSpan={8} className="py-10 text-center space-y-2">
+                            <TableCell colSpan={9} className="py-10 text-center space-y-2">
                               <p className="text-sm text-muted-foreground">
                                 Nenhum produto encontrado com os filtros aplicados.
                               </p>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSearch("");
-                                  setFiltroTipo("__all__");
-                                  setFiltroStatus("all");
-                                  setFiltroOrigem("all");
-                                  setFiltroCanalMacro("all");
-                                }}
-                              >
-                                Limpar filtros
-                              </Button>
+                              <div className="flex items-center justify-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSearch("");
+                                    setFiltroTipo("__all__");
+                                    setFiltroStatus("all");
+                                    setFiltroOrigem("all");
+                                    setFiltroCanalMacro("all");
+                                  }}
+                                >
+                                  Limpar filtros
+                                </Button>
+                                <Button size="sm" onClick={openNew} className="gap-1.5">
+                                  <Plus className="size-3.5" />
+                                  Cadastrar Novo Ponto
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
                       })()}
                     {list.map((p) => (
-                      <TableRow key={p.id}>
+                      <TableRow
+                        key={p.id}
+                        className={cn(
+                          selectedIds.has(p.id) && "bg-primary/5 dark:bg-primary/10",
+                          "transition-colors",
+                        )}
+                      >
+                        <TableCell className="w-10">
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-300 text-primary focus:ring-primary size-4 cursor-pointer"
+                            checked={selectedIds.has(p.id)}
+                            onChange={() => toggleSelectOne(p.id)}
+                            aria-label={`Selecionar ${p.nome}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             {p.fotos && p.fotos.length > 0 ? (
@@ -849,9 +990,24 @@ function ProdutosPage() {
                           {formatBRL(Number(p.valor_unit))}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={p.ativo ? "default" : "outline"}>
-                            {p.ativo ? "Ativo" : "Inativo"}
-                          </Badge>
+                          <div className="flex flex-col gap-1 items-start">
+                            <Badge variant={p.ativo ? "default" : "outline"} className="text-[11px]">
+                              {p.ativo ? "Ativo" : "Inativo"}
+                            </Badge>
+                            {p.status_operacional === "em_veiculacao" || p.pi_ativo_id ? (
+                              <Badge className="bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 text-[10px] font-bold">
+                                🟢 PI Emitido — Veiculação Autorizada
+                              </Badge>
+                            ) : p.status_operacional === "bloqueado_comercial" || p.status_operacional === "reservado" ? (
+                              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-300 text-[10px] font-bold">
+                                🟡 Aguardando Emissão de PI para Veiculação
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                Disponível Comercial
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           {canManage && (
@@ -886,9 +1042,134 @@ function ProdutosPage() {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Barra Flutuante de Ações em Lote */}
+            {selectedIds.size > 0 && (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-3 flex-wrap animate-in fade-in slide-in-from-bottom-3 max-w-[95vw]">
+                <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
+                  <CheckSquare className="size-4 text-primary shrink-0" />
+                  <span className="text-xs font-bold text-slate-100 whitespace-nowrap">
+                    {selectedIds.size} selecionado{selectedIds.size > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/40 hover:border-amber-400"
+                    disabled={batchMut.isPending}
+                    onClick={() =>
+                      batchMut.mutate({
+                        ids: Array.from(selectedIds),
+                        status_operacional: "reservado",
+                      })
+                    }
+                  >
+                    Marcar como Reservado
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-emerald-300 border-emerald-500/40 hover:border-emerald-400"
+                    disabled={batchMut.isPending}
+                    onClick={() =>
+                      batchMut.mutate({
+                        ids: Array.from(selectedIds),
+                        status_operacional: "disponivel",
+                      })
+                    }
+                  >
+                    Marcar como Disponível
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-600"
+                    disabled={batchMut.isPending}
+                    onClick={() => setBatchPriceOpen(true)}
+                  >
+                    <SlidersHorizontal className="size-3.5 mr-1" />
+                    Reajustar Valores
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs text-slate-400 hover:text-white hover:bg-slate-800"
+                    onClick={clearSelection}
+                  >
+                    <X className="size-3.5 mr-1" />
+                    Desmarcar
+                  </Button>
+                </div>
+              </div>
+            )}
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Modal de Reajuste em Lote */}
+      <Dialog open={batchPriceOpen} onOpenChange={setBatchPriceOpen}>
+        <DialogContent className="sm:max-w-[420px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Reajustar Valores em Lote</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Aplicar reajuste percentual para os <strong>{selectedIds.size}</strong> produtos selecionados.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Percentual de Reajuste (%)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="Ex: 5 para +5%, -10 para -10%"
+                  value={batchPricePercent}
+                  onChange={(e) => setBatchPricePercent(e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div className="flex gap-1.5 pt-1">
+                {[5, 10, 15, -5, -10].map((pct) => (
+                  <Button
+                    key={pct}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-2"
+                    onClick={() => setBatchPricePercent(String(pct))}
+                  >
+                    {pct > 0 ? `+${pct}%` : `${pct}%`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setBatchPriceOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={!batchPricePercent || batchMut.isPending}
+              onClick={() => {
+                const pct = parseFloat(batchPricePercent);
+                if (isNaN(pct)) return;
+                batchMut.mutate({
+                  ids: Array.from(selectedIds),
+                  reajuste_percentual: pct,
+                });
+              }}
+            >
+              {batchMut.isPending ? "Aplicando..." : "Confirmar Reajuste"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
         </>
       )}
 
@@ -1171,7 +1452,7 @@ function MidiaConfigDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Dados da emissora — {midiaLabel[value.midia as Midia]}</DialogTitle>
+          <DialogTitle>Dados cadastrais do veículo — {getMidiaLabel(value.midia as Midia)}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={(e) => {

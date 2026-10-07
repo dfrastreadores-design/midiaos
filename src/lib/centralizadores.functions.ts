@@ -328,7 +328,24 @@ export const gerarEstrategiaMidiaIA = createServerFn({ method: "POST" })
     if (tenantId) queryProdutos = queryProdutos.eq("tenant_id", tenantId);
     const { data: produtosDb } = await queryProdutos.limit(100);
 
-    const catalogoReal = produtosDb || [];
+    const todosProdutos = produtosDb || [];
+
+    // Filtrar catálogo considerando canais selecionados e produtos elegíveis
+    const canaisFiltro = (data.veiculos_preferenciais || []).map((v) => v.trim().toLowerCase());
+    const selecionadosIds = new Set(data.produtos_selecionados_ids || []);
+
+    const catalogoFiltrado = todosProdutos.filter((p) => {
+      if (selecionadosIds.size > 0 && !selecionadosIds.has(p.id)) {
+        return false;
+      }
+      if (canaisFiltro.length > 0) {
+        const midia = (p.midia || "").trim().toLowerCase();
+        return canaisFiltro.some((c) => c === midia || c.includes(midia) || midia.includes(c));
+      }
+      return true;
+    });
+
+    const catalogoReal = catalogoFiltrado.length > 0 ? catalogoFiltrado : todosProdutos;
 
     // 3. Tentar chamada à IA (Lovable Gateway / Gemini / OpenAI)
     const apiKey =

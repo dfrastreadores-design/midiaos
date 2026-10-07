@@ -5,6 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { isMasterEmail } from "@/lib/master-user";
 import {
   InsertionOrder,
   PiItem,
@@ -36,13 +37,21 @@ export const listInsertionOrders = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const client = supabaseAdmin || supabase;
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("tenant_id, role")
-      .eq("id", userId)
-      .maybeSingle();
+    const [{ data: userAuth }, { data: profile }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id, role, cnpj_vinculado, cnpj, is_superadmin")
+        .eq("id", userId)
+        .maybeSingle(),
+    ]);
 
-    const isMaster = profile?.role === "master";
+    const isMaster =
+      isMasterEmail(userAuth?.user?.email) ||
+      profile?.is_superadmin ||
+      String(profile?.role).toUpperCase() === "MASTER" ||
+      userAuth?.user?.user_metadata?.role === "MASTER" ||
+      userAuth?.user?.user_metadata?.is_superadmin === true;
 
     let query = (client.from("insertion_orders") as any)
       .select(`
@@ -55,8 +64,13 @@ export const listInsertionOrders = createServerFn({ method: "POST" })
       `)
       .order("created_at", { ascending: false });
 
-    if (!isMaster && profile?.tenant_id) {
-      query = query.eq("tenant_id", profile.tenant_id);
+    if (!isMaster) {
+      const userCnpj = (profile?.cnpj_vinculado || profile?.cnpj)?.trim();
+      if (userCnpj) {
+        query = query.or(`cnpj_cliente.eq.${userCnpj},cnpj_veiculo.eq.${userCnpj}`);
+      } else if (profile?.tenant_id) {
+        query = query.eq("tenant_id", profile.tenant_id);
+      }
     }
 
     if (data.clientId) {
@@ -124,6 +138,47 @@ export const getInsertionOrder = createServerFn({ method: "POST" })
     if (error || !order) {
       console.error("[getInsertionOrder] Erro:", error);
       throw new Error("Pedido de Inserção não encontrado.");
+    }
+
+    const [{ data: userAuth }, { data: profile }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id, role, cnpj_vinculado, cnpj, is_superadmin")
+        .eq("id", userId)
+        .maybeSingle(),
+    ]);
+
+    const isMaster =
+      isMasterEmail(userAuth?.user?.email) ||
+      profile?.is_superadmin ||
+      String(profile?.role).toUpperCase() === "MASTER" ||
+      userAuth?.user?.user_metadata?.role === "MASTER" ||
+      userAuth?.user?.user_metadata?.is_superadmin === true;
+
+    if (!isMaster) {
+      const userCnpj = (profile?.cnpj_vinculado || profile?.cnpj)?.trim();
+      if (userCnpj) {
+        const matchesClient =
+          order.cnpj_cliente === userCnpj || order.client?.cnpj === userCnpj;
+        const matchesVehicle =
+          order.cnpj_veiculo === userCnpj ||
+          order.items?.some(
+            (it: any) =>
+              it.vehicle?.cnpj === userCnpj || it.cnpj_veiculo === userCnpj,
+          );
+        if (!matchesClient && !matchesVehicle) {
+          throw new Error(
+            "Acesso negado: este Pedido de Inserção pertence a outra organização.",
+          );
+        }
+      } else if (
+        profile?.tenant_id &&
+        order.tenant_id &&
+        order.tenant_id !== profile.tenant_id
+      ) {
+        throw new Error("Acesso negado: registro pertencente a outro tenant.");
+      }
     }
 
     return order as InsertionOrder;
@@ -252,6 +307,26 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
     let piId = data.id;
     let piNumber = "";
 
+    // Resolver CNPJ do cliente e veículo para governança estrita RBAC
+    let cnpjCliente: string | null = null;
+    if (data.client_id) {
+      const { data: cli } = await (client.from("clientes") as any)
+        .select("cnpj")
+        .eq("id", data.client_id)
+        .maybeSingle();
+      cnpjCliente = cli?.cnpj || null;
+    }
+
+    let cnpjVeiculo: string | null = null;
+    const firstVehicleId = parsedItems.find((it) => it.vehicle_id)?.vehicle_id;
+    if (firstVehicleId) {
+      const { data: vRow } = await (client.from("partners") as any)
+        .select("cnpj")
+        .eq("id", firstVehicleId)
+        .maybeSingle();
+      cnpjVeiculo = vRow?.cnpj || null;
+    }
+
     if (!piId) {
       // Gerar número sequencial formal para o PI
       const year = new Date().getFullYear();
@@ -267,6 +342,8 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
           representative_id: userId,
           proposal_id: data.proposal_id || null,
           billing_type: data.billing_type,
+          cnpj_cliente: cnpjCliente,
+          cnpj_veiculo: cnpjVeiculo,
           gross_amount: split.grossAmount,
           representative_commission_rate: split.commissionRate,
           representative_commission_amount: split.commissionAmount,
@@ -298,6 +375,8 @@ export const saveInsertionOrder = createServerFn({ method: "POST" })
           client_id: data.client_id,
           agency_id: data.agency_id || null,
           billing_type: data.billing_type,
+          cnpj_cliente: cnpjCliente,
+          cnpj_veiculo: cnpjVeiculo,
           gross_amount: split.grossAmount,
           representative_commission_rate: split.commissionRate,
           representative_commission_amount: split.commissionAmount,

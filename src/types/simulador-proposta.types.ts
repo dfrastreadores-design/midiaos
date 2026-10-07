@@ -51,6 +51,8 @@ export interface ProposalItem {
   agency_commission_val: number;
   partner_payout_val: number;
   min_negotiated_unit_price?: number | null;
+  circuit_bundle_id?: string | null;
+  bundle_discount_applied?: boolean;
   notes?: string | null;
   created_at?: string;
 
@@ -116,6 +118,8 @@ export interface ProposalSimulationItemInput {
   discount_value: number;
   agency_commission_percent: number;
   min_negotiated_unit_price?: number | null;
+  circuit_bundle_id?: string | null;
+  bundle_discount_applied?: boolean;
   notes?: string | null;
   partner?: {
     id: string;

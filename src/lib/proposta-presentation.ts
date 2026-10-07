@@ -132,10 +132,6 @@ function detalhesProduto(it: Item, opts?: { mostrarEndereco?: boolean }): string
   const d = formatDias(it);
   if (d) partes.push(d);
 
-  if (it.parceiro_nome) {
-    partes.push(`🤝 Parceiro: ${it.parceiro_nome}${it.parceiro_cnpj ? ` (${it.parceiro_cnpj})` : ""}`);
-  }
-
   if (it.canal_macro === "ON") {
     partes.push(`🌐 Mídia ON${it.plataforma_rede ? ` (${it.plataforma_rede})` : ""}`);
   } else if (it.canal_macro === "HIBRIDO") {
@@ -169,6 +165,7 @@ function detalhesProduto(it: Item, opts?: { mostrarEndereco?: boolean }): string
 
 type Entidade =
   | {
+      id?: string | null;
       razao_social?: string | null;
       nome_fantasia?: string | null;
       cnpj?: string | null;
@@ -180,8 +177,10 @@ type Entidade =
   | undefined;
 
 export type PropostaApresentacao = {
+  id?: string;
   numero: string;
   campanha: string;
+  titulo?: string;
   validade?: string | null;
   created_at?: string | null;
   observacao?: string | null;
@@ -4000,7 +3999,7 @@ export async function gerarPdfPropostaNexo(
     if (defesasColetadas.length > 0 || totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
       const trechos: string[] = [];
       if (veiculosMencionados.size > 0) {
-        trechos.push(`Veiculação estruturada com os principais exibidores parceiros (${Array.from(veiculosMencionados).slice(0, 3).join(", ")}).`);
+        trechos.push("Veiculação estruturada através de rede homologada de alto impacto e cobertura contínua.");
       }
       if (totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
         const metricas: string[] = [];
@@ -4097,26 +4096,27 @@ export async function gerarPdfPropostaNexo(
 
     const tableRows = (p.itens || []).map((it, idx) => {
       let loc = it.cidade && it.estado ? `${it.cidade} / ${it.estado}` : (it.cidade || it.endereco_ponto || "DF / Região");
-      const veiculoNome = (it as any).nome_veiculo || it.tipo || "Painel LED";
-      const formato = it.formato || it.programa || "DOOH / LED";
-      const qtd = `${it.total_insercoes || it.insercoes_dia || 1}x`;
+      const codigoPonto = (it as any).codigo || `PT-${String(idx + 1).padStart(2, "0")}`;
+      const formato = it.tipo || "Mídia Exterior";
+      const specs = (it as any).dimensoes || it.formato || "Padrão OOH";
+      const qtd = (it as any).periodo || `${it.total_insercoes || it.insercoes_dia || 1} inserções`;
       const vTab = fmtBRL(it.valor_tabela);
       const desc = it.desconto > 0 ? `${it.desconto}%` : "—";
       const vNeg = fmtBRL(it.valor_negociado);
       const impMes = (it as any).impactos_estimados_mes || (it as any).impactos_mes_estimados || 750000;
       const cpm = impMes > 0 ? `R$ ${(it.valor_negociado / (impMes / 1000)).toFixed(2)}` : "—";
-      return [String(idx + 1).padStart(2, "0"), veiculoNome, formato, loc, qtd, vTab, desc, cpm, vNeg];
+      return [String(idx + 1).padStart(2, "0"), codigoPonto, formato, loc, specs, qtd, vTab, desc, cpm, vNeg];
     });
 
     autoTable(doc, {
       startY: 38,
-      head: [["#", "VEÍCULO / PARCEIRO", "FORMATO", "PRAÇA / LOCALIZAÇÃO", "INSERÇÕES", "TABELA", "DESC.", "CPM", "NEGOCIADO"]],
+      head: [["#", "CÓDIGO", "FORMATO", "LOCALIZAÇÃO", "SPECS", "PERÍODO", "TABELA", "DESC.", "CPM", "NEGOCIADO"]],
       body: tableRows,
       margin: { left: 15, right: 15 },
       theme: "grid",
       styles: {
-        fontSize: 7.5,
-        cellPadding: 2.8,
+        fontSize: 7.2,
+        cellPadding: 2.2,
         textColor: [240, 240, 240],
         fillColor: [18, 22, 30],
         lineColor: [36, 44, 58],
@@ -4126,18 +4126,19 @@ export async function gerarPdfPropostaNexo(
         fillColor: [28, 36, 52],
         textColor: [255, 107, 0],
         fontStyle: "bold",
-        fontSize: 7,
+        fontSize: 6.8,
       },
       columnStyles: {
-        0: { cellWidth: 8, halign: "center" },
-        1: { cellWidth: 42, fontStyle: "bold" },
-        2: { cellWidth: 40 },
-        3: { cellWidth: 64 },
-        4: { cellWidth: 20, halign: "center" },
-        5: { cellWidth: 24, halign: "right" },
-        6: { cellWidth: 16, halign: "right", textColor: [255, 107, 0] },
-        7: { cellWidth: 22, halign: "center", fontStyle: "bold", textColor: [121, 40, 202] },
-        8: { cellWidth: 31, halign: "right", fontStyle: "bold", textColor: [255, 255, 255] },
+        0: { cellWidth: 7, halign: "center" },
+        1: { cellWidth: 20, fontStyle: "bold", halign: "center" },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 54 },
+        4: { cellWidth: 32 },
+        5: { cellWidth: 24, halign: "center" },
+        6: { cellWidth: 24, halign: "right" },
+        7: { cellWidth: 16, halign: "right", textColor: [255, 107, 0] },
+        8: { cellWidth: 20, halign: "center", fontStyle: "bold", textColor: [121, 40, 202] },
+        9: { cellWidth: 30, halign: "right", fontStyle: "bold", textColor: [255, 255, 255] },
       },
     });
   } else if (cfg.incluir_laminas_pontos !== false && p.itens && p.itens.length > 0) {
@@ -5037,7 +5038,7 @@ export async function gerarPdfPropostaExecutivaCoBranding(
   } else if (defesasColetadas.length > 0 || totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
     const trechos: string[] = [];
     if (veiculosMencionados.size > 0) {
-      trechos.push(`Veiculação através de exibidores homologados de alta performance (${Array.from(veiculosMencionados).slice(0, 3).join(", ")}).`);
+      trechos.push("Veiculação estruturada através de rede homologada de alta performance e grande fluxo de público.");
     }
     if (totalImpactosEstimados > 0 || totalInsercoesDia > 0) {
       const metricas: string[] = [];
@@ -5071,40 +5072,81 @@ export async function gerarPdfPropostaExecutivaCoBranding(
   doc.setTextColor(69, 26, 3);
   doc.text(textoDefesa, 19, defesaY + 8.5, { maxWidth: W - 38 });
 
-  // 5. GRADE DA TABELA DE MÍDIA
+  // 5. GRADE DA TABELA DE MÍDIA (PADRÃO NEUTRO DO CLIENTE - SIGILO COMERCIAL)
   const tableY = 77;
   const tableData = (p.itens || []).map((it, idx) => {
-    let loc = "Ponto Estratégico Homologado";
-    if (it.cidade && it.estado) {
-      loc = `${it.cidade} / ${it.estado}`;
-      if (it.endereco_ponto && !it.endereco_ponto.includes(it.cidade)) {
-        loc += ` • ${it.endereco_ponto}`;
-      }
-    } else if (it.cidade) {
-      loc = it.cidade;
-    } else if (it.endereco_ponto) {
-      loc = it.endereco_ponto;
-    } else if (it.tipo?.toLowerCase().includes("próprio") || it.programa?.toLowerCase().includes("próprio")) {
-      loc = "Cobertura Nacional / Multi-Praça";
+    // 1. Código do ponto
+    let cod = (it as any).codigo || "";
+    if (!cod) {
+      const m = (it.programa || "").match(/^([A-Za-z0-9]+-[A-Za-z0-9]+|[A-Za-z]{2,5}\s*\d+)/);
+      cod = m ? m[0] : `PT-${String(idx + 1).padStart(2, "0")}`;
     }
 
-    const formato = it.formato || it.programa || it.tipo || "DOOH / LED";
-    const qtd = `${it.total_insercoes || it.insercoes_dia || 1}x`;
+    // 2. Descrição / Localização
+    let loc = "Ponto Estratégico Homologado";
+    if (it.endereco_ponto) {
+      loc = it.endereco_ponto;
+    } else if (it.cidade && it.estado) {
+      loc = `${it.cidade} / ${it.estado}`;
+    } else if (it.cidade) {
+      loc = it.cidade;
+    } else {
+      loc = (it.programa || "Ponto de Mídia").replace(/^[A-Za-z0-9]+-[A-Za-z0-9]+\s*[-·:]*\s*/, "").trim() || "Ponto Estratégico";
+    }
+
+    // 3. Formato / Tipo
+    let formato = it.tipo || "Mídia Exterior";
+    const rawFmt = `${it.tipo || ""} ${it.programa || ""} ${it.formato || ""}`.toLowerCase();
+    if (rawFmt.includes("frontlight")) formato = "Frontlight";
+    else if (rawFmt.includes("led") || rawFmt.includes("dooh")) formato = "Painel de LED Digital";
+    else if (rawFmt.includes("elevador")) formato = "DOOH Elevador";
+    else if (rawFmt.includes("outdoor") || rawFmt.includes("bissemana")) formato = "Outdoor";
+    else if (rawFmt.includes("totem")) formato = "Totem Iluminado";
+    else if (rawFmt.includes("empena")) formato = "Empena";
+
+    // 4. Dimensões / Especificações
+    const specs = (it as any).dimensoes || it.formato || (formato.includes("LED") ? "P8/P10 Full HD" : "Engenharia Padrão OOH");
+
+    // 5. Período / Veiculação
+    const periodo = (it as any).periodo || `${it.total_insercoes || it.insercoes_dia || 1} inserções / ciclo`;
+
+    // 6. Valores
     const vTab = fmtBRL(it.valor_tabela);
     const desc = it.desconto > 0 ? `${it.desconto}%` : "—";
     const vNeg = fmtBRL(it.valor_negociado);
-    return [String(idx + 1).padStart(2, "0"), formato, loc, qtd, vTab, desc, vNeg];
+
+    return [
+      String(idx + 1).padStart(2, "0"),
+      cod,
+      loc,
+      formato,
+      specs,
+      periodo,
+      vTab,
+      desc,
+      vNeg,
+    ];
   });
 
   autoTable(doc, {
     startY: tableY,
-    head: [["#", "MEIO / FORMATO", "PRAÇA / LOCALIZAÇÃO", "QTD / PERÍODO", "VALOR TABELA", "DESCONTO", "TOTAL FATURADO"]],
+    head: [[
+      "#",
+      "CÓDIGO",
+      "LOCALIZAÇÃO / PONTO",
+      "FORMATO / TIPO",
+      "DIMENSÕES / SPECS",
+      "PERÍODO",
+      "VALOR TABELA",
+      "DESCONTO",
+      "VALOR LÍQUIDO",
+    ]],
     body: tableData,
     margin: { left: 15, right: 15 },
     theme: "grid",
     styles: {
-      fontSize: 7.5,
-      cellPadding: 2.2,
+      fontSize: 7.2,
+      cellPadding: 2,
       textColor: [30, 41, 59],
       lineColor: [226, 232, 240],
       lineWidth: 0.2,
@@ -5113,16 +5155,18 @@ export async function gerarPdfPropostaExecutivaCoBranding(
       fillColor: COR_DARK,
       textColor: [255, 255, 255],
       fontStyle: "bold",
-      fontSize: 7,
+      fontSize: 6.8,
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: "center" },
-      1: { cellWidth: 55, fontStyle: "bold" },
-      2: { cellWidth: 90 },
-      3: { cellWidth: 26, halign: "center" },
-      4: { cellWidth: 28, halign: "right" },
-      5: { cellWidth: 22, halign: "right", textColor: [225, 29, 72] },
-      6: { cellWidth: 36, halign: "right", fontStyle: "bold", textColor: [15, 23, 42] },
+      0: { cellWidth: 8, halign: "center" },
+      1: { cellWidth: 20, fontStyle: "bold", halign: "center" },
+      2: { cellWidth: 68 },
+      3: { cellWidth: 34 },
+      4: { cellWidth: 32 },
+      5: { cellWidth: 27, halign: "center" },
+      6: { cellWidth: 24, halign: "right" },
+      7: { cellWidth: 22, halign: "right", textColor: [225, 29, 72] },
+      8: { cellWidth: 32, halign: "right", fontStyle: "bold", textColor: [15, 23, 42] },
     },
     didDrawCell: (data) => {
       // Se for a coluna de localização e tiver coordenadas ou maps válidos, adiciona link ativo

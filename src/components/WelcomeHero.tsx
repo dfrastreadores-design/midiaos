@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Calendar, AlertTriangle, FileText, Receipt, Clock } from "lucide-react";
 import { getInicio } from "@/lib/inicio.functions";
 import { useUserRoles } from "@/hooks/use-roles";
+import { QuickActionsBar } from "@/components/QuickActionsBar";
+import { RadarPendenciasCriticas } from "@/components/RadarPendenciasCriticas";
 
 const fmtHora = (iso: string) =>
   new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -73,6 +75,15 @@ export function WelcomeHero() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Central de Comando: Ações Rápidas em 1 Clique */}
+      <QuickActionsBar />
+
+      {/* Radar Operacional de Pendências Críticas */}
+      <RadarPendenciasCriticas
+        radar={(data as any)?.radar}
+        isLoading={isLoading}
+      />
 
       {!isProducaoOnly && (
         <div className="grid lg:grid-cols-2 gap-4">

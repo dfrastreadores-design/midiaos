@@ -620,6 +620,7 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
         open={formOpen}
         onOpenChange={setFormOpen}
         editingItem={editingItem}
+        initial={editingItem}
         partners={partners}
         onSuccess={() => {
           qc.invalidateQueries({ queryKey: ["media_services_catalog"] });

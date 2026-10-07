@@ -29,6 +29,7 @@ import {
   TrendingUp,
   Printer,
   Loader2,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
@@ -48,6 +49,7 @@ import { GerarApresentacaoDialog } from "@/components/GerarApresentacaoDialog";
 import { VisualizarPropostaDialog } from "@/components/VisualizarPropostaDialog";
 import { LayoutManagerDialog } from "@/components/LayoutManagerDialog";
 import { RecusarPropostaDialog } from "@/components/RecusarPropostaDialog";
+import { EmitirPisPropostaModal } from "@/components/pi/EmitirPisPropostaModal";
 import { SimuladorPropostaModal } from "@/components/simulador/SimuladorPropostaModal";
 import { EspelhoPropostaModal } from "@/components/simulador/EspelhoPropostaModal";
 import {
@@ -85,6 +87,7 @@ function Propostas() {
   const [layoutOpen, setLayoutOpen] = useState(false);
   const [editing, setEditing] = useState<Proposta | null>(null);
   const [converting, setConverting] = useState<Proposta | null>(null);
+  const [emitirPisProp, setEmitirPisProp] = useState<Proposta | null>(null);
   const [apresentando, setApresentando] = useState<Proposta | null>(null);
   const [visualizando, setVisualizando] = useState<Proposta | null>(null);
   const [recusando, setRecusando] = useState<Proposta | null>(null);
@@ -150,7 +153,7 @@ function Propostas() {
         valor_desconto: full.total_discount,
         total_insercoes: (full.items || []).reduce((acc, it) => acc + (it.quantity || 1), 0),
         itens: (full.items || []).map((it) => ({
-          tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Veículo Parceiro"),
+          tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Mídia Exterior"),
           programa: it.product_name,
           formato: it.billing_type,
           insercoes_dia: it.quantity,
@@ -453,11 +456,33 @@ function Propostas() {
                       >
                         <Presentation className="size-4 text-primary" />
                       </Button>
+                      {p.status === "aprovada" && (
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 h-8 text-xs shadow-xs px-2.5"
+                          title="Fast-Track: Gerar PIs Imediatamente (Cliente + Parceiros)"
+                          onClick={() => setEmitirPisProp(p)}
+                        >
+                          <Zap className="size-3.5 fill-current" />
+                          <span>Gerar PIs Imediatamente</span>
+                        </Button>
+                      )}
+                      {p.status !== "convertida" && p.status !== "aprovada" && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                          title="Emitir PIs da Proposta"
+                          onClick={() => setEmitirPisProp(p)}
+                        >
+                          <FileCheck2 className="size-4" />
+                        </Button>
+                      )}
                       {p.status !== "convertida" && (
                         <Button
                           size="icon"
                           variant="ghost"
-                          title="Converter em PI"
+                          title="Converter em PI Manualmente"
                           onClick={() => setConverting(p)}
                         >
                           <ArrowRightCircle className="size-4 text-primary" />
@@ -752,10 +777,24 @@ function Propostas() {
         onOpenChange={(v) => !v && setConverting(null)}
       />
 
+      <EmitirPisPropostaModal
+        open={!!emitirPisProp}
+        onOpenChange={(v) => !v && setEmitirPisProp(null)}
+        propostaId={emitirPisProp?.id ?? null}
+        propostaNumero={emitirPisProp?.numero ?? ""}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ["propostas"] });
+        }}
+      />
+
       <VisualizarPropostaDialog
         open={!!visualizando}
         onOpenChange={(v) => !v && setVisualizando(null)}
         propostaId={visualizando?.id ?? null}
+        onEmitirPis={(prop) => {
+          setVisualizando(null);
+          setEmitirPisProp(prop);
+        }}
       />
 
       <RecusarPropostaDialog

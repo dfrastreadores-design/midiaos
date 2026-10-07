@@ -68,6 +68,7 @@ import { useActingAsExecutivo, setActingAsExecutivo } from "@/hooks/use-acting-a
 import { ImpersonateDialog } from "@/components/ImpersonateDialog";
 import { UserCheck } from "lucide-react";
 import logoMidiaOS from "@/assets/logo-midiaos.png";
+import { MasterCompanySelector } from "@/components/MasterCompanySelector";
 import { useTenantBranding } from "@/hooks/use-tenant-branding";
 import { useTenantModulos } from "@/hooks/use-tenant-modulos";
 import { useCurrentOrg } from "@/hooks/use-current-org";
@@ -560,14 +561,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                   {tenantNome ? `Empresa: ${tenantNome}` : "Comercial Engine"}
                 </h2>
               )}
-              {isSuperAdmin && (
-                <Badge
-                  variant="outline"
-                  className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs px-2.5 py-0.5 font-bold flex items-center gap-1"
-                >
-                  👑 Super Admin Global
-                </Badge>
-              )}
+              {isSuperAdmin && <MasterCompanySelector />}
             </div>
             {(() => {
               const now = new Date();

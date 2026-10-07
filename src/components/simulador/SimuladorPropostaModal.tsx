@@ -79,6 +79,9 @@ import { cn } from "@/lib/utils";
 import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
 import { type ItemPlano360 } from "@/lib/planejamento-360.functions";
 import { UFS_BRASIL } from "@/lib/df-regioes-inteligencia";
+import { listCircuitBundles } from "@/lib/circuitos-bundles.functions";
+import { CircuitBundle, calculateCircuitBundlePricing } from "@/types/circuitos-bundles.types";
+import { CircuitoBadgeCard } from "@/components/circuitos/CircuitoBadgeCard";
 
 interface SimuladorPropostaModalProps {
   open: boolean;
@@ -121,6 +124,15 @@ export function SimuladorPropostaModal({
   const { data: pracasInfo } = useQuery({
     queryKey: ["pracas_cidades_catalog"],
     queryFn: () => fetchPracasFn(),
+    enabled: open,
+  });
+
+  // Circuit Bundles Query & State
+  const listBundlesFn = useServerFn(listCircuitBundles);
+  const [circuitModalOpen, setCircuitModalOpen] = useState(false);
+  const { data: availableBundles = [] } = useQuery({
+    queryKey: ["simulador_circuit_bundles"],
+    queryFn: () => listBundlesFn({ data: { only_active: true } }),
     enabled: open,
   });
 
@@ -186,6 +198,87 @@ export function SimuladorPropostaModal({
     });
     setItems((prev) => [...prev, ...novosItens]);
     toast.success(`${novosItens.length} itens do Plano Estratégico adicionados ao simulador!`);
+  };
+
+  // Aplicar Circuito Completo com Desconto
+  const handleApplyCircuitBundle = (bundle: CircuitBundle) => {
+    const partnerAllows = bundle.partner ? Boolean((bundle.partner as any).allows_circuit_bundles) : true;
+    const isExplicitlyAllowed = Boolean(
+      bundle.partner_id && bundle.allowed_partner_ids && bundle.allowed_partner_ids.includes(bundle.partner_id)
+    );
+    if (!partnerAllows && !isExplicitlyAllowed) {
+      toast.error("Parceiro não possui permissão para comercializar circuitos com desconto.");
+      return;
+    }
+
+    const bundleItems = bundle.items || [];
+    if (bundleItems.length === 0) {
+      toast.error("Este circuito não possui itens cadastrados.");
+      return;
+    }
+
+    const calcResult = calculateCircuitBundlePricing({
+      bundle,
+      currentItems: bundleItems.map((bi) => ({
+        media_service_id: bi.media_service_id,
+        product_name: bi.product_name,
+        quantity: bi.quantity,
+        unit_price: bi.unit_price,
+      })),
+      partnerAllowsBundles: partnerAllows,
+      partnerId: bundle.partner_id,
+    });
+
+    if (!calcResult.bundleApplied) {
+      toast.error(calcResult.reason || "Não foi possível aplicar o desconto do circuito.");
+      return;
+    }
+
+    const newSimulationItems: ProposalSimulationItemInput[] = calcResult.itemsCalculation.map((calcItem) => {
+      const matchCat = catalogItems.find(
+        (c) =>
+          (calcItem.media_service_id && c.id === calcItem.media_service_id) ||
+          c.nome_produto.toLowerCase().trim() === calcItem.product_name.toLowerCase().trim()
+      );
+
+      return {
+        media_service_id: calcItem.media_service_id || matchCat?.id || null,
+        partner_id: bundle.partner_id || matchCat?.partner_id || null,
+        product_name: calcItem.product_name,
+        is_own_product: false,
+        quantity: calcItem.quantity,
+        billing_type: (matchCat?.tipo_cobranca as any) || "insercao",
+        unit_price: calcItem.regularUnitPrice,
+        discount_type: "fixed",
+        discount_value: calcItem.discountVal,
+        agency_commission_percent:
+          matchCat?.comissao_parceiro_percentual ??
+          (bundle.partner as any)?.comissao_padrao_percentual ??
+          20,
+        min_negotiated_unit_price: matchCat?.valor_negociado_minimo
+          ? Number(matchCat.valor_negociado_minimo)
+          : null,
+        circuit_bundle_id: bundle.id,
+        bundle_discount_applied: true,
+        notes: `Integrado ao Circuito: ${bundle.name} (${bundle.code})`,
+        partner: bundle.partner as any,
+        media_service: matchCat
+          ? {
+              id: matchCat.id,
+              categoria_midia: matchCat.categoria_midia,
+              cidade: matchCat.cidade,
+              estado: matchCat.estado,
+              imagem_url: matchCat.imagem_url,
+            }
+          : undefined,
+      };
+    });
+
+    setItems((prev) => [...prev, ...newSimulationItems]);
+    setCircuitModalOpen(false);
+    toast.success(
+      `Circuito "${bundle.name}" adicionado! Desconto promocional de ${formatBRL(calcResult.discountAmount)} aplicado.`
+    );
   };
 
   // Loading existing proposal
@@ -340,8 +433,40 @@ export function SimuladorPropostaModal({
     setItems((prev) => [...prev, newItem]);
   };
 
-  // Atualização de campos de um item
+  // Atualização de campos de um item com proteção de integridade do circuito
   const updateItem = (index: number, updates: Partial<ProposalSimulationItemInput>) => {
+    const currentItem = items[index];
+
+    // Se o item faz parte de um circuito com desconto e teve a quantidade reduzida
+    if (
+      currentItem?.circuit_bundle_id &&
+      currentItem.bundle_discount_applied &&
+      updates.quantity !== undefined &&
+      Number(updates.quantity) < Number(currentItem.quantity)
+    ) {
+      const bundleId = currentItem.circuit_bundle_id;
+      setItems((prev) =>
+        prev.map((it, i) => {
+          if (it.circuit_bundle_id === bundleId) {
+            return {
+              ...it,
+              ...(i === index ? updates : {}),
+              circuit_bundle_id: null,
+              bundle_discount_applied: false,
+              discount_type: "percent" as const,
+              discount_value: 0,
+              notes: it.notes?.replace(/Integrado ao Circuito:.*/, "").trim() || undefined,
+            };
+          }
+          return i === index ? { ...it, ...updates } : it;
+        })
+      );
+      toast.warning(
+        "Quantidade do item do circuito reduzida abaixo do exigido. O desconto do pacote foi desarmado e os itens retornaram aos valores de tabela individual."
+      );
+      return;
+    }
+
     setItems((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], ...updates };
@@ -349,9 +474,38 @@ export function SimuladorPropostaModal({
     });
   };
 
-  // Remoção de item
+  // Remoção de item com desarmamento automático de circuito
   const removeItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
+    const itemToRemove = items[index];
+    const remainingItems = items.filter((_, i) => i !== index);
+
+    if (itemToRemove?.circuit_bundle_id && itemToRemove.bundle_discount_applied) {
+      const bundleId = itemToRemove.circuit_bundle_id;
+      const hasOtherBundleItems = remainingItems.some((it) => it.circuit_bundle_id === bundleId);
+      if (hasOtherBundleItems) {
+        // Desarma o desconto do bundle nos itens restantes e restaura preços de tabela avulsos
+        const unbundled = remainingItems.map((it) => {
+          if (it.circuit_bundle_id === bundleId) {
+            return {
+              ...it,
+              circuit_bundle_id: null,
+              bundle_discount_applied: false,
+              discount_type: "percent" as const,
+              discount_value: 0,
+              notes: it.notes?.replace(/Integrado ao Circuito:.*/, "").trim() || undefined,
+            };
+          }
+          return it;
+        });
+        setItems(unbundled);
+        toast.warning(
+          "Item obrigatório do circuito removido. O desconto promocional do pacote foi desarmado e os itens restantes retornaram aos valores de tabela individual."
+        );
+        return;
+      }
+    }
+
+    setItems(remainingItems);
   };
 
   // Cálculo dos itens e totais em tempo real
@@ -486,7 +640,7 @@ export function SimuladorPropostaModal({
           }
           const partnerObj = it.partner || (it as any).media_service?.partner;
           return {
-            tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Veículo Parceiro"),
+            tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Mídia Exterior"),
             programa: it.product_name,
             formato: TIPOS_COBRANCA_LABELS[it.billing_type] || it.billing_type,
             insercoes_dia: it.quantity,
@@ -501,7 +655,7 @@ export function SimuladorPropostaModal({
             media_kit_defenses: partnerObj?.media_kit_defenses,
             impactos_estimados_mes: (it as any).media_service?.impactos_estimados_mes,
             insercoes_dia_catalogo: (it as any).media_service?.insercoes_dia,
-            nome_veiculo: partnerObj?.nome_fantasia || partnerObj?.razao_social,
+            nome_veiculo: undefined,
           };
         }),
         observacoes: notes,
@@ -596,6 +750,15 @@ export function SimuladorPropostaModal({
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Adicionar do Catálogo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCircuitModalOpen(true)}
+                  className="gap-1.5 text-xs h-9 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20 font-medium"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  Circuitos / Combos
                 </Button>
                 <Button
                   variant="outline"
@@ -1004,6 +1167,12 @@ export function SimuladorPropostaModal({
                                       {it.partner?.nome_fantasia ||
                                         it.partner?.razao_social ||
                                         "Veículo Parceiro"}
+                                    </Badge>
+                                  )}
+                                  {it.circuit_bundle_id && it.bundle_discount_applied && (
+                                    <Badge className="bg-blue-600 text-white text-[9px] px-1.5 py-0 border-0 flex items-center gap-1 shadow-xs">
+                                      <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                                      Circuito Fechado
                                     </Badge>
                                   )}
                                   {it.fin.isBelowMinimum && (
@@ -1443,6 +1612,58 @@ export function SimuladorPropostaModal({
         clienteNome={clientName}
         onAplicarAoPlano={handleApplyFromAiPlan}
       />
+
+      {/* MODAL DE SELEÇÃO DE CIRCUITOS / BUNDLES */}
+      <Dialog open={circuitModalOpen} onOpenChange={setCircuitModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden bg-background">
+          <DialogHeader className="p-4 border-b bg-card">
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Sparkles className="size-4 text-blue-600" />
+              Circuitos e Combos Disponíveis
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Selecione um circuito fechado para aplicar condições especiais de desconto. Venda exclusiva para parceiros elegíveis.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {availableBundles.length === 0 ? (
+              <div className="py-12 text-center space-y-2">
+                <Layers className="size-8 text-muted-foreground/40 mx-auto" />
+                <p className="text-sm font-semibold">Nenhum circuito cadastrado ou disponível</p>
+                <p className="text-xs text-muted-foreground">
+                  Circuitos com desconto são liberados apenas quando o parceiro for autorizado ou possuir pacotes ativos.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {availableBundles.map((b) => {
+                  const partnerAllows = b.partner ? Boolean((b.partner as any).allows_circuit_bundles) : true;
+                  const isExplicitlyAllowed = Boolean(
+                    b.partner_id && b.allowed_partner_ids && b.allowed_partner_ids.includes(b.partner_id)
+                  );
+                  const isEligible = partnerAllows || isExplicitlyAllowed;
+
+                  return (
+                    <CircuitoBadgeCard
+                      key={b.id}
+                      bundle={b}
+                      isEligiblePartner={isEligible}
+                      onSelect={handleApplyCircuitBundle}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-3 border-t bg-card">
+            <Button variant="outline" size="sm" onClick={() => setCircuitModalOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

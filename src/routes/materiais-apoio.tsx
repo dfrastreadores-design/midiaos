@@ -80,6 +80,7 @@ function MateriaisApoio() {
   const { user } = useAuth();
   const { isAdmin } = useUserRoles();
   const [open, setOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Row | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkRow | null>(null);
   const [busca, setBusca] = useState("");
@@ -341,16 +342,26 @@ function MateriaisApoio() {
                           <Download className="size-4" />
                         </Button>
                         {canDelete && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            onClick={() => {
-                              if (confirm("Remover este material?")) del.mutate(row);
-                            }}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Editar material"
+                              onClick={() => setEditingMaterial(row)}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => {
+                                if (confirm("Remover este material?")) del.mutate(row);
+                              }}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </CardContent>
@@ -439,6 +450,12 @@ function MateriaisApoio() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Edição de Material de Apoio */}
+      <EditarMaterialDialog
+        material={editingMaterial}
+        onClose={() => setEditingMaterial(null)}
+      />
     </AppShell>
   );
 }
@@ -543,6 +560,138 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
         </DialogFooter>
       </form>
     </DialogContent>
+  );
+}
+
+function EditarMaterialDialog({
+  material,
+  onClose,
+}: {
+  material: Row | null;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [titulo, setTitulo] = useState(material?.titulo ?? "");
+  const [descricao, setDescricao] = useState(material?.descricao ?? "");
+  const [categoria, setCategoria] = useState(material?.categoria ?? "");
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (material) {
+      setTitulo(material.titulo);
+      setDescricao(material.descricao || "");
+      setCategoria(material.categoria || "");
+      setFile(null);
+    }
+  }, [material]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!material || !titulo.trim()) {
+      toast.error("Informe um título");
+      return;
+    }
+    setSaving(true);
+    try {
+      let updatePayload: any = {
+        titulo: titulo.trim(),
+        descricao: descricao.trim() || null,
+        categoria: categoria.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (file) {
+        const ext = file.name.split(".").pop() ?? "bin";
+        const path = `${material.created_by || "geral"}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const up = await supabase.storage.from("materiais-apoio").upload(path, file, {
+          contentType: file.type || undefined,
+          upsert: false,
+        });
+        if (up.error) throw up.error;
+        updatePayload.arquivo_path = path;
+        updatePayload.arquivo_nome = file.name;
+        updatePayload.arquivo_tipo = file.type || null;
+        updatePayload.arquivo_tamanho = file.size;
+      }
+
+      const { error } = await supabase
+        .from("materiais_apoio")
+        .update(updatePayload)
+        .eq("id", material.id);
+
+      if (error) throw error;
+      toast.success("Material de apoio atualizado com sucesso!");
+      qc.invalidateQueries({ queryKey: ["materiais-apoio"] });
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar material");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!material} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Editar Material de Apoio</DialogTitle>
+          <DialogDescription>
+            Atualize o título, descrição, categoria ou substitua o arquivo anexado.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-titulo">Título *</Label>
+            <Input
+              id="edit-titulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-categoria">Categoria</Label>
+            <Input
+              id="edit-categoria"
+              placeholder="Ex.: Tabela de preços, Apresentação, Contrato..."
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-descricao">Descrição</Label>
+            <Textarea
+              id="edit-descricao"
+              rows={3}
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-arquivo">Substituir Arquivo (Opcional)</Label>
+            <Input
+              id="edit-arquivo"
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            {material && (
+              <p className="text-xs text-muted-foreground">
+                Arquivo atual: {material.arquivo_nome} ({formatBytes(material.arquivo_tamanho)})
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

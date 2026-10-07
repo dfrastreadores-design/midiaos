@@ -4,8 +4,16 @@
  */
 
 export const MIDIAS_PARCEIROS_CATALOGO = [
-  // Mídia Exterior, Telas e Painéis Digitais (OOH/DOOH)
+  // Categorias Universais de Mídia
+  "OOH",
   "DOOH",
+  "RADIO",
+  "DIGITAL",
+  "PRINT",
+  "TV",
+  "CUSTOM",
+
+  // Mídia Exterior, Telas e Painéis Digitais (OOH/DOOH)
   "Painéis Digitais de Rua",
   "Front Lights",
   "Painéis em Rodovias / Outdoor",
@@ -21,7 +29,6 @@ export const MIDIAS_PARCEIROS_CATALOGO = [
   "Adesivagem de Bancas de Jornal",
 
   // Mídia Broadcast / Tradicional
-  "TV",
   "Radio",
 
   // Mídia Digital e Estratégica 360°
@@ -49,6 +56,15 @@ export const SEGMENTOS_MIDIA = [
 export type MidiaCatalogo = (typeof MIDIAS_PARCEIROS_CATALOGO)[number] | string;
 
 export const SUGESTOES_TIPOS_POR_MIDIA: Record<string, string[]> = {
+  OOH: [
+    "Front Light Estático",
+    "Outdoor Rodoviário (9x3m)",
+    "Empena Cega de Edifício",
+    "Totem Urbano Dupla Face",
+    "Painel Rodoviário Mega",
+    "Mupi / Abrigo de Ônibus",
+    "Painel em Shopping / Mall",
+  ],
   DOOH: [
     "Painel de LED Digital",
     "Totem Digital Vertical",
@@ -56,6 +72,39 @@ export const SUGESTOES_TIPOS_POR_MIDIA: Record<string, string[]> = {
     "Circuito de Painéis Digitais",
     "Painel de Entrada / Hall",
     "Vídeo Wall",
+  ],
+  DIGITAL: [
+    "Banner Super Top (728x90)",
+    "Banner Retângulo (300x250)",
+    "Half Page (300x600)",
+    "Publieditorial / Matéria Patrocinada",
+    "Post Feed (Card / Carrossel)",
+    "Stories com Link",
+    "Reels / TikTok Vídeo",
+    "Pre-roll Vídeo",
+  ],
+  PRINT: [
+    "Página Inteira",
+    "Meia Página Horizontal",
+    "Meia Página Vertical",
+    "1/4 de Página",
+    "Encarte Especial",
+    "Capa Falsa / Sobrecapa",
+    "Página Dupla Central",
+  ],
+  RADIO: [
+    "Spot 30s",
+    "Spot 15s",
+    "Chamada / Vinheta 5s",
+    "Testemunhal / Ao Vivo",
+    "Flash de 60s",
+    "Patrocínio de Programa",
+  ],
+  CUSTOM: [
+    "Formato Customizado do Inquilino",
+    "Ação Promocional Integrada",
+    "Patrocínio Especial",
+    "Projeto 360° Omnichannel",
   ],
   "Painéis Digitais de Rua": [
     "Painel de LED Dupla Face",
@@ -169,7 +218,13 @@ export const SUGESTOES_TIPOS_POR_MIDIA: Record<string, string[]> = {
 };
 
 export const FORMATOS_SUGERIDOS_POR_MIDIA: Record<string, string[]> = {
+  OOH: ["Bi-semana (14 dias)", "Mensal (30 dias)", "Lona 9x3m", "Empena Especial", "Adesivagem", "Semestral", "Anual"],
   DOOH: ["15s no loop", "10s no loop", "Full Screen 16:9", "Vertical 9:16", "Vídeo 10s"],
+  DIGITAL: ["Banner 728x90", "Banner 300x250", "Banner 300x600", "Post Feed 1080x1350", "Stories 1080x1920", "CPM", "Diária Fixa", "Mensal"],
+  PRINT: ["Página Inteira", "1/2 Página Horizontal", "1/2 Página Vertical", "1/4 de Página", "Encarte", "Capa Falsa"],
+  RADIO: ["Spot 30s", "Spot 15s", "Vinheta 5s", "Flash ao Vivo 60s", "Testemunhal"],
+  TV: ["30s", "15s", "60s", "Vinheta 5s", "Testemunhal 60s"],
+  CUSTOM: ["Formato Livre", "Projeto Especial", "Diária", "Pacote Personalizado"],
   "Painéis Digitais de Rua": ["15s no loop", "10s no loop", "Dupla Face 10s", "1080x1920", "1920x1080"],
   "Front Lights": ["Bi-semana (14 dias)", "Mensal (30 dias)", "Lona Vinílica 9x3m", "Mega Painel"],
   "Painéis em Rodovias / Outdoor": ["Bi-semana (14 dias)", "Mensal (30 dias)", "Lona 9x3m", "Papel 32 folhas"],
@@ -183,14 +238,19 @@ export const FORMATOS_SUGERIDOS_POR_MIDIA: Record<string, string[]> = {
   "Telas em Academias e Gastronomia": ["15s rotativo", "10s no loop", "Vídeo Cardio"],
   "Telas em Transporte por Aplicativo": ["15s interativo", "Banner touch", "Vídeo 10s"],
   "Adesivagem de Bancas de Jornal": ["Mensal (30 dias)", "Envelopamento Total", "Backlight"],
-  TV: ["30s", "15s", "60s", "Vinheta 5s", "Testemunhal 60s"],
   Radio: ["Spot 30s", "Spot 15s", "Vinheta 5s", "Flash ao Vivo 60s"],
   "Digital / Redes Sociais": ["Card Feed 1080x1350", "Stories 1080x1920", "Reels 9:16", "Banner 728x90"],
   "Projetos Especiais": ["Diária", "Turno 4h", "Ação de Final de Semana", "Evento Completo"],
 };
 
 export const PROGRAMAS_SUGERIDOS_POR_MIDIA: Record<string, string[]> = {
+  OOH: ["Fluxo Contínuo 24h", "Sentido Centro / Plano Piloto", "Sentido Bairros / Cidades Satélites", "Ponto Estratégico Rodovia"],
   DOOH: ["Circuito Geral", "Grade Rotativa Contínua", "Horário Nobre Urbano"],
+  DIGITAL: ["Topo do Portal (Home)", "Seção Economia / Notícias", "Feed Oficial", "Stories em Destaque", "Publieditorial Exclusivo"],
+  PRINT: ["Caderno Principal", "Caderno de Economia", "Caderno Cidades / Variedades", "Revista / Encarte de Domingo"],
+  RADIO: ["Manhã Notícias", "Tarde Musical", "Rotativo Comercial", "Hora do Rush", "A Voz do Brasil (Entorno)"],
+  TV: ["DF Alerta", "Jornal Local", "Break Comercial Rotativo", "Programa de Auditório", "Superliga"],
+  CUSTOM: ["Espaço Customizado", "Ação Promocional", "Blitz em Pontos de Venda", "Patrocínio Oficial"],
   "Painéis Digitais de Rua": ["Circuito Vias Principais", "Cruzamentos Estratégicos", "Fluxo Diário"],
   "Front Lights": ["Exibição Contínua 24h", "Iluminação Noturna", "Ponto Estratégico Rodovia"],
   "Painéis em Rodovias / Outdoor": ["Exibição Contínua 24h", "Sentido Plano Piloto", "Sentido Cidades Satélites"],
@@ -204,7 +264,6 @@ export const PROGRAMAS_SUGERIDOS_POR_MIDIA: Record<string, string[]> = {
   "Telas em Academias e Gastronomia": ["Horário de Pico Fitness (Manhã e Noite)", "Área de Musculação"],
   "Telas em Transporte por Aplicativo": ["Corridas no DF e Entorno", "Frotas Urbanas"],
   "Adesivagem de Bancas de Jornal": ["Pontos Nobres Comerciais", "W3 Sul/Norte / Esplanada"],
-  TV: ["DF Alerta", "Jornal Local", "Break Comercial Rotativo", "Programa de Auditório", "Superliga"],
   Radio: ["Manhã Notícias", "Tarde Musical", "Rotativo Comercial", "Hora do Rush", "A Voz do Brasil (Entorno)"],
   "Digital / Redes Sociais": ["Instagram @nexomidia", "Portal de Notícias", "LinkedIn Comercial", "Campanhas Meta Ads"],
   "Projetos Especiais": ["Ativação Promocional", "Blitz em Pontos de Venda", "Patrocínio Oficial"],
@@ -213,6 +272,7 @@ export const PROGRAMAS_SUGERIDOS_POR_MIDIA: Record<string, string[]> = {
 export function getMacroCanalParaMidia(midia: string): "OFF" | "ON" | "HIBRIDO" {
   const m = midia.toLowerCase();
   if (
+    m === "digital" ||
     m.includes("digital / redes") ||
     m.includes("social") ||
     m.includes("internet") ||

@@ -51,6 +51,12 @@ import {
   Copy,
   Sparkles,
   ShieldAlert,
+  Briefcase,
+  Layers,
+  Receipt,
+  Scale,
+  DollarSign,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -64,6 +70,19 @@ import {
   type Contrato,
   type ContratoModelo,
 } from "@/lib/contratos.functions";
+import {
+  listContratosRepresentacao,
+  deleteContratoRepresentacao,
+} from "@/lib/representacao-contratos.functions";
+import {
+  ContratoRepresentacao,
+  STATUS_CONTRATO_LABELS,
+  STATUS_CONTRATO_COLORS,
+} from "@/types/representacao-contratos.types";
+import { ContratoRepresentacaoFormModal } from "@/components/contratos/ContratoRepresentacaoFormModal";
+import { PainelLiquidacaoRepasses } from "@/components/contratos/PainelLiquidacaoRepasses";
+import { SimuladorLiquidacaoWidget } from "@/components/contratos/SimuladorLiquidacaoWidget";
+import { fmtBRL } from "@/lib/representacao-contratos";
 import { gerarPdfContrato } from "@/lib/contratos-pdf";
 import { useTenantBranding } from "@/hooks/use-tenant-branding";
 import { listClientes } from "@/lib/clientes.functions";
@@ -94,16 +113,28 @@ export function ContratosPage() {
   const upsertModeloFn = useServerFn(upsertContratoModelo);
   const deleteContratoFn = useServerFn(deleteContrato);
 
+  const listContratosRepresentacaoFn = useServerFn(listContratosRepresentacao);
+  const deleteContratoRepresentacaoFn = useServerFn(deleteContratoRepresentacao);
+
   const listClientesFn = useServerFn(listClientes);
   const listAgenciasFn = useServerFn(listAgencias);
   const listParceirosFn = useServerFn(listParceiros);
   const listPisFn = useServerFn(listPis);
 
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"contratos" | "modelos">("contratos");
+  const [tab, setTab] = useState<"representacao" | "liquidacao" | "contratos" | "modelos">("representacao");
   const [statusFiltro, setStatusFiltro] = useState<string>("todos");
 
-  // Modais de Contrato
+  // Filtros de Contratos de Representação
+  const [searchRepresentacao, setSearchRepresentacao] = useState("");
+  const [statusFiltroRepresentacao, setStatusFiltroRepresentacao] = useState<string>("todos");
+
+  // Modais de Contrato de Representação
+  const [modalRepresentacaoOpen, setModalRepresentacaoOpen] = useState(false);
+  const [editingContratoRepresentacao, setEditingContratoRepresentacao] = useState<ContratoRepresentacao | null>(null);
+  const [viewMinutaRepresentacao, setViewMinutaRepresentacao] = useState<ContratoRepresentacao | null>(null);
+
+  // Modais de Contrato Geral
   const [modalContratoOpen, setModalContratoOpen] = useState(false);
   const [viewContrato, setViewContrato] = useState<Contrato | null>(null);
   const [assinaturaContrato, setAssinaturaContrato] = useState<Contrato | null>(null);
@@ -186,6 +217,29 @@ export function ContratosPage() {
     queryFn: () => listPisFn(),
   });
 
+  // Query Contratos de Representação (Tenant Nexo Mídia)
+  const { data: contratosRepresentacao = [], isLoading: loadingRepresentacao } = useQuery({
+    queryKey: ["contratos_representacao", "68.279.031/0001-67"],
+    queryFn: () => listContratosRepresentacaoFn({ data: { tenantCnpj: "68.279.031/0001-67" } }),
+  });
+
+  // Filtros de Contratos de Representação
+  const contratosRepresentacaoFiltrados = useMemo(() => {
+    return contratosRepresentacao.filter((c) => {
+      const matchSearch =
+        searchRepresentacao === "" ||
+        c.numero_contrato.toLowerCase().includes(searchRepresentacao.toLowerCase()) ||
+        (c.parceiro?.nome && c.parceiro.nome.toLowerCase().includes(searchRepresentacao.toLowerCase())) ||
+        (c.parceiro?.razao_social && c.parceiro.razao_social.toLowerCase().includes(searchRepresentacao.toLowerCase())) ||
+        (c.territorio && c.territorio.toLowerCase().includes(searchRepresentacao.toLowerCase()));
+
+      const matchStatus =
+        statusFiltroRepresentacao === "todos" || c.status === statusFiltroRepresentacao;
+
+      return matchSearch && matchStatus;
+    });
+  }, [contratosRepresentacao, searchRepresentacao, statusFiltroRepresentacao]);
+
   // Filtros
   const contratosFiltrados = useMemo(() => {
     return contratos.filter((c) => {
@@ -266,6 +320,15 @@ export function ContratosPage() {
     },
   });
 
+  const deleteRepresentacaoMut = useMutation({
+    mutationFn: (id: string) => deleteContratoRepresentacaoFn({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["contratos_representacao"] });
+      toast.success("Contrato de representação removido!");
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao excluir"),
+  });
+
   return (
     <AppShell>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -277,12 +340,23 @@ export function ContratosPage() {
               <h1 className="text-2xl font-bold tracking-tight">Contratos & Instrumentos Jurídicos</h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              Gestão de contratos com anunciantes, agências e veículos com variáveis dinâmicas e modelos editáveis.
+              Gestão de contratos de representação comercial, veículos, liquidação financeira e minutas jurídicas integradas.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            {tab === "contratos" ? (
+            {tab === "representacao" ? (
+              <Button
+                onClick={() => {
+                  setEditingContratoRepresentacao(null);
+                  setModalRepresentacaoOpen(true);
+                }}
+                className="gap-2"
+              >
+                <Plus className="size-4" />
+                Novo Contrato de Representação
+              </Button>
+            ) : tab === "contratos" ? (
               <Button
                 onClick={() => {
                   setFormData({
@@ -305,7 +379,7 @@ export function ContratosPage() {
                 <Plus className="size-4" />
                 Novo Contrato
               </Button>
-            ) : (
+            ) : tab === "modelos" ? (
               <Button
                 onClick={() => {
                   setModeloForm({ titulo: "", tipo: "cliente", conteudo: "" });
@@ -316,7 +390,7 @@ export function ContratosPage() {
                 <Plus className="size-4" />
                 Novo Modelo
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -324,17 +398,249 @@ export function ContratosPage() {
         <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-start gap-3">
           <ShieldAlert className="size-5 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-900 dark:text-amber-200">
-            <strong>Aviso de Conformidade Jurídica:</strong> Os modelos disponibilizados são minutas comerciais.
-            Recomendamos que cada contrato seja revisado pelo departamento jurídico da sua empresa antes da assinatura definitiva.
+            <strong>Aviso de Conformidade Jurídica:</strong> Os contratos de representação comercial e minutas disponibilizados
+            possuem cláusulas automáticas de blindagem (pós-rescisão, renovações e split fiscal). Recomendamos validação jurídica final.
           </p>
         </div>
 
         {/* Abas */}
         <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="contratos">Contratos Emitidos ({contratos.length})</TabsTrigger>
-            <TabsTrigger value="modelos">Modelos de Minutas ({modelos.length})</TabsTrigger>
+          <TabsList className="grid w-full max-w-3xl grid-cols-2 md:grid-cols-4">
+            <TabsTrigger value="representacao" className="text-xs">
+              Representação Nexo ({contratosRepresentacao.length})
+            </TabsTrigger>
+            <TabsTrigger value="liquidacao" className="text-xs">
+              Liquidação & Repasses
+            </TabsTrigger>
+            <TabsTrigger value="contratos" className="text-xs">
+              Contratos Gerais ({contratos.length})
+            </TabsTrigger>
+            <TabsTrigger value="modelos" className="text-xs">
+              Modelos ({modelos.length})
+            </TabsTrigger>
           </TabsList>
+
+          {/* ABA 1: CONTRATOS DE REPRESENTAÇÃO (NEXO MÍDIA) */}
+          <TabsContent value="representacao" className="space-y-4 pt-2">
+            {/* Filtros e Busca */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div className="relative w-full sm:w-80">
+                <Search className="size-4 absolute left-3 top-3 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar contrato, parceiro ou território..."
+                  className="pl-9 text-xs"
+                  value={searchRepresentacao}
+                  onChange={(e) => setSearchRepresentacao(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Select
+                  value={statusFiltroRepresentacao}
+                  onValueChange={setStatusFiltroRepresentacao}
+                >
+                  <SelectTrigger className="w-44 text-xs">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os Status</SelectItem>
+                    <SelectItem value="rascunho">Rascunho</SelectItem>
+                    <SelectItem value="enviado_assinatura">Enviado p/ Assinatura</SelectItem>
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="suspenso">Suspenso</SelectItem>
+                    <SelectItem value="rescindido">Rescindido</SelectItem>
+                    <SelectItem value="vencido">Vencido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Tabela de Contratos de Representação */}
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Número / Veículo Parceiro</TableHead>
+                      <TableHead>Território & Produtos</TableHead>
+                      <TableHead>Faturamento Habilitado</TableHead>
+                      <TableHead>Remuneração / Split</TableHead>
+                      <TableHead>Blindagem Jurídica</TableHead>
+                      <TableHead>Vigência</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingRepresentacao ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Carregando contratos de representação comercial...
+                        </TableCell>
+                      </TableRow>
+                    ) : contratosRepresentacaoFiltrados.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                          <Handshake className="size-8 mx-auto mb-2 opacity-30" />
+                          Nenhum contrato de representação comercial cadastrado.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      contratosRepresentacaoFiltrados.map((cr) => {
+                        const parceiroNome = cr.parceiro?.nome || "Veículo de Comunicação";
+                        const parceiroCnpj = cr.parceiro?.cnpj || "—";
+                        const isGatilho = cr.tipo_comissao === "gatilho_volume";
+
+                        return (
+                          <TableRow key={cr.id} className="text-xs">
+                            <TableCell>
+                              <div className="font-semibold text-sm text-foreground">
+                                {cr.numero_contrato}
+                              </div>
+                              <div className="text-xs text-muted-foreground font-medium">
+                                {parceiroNome}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground font-mono">
+                                CNPJ: {parceiroCnpj}
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <div className="font-medium text-foreground">
+                                {cr.territorio || "Distrito Federal e Entorno"}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {cr.produtos_representados && cr.produtos_representados.length > 0 ? (
+                                  <Badge variant="secondary" className="text-[10px] mt-0.5">
+                                    {cr.produtos_representados.length} formato(s)
+                                  </Badge>
+                                ) : (
+                                  "Inventário Integral"
+                                )}
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <div className="flex flex-col gap-1 items-start">
+                                {cr.permite_faturamento_centralizado_nexo && (
+                                  <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/20">
+                                    Centralizado (Imp: {Number(cr.aliquota_imposto_nexo_percentual)}%)
+                                  </Badge>
+                                )}
+                                {cr.permite_faturamento_direto_parceiro && (
+                                  <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/20">
+                                    Direto Parceiro (Repasse {cr.prazo_repasse_dias || 3}d)
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              {isGatilho ? (
+                                <div>
+                                  <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                    Gatilhos Escalonados
+                                  </Badge>
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                                    {cr.regras_gatilho ? `${cr.regras_gatilho.length} faixas de faturamento` : "Progressivo"}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-mono">
+                                    {Number(cr.comissao_fixa_percentual)}% Fixa
+                                  </Badge>
+                                </div>
+                              )}
+                            </TableCell>
+
+                            <TableCell>
+                              <div className="space-y-0.5 text-[11px]">
+                                {cr.garantia_comissao_pos_rescisao && (
+                                  <div className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                    <CheckCircle2 className="size-3" />
+                                    <span>Pós-rescisão ativa</span>
+                                  </div>
+                                )}
+                                {cr.comissao_sobre_renovacoes && (
+                                  <div className="text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                                    <CheckCircle2 className="size-3" />
+                                    <span>Renovações ativas</span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <div className="font-medium text-foreground">
+                                {cr.vigencia_meses || 12} meses
+                              </div>
+                              <div className="text-[10px] text-muted-foreground font-mono">
+                                {cr.data_inicio || "—"} até {cr.data_fim || "—"}
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] font-medium ${STATUS_CONTRATO_COLORS[cr.status] || ""}`}
+                              >
+                                {STATUS_CONTRATO_LABELS[cr.status] || cr.status}
+                              </Badge>
+                            </TableCell>
+
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setViewMinutaRepresentacao(cr)}
+                                  title="Visualizar Minuta Jurídica"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Eye className="size-4 text-primary" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingContratoRepresentacao(cr);
+                                    setModalRepresentacaoOpen(true);
+                                  }}
+                                  title="Editar Contrato"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Pencil className="size-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    if (confirm(`Deseja remover o contrato ${cr.numero_contrato}?`)) {
+                                      deleteRepresentacaoMut.mutate(cr.id);
+                                    }
+                                  }}
+                                  title="Excluir"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ABA 2: PAINEL DE LIQUIDAÇÃO & REPASSES (SPLIT) */}
+          <TabsContent value="liquidacao" className="space-y-4 pt-2">
+            <PainelLiquidacaoRepasses tenantCnpj="68.279.031/0001-67" />
+          </TabsContent>
 
           {/* ABA CONTRATOS */}
           <TabsContent value="contratos" className="space-y-4 pt-2">
@@ -804,6 +1110,82 @@ export function ContratosPage() {
 
               <DialogFooter>
                 <Button variant="outline" onClick={() => setViewContrato(null)}>
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* MODAL: NOVO / EDITAR CONTRATO DE REPRESENTAÇÃO */}
+        <ContratoRepresentacaoFormModal
+          open={modalRepresentacaoOpen}
+          onOpenChange={setModalRepresentacaoOpen}
+          contrato={editingContratoRepresentacao}
+          tenantCnpj="68.279.031/0001-67"
+        />
+
+        {/* MODAL: VISUALIZAR MINUTA DO CONTRATO DE REPRESENTAÇÃO */}
+        {viewMinutaRepresentacao && (
+          <Dialog
+            open={!!viewMinutaRepresentacao}
+            onOpenChange={() => setViewMinutaRepresentacao(null)}
+          >
+            <DialogContent className="max-w-4xl max-h-[88vh] flex flex-col">
+              <DialogHeader>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="font-mono">
+                      {viewMinutaRepresentacao.numero_contrato}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${STATUS_CONTRATO_COLORS[viewMinutaRepresentacao.status] || ""}`}
+                    >
+                      {STATUS_CONTRATO_LABELS[viewMinutaRepresentacao.status] || viewMinutaRepresentacao.status}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs gap-1.5"
+                      onClick={() => {
+                        if (viewMinutaRepresentacao.conteudo_contrato_markdown) {
+                          navigator.clipboard.writeText(viewMinutaRepresentacao.conteudo_contrato_markdown);
+                          toast.success("Minuta copiada para a área de transferência!");
+                        }
+                      }}
+                    >
+                      <Copy className="size-3.5" />
+                      Copiar Markdown
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-xs gap-1.5"
+                      onClick={() => window.print()}
+                    >
+                      <Printer className="size-3.5" />
+                      Imprimir / Salvar PDF
+                    </Button>
+                  </div>
+                </div>
+                <DialogTitle className="text-lg">
+                  Contrato de Representação Comercial — {viewMinutaRepresentacao.parceiro?.nome || "Veículo"}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Instrumento com cláusulas bilaterais, modelo de faturamento, split e gatilhos de remuneração.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto p-4 bg-muted/20 rounded border border-border/60">
+                <div className="font-sans text-xs whitespace-pre-wrap leading-relaxed text-foreground select-text">
+                  {viewMinutaRepresentacao.conteudo_contrato_markdown || "Minuta contratual não processada."}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" size="sm" onClick={() => setViewMinutaRepresentacao(null)}>
                   Fechar
                 </Button>
               </DialogFooter>

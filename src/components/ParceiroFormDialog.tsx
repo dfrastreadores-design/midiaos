@@ -46,7 +46,12 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { LogoImg } from "@/components/LogoImg";
-import { TIPOS_VEICULO_LIST, STATUS_PARTNER_CONFIG } from "@/types/representacao-comercial.types";
+import {
+  TIPOS_VEICULO_LIST,
+  STATUS_PARTNER_CONFIG,
+  PERFIS_COMERCIAIS,
+  type PerfilComercialEntidade,
+} from "@/types/representacao-comercial.types";
 import {
   upsertParceiro,
   SEGMENTOS_MIDIA,
@@ -147,6 +152,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
               ...initial,
               logo_url: initial.logo_url ?? "",
               tipo_veiculo: initial.tipo_veiculo ?? "Painel OOH/DOOH",
+              perfil_comercial: (initial.perfil_comercial as any) ?? "VEICULO_EXIBIDOR",
               status: initial.status ?? (initial.ativo === false ? "inativo" : "ativo"),
               comissao_padrao_percentual:
                 initial.comissao_padrao_percentual ?? initial.comissao_padrao_pct ?? 20.0,
@@ -154,6 +160,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                 initial.comissao_padrao_pct ?? initial.comissao_padrao_percentual ?? 20.0,
               media_kit_defenses: initial.media_kit_defenses ?? [],
               commercial_discounts_rules: initial.commercial_discounts_rules ?? [],
+              allows_circuit_bundles: initial.allows_circuit_bundles ?? false,
             }
           : {
               razao_social: "",
@@ -161,6 +168,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
               cnpj: "",
               logo_url: "",
               tipo_veiculo: "Painel OOH/DOOH",
+              perfil_comercial: "VEICULO_EXIBIDOR",
               status: "ativo",
               comissao_padrao_percentual: 20.0,
               site: "",
@@ -183,6 +191,7 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
               cep: "",
               observacoes: "",
               ativo: true,
+              allows_circuit_bundles: false,
               media_kit_defenses: [],
               commercial_discounts_rules: [],
             },
@@ -821,6 +830,26 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
               </div>
 
               <div>
+                <Label className="text-xs font-medium">Perfil Comercial da Entidade *</Label>
+                <Select
+                  value={form.perfil_comercial || "VEICULO_EXIBIDOR"}
+                  onValueChange={(v) => set({ perfil_comercial: v as PerfilComercialEntidade })}
+                >
+                  <SelectTrigger className="mt-1 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PERFIS_COMERCIAIS.map((p) => (
+                      <SelectItem key={p.value} value={p.value} className="text-xs">
+                        <span className="font-semibold">{p.label}</span>
+                        <span className="block text-[10px] text-muted-foreground">{p.desc}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label className="text-xs font-medium">Tipo de Veículo / Mídia Principal *</Label>
                 <Select
                   value={form.tipo_veiculo || "Painel OOH/DOOH"}
@@ -1017,6 +1046,43 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                 />
               </div>
             </div>
+          </div>
+
+          {/* Venda de Circuitos Completos / Bundles com Desconto */}
+          <div className="rounded-xl border p-3.5 bg-blue-50/40 dark:bg-blue-950/20 border-blue-500/30 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <Label className="text-xs font-semibold flex items-center gap-1.5 text-blue-900 dark:text-blue-300 uppercase tracking-wider">
+                  <Sparkles className="size-3.5 text-blue-600 dark:text-blue-400" />
+                  Venda de Circuitos Completos (Bundles / Combos)
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Permitir que este parceiro comercialize pacotes fechados com desconto especial para o cliente final.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] font-semibold transition-colors",
+                    form.allows_circuit_bundles
+                      ? "bg-blue-500/10 text-blue-600 border-blue-300 dark:text-blue-400"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {form.allows_circuit_bundles ? "Circuitos Habilitados" : "Apenas Venda Unitária"}
+                </Badge>
+                <Switch
+                  checked={Boolean(form.allows_circuit_bundles)}
+                  onCheckedChange={(checked) => set({ allows_circuit_bundles: checked })}
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {form.allows_circuit_bundles
+                ? "✓ Parceiro autorizado a vender circuitos completos com preço de pacote ou desconto percentual/nominal agregado. Na remoção de qualquer item obrigatório, o sistema desarma o desconto e recalcula preços de tabela avulsos."
+                : "✕ Parceiro restrito à venda de pontos avulsos. Os combos/circuitos com desconto não serão disponibilizados no catálogo para este parceiro."}
+            </p>
           </div>
 
           {/* Contato & Dados Financeiros do Parceiro */}

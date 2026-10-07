@@ -16,6 +16,60 @@ export type TipoVeiculoPartner =
   | "Redes Sociais & Influenciadores"
   | "Outros";
 
+export type PerfilComercialEntidade =
+  | "VEICULO_EXIBIDOR"
+  | "AGENCIA"
+  | "REPRESENTANTE"
+  | "ANUNCIANTE"
+  | "FORNECEDOR_PRODUCAO";
+
+export const PERFIS_COMERCIAIS: { value: PerfilComercialEntidade; label: string; desc: string }[] = [
+  {
+    value: "VEICULO_EXIBIDOR",
+    label: "Veículo de Comunicação / Exibidora",
+    desc: "Donos de pontos de mídia, painéis, emissoras, rádios ou portais",
+  },
+  {
+    value: "AGENCIA",
+    label: "Agência de Publicidade",
+    desc: "Agências que compram e intermediam mídia para anunciantes",
+  },
+  {
+    value: "REPRESENTANTE",
+    label: "Representante Comercial de Mídia",
+    desc: "Escritórios de representação comercial de veículos",
+  },
+  {
+    value: "ANUNCIANTE",
+    label: "Anunciante / Cliente Final",
+    desc: "Empresas e marcas compradoras de espaços de mídia",
+  },
+  {
+    value: "FORNECEDOR_PRODUCAO",
+    label: "Fornecedor de Produção",
+    desc: "Produtoras de áudio/vídeo, birôs de impressão de lona e montagem",
+  },
+];
+
+export type UniversalMediaType =
+  | "OOH"
+  | "DOOH"
+  | "RADIO"
+  | "DIGITAL"
+  | "PRINT"
+  | "TV"
+  | "CUSTOM";
+
+export const UNIVERSAL_MEDIA_TYPES: { id: UniversalMediaType; label: string; desc: string }[] = [
+  { id: "OOH", label: "Mídia Exterior (OOH)", desc: "Frontlights, Outdoors, Empenas, Painéis Rodoviários, Totens" },
+  { id: "DOOH", label: "Mídia Digital Exterior (DOOH)", desc: "Painéis Digitais LED de rua, Elevadores, Displays no Varejo" },
+  { id: "RADIO", label: "Rádio / Áudio", desc: "Spots, Testemunhais, Patrocínios de programas e podcasts" },
+  { id: "DIGITAL", label: "Digital / Portais / Web", desc: "Banners em portais de notícias, Publieditoriais, Redes Sociais" },
+  { id: "PRINT", label: "Mídia Impressa", desc: "Jornais impressos, Revistas, Encartes e Folders" },
+  { id: "TV", label: "TV / Vídeo Broadcast", desc: "Inserções comerciais 30s/15s, Merchandising, Patrocínios" },
+  { id: "CUSTOM", label: "Formatos Customizados", desc: "Formatos livres definidos pelo inquilino" },
+];
+
 export interface Partner {
   id: string;
   tenant_id?: string | null;
@@ -28,6 +82,7 @@ export interface Partner {
   telefone?: string | null;
   site?: string | null;
   tipo_veiculo: TipoVeiculoPartner | string;
+  perfil_comercial?: PerfilComercialEntidade | string;
   comissao_padrao_percentual: number;
   status: PartnerStatus;
   observacoes?: string | null;
@@ -39,6 +94,7 @@ export interface Partner {
   redes_sociais?: Record<string, any> | null;
   media_kit_defenses?: string[] | { titulo: string; descricao?: string; metricas?: string }[] | null;
   commercial_discounts_rules?: { periodo: string; desconto_pct: number; condicoes?: string }[] | Record<string, any> | null;
+  allows_circuit_bundles?: boolean;
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;

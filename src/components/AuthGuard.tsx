@@ -50,7 +50,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     // Usuários Master possuem acesso perpétuo irrestrito — liberados instantaneamente
-    if (isMasterEmail(user.email)) {
+    if (
+      isMasterEmail(user.email) ||
+      user.user_metadata?.role === "MASTER" ||
+      user.user_metadata?.is_superadmin === true
+    ) {
       setIsDemo(false);
       setExpired(false);
       setChecking(false);

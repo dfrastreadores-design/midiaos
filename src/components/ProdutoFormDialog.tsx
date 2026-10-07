@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ import {
   TrendingUp,
   Share2,
   ExternalLink,
+  Newspaper,
 } from "lucide-react";
 import { toast } from "sonner";
 import { upsertProduto, upsertProdutoTipo } from "@/lib/produtos.functions";
@@ -55,6 +57,7 @@ import {
   getMacroCanalParaMidia,
 } from "@/lib/catalogo-midias";
 import { useQuery } from "@tanstack/react-query";
+import { useTenantSettings } from "@/hooks/use-tenant-settings";
 import { CreatableCombobox } from "@/components/CreatableCombobox";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
 import { ProdutoFotosUploader } from "@/components/ProdutoFotosUploader";
@@ -99,6 +102,7 @@ export type Produto = {
   longitude?: number | null;
   link_maps?: string | null;
   sentido_via?: string | null;
+  sentido_fluxo?: string | null;
   ponto_referencia?: string | null;
   quantidade_telas?: number | null;
   ambientes?: string[];
@@ -108,12 +112,21 @@ export type Produto = {
   loop_minutos?: number | null;
   insercoes_por_hora?: number | null;
   horas_operacao_dia?: number | null;
+  posicao_site?: string | null;
+  dimensoes_pixels?: string | null;
+  url_destino?: string | null;
+  tiragem_estimada?: number | null;
+  formato_impresso?: string | null;
+  dimensoes_cm?: string | null;
+  impactos_estimados?: number | null;
   detalhes_venda?: string | null;
   parceiro_id?: string | null;
   parceiro_cnpj?: string | null;
   parceiro_nome?: string | null;
   comissao_inquilino_pct?: number | null;
   fotos?: string[] | null;
+  status_operacional?: "disponivel" | "reservado" | "bloqueado_comercial" | "em_veiculacao" | string | null;
+  pi_ativo_id?: string | null;
 };
 
 type Props = {
@@ -214,23 +227,39 @@ export function ProdutoFormDialog({
     Array.isArray(p.segmentos) ? p.segmentos : [],
   );
 
+  const { activeModules, isMediaTypeActive } = useTenantSettings();
+
+  const defaultMidia = useMemo(() => {
+    if (activeModules.includes("OOH")) return "OOH";
+    if (activeModules.includes("DOOH")) return "DOOH";
+    if (activeModules.includes("DIGITAL")) return "DIGITAL";
+    if (activeModules.includes("RADIO")) return "RADIO";
+    if (activeModules.includes("PRINT")) return "PRINT";
+    if (activeModules.includes("TV")) return "TV";
+    return activeModules.find((m) => m !== "PI_FINANCEIRO") || "DOOH";
+  }, [activeModules]);
+
   // Lista consolidada de todas as mídias: padrão comercial + catálogo parceiros + cadastrados no banco
-  const todasMidias = Array.from(
-    new Set([
-      ...MIDIAS_PARCEIROS_CATALOGO,
-      ...SEGMENTOS_MIDIA,
-      ...segmentosParceiros,
-      ...(configs as any[]).map((c) => c.midia).filter(Boolean),
-    ]),
-  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const todasMidias = useMemo(() => {
+    const raw = Array.from(
+      new Set([
+        ...MIDIAS_PARCEIROS_CATALOGO,
+        ...SEGMENTOS_MIDIA,
+        ...segmentosParceiros,
+        ...(configs as any[]).map((c) => c.midia).filter(Boolean),
+      ]),
+    );
+    const filtered = raw.filter((m) => isMediaTypeActive(m));
+    return (filtered.length > 0 ? filtered : raw).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [segmentosParceiros, configs, isMediaTypeActive]);
 
   const [form, setForm] = useState<Partial<Produto>>({
-    midia: "TV",
-    canal_macro: "OFF",
+    midia: defaultMidia,
+    canal_macro: getMacroCanalParaMidia(defaultMidia),
     plataforma_rede: null,
     metricas_digitais: null,
     nome: "",
-    duracao_segundos: 30,
+    duracao_segundos: defaultMidia === "TV" || defaultMidia === "Radio" || defaultMidia === "RADIO" ? 30 : 0,
     insercoes_padrao: 1,
     valor_unit: 0,
     ativo: true,
@@ -248,12 +277,12 @@ export function ProdutoFormDialog({
     if (open) {
       setErrors({});
       const init = initial || {
-        midia: "TV",
-        canal_macro: "OFF",
+        midia: defaultMidia,
+        canal_macro: getMacroCanalParaMidia(defaultMidia),
         plataforma_rede: null,
         metricas_digitais: null,
         nome: "",
-        duracao_segundos: 30,
+        duracao_segundos: defaultMidia === "TV" || defaultMidia === "Radio" || defaultMidia === "RADIO" ? 30 : 0,
         insercoes_padrao: 1,
         valor_unit: 0,
         ativo: true,
@@ -275,8 +304,16 @@ export function ProdutoFormDialog({
         plataforma_rede: init.plataforma_rede || null,
         metricas_digitais: init.metricas_digitais || null,
         link_maps: init.link_maps || null,
-        sentido_via: init.sentido_via || null,
+        sentido_via: init.sentido_via || init.sentido_fluxo || null,
+        sentido_fluxo: init.sentido_fluxo || init.sentido_via || null,
         ponto_referencia: init.ponto_referencia || null,
+        posicao_site: init.posicao_site || null,
+        dimensoes_pixels: init.dimensoes_pixels || null,
+        url_destino: init.url_destino || null,
+        tiragem_estimada: init.tiragem_estimada != null ? Number(init.tiragem_estimada) : null,
+        formato_impresso: init.formato_impresso || null,
+        dimensoes_cm: init.dimensoes_cm || null,
+        impactos_estimados: init.impactos_estimados != null ? Number(init.impactos_estimados) : null,
         fotos: init.fotos || [],
       });
       const rawCep = init.cep || init.endereco_ponto?.match(/\b\d{5}-?\d{3}\b/)?.[0] || "";
@@ -284,7 +321,8 @@ export function ProdutoFormDialog({
     }
   }, [open, initial]);
 
-  const set = (patch: Partial<Produto>) => setForm((prev) => ({ ...prev, ...patch }));
+  const set = (patch: Partial<Produto> | ((prev: Partial<Produto>) => Partial<Produto>)) =>
+    setForm((prev) => (typeof patch === "function" ? patch(prev) : { ...prev, ...patch }));
 
   const updateMetricaDigital = (key: string, val: any) => {
     setForm((prev) => {
@@ -480,10 +518,16 @@ export function ProdutoFormDialog({
     if (form.valor_unit == null || isNaN(Number(form.valor_unit)) || Number(form.valor_unit) < 0) {
       errs.valor_unit = "Informe um valor unitário válido.";
     }
-    if (!form.duracao_segundos || Number(form.duracao_segundos) <= 0) {
-      errs.duracao_segundos = "Duração deve ser maior que zero.";
+    const isBroadcast =
+      form.midia === "TV" ||
+      form.midia === "Radio" ||
+      form.midia === "Rádio" ||
+      (typeof form.formato === "string" && /\b(\d+s|segundos?)\b/i.test(form.formato));
+
+    if (isBroadcast && (form.duracao_segundos == null || Number(form.duracao_segundos) <= 0)) {
+      errs.duracao_segundos = "Duração deve ser maior que zero para inserções em TV/Rádio.";
     }
-    if (!form.insercoes_padrao || Number(form.insercoes_padrao) <= 0) {
+    if (form.insercoes_padrao != null && Number(form.insercoes_padrao) < 1) {
       errs.insercoes_padrao = "Inserções padrão deve ser pelo menos 1.";
     }
     return errs;
@@ -499,7 +543,21 @@ export function ProdutoFormDialog({
       return;
     }
     setErrors({});
-    saveMut.mutate(form);
+    const payload = {
+      ...form,
+      duracao_segundos: Number(form.duracao_segundos) || 0,
+      insercoes_padrao: Number(form.insercoes_padrao) || 1,
+      sentido_via: form.sentido_fluxo || form.sentido_via || null,
+      sentido_fluxo: form.sentido_fluxo || form.sentido_via || null,
+      posicao_site: form.posicao_site || null,
+      dimensoes_pixels: form.dimensoes_pixels || null,
+      url_destino: form.url_destino || null,
+      tiragem_estimada: form.tiragem_estimada != null ? Number(form.tiragem_estimada) : null,
+      formato_impresso: form.formato_impresso || null,
+      dimensoes_cm: form.dimensoes_cm || null,
+      impactos_estimados: form.impactos_estimados != null ? Number(form.impactos_estimados) : null,
+    };
+    saveMut.mutate(payload);
   };
 
   return (
@@ -601,7 +659,7 @@ export function ProdutoFormDialog({
             <div className="grid grid-cols-2 gap-3">
               <div data-field="midia">
                 <div className="flex items-center justify-between mb-1.5">
-                  <Label className={`font-semibold text-xs flex items-center gap-1 ${errors.midia ? errorLabelClass : ""}`}>
+                  <Label className={`font-semibold text-xs flex items-center gap-1 ${errorLabelClass(!!errors.midia)}`}>
                     <span>Mídia *</span>
                   </Label>
                   <button
@@ -986,7 +1044,7 @@ export function ProdutoFormDialog({
             </div>
 
             <div>
-              <Label className={errors.nome ? errorLabelClass : undefined}>Nome do Produto *</Label>
+              <Label className={errorLabelClass(!!errors.nome)}>Nome do Produto *</Label>
               <Input
                 data-field="nome"
                 error={errors.nome}
@@ -1006,7 +1064,7 @@ export function ProdutoFormDialog({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>programa</Label>
+                <Label>Posição / Programa / Espaço Comercial</Label>
                 {(() => {
                   const programasCatalogo = form.midia ? PROGRAMAS_SUGERIDOS_POR_MIDIA[form.midia] || [] : [];
                   const progOptions = Array.from(
@@ -1018,13 +1076,13 @@ export function ProdutoFormDialog({
                       value={form.programa ?? ""}
                       onChange={(v) => set({ programa: v })}
                       options={progOptions}
-                      placeholder="Selecione ou crie"
+                      placeholder="Selecione ou crie espaço/posição"
                     />
                   );
                 })()}
               </div>
               <div>
-                <Label>Formato</Label>
+                <Label>Formato Comercial</Label>
                 {(() => {
                   const formatosCatalogo = form.midia ? FORMATOS_SUGERIDOS_POR_MIDIA[form.midia] || [] : [];
                   const formOptions = Array.from(
@@ -1036,7 +1094,7 @@ export function ProdutoFormDialog({
                       value={form.formato ?? ""}
                       onChange={(v) => set({ formato: v })}
                       options={formOptions}
-                      placeholder="Selecione ou crie (30s, Página...)"
+                      placeholder="Selecione ou crie (Bi-semana, 30s, Banner...)"
                     />
                   );
                 })()}
@@ -1044,24 +1102,29 @@ export function ProdutoFormDialog({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>faixa horária</Label>
+                <Label>Faixa Horária / Horário de Exibição</Label>
                 <CreatableCombobox
                   value={form.faixa ?? ""}
                   onChange={(v) => set({ faixa: v })}
                   options={sugestoes.faixas ?? []}
-                  placeholder="Selecione ou crie (Manhã, Tarde...)"
+                  placeholder="Selecione ou crie (24h, Manhã, Tarde...)"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className={errors.duracao_segundos ? errorLabelClass : undefined}>Duração (s)</Label>
+                  <Label className={errorLabelClass(!!errors.duracao_segundos)}>
+                    Duração (s){" "}
+                    {!(form.midia === "TV" || form.midia === "Radio" || form.midia === "Rádio") && (
+                      <span className="text-[10px] text-muted-foreground font-normal">(opcional)</span>
+                    )}
+                  </Label>
                   <Input
                     data-field="duracao_segundos"
                     error={errors.duracao_segundos}
                     type="number"
-                    min={1}
-                    value={form.duracao_segundos ?? 30}
+                    min={0}
+                    value={form.duracao_segundos ?? 0}
                     onChange={(e) => {
                       set({ duracao_segundos: Number(e.target.value) });
                       if (errors.duracao_segundos) {
@@ -1076,7 +1139,7 @@ export function ProdutoFormDialog({
                   <FormFieldError message={errors.duracao_segundos} />
                 </div>
                 <div>
-                  <Label className={errors.insercoes_padrao ? errorLabelClass : undefined}>Ins. padrão</Label>
+                  <Label className={errorLabelClass(!!errors.insercoes_padrao)}>Ins. padrão</Label>
                   <Input
                     data-field="insercoes_padrao"
                     error={errors.insercoes_padrao}
@@ -1099,7 +1162,7 @@ export function ProdutoFormDialog({
               </div>
             </div>
             <div>
-              <Label className={errors.valor_unit ? errorLabelClass : undefined}>Valor unitário (R$) *</Label>
+              <Label className={errorLabelClass(!!errors.valor_unit)}>Valor unitário (R$) *</Label>
               <Input
                 data-field="valor_unit"
                 error={errors.valor_unit}
@@ -1121,7 +1184,7 @@ export function ProdutoFormDialog({
               <FormFieldError message={errors.valor_unit} />
             </div>
             <div>
-              <Label>Link do modelo do produto (opcional)</Label>
+              <Label>Link do modelo do produto / Mídia Kit (opcional)</Label>
               <Input
                 type="url"
                 placeholder="https://..."
@@ -1130,13 +1193,13 @@ export function ProdutoFormDialog({
               />
             </div>
             <div>
-              <Label>Emissora (CNPJ que emitirá o PI)</Label>
+              <Label>Veículo Emissor do PI (CNPJ de Faturamento)</Label>
               <Select
                 value={form.emissora_id ?? "none"}
                 onValueChange={(v) => set({ emissora_id: v === "none" ? null : v })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a emissora" />
+                  <SelectValue placeholder="Selecione o veículo/emissor" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— Sem vínculo —</SelectItem>
@@ -1158,7 +1221,7 @@ export function ProdutoFormDialog({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Ao selecionar este produto em um PI, a emissora correspondente será sugerida
+                Ao selecionar este produto em um PI, o veículo emissor correspondente será sugerido
                 automaticamente.
               </p>
             </div>
@@ -1275,6 +1338,65 @@ export function ProdutoFormDialog({
                   </div>
                 </div>
 
+                {/* Detalhes Técnicos e Web do Formato Digital */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Posição no Site / App</Label>
+                    <CreatableCombobox
+                      value={form.posicao_site ?? ""}
+                      onChange={(v) => {
+                        set({ posicao_site: v });
+                        updateMetricaDigital("posicao_site", v);
+                      }}
+                      options={[
+                        "Topo da Home (Leaderboard / Super Top)",
+                        "Lateral Direita (Sidebar Retângulo)",
+                        "In-Article (Meio do Artigo / Matéria)",
+                        "Feed de Conteúdo / Linha do Tempo",
+                        "Rodapé Fixo (Floating Footer)",
+                        "Takeover de Página / Fullscreen",
+                        "Cabeçalho de Categoria / Seção",
+                      ]}
+                      placeholder="Ex: Topo da Home, In-Article..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">Dimensões em Pixels</Label>
+                    <CreatableCombobox
+                      value={form.dimensoes_pixels ?? ""}
+                      onChange={(v) => {
+                        set({ dimensoes_pixels: v });
+                        updateMetricaDigital("dimensoes_pixels", v);
+                      }}
+                      options={[
+                        "728x90 px (Leaderboard)",
+                        "300x250 px (Retângulo Médio)",
+                        "970x250 px (Billboard)",
+                        "300x600 px (Half Page / Skyscraper)",
+                        "320x50 px (Mobile Leaderboard)",
+                        "1080x1920 px (Stories / Reels 9:16)",
+                        "1080x1080 px (Feed Quadrado 1:1)",
+                        "1200x628 px (Card Web / Social)",
+                      ]}
+                      placeholder="Ex: 728x90 px, 300x250 px..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">URL de Destino / Link</Label>
+                    <Input
+                      placeholder="https://anunciante.com.br/campanha"
+                      value={form.url_destino ?? ""}
+                      onChange={(e) => {
+                        set({ url_destino: e.target.value });
+                        updateMetricaDigital("url_destino", e.target.value);
+                      }}
+                      className="text-xs bg-background font-mono"
+                    />
+                  </div>
+                </div>
+
                 {/* Métricas Estimadas de Entrega */}
                 <div>
                   <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
@@ -1367,7 +1489,7 @@ export function ProdutoFormDialog({
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <Label className="text-xs font-semibold">Tipo de Equipamento / Veículo</Label>
                     <CreatableCombobox
@@ -1405,12 +1527,28 @@ export function ProdutoFormDialog({
                   </div>
 
                   <div>
-                    <Label className="text-xs font-semibold">Fluxo Estimado (Veículos / Pedestres)</Label>
+                    <Label className="text-xs font-semibold">Fluxo Estimado (Dia)</Label>
                     <Input
-                      placeholder="Ex: 50.000 veículos/dia, 80.000 pessoas/dia..."
+                      placeholder="Ex: 50.000 veículos/dia..."
                       value={form.metricas_digitais?.fluxo_estimado ?? ""}
                       onChange={(e) => updateMetricaDigital("fluxo_estimado", e.target.value)}
                       className="text-xs bg-background"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">Impactos Estimados</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Ex: 150000"
+                      value={form.impactos_estimados ?? ""}
+                      onChange={(e) =>
+                        set({
+                          impactos_estimados: e.target.value === "" ? null : Number(e.target.value),
+                        })
+                      }
+                      className="text-xs bg-background font-mono"
                     />
                   </div>
                 </div>
@@ -1667,8 +1805,10 @@ export function ProdutoFormDialog({
                     <div>
                       <Label className="text-xs font-medium">Sentido da Via (Fluxo)</Label>
                       <Input
-                        value={form.sentido_via ?? ""}
-                        onChange={(e) => set({ sentido_via: e.target.value })}
+                        value={form.sentido_via ?? form.sentido_fluxo ?? ""}
+                        onChange={(e) =>
+                          set({ sentido_via: e.target.value, sentido_fluxo: e.target.value })
+                        }
                         placeholder="Ex: Sentido Plano Piloto / Sentido Taguatinga"
                         className="text-xs bg-background mt-1"
                       />
@@ -1881,6 +2021,84 @@ export function ProdutoFormDialog({
               </div>
             )}
 
+            {/* Bloco Mídia Impressa (Jornais, Revistas e Encartes) */}
+            {(form.midia === "PRINT" ||
+              form.midia === "Impresso" ||
+              form.midia === "Jornal / Revista" ||
+              form.midia === "Revista" ||
+              form.midia === "Jornal" ||
+              form.formato_impresso != null ||
+              (form.canal_macro === "OFF" && ["PRINT", "Impresso", "Jornal", "Revista"].includes(form.midia || ""))) && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/20 p-4 space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      <Newspaper className="size-4" />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                        Especificações de Mídia Impressa (Jornais & Revistas)
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Formatos gráficos editoriais, dimensões físicas da peça em cm e tiragem por edição.
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-amber-100/60 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 text-[10px]">
+                    📰 Mídia Impressa
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs font-semibold">Formato do Anúncio Impresso</Label>
+                    <CreatableCombobox
+                      value={form.formato_impresso ?? ""}
+                      onChange={(v) => set({ formato_impresso: v })}
+                      options={[
+                        "Página Inteira (Full Page)",
+                        "Meia Página Horizontal",
+                        "Meia Página Vertical",
+                        "Quarto de Página",
+                        "Página Dupla Central",
+                        "Robô de Capa (Primeira Página)",
+                        "Rodapé de Página (Faixa)",
+                        "Encarte Avulso Especial",
+                        "Informe Publicitário / Publieditorial",
+                      ]}
+                      placeholder="Ex: Página Inteira, Meia Página..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">Dimensões em Centímetros (cm)</Label>
+                    <Input
+                      placeholder="Ex: 21 x 28 cm, 26 x 15 cm..."
+                      value={form.dimensoes_cm ?? ""}
+                      onChange={(e) => set({ dimensoes_cm: e.target.value })}
+                      className="text-xs bg-background"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold">Tiragem Estimada por Edição</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Ex: 45000"
+                      value={form.tiragem_estimada ?? ""}
+                      onChange={(e) =>
+                        set({
+                          tiragem_estimada: e.target.value === "" ? null : Number(e.target.value),
+                        })
+                      }
+                      className="text-xs bg-background font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Fotos do Produto (no máximo 2 fotos) */}
             <ProdutoFotosUploader
               fotos={form.fotos}
@@ -1958,7 +2176,7 @@ export function ProdutoFormDialog({
                     })}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Marque os dias da semana em que o programa vai ao ar.
+                    Marque os dias da semana em que a veiculação / exibição ocorre.
                   </p>
                 </div>
               )}
@@ -2039,7 +2257,7 @@ export function ProdutoFormDialog({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Razão Social / Emissora Parceira (Opcional)</Label>
+              <Label className="text-xs">Razão Social / Veículo Parceiro (Opcional)</Label>
               <Input
                 placeholder="Ex.: Empresa Brasil de Comunicação / Parceiro"
                 value={novaMidiaForm.razao_social}

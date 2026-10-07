@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { GlobalSpotlightCommand } from "@/components/GlobalSpotlightCommand";
 
 import appCss from "../styles.css?url";
 
@@ -341,6 +342,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <GlobalSpotlightCommand />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );

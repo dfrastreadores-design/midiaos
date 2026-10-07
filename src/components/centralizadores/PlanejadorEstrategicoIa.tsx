@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -143,6 +143,18 @@ export function PlanejadorEstrategicoIa() {
   const [modalNovoClienteOpen, setModalNovoClienteOpen] = useState(false);
   const [modal360Open, setModal360Open] = useState(false);
 
+  // 1. Extração dinâmica da lista de canais/veículos únicos a partir dos produtos ativos cadastrados
+  const canaisDisponiveis = useMemo(() => {
+    const canaisSet = new Set<string>();
+    (produtos || []).forEach((p) => {
+      if (p.ativo !== false && p.midia && typeof p.midia === "string") {
+        const canal = p.midia.trim();
+        if (canal) canaisSet.add(canal);
+      }
+    });
+    return Array.from(canaisSet).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [produtos]);
+
   const [form, setForm] = useState<EstrategiaMidiaInput>({
     cliente_id: null,
     cliente_nome: "",
@@ -153,11 +165,44 @@ export function PlanejadorEstrategicoIa() {
     pracas: ["Brasília - DF", "Águas Claras / Taguatinga", "Plano Piloto"],
     budget_estimado: 60000,
     duracao_dias: 30,
-    veiculos_preferenciais: ["TV Aberta", "Painéis DOOH", "Rádio FM", "Digital / Redes"],
+    veiculos_preferenciais: [],
     diferenciais_cliente: "Tradição de mercado, excelência no atendimento e facilidade de pagamento",
     tom_comunicacao: "Persuasivo & Confiável",
     produtos_selecionados_ids: [],
   });
+
+  // 3. Por padrão, inicializa o estado com todos os canais disponíveis selecionados
+  const canaisInicializadosRef = useRef(false);
+  useEffect(() => {
+    if (canaisDisponiveis.length > 0 && !canaisInicializadosRef.current) {
+      canaisInicializadosRef.current = true;
+      setForm((prev) => ({
+        ...prev,
+        veiculos_preferenciais: canaisDisponiveis,
+      }));
+    }
+  }, [canaisDisponiveis]);
+
+  // 4. Produtos elegíveis filtrados dinamicamente com base nos canais selecionados
+  const produtosElegiveis = useMemo(() => {
+    const selecionados = form.veiculos_preferenciais || [];
+    if (selecionados.length === 0) return [];
+
+    return (produtos || []).filter((p) => {
+      if (p.ativo === false) return false;
+      const midia = (p.midia || "").trim().toLowerCase();
+      return selecionados.some((canal) => {
+        const c = canal.trim().toLowerCase();
+        return c === midia || c.includes(midia) || midia.includes(c);
+      });
+    });
+  }, [produtos, form.veiculos_preferenciais]);
+
+  // Itens manuais filtrados pelos elegíveis
+  const itensManuaisSelecionadosElegiveis = useMemo(() => {
+    const idsElegiveis = new Set(produtosElegiveis.map((p) => p.id));
+    return (form.produtos_selecionados_ids || []).filter((id) => idsElegiveis.has(id));
+  }, [produtosElegiveis, form.produtos_selecionados_ids]);
 
   const [resultado, setResultado] = useState<EstrategiaMidiaOutput | null>(null);
   const [modalAnexoClienteAberto, setModalAnexoClienteAberto] = useState(false);
@@ -212,6 +257,14 @@ export function PlanejadorEstrategicoIa() {
       const next = exists ? current.filter((v) => v !== veiculo) : [...current, veiculo];
       return { ...prev, veiculos_preferenciais: next };
     });
+  };
+
+  const selecionarTodosCanais = () => {
+    setForm((prev) => ({ ...prev, veiculos_preferenciais: canaisDisponiveis }));
+  };
+
+  const desmarcarTodosCanais = () => {
+    setForm((prev) => ({ ...prev, veiculos_preferenciais: [] }));
   };
 
   const copiarEstrategiaCompleta = () => {
@@ -461,29 +514,62 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                 </div>
               </div>
 
-              {/* Mídias de Interesse */}
+              {/* Mídias de Interesse - Canais Dinâmicos */}
               <div>
-                <Label className="text-xs font-semibold mb-1.5 block">Canais & Veículos Disponíveis</Label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {["TV Aberta", "Painéis DOOH", "Rádio FM", "Digital / Redes", "Portais Web"].map((v) => {
-                    const isSelected = (form.veiculos_preferenciais || []).includes(v);
-                    return (
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label className="text-xs font-semibold block">Canais & Veículos Disponíveis</Label>
+                  {canaisDisponiveis.length > 0 && (
+                    <div className="flex items-center gap-2 text-[10px]">
                       <button
-                        key={v}
                         type="button"
-                        onClick={() => toggleVeiculo(v)}
-                        className={`p-2 rounded border text-xs flex items-center justify-between transition-all ${
-                          isSelected
-                            ? "bg-primary/10 border-primary text-primary font-medium"
-                            : "bg-muted/40 border-border text-muted-foreground hover:bg-muted"
-                        }`}
+                        onClick={selecionarTodosCanais}
+                        className="text-primary hover:underline font-medium"
                       >
-                        <span>{v}</span>
-                        {isSelected && <CheckCircle2 className="size-3.5" />}
+                        Todos
                       </button>
-                    );
-                  })}
+                      <span className="text-muted-foreground">•</span>
+                      <button
+                        type="button"
+                        onClick={desmarcarTodosCanais}
+                        className="text-muted-foreground hover:underline"
+                      >
+                        Nenhum
+                      </button>
+                    </div>
+                  )}
                 </div>
+
+                {canaisDisponiveis.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-muted-foreground border rounded-md bg-muted/20">
+                    Carregando canais do inventário...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {canaisDisponiveis.map((v) => {
+                      const isSelected = (form.veiculos_preferenciais || []).includes(v);
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => toggleVeiculo(v)}
+                          className={`p-2 rounded border text-xs flex items-center justify-between transition-all ${
+                            isSelected
+                              ? "bg-primary/10 border-primary text-primary font-medium"
+                              : "bg-muted/40 border-border text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <span className="truncate mr-1">{v}</span>
+                          {isSelected && <CheckCircle2 className="size-3.5 shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {form.veiculos_preferenciais && form.veiculos_preferenciais.length === 0 && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                    ⚠️ Selecione ao menos um canal para alocar produtos e verba na campanha.
+                  </p>
+                )}
               </div>
 
               {/* Inventário Real do Inquilino Integrado */}
@@ -493,12 +579,12 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                     <Package className="size-3.5 text-primary" />
                     Inventário Real do Sistema
                   </Label>
-                  <Badge variant="outline" className="text-[10px] bg-background">
-                    {produtos.length} produto(s) ativo(s)
+                  <Badge variant="outline" className="text-[10px] bg-background font-mono">
+                    {produtosElegiveis.length} elegível(is) {produtos.length > 0 && `de ${produtos.length}`}
                   </Badge>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-tight">
-                  A inteligência artificial selecionará e alocará os pontos, telas de LED, programas e formatos reais do seu catálogo para atingir a meta deste cliente.
+                  A inteligência artificial selecionará e alocará os pontos, telas de LED, programas e formatos reais dos canais selecionados para atingir a meta deste cliente.
                 </p>
                 <div className="flex items-center gap-2 pt-1">
                   <Button
@@ -512,7 +598,7 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                     }}
                   >
                     <CheckCircle2 className="size-3" />
-                    Todo o Inventário ({produtos.length})
+                    Inventário Elegível ({produtosElegiveis.length})
                   </Button>
                   <Button
                     type="button"
@@ -522,50 +608,56 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                     onClick={() => setUsarTodoInventario(false)}
                   >
                     <Filter className="size-3" />
-                    Filtrar Itens ({form.produtos_selecionados_ids?.length || 0})
+                    Filtrar Manualmente ({itensManuaisSelecionadosElegiveis.length})
                   </Button>
                 </div>
 
                 {!usarTodoInventario && (
                   <div className="space-y-1.5 pt-1.5">
                     <div className="max-h-44 overflow-y-auto space-y-1 pr-1 border rounded p-1.5 bg-background">
-                      {produtos.map((prod: any) => {
-                        const selected = (form.produtos_selecionados_ids || []).includes(prod.id);
-                        return (
-                          <div
-                            key={prod.id}
-                            onClick={() => {
-                              const curr = form.produtos_selecionados_ids || [];
-                              const next = selected
-                                ? curr.filter((id) => id !== prod.id)
-                                : [...curr, prod.id];
-                              setForm({ ...form, produtos_selecionados_ids: next });
-                            }}
-                            className={`p-1.5 rounded text-[11px] flex items-center justify-between cursor-pointer transition-colors ${
-                              selected
-                                ? "bg-primary/10 border border-primary/40 font-medium text-primary"
-                                : "hover:bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            <div className="truncate mr-2">
-                              <span className="font-semibold text-foreground">{prod.nome}</span>
-                              {prod.endereco_ponto && (
-                                <span className="text-[10px] text-muted-foreground block truncate">
-                                  📍 {prod.endereco_ponto}
+                      {produtosElegiveis.length === 0 ? (
+                        <div className="p-3 text-center text-xs text-muted-foreground">
+                          Nenhum produto cadastrado para os canais selecionados.
+                        </div>
+                      ) : (
+                        produtosElegiveis.map((prod: any) => {
+                          const selected = (form.produtos_selecionados_ids || []).includes(prod.id);
+                          return (
+                            <div
+                              key={prod.id}
+                              onClick={() => {
+                                const curr = form.produtos_selecionados_ids || [];
+                                const next = selected
+                                  ? curr.filter((id) => id !== prod.id)
+                                  : [...curr, prod.id];
+                                setForm({ ...form, produtos_selecionados_ids: next });
+                              }}
+                              className={`p-1.5 rounded text-[11px] flex items-center justify-between cursor-pointer transition-colors ${
+                                selected
+                                  ? "bg-primary/10 border border-primary/40 font-medium text-primary"
+                                  : "hover:bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              <div className="truncate mr-2">
+                                <span className="font-semibold text-foreground">{prod.nome}</span>
+                                {prod.endereco_ponto && (
+                                  <span className="text-[10px] text-muted-foreground block truncate">
+                                    📍 {prod.endereco_ponto}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="shrink-0 flex items-center gap-1.5">
+                                <Badge variant="secondary" className="text-[9px] py-0">
+                                  {prod.midia}
+                                </Badge>
+                                <span className="font-mono text-[10px] font-semibold text-foreground">
+                                  {formatBRL(prod.valor_unit)}
                                 </span>
-                              )}
+                              </div>
                             </div>
-                            <div className="shrink-0 flex items-center gap-1.5">
-                              <Badge variant="secondary" className="text-[9px] py-0">
-                                {prod.midia}
-                              </Badge>
-                              <span className="font-mono text-[10px] font-semibold text-foreground">
-                                {formatBRL(prod.valor_unit)}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 )}
@@ -589,7 +681,25 @@ Plano desenvolvido pela Inteligência de Mídia do Mídia.OS`;
                     toast.error("Informe o nome do cliente");
                     return;
                   }
-                  gerarMutation.mutate(form);
+                  if (!form.veiculos_preferenciais || form.veiculos_preferenciais.length === 0) {
+                    toast.error("Selecione pelo menos um canal de mídia.");
+                    return;
+                  }
+                  if (produtosElegiveis.length === 0) {
+                    toast.error("Nenhum produto ativo elegível para os canais selecionados.");
+                    return;
+                  }
+
+                  const idsParaDistribuicao = usarTodoInventario
+                    ? produtosElegiveis.map((p) => p.id)
+                    : itensManuaisSelecionadosElegiveis.length > 0
+                      ? itensManuaisSelecionadosElegiveis
+                      : produtosElegiveis.map((p) => p.id);
+
+                  gerarMutation.mutate({
+                    ...form,
+                    produtos_selecionados_ids: idsParaDistribuicao,
+                  });
                 }}
                 disabled={gerarMutation.isPending}
                 className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-primary text-white hover:opacity-95 shadow-md py-5 font-semibold text-sm gap-2"
