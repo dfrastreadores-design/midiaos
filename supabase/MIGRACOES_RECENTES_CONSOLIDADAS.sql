@@ -163,8 +163,16 @@ CREATE INDEX IF NOT EXISTS idx_entities_cnpj ON public.entities(cnpj);
 CREATE INDEX IF NOT EXISTS idx_entities_tipo ON public.entities(tipo);
 
 -- Sincronização inicial não-destrutiva de entidades
-INSERT INTO public.entities (id, tenant_id, tipo, razao_social, nome_fantasia, cnpj, email, telefone, ativo)
-SELECT c.id, c.tenant_id, 'cliente', c.razao_social, c.nome_fantasia, c.cnpj, c.email, c.telefone, COALESCE(c.ativo, true)
+INSERT INTO public.entities (id, tipo, razao_social, nome_fantasia, cnpj, email, telefone, ativo)
+SELECT 
+  c.id, 
+  'cliente', 
+  c.razao_social, 
+  c.nome_fantasia, 
+  c.cnpj, 
+  NULL, 
+  NULL, 
+  (CASE WHEN c.status = 'inativo' THEN false ELSE true END)
 FROM public.clientes c
 WHERE c.cnpj IS NOT NULL
 ON CONFLICT (id) DO UPDATE SET
@@ -172,8 +180,16 @@ ON CONFLICT (id) DO UPDATE SET
   razao_social = EXCLUDED.razao_social,
   nome_fantasia = EXCLUDED.nome_fantasia;
 
-INSERT INTO public.entities (id, tenant_id, tipo, razao_social, nome_fantasia, cnpj, email, telefone, ativo)
-SELECT a.id, a.tenant_id, 'agencia', a.razao_social, a.nome_fantasia, a.cnpj, null, null, true
+INSERT INTO public.entities (id, tipo, razao_social, nome_fantasia, cnpj, email, telefone, ativo)
+SELECT 
+  a.id, 
+  'agencia', 
+  a.razao_social, 
+  a.nome_fantasia, 
+  a.cnpj, 
+  NULL, 
+  NULL, 
+  true
 FROM public.agencias a
 WHERE a.cnpj IS NOT NULL
 ON CONFLICT (id) DO UPDATE SET
@@ -184,8 +200,16 @@ ON CONFLICT (id) DO UPDATE SET
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'parceiros') THEN
-    INSERT INTO public.entities (id, tenant_id, tipo, razao_social, nome_fantasia, cnpj, email, telefone, ativo)
-    SELECT p.id, p.tenant_id, 'veiculo', p.razao_social, p.nome_fantasia, p.cnpj, p.contato_email, p.contato_telefone, COALESCE(p.ativo, true)
+    INSERT INTO public.entities (id, tipo, razao_social, nome_fantasia, cnpj, email, telefone, ativo)
+    SELECT 
+      p.id, 
+      'veiculo', 
+      p.razao_social, 
+      p.nome_fantasia, 
+      p.cnpj, 
+      p.contato_email, 
+      p.contato_telefone, 
+      COALESCE(p.ativo, true)
     FROM public.parceiros p
     WHERE p.cnpj IS NOT NULL
     ON CONFLICT (id) DO UPDATE SET
