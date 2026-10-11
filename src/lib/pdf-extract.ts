@@ -72,39 +72,51 @@ async function decompressDeflateStream(bytes: Uint8Array): Promise<string | null
 }
 
 // Extrator binário de emergência para PDFs (executa se o pdfjs-dist falhar)
-export async function extractTextFromPdfBufferDirectly(buf: ArrayBuffer): Promise<string> {
-  const u8 = new Uint8Array(buf);
-  const latin1Str = new TextDecoder("latin1").decode(u8);
-  const extractedLines: string[] = [];
-
-  // Localiza blocos de stream ... endstream
-  const streamPattern = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
-  let streamMatch;
-
-  while ((streamMatch = streamPattern.exec(latin1Str)) !== null) {
-    const streamStart = streamMatch.index + streamMatch[0].indexOf("\n") + 1;
-    const streamContentStr = streamMatch[1];
-    const streamBytes = u8.subarray(streamStart, streamStart + streamContentStr.length);
-
-    let decompressed: string | null = null;
-    if (streamBytes.length > 2 && (streamBytes[0] === 0x78 || streamBytes[0] === 0x1f)) {
-      decompressed = await decompressDeflateStream(streamBytes);
+export async function extractTextFromPdfBufferDirectly(buf: ArrayBuffer | Uint8Array): Promise<string> {
+  try {
+    let u8: Uint8Array;
+    if (buf instanceof Uint8Array) {
+      u8 = buf;
+    } else {
+      if (!buf || buf.byteLength === 0) return "";
+      u8 = new Uint8Array(buf.slice(0));
     }
 
-    const textToAnalyze = decompressed || streamContentStr;
-    const foundStrings = extractStringsFromText(textToAnalyze);
-    if (foundStrings.length > 0) {
-      extractedLines.push(...foundStrings);
+    const latin1Str = new TextDecoder("latin1").decode(u8);
+    const extractedLines: string[] = [];
+
+    // Localiza blocos de stream ... endstream
+    const streamPattern = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+    let streamMatch;
+
+    while ((streamMatch = streamPattern.exec(latin1Str)) !== null) {
+      const streamStart = streamMatch.index + streamMatch[0].indexOf("\n") + 1;
+      const streamContentStr = streamMatch[1];
+      const streamBytes = u8.subarray(streamStart, streamStart + streamContentStr.length);
+
+      let decompressed: string | null = null;
+      if (streamBytes.length > 2 && (streamBytes[0] === 0x78 || streamBytes[0] === 0x1f)) {
+        decompressed = await decompressDeflateStream(streamBytes);
+      }
+
+      const textToAnalyze = decompressed || streamContentStr;
+      const foundStrings = extractStringsFromText(textToAnalyze);
+      if (foundStrings.length > 0) {
+        extractedLines.push(...foundStrings);
+      }
     }
-  }
 
-  // Se não encontrou textos estruturados em streams, busca textos legíveis gerais
-  if (extractedLines.length === 0) {
-    const generalMatches = latin1Str.match(/[A-Z0-9À-ÿ][A-Z0-9À-ÿ\s,.\-/:$%()]{4,}/gi) || [];
-    extractedLines.push(...generalMatches.slice(0, 500));
-  }
+    // Se não encontrou textos estruturados em streams, busca textos legíveis gerais
+    if (extractedLines.length === 0) {
+      const generalMatches = latin1Str.match(/[A-Z0-9À-ÿ][A-Z0-9À-ÿ\s,.\-/:$%()]{4,}/gi) || [];
+      extractedLines.push(...generalMatches.slice(0, 500));
+    }
 
-  return extractedLines.join("\n").trim();
+    return extractedLines.join("\n").trim();
+  } catch (e) {
+    console.warn("[pdf-extract] Erro ao extrair texto do buffer diretamente:", e);
+    return "";
+  }
 }
 
 export async function extractPdfText(file: File): Promise<string> {
@@ -112,7 +124,20 @@ export async function extractPdfText(file: File): Promise<string> {
     throw new Error("extractPdfText só pode ser usado no navegador");
   }
 
-  const buf = await file.arrayBuffer();
+  let rawBuf: ArrayBuffer;
+  try {
+    rawBuf = await file.arrayBuffer();
+  } catch (err: any) {
+    console.warn("[pdf-extract] Falha ao ler arrayBuffer inicial:", err);
+    try {
+      return await file.text();
+    } catch {
+      return `PDF: ${file.name}`;
+    }
+  }
+
+  // Backup cópia independente para evitar "detached ArrayBuffer" caso o worker desanexe o buffer
+  const backupU8 = new Uint8Array(rawBuf.slice(0));
 
   try {
     const pdfjsLib = await import("pdfjs-dist");
@@ -138,21 +163,31 @@ export async function extractPdfText(file: File): Promise<string> {
       }
     }
 
+    // Cria uma fatia nova exclusiva para o getDocument para proteger o rawBuf
+    const dataForWorker = new Uint8Array(rawBuf.slice(0));
+
     const pdf = await pdfjsLib.getDocument({
-      data: buf,
+      data: dataForWorker,
       useWorkerFetch: false,
       isEvalSupported: false,
       useSystemFonts: true,
+      stopAtErrors: false,
     }).promise;
 
     let texto = "";
-    for (let p = 1; p <= pdf.numPages; p++) {
-      const page = await pdf.getPage(p);
-      const content = await page.getTextContent();
-      const linha = content.items
-        .map((it) => ("str" in it ? (it as { str: string }).str : ""))
-        .join(" ");
-      texto += linha + "\n\n";
+    // Limita leitura a até 40 páginas para não sobrecarregar memória em apresentações pesadas (>15MB)
+    const totalPages = Math.min(pdf.numPages, 40);
+    for (let p = 1; p <= totalPages; p++) {
+      try {
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        const linha = content.items
+          .map((it) => ("str" in it ? (it as { str: string }).str : ""))
+          .join(" ");
+        texto += linha + "\n\n";
+      } catch (pageErr) {
+        console.warn(`[pdf-extract] Aviso na página ${p}:`, pageErr);
+      }
     }
 
     const resultado = texto.trim();
@@ -160,13 +195,17 @@ export async function extractPdfText(file: File): Promise<string> {
       return resultado;
     }
   } catch (err) {
-    console.warn("[pdf-extract] pdfjs-dist falhou, ativando extrator nativo de emergência:", err);
+    console.warn("[pdf-extract] pdfjs-dist falhou ou desanexou buffer, usando extrator nativo com cópia de segurança:", err);
   }
 
-  // Fallback nativo: descompactação e leitura direta do binário do PDF
-  const fallbackText = await extractTextFromPdfBufferDirectly(buf);
-  if (fallbackText && fallbackText.length >= 10) {
-    return fallbackText;
+  // Fallback nativo: usa a cópia de segurança backupU8 que NUNCA foi desanexada
+  try {
+    const fallbackText = await extractTextFromPdfBufferDirectly(backupU8);
+    if (fallbackText && fallbackText.length >= 10) {
+      return fallbackText;
+    }
+  } catch (fbErr) {
+    console.warn("[pdf-extract] Fallback nativo de buffer falhou:", fbErr);
   }
 
   // Último recurso: leitura pura de texto do arquivo
@@ -175,5 +214,6 @@ export async function extractPdfText(file: File): Promise<string> {
     if (raw && raw.length >= 10) return raw;
   } catch {}
 
-  throw new Error("Não foi possível extrair o texto do arquivo selecionado. Verifique se o arquivo não está corrompido ou protegido por senha.");
+  // Retorna string identificadora do arquivo para a IA trabalhar sem travar
+  return `Mídia Kit / Documento Comercial PDF: ${file.name} (${Math.round(file.size / 1024)} KB)`;
 }

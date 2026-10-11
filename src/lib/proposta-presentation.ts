@@ -5242,3 +5242,13 @@ export async function gerarPdfPropostaExecutivaCoBranding(
   saveBlob(blob, `${slugify(clienteNome)}-Proposta-Comercial-${p.numero || "Simulacao"}.pdf`);
 }
 
+// Reexportação dos novos motores de Apresentação Estratégica (4 Templates & 9 Seções)
+export {
+  TEMPLATES_PROPOSTA,
+  gerarApresentacaoEstrategicaPdf,
+  gerarApresentacaoEstrategicaPptx,
+  compilarDadosEstrategicos,
+  type TemplateTipo,
+  type TemplateVisual,
+  type DadosEstrategicosProposta,
+} from "./proposta-estrategica";

@@ -11,6 +11,15 @@ import { executarTestesAssinaturasVersionamento } from "./suite-assinaturas-vers
 import { executarTestesIaMidia } from "./suite-ia-midia.mjs";
 import { executarTestesE2eCicloVida } from "./suite-e2e-ciclo-vida.mjs";
 import { executarTestesEstabilidadePerformance } from "./suite-estabilidade-regressao.mjs";
+import { executarTestesPlanejamentoEstrategico } from "./suite-planejamento-estrategico.mjs";
+import { executarTestesEstrategiaIA } from "./suite-estrategia-ia.mjs";
+import { executarTestesInventarioEvolucao } from "./suite-inventario-evolucao.mjs";
+import { executarTestesPropostaEstrategica } from "./suite-proposta-estrategica.mjs";
+import { executarTestesDashboardExecutivo } from "./suite-dashboard-executivo.mjs";
+import { executarTestesRedeInventario } from "./suite-rede-inventario.mjs";
+import { executarTestesIdentidadeVisualComercial } from "./suite-identidade-visual-comercial.mjs";
+import { executarTestesAssistenteNovaCampanha } from "./suite-assistente-nova-campanha.mjs";
+import { rodarSuiteCopilotoComercial } from "./suite-copiloto-comercial.mjs";
 
 console.log("================================================================================");
 console.log("🌟 MÍDIA OS — AUDITORIA TÉCNICA MASTER, TESTES AUTOMATIZADOS E HOMOLOGAÇÃO");
@@ -25,6 +34,15 @@ const rAssinaturas = executarTestesAssinaturasVersionamento();
 const rIa = executarTestesIaMidia();
 const rE2e = executarTestesE2eCicloVida();
 const rEstabilidade = executarTestesEstabilidadePerformance();
+const rPlanejamento = executarTestesPlanejamentoEstrategico();
+const rEstrategiaIA = executarTestesEstrategiaIA();
+const rInventario = executarTestesInventarioEvolucao();
+const rPropostaEstrategica = executarTestesPropostaEstrategica();
+const rDashboardExecutivo = executarTestesDashboardExecutivo();
+const rRedeInventario = executarTestesRedeInventario();
+const rIdentidadeVisual = executarTestesIdentidadeVisualComercial();
+const rAssistenteVenda = executarTestesAssistenteNovaCampanha();
+const rCopilotoComercial = rodarSuiteCopilotoComercial();
 
 const tempoTotal = ((performance.now() - inicio) / 1000).toFixed(2);
 
@@ -36,6 +54,15 @@ const suites = [
   { nome: "Inteligência Artificial de Mídia (50 Cenários)", res: rIa, bloqueador: true },
   { nome: "E2E Fluxo Completo (10 Campanhas) & Concorrência", res: rE2e, bloqueador: true },
   { nome: "Estabilidade (100 Execuções) & Performance", res: rEstabilidade, bloqueador: true },
+  { nome: "Planejamento Estratégico (Pilares, Regiões, Inventário)", res: rPlanejamento, bloqueador: true },
+  { nome: "Assistente IA de Planejamento (Gemini 2.5 Flash)", res: rEstrategiaIA, bloqueador: true },
+  { nome: "Evolução do Inventário de Mídia (Cards, Mapas, Compatibilidade)", res: rInventario, bloqueador: true },
+  { nome: "Gerador de Propostas & Apresentações Estratégicas (4 Templates, 9 Seções)", res: rPropostaEstrategica, bloqueador: true },
+  { nome: "Dashboard Executivo de Inteligência (8 Indicadores, 4 Gráficos C-Level)", res: rDashboardExecutivo, bloqueador: true },
+  { nome: "Rede de Inventário (Próprio vs Representado, Vínculo de Ativos)", res: rRedeInventario, bloqueador: true },
+  { nome: "Identidade Visual Comercial & Blindagem (Logo, Marca d'Água, Imagem Comercial)", res: rIdentidadeVisual, bloqueador: true },
+  { nome: "Nova Experiência de Venda (Assistente Guiado de Campanha em 7 Passos)", res: rAssistenteVenda, bloqueador: true },
+  { nome: "Copiloto Comercial Gemini (5 Parâmetros, 4 Blocos, Integrações e Histórico)", res: rCopilotoComercial, bloqueador: true },
 ];
 
 let totalGeral = 0;

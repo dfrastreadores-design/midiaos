@@ -71,6 +71,11 @@ export function FluxAssetDetailModal({
       ? `https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`
       : asset.link_maps || null;
 
+  const googleRouteUrl =
+    asset.latitude != null && asset.longitude != null
+      ? `https://www.google.com/maps/dir/?api=1&destination=${asset.latitude},${asset.longitude}`
+      : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl sm:max-w-3xl p-0 overflow-hidden rounded-2xl border-border bg-card">
@@ -268,11 +273,27 @@ export function FluxAssetDetailModal({
                 variant="outline"
                 size="sm"
                 asChild
-                className="gap-1.5"
+                className="gap-1.5 font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50"
               >
                 <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
                   <MapPin className="size-4 text-rose-500" />
                   <span>Google Maps</span>
+                </a>
+              </Button>
+            )}
+
+            {googleRouteUrl && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                asChild
+                className="gap-1.5"
+                title="Traçar rota até o ponto no Google Maps"
+              >
+                <a href={googleRouteUrl} target="_blank" rel="noopener noreferrer">
+                  <Navigation className="size-3.5 text-blue-500" />
+                  <span>Rotas</span>
                 </a>
               </Button>
             )}

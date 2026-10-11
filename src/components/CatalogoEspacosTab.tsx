@@ -301,13 +301,13 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-purple-700 dark:text-purple-400 uppercase tracking-wider">
-                Veículos Representados
+                Veículos Representados (Parceiros)
               </p>
               <h3 className="text-2xl font-bold mt-1 text-purple-900 dark:text-purple-200">
                 {stats.parceiros}
               </h3>
               <p className="text-xs text-purple-700/80 dark:text-purple-400/80 mt-0.5">
-                Espaços de terceiros
+                Espaços de parceiros homologados
               </p>
             </div>
             <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
@@ -326,7 +326,7 @@ export function CatalogoEspacosTab({ initialPartnerId }: CatalogoEspacosTabProps
                 {stats.avgCommission.toFixed(1)}%
               </h3>
               <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">
-                Repasse médio de parceiros
+                Repasse aos veículos parceiros
               </p>
             </div>
             <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">

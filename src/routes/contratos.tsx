@@ -407,7 +407,7 @@ export function ContratosPage() {
         <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
           <TabsList className="grid w-full max-w-3xl grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="representacao" className="text-xs">
-              Representação Nexo ({contratosRepresentacao.length})
+              Representação de Veículos ({contratosRepresentacao.length})
             </TabsTrigger>
             <TabsTrigger value="liquidacao" className="text-xs">
               Liquidação & Repasses

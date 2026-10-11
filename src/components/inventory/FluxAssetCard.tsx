@@ -143,18 +143,30 @@ export const FluxAssetCard = memo(function FluxAssetCard({
 
             <div className="flex items-center gap-1 flex-shrink-0">
               {hasCoords && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-6 text-muted-foreground hover:text-primary"
-                  title="Focar no mapa"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelect(asset);
-                  }}
-                >
-                  <Navigation className="size-3" />
-                </Button>
+                <>
+                  <a
+                    href={`https://www.google.com/maps?q=${asset.latitude},${asset.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="size-6 inline-flex items-center justify-center rounded-md text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                    title="Abrir no Google Maps"
+                  >
+                    <MapPin className="size-3.5" />
+                  </a>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-6 text-muted-foreground hover:text-primary"
+                    title="Focar no mapa"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(asset);
+                    }}
+                  >
+                    <Navigation className="size-3" />
+                  </Button>
+                </>
               )}
               <Button
                 size="sm"

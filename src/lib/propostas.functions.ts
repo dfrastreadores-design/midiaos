@@ -392,6 +392,8 @@ export const upsertProposta = createServerFn({ method: "POST" })
     return { id: propId };
   });
 
+export const saveProposta = upsertProposta;
+
 export const deleteProposta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))

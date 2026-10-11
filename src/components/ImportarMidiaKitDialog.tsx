@@ -320,28 +320,49 @@ export function ImportarMidiaKitDialog({
       setStatusMsg("Lendo e decodificando arquivos...");
       let textoPrincipal = "";
       let dadosPistas: any = {};
+      let base64Pdf: string | undefined;
 
       if (midiaKitFile) {
-        const proc = await processarArquivoImportacao(midiaKitFile);
-        textoPrincipal = proc.textoCompleto;
-        dadosPistas = proc.parceiroDetectado || {};
+        // Se for PDF, prepara Base64 para envio multimodal direto à IA
+        if (midiaKitFile.name.toLowerCase().endsWith(".pdf")) {
+          try {
+            base64Pdf = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = () => resolve("");
+              reader.readAsDataURL(midiaKitFile);
+            });
+          } catch (b64Err) {
+            console.warn("Aviso ao ler Base64 do PDF:", b64Err);
+          }
+        }
+
+        try {
+          const proc = await processarArquivoImportacao(midiaKitFile);
+          textoPrincipal = proc.textoCompleto;
+          dadosPistas = proc.parceiroDetectado || {};
+        } catch (procErr: any) {
+          console.warn("Aviso na decodificação local do Mídia Kit:", procErr);
+          textoPrincipal = `Mídia Kit: ${midiaKitFile.name}`;
+        }
       }
 
       let textoSecundario = "";
       if (tabelaPrecosFile) {
-        const procSec = await processarArquivoImportacao(tabelaPrecosFile);
-        textoSecundario = procSec.textoCompleto;
-        if (!dadosPistas.cnpj && procSec.parceiroDetectado?.cnpj) {
-          dadosPistas.cnpj = procSec.parceiroDetectado.cnpj;
+        try {
+          const procSec = await processarArquivoImportacao(tabelaPrecosFile);
+          textoSecundario = procSec.textoCompleto;
+          if (!dadosPistas.cnpj && procSec.parceiroDetectado?.cnpj) {
+            dadosPistas.cnpj = procSec.parceiroDetectado.cnpj;
+          }
+        } catch (procSecErr: any) {
+          console.warn("Aviso na tabela de preços:", procSecErr);
         }
       }
 
-      const textoFinal = textoPrincipal || textoSecundario;
-      if (!textoFinal || textoFinal.trim().length < 5) {
-        throw new Error("Não foi possível extrair dados dos arquivos enviados.");
-      }
+      const textoFinal = textoPrincipal || textoSecundario || "Mídia Kit Comercial";
 
-      setStatusMsg("Mídia.OS IA identificando parceiro, produtos, programas e preços...");
+      setStatusMsg("Mídia.OS IA identificando parceiro, produtos, programas e preços via Gemini 2.5 Flash...");
       const targetParc = parceiros.find((p) => p.id === (parceiroId || parceiroInicialId));
 
       const res = await extrairFn({
@@ -349,6 +370,8 @@ export function ImportarMidiaKitDialog({
           texto: textoFinal,
           tabelaPrecosTexto: textoSecundario || undefined,
           parceiroNome: targetParc?.nome_fantasia || targetParc?.razao_social || dadosPistas.nome || undefined,
+          conteudoBase64: base64Pdf || undefined,
+          nomeArquivo: midiaKitFile?.name || tabelaPrecosFile?.name || undefined,
         },
       });
 

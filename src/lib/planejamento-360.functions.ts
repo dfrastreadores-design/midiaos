@@ -202,22 +202,16 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     // 2. Buscar produtos com isolamento Multi-tenant estrito (Nexo vs Neutro)
     const { data: prof } = await supabase
       .from("profiles")
-      .select("id, email, tenant_id, organizacao_id")
+      .select("id, email, tenant_id")
       .eq("id", userId)
       .maybeSingle();
 
     const tenantId = prof?.tenant_id || null;
-    let userOrgId = prof?.organizacao_id || null;
+    let userOrgId: string | null = null;
     const userEmail = (prof?.email || "").toLowerCase();
 
     let isNexo = false;
-    if (userOrgId) {
-      const { data: o } = await (supabase.from("organizacoes") as any)
-        .select("slug")
-        .eq("id", userOrgId)
-        .maybeSingle();
-      if (o?.slug === "nexo") isNexo = true;
-    } else if (userEmail.includes("nexo") || userEmail.includes("rafaelnexomidia@gmail.com")) {
+    if (userEmail.includes("nexo") || userEmail.includes("rafaelnexomidia@gmail.com")) {
       const { data: nexoOrg } = await (supabase.from("organizacoes") as any)
         .select("id, slug")
         .eq("slug", "nexo")
@@ -231,7 +225,7 @@ export const gerarPlano360Comercial = createServerFn({ method: "POST" })
     let q = supabase
       .from("produtos")
       .select(
-        "id, tenant_id, organizacao_id, origem_produto, nome, programa, tipo, formato, midia, canal_macro, endereco_ponto, latitude, longitude, link_maps, sentido_via, ponto_referencia, detalhes_venda, valor_unit, valor_tabela, parceiro_id, parceiro_nome, cidade, estado",
+        "id, tenant_id, nome, programa, tipo, formato, midia, canal_macro, endereco_ponto, latitude, longitude, link_maps, sentido_via, ponto_referencia, detalhes_venda, valor_unit, parceiro_id, parceiro_nome, cidade",
       )
       .eq("ativo", true);
 

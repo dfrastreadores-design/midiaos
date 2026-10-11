@@ -76,7 +76,7 @@ export function DriveSyncResultModal({ open, onOpenChange, summary }: Props) {
                 <Package className="size-3 text-blue-600" /> Produtos / Tabelas
               </span>
               <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-0.5">
-                {summary.produtosAtualizados}
+                {summary.totalProductsCreated ?? summary.produtosAtualizados}
               </p>
             </CardContent>
           </Card>
@@ -84,10 +84,10 @@ export function DriveSyncResultModal({ open, onOpenChange, summary }: Props) {
           <Card className="border-border/60 shadow-2xs bg-indigo-50/40 dark:bg-indigo-950/20">
             <CardContent className="p-3 text-center">
               <span className="text-[11px] text-muted-foreground font-medium flex items-center justify-center gap-1">
-                <Paperclip className="size-3 text-indigo-600" /> Arquivos Anexados
+                <Paperclip className="size-3 text-indigo-600" /> Arquivos Processados
               </span>
               <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mt-0.5">
-                {summary.arquivosAnexados}
+                {summary.totalFilesProcessed ?? summary.arquivosAnexados}
               </p>
             </CardContent>
           </Card>

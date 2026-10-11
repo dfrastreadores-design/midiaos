@@ -123,7 +123,7 @@ export const listParceiros = createServerFn({ method: "GET" })
     // Busca parceiros
     let query = supabase.from("parceiros").select("*");
     if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
+      query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
     }
     let { data: parceiros, error: pErr } = await query.order("razao_social");
 
@@ -132,7 +132,7 @@ export const listParceiros = createServerFn({ method: "GET" })
       console.warn("[listParceiros] Falha na consulta de parceiros via client:", pErr.message, "- Tentando via supabaseAdmin...");
       let adminQuery = supabaseAdmin.from("parceiros").select("*");
       if (tenantId) {
-        adminQuery = adminQuery.eq("tenant_id", tenantId);
+        adminQuery = adminQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
       }
       const adminRes = await adminQuery.order("razao_social");
       if (!adminRes.error && adminRes.data) {
@@ -152,7 +152,7 @@ export const listParceiros = createServerFn({ method: "GET" })
       let pQuery = supabase
         .from("produtos")
         .select("id, parceiro_id, parceiro_cnpj, parceiro_nome, valor_unit, ativo");
-      if (tenantId) pQuery = pQuery.eq("tenant_id", tenantId);
+      if (tenantId) pQuery = pQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
       const { data: prodData, error: prodErr } = await pQuery;
       if (!prodErr && prodData) {
         produtos = prodData;
@@ -160,7 +160,7 @@ export const listParceiros = createServerFn({ method: "GET" })
         let adminPQuery = supabaseAdmin
           .from("produtos")
           .select("id, parceiro_id, parceiro_cnpj, parceiro_nome, valor_unit, ativo");
-        if (tenantId) adminPQuery = adminPQuery.eq("tenant_id", tenantId);
+        if (tenantId) adminPQuery = adminPQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
         const { data: adminProdData } = await adminPQuery;
         if (adminProdData) produtos = adminProdData;
       }
@@ -169,16 +169,21 @@ export const listParceiros = createServerFn({ method: "GET" })
     }
 
     return (parceiros ?? []).map((parceiro: any) => {
-      const prods = (produtos ?? []).filter(
-        (p: any) =>
-          (p.parceiro_id && p.parceiro_id === parceiro.id) ||
-          (p.parceiro_cnpj &&
-            parceiro.cnpj &&
-            p.parceiro_cnpj.replace(/\D/g, "") === parceiro.cnpj.replace(/\D/g, "")) ||
-          (p.parceiro_nome &&
-            parceiro.razao_social &&
-            p.parceiro_nome.toLowerCase().trim() === parceiro.razao_social.toLowerCase().trim()),
-      );
+      const cleanCnpj = parceiro.cnpj ? parceiro.cnpj.replace(/\D/g, "") : null;
+      const razaoNorm = parceiro.razao_social ? parceiro.razao_social.toLowerCase().trim() : "";
+      const fantasiaNorm = parceiro.nome_fantasia ? parceiro.nome_fantasia.toLowerCase().trim() : "";
+
+      const prods = (produtos ?? []).filter((p: any) => {
+        if (p.parceiro_id && p.parceiro_id === parceiro.id) return true;
+        if (cleanCnpj && p.parceiro_cnpj && p.parceiro_cnpj.replace(/\D/g, "") === cleanCnpj) return true;
+        if (p.parceiro_nome) {
+          const pNomeNorm = p.parceiro_nome.toLowerCase().trim();
+          if (razaoNorm && pNomeNorm === razaoNorm) return true;
+          if (fantasiaNorm && pNomeNorm === fantasiaNorm) return true;
+          if (fantasiaNorm && (pNomeNorm.includes(fantasiaNorm) || fantasiaNorm.includes(pNomeNorm))) return true;
+        }
+        return false;
+      });
 
       const valorTotal = prods.reduce(
         (acc: number, cur: any) => acc + (Number(cur.valor_unit) || 0),

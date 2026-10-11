@@ -36,8 +36,14 @@ import {
   Smartphone,
   Tablet,
   Trash2,
+  MapPin,
+  Brain,
+  Bot,
+  Palette,
+  Layers,
+  Network,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { InstallAppDialog } from "@/components/InstallAppDialog";
 import { AppDownloadBanner } from "@/components/AppDownloadBanner";
@@ -80,38 +86,72 @@ import { Badge } from "@/components/ui/badge";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+export type NavCategoria =
+  | "Dashboard"
+  | "Comercial"
+  | "Inventário"
+  | "Planejamento"
+  | "Operação"
+  | "Financeiro"
+  | "Administração";
+
+export const CATEGORIA_LABELS: Record<NavCategoria, string> = {
+  Dashboard: "🏠 Dashboard",
+  Comercial: "💼 Comercial",
+  Inventário: "📍 Inventário",
+  Planejamento: "🧠 Planejamento",
+  Operação: "⚙️ Operação",
+  Financeiro: "💰 Financeiro",
+  Administração: "⚙️ Administração",
+};
+
 const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, modulo: null },
-  { to: "/centralizadores", label: "Centralizadores & Planejadores", icon: Compass, modulo: "centralizadores" },
-  { to: "/owner", label: "Painel do Proprietário", icon: ShieldCheck, modulo: null },
-  { to: "/monitoramento", label: "Monitoramento", icon: Activity, modulo: null },
-  { to: "/crm", label: "Funil CRM", icon: KanbanSquare, modulo: "crm" },
-  { to: "/tarefas", label: "Tarefas", icon: CheckSquare, modulo: null },
-  { to: "/clientes", label: "Clientes", icon: Users, modulo: null },
-  { to: "/agencias", label: "Agências", icon: Building2, modulo: null },
-  { to: "/produtos", label: "Produtos", icon: Package, modulo: null },
-  { to: "/parceiros", label: "Parceiros de Mídia", icon: Handshake, modulo: null },
-  { to: "/pi", label: "Pedidos de Inserção", icon: FileText, modulo: "pi" },
-  { to: "/historico-veiculacao", label: "Histórico de Veiculação", icon: Radio, modulo: "pi" },
-  { to: "/propostas", label: "Propostas", icon: FileText, modulo: "propostas" },
-  { to: "/contratos", label: "Contratos", icon: FileSignature, modulo: null },
-  { to: "/assinaturas", label: "Central de Assinaturas", icon: FileSignature, modulo: "assinaturas" },
-  // { to: "/briefings", label: "Briefing de Proposta", icon: FileText, modulo: "briefings" },
+  // 🏠 Dashboard
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, modulo: null, categoria: "Dashboard" as const },
+  { to: "/owner", label: "Painel do Proprietário", icon: ShieldCheck, modulo: null, categoria: "Dashboard" as const },
+  { to: "/monitoramento", label: "Monitoramento", icon: Activity, modulo: null, categoria: "Dashboard" as const },
 
-  { to: "/financeiro", label: "Financeiro", icon: Wallet, modulo: "financeiro" },
-  { to: "/comissoes", label: "Comissões", icon: Percent, modulo: "comissoes" },
-  { to: "/relatorios", label: "Relatórios", icon: BarChart3, modulo: "relatorios" },
-  { to: "/materiais-apoio", label: "Material de Apoio", icon: FolderOpen, modulo: null },
-  { to: "/landing-pages", label: "Landing Pages", icon: FileSignature, modulo: "landing_pages" },
-  { to: "/influenciadores", label: "Influenciadores", icon: Sparkles, modulo: "influenciadores" },
-  { to: "/social-media", label: "Redes Sociais & Tráfego", icon: Share2, modulo: null },
-  { to: "/usuarios", label: "Usuários", icon: ShieldCheck, modulo: null },
-  { to: "/relatorio-sincronizacao", label: "Sincronização CNPJ", icon: RefreshCw, modulo: null },
-  { to: "/layouts", label: "Layouts (PI/Propostas)", icon: Settings, modulo: null },
-  { to: "/configuracoes", label: "Configurações", icon: Settings, modulo: null },
-  { to: "/lixeira", label: "Lixeira", icon: Trash2, modulo: null },
+  // 💼 Comercial
+  { to: "/nova-campanha", label: "Criar Campanha", icon: Sparkles, modulo: null, categoria: "Comercial" as const },
+  { to: "/copiloto-comercial", label: "Copiloto Comercial IA", icon: Bot, modulo: null, categoria: "Comercial" as const },
+  { to: "/crm", label: "CRM", icon: KanbanSquare, modulo: "crm", categoria: "Comercial" as const },
+  { to: "/clientes", label: "Clientes", icon: Users, modulo: null, categoria: "Comercial" as const },
+  { to: "/agencias", label: "Agências", icon: Building2, modulo: null, categoria: "Comercial" as const },
+  { to: "/propostas", label: "Propostas", icon: FileText, modulo: "propostas", categoria: "Comercial" as const },
 
-  { to: "/documentacao", label: "Manual do Sistema", icon: BookOpen, modulo: null },
+  // 📍 Inventário
+  { to: "/rede-inventario", label: "Rede de Inventário", icon: Network, modulo: null, categoria: "Inventário" as const },
+  { to: "/produtos", label: "Produtos", icon: Package, modulo: null, categoria: "Inventário" as const },
+  { to: "/produtos?view=mapa", label: "Mapas", icon: MapPin, modulo: null, categoria: "Inventário" as const },
+  { to: "/produtos?view=cards", label: "Fotos", icon: Layers, modulo: null, categoria: "Inventário" as const },
+  { to: "/produtos?status=disponivel", label: "Disponibilidade", icon: CalendarDays, modulo: null, categoria: "Inventário" as const },
+
+  // 🧠 Planejamento
+  { to: "/planejamento", label: "Campanhas", icon: Compass, modulo: null, categoria: "Planejamento" as const },
+  { to: "/copiloto-comercial", label: "Copiloto Comercial IA", icon: Bot, modulo: null, categoria: "Planejamento" as const },
+  { to: "/centralizadores", label: "Estratégias", icon: Target, modulo: "centralizadores", categoria: "Planejamento" as const },
+  { to: "/centralizadores?tab=ia", label: "Planejamento IA", icon: Brain, modulo: "centralizadores", categoria: "Planejamento" as const },
+
+  // ⚙️ Operação
+  { to: "/pi", label: "PI", icon: FileText, modulo: "pi", categoria: "Operação" as const },
+  { to: "/contratos", label: "Contratos", icon: FileSignature, modulo: null, categoria: "Operação" as const },
+  { to: "/pi?tab=checking", label: "Checking", icon: CheckSquare, modulo: "pi", categoria: "Operação" as const },
+  { to: "/historico-veiculacao", label: "Veiculação", icon: Radio, modulo: "pi", categoria: "Operação" as const },
+  { to: "/assinaturas", label: "Central de Assinaturas", icon: FileSignature, modulo: "assinaturas", categoria: "Operação" as const },
+
+  // 💰 Financeiro
+  { to: "/financeiro", label: "Faturamento", icon: Wallet, modulo: "financeiro", categoria: "Financeiro" as const },
+  { to: "/comissoes", label: "Comissões", icon: Percent, modulo: "comissoes", categoria: "Financeiro" as const },
+  { to: "/financeiro?tab=dre", label: "DRE", icon: BarChart3, modulo: "financeiro", categoria: "Financeiro" as const },
+  { to: "/relatorios", label: "Relatórios", icon: BarChart3, modulo: "relatorios", categoria: "Financeiro" as const },
+
+  // ⚙️ Administração
+  { to: "/usuarios", label: "Usuários", icon: ShieldCheck, modulo: null, categoria: "Administração" as const },
+  { to: "/usuarios?tab=permissoes", label: "Permissões", icon: ShieldCheck, modulo: null, categoria: "Administração" as const },
+  { to: "/configuracoes?tab=branding", label: "White Label", icon: Palette, modulo: null, categoria: "Administração" as const },
+  { to: "/configuracoes", label: "Configurações", icon: Settings, modulo: null, categoria: "Administração" as const },
+  { to: "/lixeira", label: "Lixeira", icon: Trash2, modulo: null, categoria: "Administração" as const },
+  { to: "/documentacao", label: "Manual do Sistema", icon: BookOpen, modulo: null, categoria: "Administração" as const },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -150,28 +190,76 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     .slice(0, 2)
     .toUpperCase();
 
-  const visibleNav = nav
-    .filter((item) => {
-      if (item.to === "/lixeira") return isAdmin;
-      const canAccess = can(item.to);
-      const hasMod = item.modulo == null || hasModulo(item.modulo);
-      return canAccess && hasMod;
-    })
-    .map((item) => {
-      if (isNexo) {
-        if (item.to === "/produtos") {
-          return { ...item, label: "Soluções Próprias & Parceiros" };
+  const visibleNav = useMemo(() => {
+    return nav
+      .filter((item) => {
+        const basePath = item.to.split("?")[0];
+        if (basePath === "/owner" || basePath === "/monitoramento") return isSuperAdmin;
+        if (basePath === "/lixeira") return isAdmin;
+        const canAccess = can(basePath);
+        const hasMod = item.modulo == null || hasModulo(item.modulo);
+        return canAccess && hasMod;
+      })
+      .map((item) => {
+        if (isNexo) {
+          if (item.to === "/produtos") {
+            return { ...item, label: "Soluções Próprias & Parceiros" };
+          }
+          if (item.to === "/centralizadores") {
+            return { ...item, label: "Planejamento 360° & Radar DF" };
+          }
         }
-        if (item.to === "/centralizadores") {
-          return { ...item, label: "Planejamento 360° & Radar DF" };
-        }
+        return item;
+      });
+  }, [can, hasModulo, isAdmin, isSuperAdmin, isNexo]);
+
+  const navSections = useMemo(() => {
+    const list: { title: NavCategoria; items: typeof visibleNav }[] = [];
+    for (const item of visibleNav) {
+      let group = list.find((g) => g.title === item.categoria);
+      if (!group) {
+        group = { title: item.categoria, items: [] };
+        list.push(group);
       }
-      return item;
-    });
-  const matchedNavItem = nav.find(
-    (item) =>
-      item.to === location.pathname || (item.to !== "/" && location.pathname.startsWith(item.to)),
-  );
+      group.items.push(item);
+    }
+    return list;
+  }, [visibleNav]);
+
+  const isItemActive = (to: string) => {
+    if (to === "/") {
+      return location.pathname === "/" && !location.search;
+    }
+    if (to.includes("?")) {
+      const [path, search] = to.split("?");
+      if (location.pathname !== path) return false;
+      const params = new URLSearchParams(search);
+      const currentParams = new URLSearchParams(location.search);
+      for (const [key, val] of params.entries()) {
+        if (currentParams.get(key) !== val) return false;
+      }
+      return true;
+    }
+    if (location.pathname === to) {
+      const hasSpecificQueryMatch = nav.some(
+        (other) =>
+          other.to.includes("?") &&
+          other.to.startsWith(to + "?") &&
+          location.search.includes(other.to.split("?")[1]),
+      );
+      if (hasSpecificQueryMatch) return false;
+      return true;
+    }
+    return location.pathname.startsWith(to + "/");
+  };
+
+  const matchedNavItem = nav.find((item) => {
+    const basePath = item.to.split("?")[0];
+    return (
+      basePath === location.pathname ||
+      (basePath !== "/" && location.pathname.startsWith(basePath))
+    );
+  });
 
   const blocked =
     !rolesLoading &&
@@ -179,7 +267,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       (location.pathname.startsWith("/owner") || location.pathname.startsWith("/monitoramento"))) ||
       !can(location.pathname) ||
       (matchedNavItem
-        ? !can(matchedNavItem.to) ||
+        ? !can(matchedNavItem.to.split("?")[0]) ||
           (matchedNavItem.modulo != null && !hasModulo(matchedNavItem.modulo))
         : false));
 
@@ -239,36 +327,43 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 py-8 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-border/50">
-          {visibleNav.map((item) => {
-            const active =
-              location.pathname === item.to ||
-              (item.to !== "/" && location.pathname.startsWith(item.to));
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-300 relative overflow-hidden",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-primary shadow-sm"
-                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "size-4.5 transition-transform duration-300 group-hover:scale-110",
-                    active
-                      ? "text-sidebar-primary"
-                      : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70",
-                  )}
-                />
-                <span className="flex-1">{item.label}</span>
-                {active && <ChevronRight className="size-3 text-sidebar-primary/50" />}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-border/50">
+          {navSections.map((section) => (
+            <div key={section.title} className="space-y-1">
+              <div className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-sidebar-foreground/45 select-none">
+                {CATEGORIA_LABELS[section.title] ?? section.title}
+              </div>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const active = isItemActive(item.to);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "group flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 relative overflow-hidden",
+                        active
+                          ? "bg-sidebar-accent text-sidebar-primary shadow-xs font-bold"
+                          : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "size-4 shrink-0 transition-transform duration-200 group-hover:scale-105",
+                          active
+                            ? "text-sidebar-primary"
+                            : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/75",
+                        )}
+                      />
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {active && <ChevronRight className="size-3 text-sidebar-primary/60 shrink-0" />}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Promo card: App Mobile Android & iOS */}
@@ -428,35 +523,42 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
 
-                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin overscroll-contain">
-                  {visibleNav.map((item) => {
-                    const active =
-                      location.pathname === item.to ||
-                      (item.to !== "/" && location.pathname.startsWith(item.to));
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => setMobileNavOpen(false)}
-                        className={cn(
-                          "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 min-h-[44px]",
-                          active
-                            ? "bg-sidebar-accent text-sidebar-primary shadow-sm font-bold"
-                            : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
-                        )}
-                      >
-                        <Icon
-                          className={cn(
-                            "size-4.5 shrink-0",
-                            active ? "text-sidebar-primary" : "text-sidebar-foreground/50",
-                          )}
-                        />
-                        <span className="flex-1 truncate">{item.label}</span>
-                        {active && <span className="size-1.5 rounded-full bg-primary" />}
-                      </Link>
-                    );
-                  })}
+                <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto scrollbar-thin overscroll-contain">
+                  {navSections.map((section) => (
+                    <div key={section.title} className="space-y-1">
+                      <div className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-sidebar-foreground/45 select-none">
+                        {CATEGORIA_LABELS[section.title] ?? section.title}
+                      </div>
+                      <div className="space-y-0.5">
+                        {section.items.map((item) => {
+                          const active = isItemActive(item.to);
+                          const Icon = item.icon;
+                          return (
+                            <Link
+                              key={item.to}
+                              to={item.to}
+                              onClick={() => setMobileNavOpen(false)}
+                              className={cn(
+                                "group flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 min-h-[38px]",
+                                active
+                                  ? "bg-sidebar-accent text-sidebar-primary shadow-xs font-bold"
+                                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  "size-4 shrink-0",
+                                  active ? "text-sidebar-primary" : "text-sidebar-foreground/50",
+                                )}
+                              />
+                              <span className="flex-1 truncate">{item.label}</span>
+                              {active && <span className="size-1.5 rounded-full bg-primary" />}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </nav>
 
                 <div className="p-6 border-t border-sidebar-border/30 bg-sidebar/30 backdrop-blur-sm">

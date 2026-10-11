@@ -918,11 +918,41 @@ export const resetSenhaTenantUsuario = createServerFn({ method: "POST" })
     const password = data.password ?? "";
     if (password.length < 6) throw new Error("A senha deve ter no mínimo 6 caracteres");
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
-      password,
-    });
-    if (error) throw new Error(error.message);
+    const { supabaseAdmin, hasServiceRoleKey } = await import("@/integrations/supabase/client.server");
 
-    return { ok: true };
+    // Tentativa primária: Supabase Auth Admin API
+    let error: any = null;
+    if (hasServiceRoleKey()) {
+      const res = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+        password,
+      });
+      error = res.error;
+    } else {
+      error = { message: "User not allowed: SUPABASE_SERVICE_ROLE_KEY ausente" };
+    }
+
+    if (!error) {
+      return { ok: true };
+    }
+
+    // Tentativa secundária: RPC segura com SECURITY DEFINER (caso criada no banco)
+    const { data: rpcRes, error: rpcErr } = await context.supabase.rpc(
+      "admin_reset_user_password" as any,
+      {
+        target_user_id: data.user_id,
+        new_plain_password: password,
+      },
+    );
+
+    if (!rpcErr && (rpcRes as any)?.success) {
+      return { ok: true };
+    }
+
+    if (error.message.includes("not allowed") || !hasServiceRoleKey()) {
+      throw new Error(
+        "Erro 'User not allowed': A chave SUPABASE_SERVICE_ROLE_KEY precisa estar preenchida no arquivo .env para permitir redefinir a senha de outros usuários via painel administrativo."
+      );
+    }
+
+    throw new Error(error.message);
   });

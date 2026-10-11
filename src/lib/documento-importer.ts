@@ -29,7 +29,12 @@ export async function processarArquivoImportacao(file: File): Promise<DocumentoP
 
   if (nomeLower.endsWith(".pdf")) {
     tipo = "pdf";
-    texto = await extractPdfText(file);
+    try {
+      texto = await extractPdfText(file);
+    } catch (e: any) {
+      console.warn("[documento-importer] Aviso ao extrair texto do PDF:", e);
+      texto = `Mídia Kit PDF: ${file.name}`;
+    }
   } else if (nomeLower.endsWith(".xlsx") || nomeLower.endsWith(".xls") || nomeLower.endsWith(".csv")) {
     tipo = nomeLower.endsWith(".csv") ? "csv" : "excel";
     try {

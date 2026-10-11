@@ -53,6 +53,43 @@ function loadLeaflet(): Promise<any> {
   return window.__leafletPromise;
 }
 
+type MapLayerStyle = "google_traffic" | "google_hybrid" | "google_streets" | "voyager";
+
+const GOOGLE_TILE_SUBDOMAINS = ["0", "1", "2", "3"];
+
+function createTileLayerForStyle(L: any, style: MapLayerStyle) {
+  switch (style) {
+    case "google_traffic":
+      return L.tileLayer("https://mt{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}", {
+        maxZoom: 20,
+        subdomains: GOOGLE_TILE_SUBDOMAINS,
+        attribution: "© Google Maps Traffic",
+      });
+    case "google_hybrid":
+      return L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+        maxZoom: 20,
+        subdomains: GOOGLE_TILE_SUBDOMAINS,
+        attribution: "© Google Maps Satellite",
+      });
+    case "google_streets":
+      return L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+        maxZoom: 20,
+        subdomains: GOOGLE_TILE_SUBDOMAINS,
+        attribution: "© Google Maps",
+      });
+    case "voyager":
+    default:
+      return L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        {
+          maxZoom: 19,
+          subdomains: "abcd",
+          attribution: "© CartoDB Voyager",
+        },
+      );
+  }
+}
+
 const DEFAULT_CENTER = [-15.7942, -47.8822]; // Brasília / DF
 
 export function FluxOohMap({
@@ -69,7 +106,7 @@ export function FluxOohMap({
   const activeTileLayerRef = useRef<any>(null);
 
   const [mapReady, setMapReady] = useState(false);
-  const [mapStyle, setMapStyle] = useState<"voyager" | "satellite">("voyager");
+  const [mapStyle, setMapStyle] = useState<MapLayerStyle>("google_traffic");
 
   // Filtra ativos que possuem coordenadas válidas
   const geoAssets = assets.filter(
@@ -104,17 +141,10 @@ export function FluxOohMap({
         // Controles de zoom na direita inferior
         L.control.zoom({ position: "bottomright" }).addTo(map);
 
-        // Camada de Azulejos moderna estilo CartoDB Voyager
-        const voyagerLayer = L.tileLayer(
-          "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-          {
-            maxZoom: 19,
-            subdomains: "abcd",
-          },
-        );
-
-        voyagerLayer.addTo(map);
-        activeTileLayerRef.current = voyagerLayer;
+        // Camada inicial do Google Maps com Trânsito/Fluxo em tempo real
+        const initialLayer = createTileLayerForStyle(L, "google_traffic");
+        initialLayer.addTo(map);
+        activeTileLayerRef.current = initialLayer;
 
         const markersLayer = L.featureGroup().addTo(map);
         markersGroupRef.current = markersLayer;
@@ -144,34 +174,21 @@ export function FluxOohMap({
     };
   }, []);
 
-  // Alterna estilo de camadas (Voyager vs Satélite)
-  const toggleMapStyle = useCallback(() => {
+  // Altera estilo de camadas do Google Maps
+  const changeMapStyle = useCallback((nextStyle: MapLayerStyle) => {
     if (!mapRef.current || !window.L) return;
     const L = window.L;
-    const nextStyle = mapStyle === "voyager" ? "satellite" : "voyager";
 
     if (activeTileLayerRef.current) {
       mapRef.current.removeLayer(activeTileLayerRef.current);
     }
 
-    if (nextStyle === "satellite") {
-      const satLayer = L.tileLayer(
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        { maxZoom: 18 },
-      );
-      satLayer.addTo(mapRef.current);
-      activeTileLayerRef.current = satLayer;
-    } else {
-      const voyLayer = L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-        { maxZoom: 19, subdomains: "abcd" },
-      );
-      voyLayer.addTo(mapRef.current);
-      activeTileLayerRef.current = voyLayer;
-    }
+    const newLayer = createTileLayerForStyle(L, nextStyle);
+    newLayer.addTo(mapRef.current);
+    activeTileLayerRef.current = newLayer;
 
     setMapStyle(nextStyle);
-  }, [mapStyle]);
+  }, []);
 
   // Função para criar o ícone HTML customizado de cada pin
   const createCustomIcon = useCallback((asset: PublicAsset, isHighlighted: boolean) => {
@@ -223,11 +240,14 @@ export function FluxOohMap({
       const marker = L.marker([lat, lng], { icon }).addTo(group);
       bounds.extend([lat, lng]);
 
-      // Conteúdo seguro do popup (NUNCA menciona parceiro)
+      // Links do Google Maps & Street View
+      const gMapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
+      const streetViewLink = `https://www.google.com/maps?q=${lat},${lng}&layer=c&cbll=${lat},${lng}`;
+
+      // Conteúdo seguro do popup integrado com Google Maps
       const thumb = asset.fotos_urls?.[0];
-      const catConfig = CATEGORIAS_CORES[asset.categoria_slug] || CATEGORIAS_CORES.ooh;
       const popupHtml = `
-        <div class="p-1 min-w-[220px] max-w-[260px] font-sans">
+        <div class="p-1 min-w-[240px] max-w-[280px] font-sans">
           ${
             thumb
               ? `<div class="relative w-full h-24 rounded-lg overflow-hidden mb-2 bg-slate-100">
@@ -245,11 +265,19 @@ export function FluxOohMap({
           <div class="text-[11px] text-slate-600 mb-2 truncate">
             📍 ${asset.bairro ? `${asset.bairro}, ` : ""}${asset.cidade} - ${asset.uf}
           </div>
-          <div class="flex items-center justify-between gap-1 pt-1.5 border-t border-slate-100">
+          <div class="flex items-center justify-between gap-1 pt-1.5 border-t border-slate-100 mb-2">
             <span class="text-[10px] font-semibold text-slate-700">${asset.dimensoes || asset.formato}</span>
             <button id="btn-popup-${asset.id}" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
               Ver Detalhes →
             </button>
+          </div>
+          <div class="flex items-center gap-1.5 pt-1.5 border-t border-slate-100">
+            <a href="${gMapsLink}" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-bold transition-colors">
+              🗺️ Google Maps
+            </a>
+            <a href="${streetViewLink}" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 text-[10px] font-bold transition-colors">
+              👁️ Street View
+            </a>
           </div>
         </div>
       `;
@@ -315,6 +343,24 @@ export function FluxOohMap({
     }
   };
 
+  // Abre visualização no Google Maps
+  const handleOpenGoogleMaps = () => {
+    if (selectedAssetId) {
+      const selected = assets.find((a) => a.id === selectedAssetId);
+      if (selected && selected.latitude != null && selected.longitude != null) {
+        window.open(`https://www.google.com/maps?q=${selected.latitude},${selected.longitude}`, "_blank");
+        return;
+      }
+    }
+    if (mapRef.current) {
+      const center = mapRef.current.getCenter();
+      const zoom = mapRef.current.getZoom();
+      window.open(`https://www.google.com/maps/@${center.lat},${center.lng},${zoom}z`, "_blank");
+    } else {
+      window.open(`https://www.google.com/maps?q=${DEFAULT_CENTER[0]},${DEFAULT_CENTER[1]}`, "_blank");
+    }
+  };
+
   return (
     <div className={cn("relative w-full h-full min-h-[400px] overflow-hidden bg-muted", className)}>
       <div ref={containerRef} className="w-full h-full" />
@@ -324,36 +370,83 @@ export function FluxOohMap({
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs z-30">
           <Loader2 className="size-8 animate-spin text-primary mb-2" />
           <p className="text-xs font-semibold text-muted-foreground">
-            Carregando mapa interativo OOH...
+            Carregando mapa interativo OOH (Google Maps)...
           </p>
         </div>
       )}
 
-      {/* Floating Map Controls */}
+      {/* Floating Map Controls - Integrado com Google Maps */}
       <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-        <Button
-          size="sm"
-          variant="secondary"
-          className="shadow-md bg-background/90 backdrop-blur-md hover:bg-background border h-8 px-2.5 text-xs gap-1.5"
-          onClick={toggleMapStyle}
-          title="Alternar camada do mapa (Rua / Satélite)"
-        >
-          <Layers className="size-3.5 text-primary" />
-          <span className="hidden sm:inline font-semibold">
-            {mapStyle === "voyager" ? "Satélite" : "Mapa"}
-          </span>
-        </Button>
+        {/* Seletor de Camadas Google Maps */}
+        <div className="flex bg-background/95 backdrop-blur-md border rounded-xl shadow-lg p-1 gap-1">
+          <button
+            type="button"
+            onClick={() => changeMapStyle("google_traffic")}
+            className={cn(
+              "px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5",
+              mapStyle === "google_traffic"
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+            )}
+            title="Google Maps com Fluxo de Trânsito em Tempo Real"
+          >
+            <span className="size-2 rounded-full bg-emerald-300 animate-pulse" />
+            <span>Trânsito / Fluxo</span>
+          </button>
 
-        <Button
-          size="sm"
-          variant="secondary"
-          className="shadow-md bg-background/90 backdrop-blur-md hover:bg-background border h-8 px-2.5 text-xs gap-1.5"
-          onClick={handleFitAll}
-          title="Enquadrar todos os pontos no mapa"
-        >
-          <Maximize2 className="size-3.5 text-primary" />
-          <span className="hidden sm:inline font-semibold">Ver Todos</span>
-        </Button>
+          <button
+            type="button"
+            onClick={() => changeMapStyle("google_hybrid")}
+            className={cn(
+              "px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5",
+              mapStyle === "google_hybrid"
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+            )}
+            title="Google Maps Satélite com Nomes de Vias"
+          >
+            <span>🛰️ Satélite</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => changeMapStyle("google_streets")}
+            className={cn(
+              "px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5",
+              mapStyle === "google_streets"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+            )}
+            title="Google Maps Vetorial Padrão"
+          >
+            <span>🗺️ Ruas</span>
+          </button>
+        </div>
+
+        <div className="flex gap-2 self-end">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="shadow-md bg-background/95 backdrop-blur-md hover:bg-background border h-8 px-2.5 text-xs gap-1.5 font-bold text-rose-600 hover:text-rose-700"
+            onClick={handleOpenGoogleMaps}
+            title="Abrir esta área ou ponto no Google Maps oficial"
+          >
+            <MapPin className="size-3.5 text-rose-500" />
+            <span className="hidden sm:inline">Google Maps</span>
+            <ExternalLink className="size-3 opacity-60" />
+          </Button>
+
+          <Button
+            size="sm"
+            variant="secondary"
+            className="shadow-md bg-background/95 backdrop-blur-md hover:bg-background border h-8 px-2.5 text-xs gap-1.5 font-semibold"
+            onClick={handleFitAll}
+            title="Enquadrar todos os pontos no mapa"
+          >
+            <Maximize2 className="size-3.5 text-primary" />
+            <span className="hidden sm:inline">Ver Todos</span>
+          </Button>
+        </div>
       </div>
 
       {/* Floating Bottom Status Pill */}
@@ -362,6 +455,18 @@ export function FluxOohMap({
           <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>
             <strong>{geoAssets.length}</strong> pontos mapeados
+          </span>
+          <span className="text-muted-foreground text-[10px]">
+            • Camada ativa:{" "}
+            <strong className="text-foreground">
+              {mapStyle === "google_traffic"
+                ? "Google Trânsito (Fluxo ao Vivo)"
+                : mapStyle === "google_hybrid"
+                  ? "Google Satélite Híbrido"
+                  : mapStyle === "google_streets"
+                    ? "Google Maps"
+                    : "Voyager"}
+            </strong>
           </span>
           {assets.length > geoAssets.length && (
             <span className="text-muted-foreground text-[10px]">

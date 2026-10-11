@@ -56,6 +56,8 @@ import {
 } from "recharts";
 import { WelcomeHero } from "@/components/WelcomeHero";
 import { DashboardCalendarWidget } from "@/components/DashboardCalendarWidget";
+import { ExecutiveIntelligenceDashboard } from "@/components/dashboard/ExecutiveIntelligenceDashboard";
+import { cn } from "@/lib/utils";
 
 import { getDashboard, type DrillFilter } from "@/lib/dashboard.functions";
 import { listUsuarios } from "@/lib/usuarios.functions";
@@ -309,6 +311,7 @@ function Dashboard() {
   const filterId = isAdmin && execFilter !== "all" ? execFilter : null;
   const { prefs, isVisible, toggle, move, reorder, getOrder, setAccent, reset, all } =
     useDashboardPrefs();
+  const [visaoDashboard, setVisaoDashboard] = useState<"inteligencia" | "operacional">("inteligencia");
   const [dragId, setDragId] = useState<WidgetId | null>(null);
   const [overId, setOverId] = useState<WidgetId | null>(null);
 
@@ -516,7 +519,42 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Switcher de Visão: Inteligência Executiva vs Operacional */}
+        <div className="flex items-center gap-1.5 mb-6 border rounded-2xl p-1 bg-muted/40 w-fit shadow-xs flex-wrap">
+          <button
+            type="button"
+            onClick={() => setVisaoDashboard("inteligencia")}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+              visaoDashboard === "inteligencia"
+                ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Sparkles className="size-4 text-primary" />
+            <span>Inteligência Executiva (Gestão)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVisaoDashboard("operacional")}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+              visaoDashboard === "operacional"
+                ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <BarChart3 className="size-4 text-muted-foreground" />
+            <span>Operacional & Comercial</span>
+          </button>
+        </div>
+
+        {visaoDashboard === "inteligencia" ? (
+          <ExecutiveIntelligenceDashboard />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {isVisible("kpi_faturamento") && (
             <KPI
               label="Faturamento do mês"
@@ -1163,6 +1201,8 @@ function Dashboard() {
           <div className="mt-6" style={{ order: getOrder("welcome_hero") }}>
             <WelcomeHero />
           </div>
+        )}
+          </>
         )}
 
         <DrillDownDialog state={drill} onOpenChange={(open) => setDrill((s) => ({ ...s, open }))} />

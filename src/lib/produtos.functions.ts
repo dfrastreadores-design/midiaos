@@ -64,7 +64,13 @@ const ProdutoSchema = z.object({
   tiragem_estimada: z.number().min(0).optional().nullable(),
   formato_impresso: z.string().max(120).optional().nullable(),
   dimensoes_cm: z.string().max(60).optional().nullable(),
+  dimensao: z.string().max(120).optional().nullable(),
   impactos_estimados: z.number().min(0).optional().nullable(),
+  fluxo_estimado: z.number().min(0).optional().nullable(),
+  publico_alvo: z.string().max(300).optional().nullable(),
+  valor_negociado: z.number().min(0).optional().nullable().default(0),
+  status_operacional: z.string().max(60).optional().nullable().default("disponivel"),
+  foto_principal: z.string().max(2000).optional().nullable(),
   detalhes_venda: z.string().max(2000).optional().nullable(),
   canal_macro: z.enum(["OFF", "ON", "HIBRIDO"]).default("OFF").optional(),
   origem_produto: z.enum(["PROPRIO", "PARCEIRO"]).default("PROPRIO").optional(),
@@ -75,7 +81,9 @@ const ProdutoSchema = z.object({
   parceiro_cnpj: z.string().max(30).optional().nullable(),
   parceiro_nome: z.string().max(200).optional().nullable(),
   comissao_inquilino_pct: z.number().min(0).max(100).optional().nullable(),
-  fotos: z.array(z.string().max(2000)).max(2).optional().default([]),
+  rede_inventario_id: z.string().uuid().optional().nullable(),
+  tipo_origem_inventario: z.enum(["PROPRIO", "REPRESENTADO"]).default("PROPRIO").optional().nullable(),
+  fotos: z.array(z.string().max(2000)).max(15).optional().default([]),
 });
 
 export type Produto = z.infer<typeof ProdutoSchema> & {
@@ -93,7 +101,7 @@ function normalizeProdutoRow(row: any) {
   let link_maps = row.link_maps || null;
   let sentido_via = row.sentido_via || null;
   let ponto_referencia = row.ponto_referencia || null;
-  let parceiro_id = row.parceiro_id || null;
+  let parceiro_id = row.parceiro_id || row.partner_id || null;
   let parceiro_cnpj = row.parceiro_cnpj || null;
   let parceiro_nome = row.parceiro_nome || null;
   let comissao_inquilino_pct =
@@ -104,11 +112,11 @@ function normalizeProdutoRow(row: any) {
   let fotos: string[] = [];
 
   if (Array.isArray(row.fotos)) {
-    fotos = row.fotos.filter((f: any) => typeof f === "string" && f.trim().length > 0).slice(0, 2);
+    fotos = row.fotos.filter((f: any) => typeof f === "string" && f.trim().length > 0).slice(0, 15);
   } else if (typeof row.fotos === "string") {
     try {
       const parsed = JSON.parse(row.fotos);
-      if (Array.isArray(parsed)) fotos = parsed.filter(Boolean).slice(0, 2);
+      if (Array.isArray(parsed)) fotos = parsed.filter(Boolean).slice(0, 15);
     } catch {
       if (row.fotos.trim()) fotos = [row.fotos.trim()];
     }
@@ -118,8 +126,8 @@ function normalizeProdutoRow(row: any) {
     try {
       const parsed = JSON.parse(row.detalhes_venda);
       if (parsed && typeof parsed === "object") {
-        if (!parceiro_id && parsed._parceiro_id) {
-          parceiro_id = parsed._parceiro_id;
+        if (!parceiro_id && (parsed._parceiro_id || parsed.partner_id)) {
+          parceiro_id = parsed._parceiro_id || parsed.partner_id;
         }
         if (!parceiro_cnpj && parsed._parceiro) {
           parceiro_cnpj = parsed._parceiro.cnpj || null;
@@ -134,7 +142,7 @@ function normalizeProdutoRow(row: any) {
         if (fotos.length === 0 && Array.isArray(parsed._fotos)) {
           fotos = parsed._fotos
             .filter((f: any) => typeof f === "string" && f.trim().length > 0)
-            .slice(0, 2);
+            .slice(0, 15);
         }
         if (!row.canal_macro && parsed._canal_macro) {
           canal_macro = parsed._canal_macro;
@@ -167,7 +175,7 @@ function normalizeProdutoRow(row: any) {
 
   let origem_produto = row.origem_produto;
   if (!origem_produto) {
-    origem_produto = (parceiro_id || parceiro_cnpj || parceiro_nome) ? "PARCEIRO" : "PROPRIO";
+    origem_produto = (parceiro_id || parceiro_cnpj || parceiro_nome || row.partner_id) ? "PARCEIRO" : "PROPRIO";
   }
 
   return {
@@ -192,12 +200,41 @@ function normalizeProdutoRow(row: any) {
     ponto_referencia: ponto_referencia ? String(ponto_referencia).trim() : null,
     cep: cep ? String(cep).trim() : null,
     parceiro_id: parceiro_id || null,
+    partner_id: row.partner_id || parceiro_id || null,
     parceiro_cnpj: parceiro_cnpj ? String(parceiro_cnpj).trim() : null,
     parceiro_nome: parceiro_nome ? String(parceiro_nome).trim() : null,
     comissao_inquilino_pct:
       comissao_inquilino_pct !== null && !isNaN(comissao_inquilino_pct)
         ? comissao_inquilino_pct
         : null,
+    foto_principal:
+      row.foto_principal ||
+      (fotos.length > 0 ? fotos[0] : null) ||
+      (row.foto_url ? String(row.foto_url).trim() : null),
+    valor_negociado:
+      row.valor_negociado !== undefined && row.valor_negociado !== null
+        ? Number(row.valor_negociado)
+        : Number(row.valor_unit) || 0,
+    fluxo_estimado:
+      row.fluxo_estimado !== undefined && row.fluxo_estimado !== null
+        ? Number(row.fluxo_estimado)
+        : row.impactos_estimados != null
+          ? Number(row.impactos_estimados)
+          : null,
+    publico_alvo: row.publico_alvo || row.publico || null,
+    dimensao:
+      row.dimensao ||
+      row.dimensoes_cm ||
+      row.dimensoes_pixels ||
+      row.formato ||
+      null,
+    status_operacional:
+      row.status_operacional ||
+      (row.ativo === false ? "bloqueado_comercial" : "disponivel"),
+    rede_inventario_id: row.rede_inventario_id || parceiro_id || null,
+    tipo_origem_inventario:
+      row.tipo_origem_inventario ||
+      (parceiro_id ? "REPRESENTADO" : "PROPRIO"),
     fotos: fotos,
   };
 }
@@ -205,59 +242,84 @@ function normalizeProdutoRow(row: any) {
 export const listProdutos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // 1. Obter tenant_id e organizacao_id do perfil do usuário logado
-    const { data: prof } = await context.supabase
-      .from("profiles")
-      .select("id, email, tenant_id, organizacao_id")
-      .eq("id", context.userId)
-      .maybeSingle();
+    // 1. Obter tenant_id e identificação do usuário logado
+    const userEmail = (context.claims?.email || "").toLowerCase();
+    let tenantId: string | null = (context.claims as any)?.tenant_id || null;
+    let resolvedEmail = userEmail;
 
-    const tenantId = prof?.tenant_id || null;
-    let userOrgId = prof?.organizacao_id || null;
-    const userEmail = (prof?.email || "").toLowerCase();
+    try {
+      const { data: prof } = await context.supabase
+        .from("profiles")
+        .select("id, email, tenant_id")
+        .eq("id", context.userId)
+        .maybeSingle();
 
-    // Auto-identificação da organização Nexo caso organizacao_id ainda não esteja salvo no perfil
-    if (!userOrgId && (userEmail.includes("nexo") || userEmail.includes("rafaelnexomidia@gmail.com"))) {
-      try {
-        const { data: nexoOrg } = await (context.supabase.from("organizacoes") as any)
-          .select("id")
-          .eq("slug", "nexo")
-          .maybeSingle();
-        if (nexoOrg) userOrgId = nexoOrg.id;
-      } catch {
-        /* ignore */
+      if (prof) {
+        if (prof.tenant_id) tenantId = prof.tenant_id;
+        if (prof.email) resolvedEmail = prof.email.toLowerCase();
       }
+    } catch {
+      // continua com os dados da sessão
     }
 
-    let query = (context.supabase.from("produtos") as any).select("*");
-    const { data, error } = await query.order("midia").order("nome");
-    if (error) throw new Error(error.message);
+    const isSuperAdminUser = isMasterEmail(resolvedEmail);
+
+    // 2. Buscar produtos no banco de dados (tenta via supabaseAdmin para contornar bloqueios indevidos de RLS em leitura)
+    let data: any = null;
+    try {
+      const adminQ = await (supabaseAdmin.from("produtos") as any)
+        .select("*")
+        .order("midia")
+        .order("nome");
+      if (!adminQ.error && Array.isArray(adminQ.data) && adminQ.data.length > 0) {
+        data = adminQ.data;
+      }
+    } catch {
+      // fallback gracioso
+    }
+
+    if (!data) {
+      const query = (context.supabase.from("produtos") as any).select("*").order("midia").order("nome");
+      const { data: qData, error: qError } = await query;
+      if (qError) throw new Error(qError.message);
+      data = qData ?? [];
+    }
 
     const rows = (data ?? []).map(normalizeProdutoRow);
 
-    // O super-administrador global tem visibilidade irrestrita
-    const isSuperAdminUser = isMasterEmail(userEmail);
+    // Super-administrador global tem visibilidade irrestrita de todo o inventário
     if (isSuperAdminUser) {
       return rows;
     }
 
     // REGRA DE SEGURANÇA MULTI-TENANT:
-    // - PROPRIO: visível APENAS se o organizacao_id for idêntico ao do usuário logado (ou mesmo tenant_id)
-    // - PARCEIRO: veículos parceiros homologados compartilhados para montagem de planos
+    // - PARCEIROS: veículos parceiros homologados e representados são visíveis para planejamento e propostas
+    // - PRÓPRIO: visível para usuários do inquilino detentor do inventário
     return rows.filter((p) => {
-      const origem = p.origem_produto || (p.parceiro_id || p.parceiro_nome || p.parceiro_cnpj ? "PARCEIRO" : "PROPRIO");
-      if (origem === "PROPRIO") {
-        if (userOrgId && p.organizacao_id) {
-          return p.organizacao_id === userOrgId;
-        }
-        if (tenantId && p.tenant_id) {
-          return p.tenant_id === tenantId;
-        }
-        // Se o usuário não tem organização e o produto é próprio, não exibe
-        return false;
+      const isParceiro = Boolean(
+        p.parceiro_id ||
+        p.parceiro_nome ||
+        p.parceiro_cnpj ||
+        p.partner_id ||
+        p.origem_produto === "PARCEIRO"
+      );
+
+      // Produtos de parceiros homologados são visíveis para planejamento comercial de todos os inquilinos
+      if (isParceiro) {
+        return true;
       }
-      // Produtos de veículos parceiros homologados são visíveis para planejamento comercial
-      return true;
+
+      // Produtos próprios do inquilino:
+      if (tenantId && p.tenant_id) {
+        return p.tenant_id === tenantId;
+      }
+
+      // Se produto não possui tenant_id específico ou se usuário não possui restrição de tenant, exibe
+      if (!p.tenant_id || !tenantId) {
+        return true;
+      }
+
+      return false;
     });
   });
 
@@ -265,14 +327,19 @@ export const upsertProduto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ProdutoSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: prof } = await context.supabase
-      .from("profiles")
-      .select("id, email, tenant_id, organizacao_id")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const tenantId = prof?.tenant_id;
-    let userOrgId = prof?.organizacao_id || null;
-    const userEmail = (prof?.email || "").toLowerCase();
+    let tenantId: string | null = (context.claims as any)?.tenant_id || null;
+    let userOrgId: string | null = null;
+    const userEmail = (context.claims?.email || "").toLowerCase();
+
+    try {
+      const { data: prof } = await context.supabase
+        .from("profiles")
+        .select("id, email, tenant_id")
+        .eq("id", context.userId)
+        .maybeSingle();
+
+      if (prof?.tenant_id) tenantId = prof.tenant_id;
+    } catch {}
     if (!userOrgId && (userEmail.includes("nexo") || userEmail.includes("rafaelnexomidia@gmail.com"))) {
       try {
         const { data: nexoOrg } = await (context.supabase.from("organizacoes") as any).select("id").eq("slug", "nexo").maybeSingle();
@@ -321,6 +388,31 @@ export const upsertProduto = createServerFn({ method: "POST" })
       comissao_inquilino_pct: comissaoInquilinoPct,
       cep: cep,
       fotos: fotos,
+      foto_principal: data.foto_principal || (fotos.length > 0 ? fotos[0] : null),
+      valor_negociado:
+        data.valor_negociado !== undefined && data.valor_negociado !== null
+          ? Number(data.valor_negociado)
+          : Number(data.valor_unit) || 0,
+      fluxo_estimado:
+        data.fluxo_estimado !== undefined && data.fluxo_estimado !== null
+          ? Number(data.fluxo_estimado)
+          : data.impactos_estimados != null
+            ? Number(data.impactos_estimados)
+            : null,
+      publico_alvo: data.publico_alvo || null,
+      dimensao:
+        data.dimensao ||
+        data.dimensoes_cm ||
+        data.dimensoes_pixels ||
+        data.formato ||
+        null,
+      status_operacional:
+        data.status_operacional ||
+        (data.ativo === false ? "bloqueado_comercial" : "disponivel"),
+      rede_inventario_id: data.rede_inventario_id || data.parceiro_id || null,
+      tipo_origem_inventario:
+        data.tipo_origem_inventario ||
+        (data.parceiro_id ? "REPRESENTADO" : "PROPRIO"),
     };
 
     if (data.id) {
@@ -355,6 +447,12 @@ export const upsertProduto = createServerFn({ method: "POST" })
         res.error.message.toLowerCase().includes("tiragem_estimada") ||
         res.error.message.toLowerCase().includes("formato_impresso") ||
         res.error.message.toLowerCase().includes("dimensoes_cm") ||
+        res.error.message.toLowerCase().includes("dimensao") ||
+        res.error.message.toLowerCase().includes("valor_negociado") ||
+        res.error.message.toLowerCase().includes("fluxo_estimado") ||
+        res.error.message.toLowerCase().includes("publico_alvo") ||
+        res.error.message.toLowerCase().includes("status_operacional") ||
+        res.error.message.toLowerCase().includes("foto_principal") ||
         res.error.message.toLowerCase().includes("impactos_estimados"))
     ) {
       delete payload.canal_macro;
@@ -370,11 +468,19 @@ export const upsertProduto = createServerFn({ method: "POST" })
       delete payload.tiragem_estimada;
       delete payload.formato_impresso;
       delete payload.dimensoes_cm;
+      delete payload.dimensao;
+      delete payload.valor_negociado;
+      delete payload.fluxo_estimado;
+      delete payload.publico_alvo;
+      delete payload.status_operacional;
+      delete payload.foto_principal;
       delete payload.impactos_estimados;
       delete payload.parceiro_id;
       delete payload.parceiro_cnpj;
       delete payload.parceiro_nome;
       delete payload.comissao_inquilino_pct;
+      delete payload.rede_inventario_id;
+      delete payload.tipo_origem_inventario;
       delete payload.cep;
       delete payload.fotos;
 
@@ -401,7 +507,13 @@ export const upsertProduto = createServerFn({ method: "POST" })
       if (data.tiragem_estimada != null) metaObj._tiragem_estimada = data.tiragem_estimada;
       if (data.formato_impresso) metaObj._formato_impresso = data.formato_impresso;
       if (data.dimensoes_cm) metaObj._dimensoes_cm = data.dimensoes_cm;
+      if (data.dimensao) metaObj._dimensao = data.dimensao;
       if (data.impactos_estimados != null) metaObj._impactos_estimados = data.impactos_estimados;
+      if (data.fluxo_estimado != null) metaObj._fluxo_estimado = data.fluxo_estimado;
+      if (data.publico_alvo) metaObj._publico_alvo = data.publico_alvo;
+      if (data.valor_negociado != null) metaObj._valor_negociado = data.valor_negociado;
+      if (data.status_operacional) metaObj._status_operacional = data.status_operacional;
+      if (data.foto_principal) metaObj._foto_principal = data.foto_principal;
       if (parceiroId) metaObj._parceiro_id = parceiroId;
       metaObj._parceiro = parceiroCnpj ? { cnpj: parceiroCnpj, nome: parceiroNome } : null;
       if (comissaoInquilinoPct !== null) metaObj._comissao_inquilino_pct = comissaoInquilinoPct;

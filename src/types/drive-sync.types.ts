@@ -26,6 +26,10 @@ export interface PartnerSyncDetail {
 }
 
 export interface DriveSyncSummary {
+  success: boolean;
+  totalPartners: number;
+  totalProductsCreated: number;
+  totalFilesProcessed: number;
   sucesso: boolean;
   tenantId: string;
   tenantCnpj: string;

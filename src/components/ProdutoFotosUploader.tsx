@@ -27,6 +27,7 @@ type Props = {
   onChange: (fotos: string[]) => void;
   disabled?: boolean;
   tituloProduto?: string;
+  maxFotos?: number;
 };
 
 export function ProdutoFotosUploader({
@@ -34,8 +35,9 @@ export function ProdutoFotosUploader({
   onChange,
   disabled = false,
   tituloProduto,
+  maxFotos = 8,
 }: Props) {
-  const currentFotos = (fotos || []).slice(0, 2);
+  const currentFotos = (fotos || []).slice(0, maxFotos);
   const [uploading, setUploading] = useState(false);
   const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
   const [editingFotoIndex, setEditingFotoIndex] = useState<number | null>(null);
@@ -60,13 +62,13 @@ export function ProdutoFotosUploader({
         const res = await uploadProdutoFoto(file);
         const updated = [...currentFotos];
         updated[replaceIdx] = res.url;
-        onChange(updated.slice(0, 2));
+        onChange(updated.slice(0, maxFotos));
         toast.success(`Foto ${replaceIdx + 1} atualizada com sucesso!`);
       } else {
-        // Adição de fotos (respeitando o limite de 2)
-        const slotsAvailable = 2 - currentFotos.length;
+        // Adição de fotos (respeitando o limite de maxFotos)
+        const slotsAvailable = maxFotos - currentFotos.length;
         if (slotsAvailable <= 0) {
-          toast.info("Limite de 2 fotos atingido.");
+          toast.info(`Limite de ${maxFotos} fotos atingido.`);
           return;
         }
 
@@ -78,12 +80,12 @@ export function ProdutoFotosUploader({
           newUrls.push(res.url);
         }
 
-        const updated = [...currentFotos, ...newUrls].slice(0, 2);
+        const updated = [...currentFotos, ...newUrls].slice(0, maxFotos);
         onChange(updated);
         toast.success(
           newUrls.length === 1
-            ? "Foto adicionada com sucesso!"
-            : `${newUrls.length} fotos adicionadas com sucesso!`,
+            ? "Foto adicionada à galeria com sucesso!"
+            : `${newUrls.length} fotos adicionadas à galeria com sucesso!`,
         );
       }
     } catch (err: any) {
@@ -101,11 +103,11 @@ export function ProdutoFotosUploader({
       toast.error("Informe uma URL válida iniciando com https://");
       return;
     }
-    if (currentFotos.length >= 2) {
-      toast.info("Limite máximo de 2 fotos já atingido.");
+    if (currentFotos.length >= maxFotos) {
+      toast.info(`Limite máximo de ${maxFotos} fotos já atingido.`);
       return;
     }
-    const updated = [...currentFotos, trimmed].slice(0, 2);
+    const updated = [...currentFotos, trimmed].slice(0, maxFotos);
     onChange(updated);
     setUrlInput("");
     setShowUrlInput(false);
@@ -118,10 +120,18 @@ export function ProdutoFotosUploader({
     toast.info("Foto removida.");
   };
 
+  const handleSetMainPhoto = (index: number) => {
+    if (index <= 0 || index >= currentFotos.length) return;
+    const selected = currentFotos[index];
+    const remaining = currentFotos.filter((_, i) => i !== index);
+    onChange([selected, ...remaining]);
+    toast.success("Foto definida como Principal (Capa do Inventário)!");
+  };
+
   const handleSwap = () => {
     if (currentFotos.length < 2) return;
-    onChange([currentFotos[1], currentFotos[0]]);
-    toast.success("Ordem das fotos invertida (Foto 2 tornou-se a Principal)!");
+    onChange([currentFotos[1], currentFotos[0], ...currentFotos.slice(2)]);
+    toast.success("Ordem invertida!");
   };
 
   return (
@@ -130,40 +140,39 @@ export function ProdutoFotosUploader({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Camera className="size-4 text-primary" />
-          <Label className="text-sm font-semibold">Fotos do Produto / Ponto</Label>
-          <span className="text-[11px] text-muted-foreground font-normal">(máximo de 2 fotos)</span>
+          <Label className="text-sm font-semibold">Galeria de Fotos do Ponto</Label>
+          <span className="text-[11px] text-muted-foreground font-normal">(até {maxFotos} fotos)</span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          {currentFotos.length === 2 ? (
+          {currentFotos.length >= maxFotos ? (
             <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-[11px] py-0.5">
-              <CheckCircle2 className="size-3" />2 de 2 fotos cadastradas
+              <CheckCircle2 className="size-3" />{currentFotos.length} de {maxFotos} fotos cadastradas
             </Badge>
           ) : (
             <Badge variant="outline" className="text-[11px] py-0.5">
-              {currentFotos.length} de 2 fotos
+              {currentFotos.length} de {maxFotos} fotos
             </Badge>
           )}
 
-          {currentFotos.length === 2 && (
+          {currentFotos.length >= 2 && (
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs gap-1 border-muted-foreground/30 hover:bg-muted"
               onClick={handleSwap}
-              title="Inverter ordem (definir Foto 2 como principal)"
+              title="Inverter ordem das duas primeiras fotos"
             >
               <ArrowLeftRight className="size-3" />
-              <span className="hidden sm:inline">Inverter ordem</span>
+              <span className="hidden sm:inline">Inverter 1ª e 2ª</span>
             </Button>
           )}
         </div>
       </div>
 
       <p className="text-[11px] text-muted-foreground">
-        Adicione até 2 imagens para demonstrar o ponto, fachada, estúdio, painel de LED ou formato
-        comercial (ex.: foto frontal e vista da rua).
+        Adicione foto principal de impacto e fotos complementares da galeria (vista frontal, ângulo da rua, fluxo de veículos e detalhes técnicos).
       </p>
 
       {/* Grid de Fotos e Slots */}
@@ -188,11 +197,11 @@ export function ProdutoFotosUploader({
                 <Badge
                   className={`text-[10px] py-0.5 font-semibold shadow-sm ${
                     index === 0
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-slate-800 text-white dark:bg-slate-700"
+                      ? "bg-primary text-primary-foreground font-bold"
+                      : "bg-slate-850 text-white dark:bg-slate-700"
                   }`}
                 >
-                  {index === 0 ? "Foto 1 (Principal)" : "Foto 2 (Secundária)"}
+                  {index === 0 ? "★ Foto Principal (Capa)" : `Galeria #${index + 1}`}
                 </Badge>
               </div>
 
@@ -220,18 +229,34 @@ export function ProdutoFotosUploader({
 
             {/* Ações inferiores da foto */}
             <div className="p-2 bg-muted/20 border-t flex items-center justify-between gap-1 flex-wrap">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-xs text-primary border-primary/30 hover:bg-primary/10 gap-1 font-medium"
-                onClick={() => setEditingFotoIndex(index)}
-                disabled={uploading || disabled}
-                title="Cobrir logo do parceiro ou telefone com o logo da Nexo ou desfoque"
-              >
-                <ShieldCheck className="size-3.5 text-emerald-500" />
-                <span>Logo Nexo / Borrar</span>
-              </Button>
+              <div className="flex items-center gap-1">
+                {index > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-1 font-semibold"
+                    onClick={() => handleSetMainPhoto(index)}
+                    disabled={uploading || disabled}
+                    title="Definir esta foto como a capa/principal do inventário"
+                  >
+                    ★ Tornar Capa
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-primary border-primary/30 hover:bg-primary/10 gap-1 font-medium"
+                  onClick={() => setEditingFotoIndex(index)}
+                  disabled={uploading || disabled}
+                  title="Cobrir logo do parceiro ou telefone com o logo da Nexo ou desfoque"
+                >
+                  <ShieldCheck className="size-3.5 text-emerald-500" />
+                  <span>Logo Nexo / Borrar</span>
+                </Button>
+              </div>
 
               <div className="flex items-center gap-1 ml-auto">
                 <Button
@@ -267,8 +292,8 @@ export function ProdutoFotosUploader({
           </div>
         ))}
 
-        {/* Slot de Upload caso haja menos de 2 fotos */}
-        {currentFotos.length < 2 && (
+        {/* Slot de Upload caso haja menos de maxFotos fotos */}
+        {currentFotos.length < maxFotos && (
           <div className="relative rounded-lg border-2 border-dashed border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 transition-colors p-4 flex flex-col items-center justify-center text-center gap-2 aspect-[16/10] min-h-[140px]">
             {uploading ? (
               <div className="flex flex-col items-center gap-2 text-primary">

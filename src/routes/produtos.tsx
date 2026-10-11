@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ImportDropdown } from "@/components/ImportDropdown";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus,
   Pencil,
   Trash2,
@@ -50,6 +58,7 @@ import {
   Sparkles,
   Layers,
   Globe,
+  LayoutGrid,
   Newspaper,
   MapPin,
   ExternalLink,
@@ -58,6 +67,9 @@ import {
   CheckCheck,
   X,
   SlidersHorizontal,
+  Search,
+  ChevronDown,
+  MoreVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -83,6 +95,8 @@ import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
 import { CatalogoEspacosTab } from "@/components/CatalogoEspacosTab";
 import { FluxOohSplitScreen } from "@/components/inventory/FluxOohSplitScreen";
+import { MediaPointCard } from "@/components/inventory/MediaPointCard";
+import { MediaInventoryMap } from "@/components/inventory/MediaInventoryMap";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
 import { cn } from "@/lib/utils";
 
@@ -90,6 +104,8 @@ export const Route = createFileRoute("/produtos")({
   head: () => ({ meta: [{ title: "Produtos — Mídia.OS" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     parceiro: typeof search.parceiro === "string" ? search.parceiro : undefined,
+    parceiro_id: typeof search.parceiro_id === "string" ? search.parceiro_id : undefined,
+    view: typeof search.view === "string" ? (search.view as "catalogo" | "tabela" | "mapa" | "cards") : undefined,
   }),
   component: ProdutosPage,
 });
@@ -97,6 +113,7 @@ export const Route = createFileRoute("/produtos")({
 type Midia = string;
 
 const midiaLabel: Record<string, string> = {
+  TODAS: "Todas as Mídias",
   OOH: "OOH",
   DOOH: "DOOH",
   Radio: "Rádio",
@@ -110,6 +127,25 @@ const midiaLabel: Record<string, string> = {
   CUSTOM: "Personalizado",
 };
 const getMidiaLabel = (m: string) => midiaLabel[m] || m;
+
+function matchMidia(prodMidia: string | undefined | null, activeTab: string): boolean {
+  if (activeTab === "TODAS") return true;
+  if (!prodMidia) return false;
+  if (prodMidia === activeTab) return true;
+
+  const mProd = prodMidia.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const mTab = activeTab.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (mProd === mTab) return true;
+
+  if (mTab === "RADIO" && (mProd.includes("RADIO") || mProd.includes("AUDIO") || mProd.includes("SPOT"))) return true;
+  if (mTab === "TV" && (mProd.includes("TV") || mProd.includes("TELEVISAO"))) return true;
+  if (mTab === "DIGITAL" && (mProd.includes("DIGITAL") || mProd.includes("SOCIAL") || mProd.includes("WEB") || mProd.includes("PORTAL"))) return true;
+  if (mTab === "DOOH" && (mProd.includes("DOOH") || mProd.includes("TRANSPORTE") || mProd.includes("PAINEL LED") || mProd.includes("ELEVADOR") || mProd.includes("TELA"))) return true;
+  if (mTab === "OOH" && (mProd.includes("OOH") || mProd.includes("OUTDOOR") || mProd.includes("FRONTLIGHT") || mProd.includes("EMPENA") || mProd.includes("BUSDOOR"))) return true;
+  if (mTab === "PRINT" && (mProd.includes("PRINT") || mProd.includes("IMPRESS") || mProd.includes("JORNAL") || mProd.includes("REVISTA"))) return true;
+
+  return false;
+}
 
 type MidiaConfig = {
   midia: Midia;
@@ -148,13 +184,23 @@ function ProdutosPage() {
 
   const searchParams = Route.useSearch();
   const { isNexo } = useCurrentOrg();
-  const [mainView, setMainView] = useState<"catalogo" | "tabela" | "mapa">("catalogo");
-  const [tab, setTab] = useState<Midia>("DOOH");
-  const [search, setSearch] = useState(searchParams.parceiro || "");
+  const [mainView, setMainView] = useState<"cards" | "tabela" | "mapa" | "catalogo">(() => {
+    if (searchParams.view) return searchParams.view;
+    return "cards";
+  });
+  const [selectedMapProdutoId, setSelectedMapProdutoId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Midia>("TODAS");
+  const [parceiroFiltro, setParceiroFiltro] = useState<{ id?: string; nome?: string } | null>(() => {
+    if (searchParams.parceiro_id || searchParams.parceiro) {
+      return { id: searchParams.parceiro_id, nome: searchParams.parceiro };
+    }
+    return null;
+  });
+  const [search, setSearch] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("__all__");
   const [filtroStatus, setFiltroStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [filtroOrigem, setFiltroOrigem] = useState<"all" | "proprio" | "parceiro">(
-    searchParams.parceiro ? "parceiro" : "all",
+    searchParams.parceiro || searchParams.parceiro_id ? "parceiro" : "all",
   );
   const [filtroCanalMacro, setFiltroCanalMacro] = useState<"all" | "OFF" | "ON" | "HIBRIDO">("all");
   const [editing, setEditing] = useState<Partial<Produto> | null>(null);
@@ -216,7 +262,8 @@ function ProdutosPage() {
       new Set([...universais, ...fromConfigs, ...fromProdutos, ...fromTipos, ...customMidias]),
     );
     const filtered = all.filter((m) => isMediaTypeActive(m));
-    return filtered.length > 0 ? filtered : all;
+    const activeMidias = filtered.length > 0 ? filtered : all;
+    return ["TODAS", ...activeMidias];
   }, [configs, allProdutos, todosTipos, customMidias, isMediaTypeActive]);
 
   useEffect(() => {
@@ -226,18 +273,45 @@ function ProdutosPage() {
   }, [listaMidias, tab]);
 
   useEffect(() => {
-    if (searchParams.parceiro && allProdutos.length > 0) {
-      setSearch(searchParams.parceiro);
-      setFiltroOrigem("parceiro");
-      const hasInDooh = allProdutos.some(
-        (p) =>
-          p.midia === "DOOH" &&
-          (p.parceiro_nome?.toLowerCase().includes(searchParams.parceiro!.toLowerCase()) ||
-            p.parceiro_cnpj?.includes(searchParams.parceiro!)),
-      );
-      if (hasInDooh) setTab("DOOH");
+    if (searchParams.view) {
+      setMainView(searchParams.view);
+    } else if (searchParams.parceiro || searchParams.parceiro_id) {
+      setMainView("tabela");
     }
-  }, [searchParams.parceiro, allProdutos]);
+    if (searchParams.parceiro || searchParams.parceiro_id) {
+      setParceiroFiltro({ id: searchParams.parceiro_id, nome: searchParams.parceiro });
+      setFiltroOrigem("parceiro");
+    }
+  }, [searchParams.view, searchParams.parceiro, searchParams.parceiro_id]);
+
+  useEffect(() => {
+    if ((parceiroFiltro?.id || parceiroFiltro?.nome) && allProdutos.length > 0) {
+      const pid = parceiroFiltro.id;
+      const pNome = parceiroFiltro.nome?.toLowerCase().trim();
+
+      const matching = allProdutos.filter((p) => {
+        if (pid && p.parceiro_id === pid) return true;
+        if (pNome) {
+          const nomeProd = (p.parceiro_nome || "").toLowerCase().trim();
+          if (nomeProd && (nomeProd.includes(pNome) || pNome.includes(nomeProd))) return true;
+          if (p.parceiro_cnpj && pNome.includes(p.parceiro_cnpj.replace(/\D/g, ""))) return true;
+          const words = pNome.split(/\s+/).filter((w) => w.length >= 3 && !["ltda", "epp", "me", "e", "paineis"].includes(w));
+          if (words.some((w) => nomeProd.includes(w))) return true;
+        }
+        return false;
+      });
+
+      if (matching.length > 0) {
+        setMainView("tabela");
+        setFiltroOrigem("parceiro");
+        const partnerMedias = Array.from(new Set(matching.map((p) => p.midia).filter(Boolean)));
+        // Se a aba atual não for TODAS e não estiver entre as mídias deste parceiro, selecionar a primeira mídia do parceiro
+        if (tab !== "TODAS" && !partnerMedias.includes(tab)) {
+          setTab(partnerMedias[0]);
+        }
+      }
+    }
+  }, [parceiroFiltro, allProdutos]);
 
   const delMut = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
@@ -277,18 +351,62 @@ function ProdutosPage() {
     onError: (e: Error) => toast.error(`Erro ao atualizar em lote: ${e.message}`),
   });
 
+  const totalParceiros = useMemo(() => {
+    return allProdutos.filter((p) =>
+      Boolean(
+        p.parceiro_cnpj ||
+        p.parceiro_nome ||
+        p.parceiro_id ||
+        p.partner_id ||
+        p.origem_produto === "PARCEIRO"
+      )
+    ).length;
+  }, [allProdutos]);
+  const totalProprios = allProdutos.length - totalParceiros;
+
   const q = search.trim().toLowerCase();
   const list = allProdutos.filter((p) => {
-    if (p.midia !== tab) return false;
+    if (!matchMidia(p.midia, tab)) return false;
     if (filtroTipo !== "__all__" && (p.tipo ?? "") !== filtroTipo) return false;
     if (filtroStatus === "ativo" && !p.ativo) return false;
     if (filtroStatus === "inativo" && p.ativo) return false;
-    if (filtroOrigem === "proprio" && (p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id))
-      return false;
-    if (filtroOrigem === "parceiro" && !p.parceiro_cnpj && !p.parceiro_nome && !p.parceiro_id)
-      return false;
+
+    const isParceiro = Boolean(
+      p.parceiro_cnpj ||
+      p.parceiro_nome ||
+      p.parceiro_id ||
+      p.partner_id ||
+      p.origem_produto === "PARCEIRO"
+    );
+    if (filtroOrigem === "proprio" && isParceiro) return false;
+    if (filtroOrigem === "parceiro" && !isParceiro) return false;
+
     if (filtroCanalMacro !== "all" && (p.canal_macro || "OFF") !== filtroCanalMacro)
       return false;
+
+    // Se filtro de parceiro específico estiver ativo
+    if (parceiroFiltro) {
+      const pid = parceiroFiltro.id;
+      const pNome = parceiroFiltro.nome?.toLowerCase().trim();
+      let matchParceiro = false;
+      if (pid && p.parceiro_id === pid) {
+        matchParceiro = true;
+      } else if (pNome) {
+        const prodPartner = (p.parceiro_nome || "").toLowerCase().trim();
+        if (prodPartner && (prodPartner.includes(pNome) || pNome.includes(prodPartner))) {
+          matchParceiro = true;
+        } else if (p.parceiro_cnpj && pNome.includes(p.parceiro_cnpj.replace(/\D/g, ""))) {
+          matchParceiro = true;
+        } else {
+          const words = pNome.split(/\s+/).filter((w) => w.length >= 3 && !["ltda", "epp", "me", "e", "paineis"].includes(w));
+          if (words.some((w) => prodPartner.includes(w))) {
+            matchParceiro = true;
+          }
+        }
+      }
+      if (!matchParceiro) return false;
+    }
+
     if (!q) return true;
     return [
       p.nome,
@@ -300,6 +418,9 @@ function ProdutosPage() {
       p.parceiro_cnpj,
       p.plataforma_rede,
       p.canal_macro,
+      p.cidade,
+      p.bairro,
+      p.localizacao,
     ]
       .filter(Boolean)
       .some((v) => String(v).toLowerCase().includes(q));
@@ -307,6 +428,13 @@ function ProdutosPage() {
 
   // Função para retornar os tipos cadastrados para uma mídia específica deste inquilino
   const getTiposPorMidia = (m: Midia) => {
+    if (m === "TODAS") {
+      const allTiposCadastrados = (todosTipos as ProdutoTipo[]).map((t) => t.nome.trim()).filter(Boolean);
+      const tiposDosProdutos = allProdutos.map((p) => p.tipo?.trim()).filter(Boolean) as string[];
+      return Array.from(new Set([...allTiposCadastrados, ...tiposDosProdutos])).sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
+      );
+    }
     const tiposDaMidia = (todosTipos as ProdutoTipo[])
       .filter((t) => t.midia === m)
       .map((t) => t.nome.trim())
@@ -325,7 +453,7 @@ function ProdutosPage() {
   const programasSugeridos = Array.from(
     new Set(
       allProdutos
-        .filter((p) => p.midia === tab)
+        .filter((p) => tab === "TODAS" || p.midia === tab)
         .map((p) => p.programa)
         .filter(Boolean),
     ),
@@ -333,7 +461,7 @@ function ProdutosPage() {
   const formatosSugeridos = Array.from(
     new Set(
       allProdutos
-        .filter((p) => p.midia === tab)
+        .filter((p) => tab === "TODAS" || p.midia === tab)
         .map((p) => p.formato)
         .filter(Boolean),
     ),
@@ -341,7 +469,7 @@ function ProdutosPage() {
   const faixasSugeridas = Array.from(
     new Set(
       allProdutos
-        .filter((p) => p.midia === tab)
+        .filter((p) => tab === "TODAS" || p.midia === tab)
         .map((p) => p.faixa)
         .filter(Boolean),
     ),
@@ -351,12 +479,14 @@ function ProdutosPage() {
 
   const openNew = () => {
     setEditing({
-      midia: tab,
+      midia: tab === "TODAS" ? "OOH" : tab,
       nome: "",
       duracao_segundos: 30,
       insercoes_padrao: 1,
       valor_unit: 0,
       ativo: true,
+      parceiro_id: parceiroFiltro?.id,
+      parceiro_nome: parceiroFiltro?.nome,
     });
     setOpen(true);
   };
@@ -368,145 +498,158 @@ function ProdutosPage() {
 
   return (
     <AppShell>
+      {/* Top Header Unificado */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
-              {isNexo ? "Soluções Próprias Nexo & Veículos Representados" : "Produtos & Inventário Comercial"}
+              {isNexo ? "Produtos & Inventário Comercial" : "Produtos & Inventário Comercial"}
             </h1>
-            {isNexo && (
-              <Badge variant="outline" className="bg-sky-500/10 text-sky-600 border-sky-500/30 text-xs font-bold py-0.5">
-                Hub Nexo 360° DF
-              </Badge>
-            )}
+            <Badge variant="outline" className="text-xs font-semibold py-0.5">
+              {allProdutos.length} cadastrados
+            </Badge>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            {isNexo
-              ? "Catálogo estratégico de inventário comercial: soluções próprias e veículos parceiros homologados no Distrito Federal."
-              : "Catálogo de soluções de mídia e inventário comercial: OOH, DOOH, Rádio, Portais/Digital, Mídia Impressa e TV."}
+            Gerencie pontos comerciais, tabelas de preço, espaços de mídia e veículos homologados.
           </p>
         </div>
+
         <div className="flex gap-2 flex-wrap items-center">
-          <Button
-            variant="outline"
-            asChild
-            className="gap-2 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-xs"
-            title="Abrir vitrine pública interativa no modelo Flux OOH (White-label seguro)"
-          >
-            <Link to="/site/inventario" target="_blank">
-              <ExternalLink className="size-4 text-emerald-600" />
-              <span>Vitrine Pública OOH</span>
-            </Link>
-          </Button>
-
-          <Button
-            variant="outline"
-            asChild
-            className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/40"
-          >
-            <Link to="/parceiros">
-              <Handshake className="size-4 text-purple-600" />
-              <span>Parceiros de Mídia</span>
-            </Link>
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={() => {
+          {/* Dropdown Principal: Importar Dados */}
+          <ImportDropdown
+            buttonLabel="Importar Dados"
+            onImportMediaKit={() => setMidiaKitOpen(true)}
+            onImportSpreadsheet={() => setImportOpen(true)}
+            onDownloadTemplate={() => {
               downloadModeloProdutosExcel("modelo-importacao-produtos-cliente.xlsx");
               toast.success("Modelo de planilha (.xlsx) baixado com sucesso!");
             }}
-            className="gap-2 text-xs"
-            title="Baixar planilha modelo (.xlsx) com instruções e exemplos de produtos para preenchimento"
-          >
-            <Download className="size-4 text-emerald-600" />
-            <span>Baixar Modelo (.xlsx)</span>
-          </Button>
+          />
 
-          <Button
-            variant="outline"
-            onClick={() => setMidiaKitOpen(true)}
-            className="gap-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 shadow-xs"
-            title="Importar produtos e cadastrar parceiro via PDF (Mídia Kit) ou Planilha Excel com IA"
-          >
-            <Sparkles className="size-4 text-indigo-600" />
-            <span>Importar PDF / Excel (IA)</span>
-          </Button>
+          {/* Dropdown de Mais Opções */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="size-9" title="Mais opções">
+                <MoreVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => setTiposOpen(true)} className="gap-2 cursor-pointer">
+                <Tags className="size-4" />
+                <span>Tipos de Produto</span>
+              </DropdownMenuItem>
 
-          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
-            <Upload className="size-4" />
-            <span>Importar Planilha</span>
-          </Button>
+              {(isAdmin || canManage) && tab !== "TODAS" && (
+                <DropdownMenuItem onClick={openCfg} className="gap-2 cursor-pointer">
+                  <Building2 className="size-4" />
+                  <span>Dados do Veículo ({getMidiaLabel(tab)})</span>
+                </DropdownMenuItem>
+              )}
 
-          <Button variant="outline" onClick={() => setTiposOpen(true)} className="gap-2">
-            <Tags className="size-4" />
-            <span>Tipos de Produto</span>
-          </Button>
+              <DropdownMenuSeparator />
 
-          {(isAdmin || canManage) && (
-            <Button variant="outline" onClick={openCfg} className="gap-2">
-              <Building2 className="size-4" />
-              <span>Dados cadastrais do veículo ({getMidiaLabel(tab)})</span>
-            </Button>
-          )}
+              <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                <Link to="/site/inventario" target="_blank">
+                  <ExternalLink className="size-4 text-emerald-600" />
+                  <span>Vitrine Pública OOH</span>
+                </Link>
+              </DropdownMenuItem>
 
-          <Button onClick={openNew} className="gap-2 shadow-sm">
+              <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                <Link to="/parceiros">
+                  <Handshake className="size-4 text-purple-600" />
+                  <span>Parceiros Comerciais</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Botão de Criação Principal */}
+          <Button onClick={openNew} className="gap-2 shadow-sm font-semibold">
             <Plus className="size-4" />
             <span>Novo Produto</span>
           </Button>
         </div>
       </div>
 
-      {/* Switcher de Visão Principal */}
-      <div className="flex items-center gap-2 border rounded-xl p-1 bg-muted/40 w-fit mb-6 shadow-xs">
+      {/* Switcher de Visão: Cards de Mídia / Tabela / Mapa Interativo / Nexo Hub */}
+      <div className="flex items-center gap-1.5 border rounded-xl p-1 bg-muted/40 w-fit mb-5 shadow-xs flex-wrap">
         <button
           type="button"
-          onClick={() => setMainView("catalogo")}
+          onClick={() => setMainView("cards")}
           className={cn(
-            "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2",
-            mainView === "catalogo"
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+            mainView === "cards"
               ? "bg-background text-foreground shadow-xs ring-1 ring-border"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <Layers className="size-4 text-primary" />
-          <span>Catálogo & Representação Comercial</span>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary">
-            Nexo Hub
+          <LayoutGrid className="size-3.5 text-primary" />
+          <span>Cards de Mídia</span>
+          <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+            {allProdutos.length}
           </Badge>
         </button>
+
         <button
           type="button"
           onClick={() => setMainView("tabela")}
           className={cn(
-            "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2",
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
             mainView === "tabela"
               ? "bg-background text-foreground shadow-xs ring-1 ring-border"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <FileSpreadsheet className="size-4" />
-          <span>Inventário por Canal / Mídia</span>
+          <FileSpreadsheet className="size-3.5" />
+          <span>Inventário / Tabela</span>
         </button>
+
         <button
           type="button"
           onClick={() => setMainView("mapa")}
           className={cn(
-            "px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2",
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
             mainView === "mapa"
               ? "bg-background text-foreground shadow-xs ring-1 ring-border"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <MapPin className="size-4 text-emerald-600" />
-          <span>Mapa Interativo (Flux OOH)</span>
-          <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+          <MapPin className="size-3.5 text-rose-500" />
+          <span>Mapa Interativo</span>
         </button>
+
+        {isNexo && (
+          <button
+            type="button"
+            onClick={() => setMainView("catalogo")}
+            className={cn(
+              "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+              mainView === "catalogo"
+                ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Layers className="size-3.5 text-primary" />
+            <span>Hub Nexo 360°</span>
+          </button>
+        )}
       </div>
 
       {mainView === "mapa" ? (
-        <div className="h-[calc(100vh-210px)] min-h-[600px] rounded-2xl overflow-hidden border shadow-sm bg-card">
-          <FluxOohSplitScreen />
+        <div className="h-[calc(100vh-210px)] min-h-[620px] rounded-2xl overflow-hidden border shadow-sm bg-card">
+          <MediaInventoryMap
+            produtos={allProdutos}
+            selectedProdutoId={selectedMapProdutoId}
+            onSelectProduto={(prod) => setSelectedMapProdutoId(prod?.id ?? null)}
+            onEditProduto={openEdit}
+            onOpenGallery={(fotos, titulo) =>
+              setGalleryFotos({
+                fotos,
+                titulo,
+              })
+            }
+          />
         </div>
       ) : mainView === "catalogo" ? (
         <CatalogoEspacosTab initialPartnerId={searchParams.parceiro} />
@@ -534,13 +677,64 @@ function ProdutosPage() {
       )}
 
       <ImportarMidiaKitDialog open={midiaKitOpen} onOpenChange={setMidiaKitOpen} />
-      <ImportarProdutosDialog open={importOpen} onOpenChange={setImportOpen} midiaPadrao={tab as any} />
+      <ImportarProdutosDialog open={importOpen} onOpenChange={setImportOpen} midiaPadrao={(tab === "TODAS" ? "OOH" : tab) as any} />
+
+      {/* Banner de Filtro de Parceiro Comercial Ativo */}
+      {parceiroFiltro && (
+        <div className="flex items-center justify-between flex-wrap gap-3 p-3.5 mb-4 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/80 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-lg bg-purple-100 dark:bg-purple-900/60 flex items-center justify-center shrink-0 text-purple-700 dark:text-purple-300">
+              <Handshake className="size-5" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold flex items-center gap-2 flex-wrap">
+                <span>Exibindo produtos do parceiro de mídia:</span>
+                <Badge className="bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs py-0.5 px-2">
+                  {parceiroFiltro.nome || "Parceiro Selecionado"}
+                </Badge>
+                <span className="text-xs text-purple-600 dark:text-purple-400 font-normal">
+                  ({list.length} produto{list.length === 1 ? "" : "s"} listado{list.length === 1 ? "" : "s"})
+                </span>
+              </div>
+              <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">
+                Inventário fornecido por este parceiro para representação comercial pela Nexo.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="h-7 text-xs border-purple-300 dark:border-purple-800 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50"
+            >
+              <Link to="/rede-inventario">
+                ← Rede de Inventário
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setParceiroFiltro(null);
+                setFiltroOrigem("all");
+              }}
+              className="h-7 text-xs text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50"
+            >
+              <X className="size-3.5 mr-1" />
+              Ver Todo o Inventário
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v)}>
         <TabsList className="flex flex-wrap h-auto gap-1">
           {listaMidias.map((m) => (
             <TabsTrigger key={m} value={m} className="gap-1.5">
-              {m === "TV" ? (
+              {m === "TODAS" ? (
+                <Layers className="size-4" />
+              ) : m === "TV" ? (
                 <Tv className="size-4" />
               ) : m === "Radio" || m === "RADIO" ? (
                 <Radio className="size-4" />
@@ -569,125 +763,75 @@ function ProdutosPage() {
           </Button>
         </TabsList>
 
-        {listaMidias.map((m) => (
-          <TabsContent key={m} value={m} className="mt-4 space-y-3">
-            {/* Seletor Visual de Categorias Híbridas Nexo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Categoria A: Soluções Próprias Nexo */}
-              <div
-                onClick={() => setFiltroOrigem(filtroOrigem === "proprio" ? "all" : "proprio")}
-                className={cn(
-                  "p-3.5 rounded-xl border transition-all cursor-pointer",
-                  filtroOrigem === "proprio"
-                    ? "bg-sky-500/10 border-sky-500 ring-2 ring-sky-500/30"
-                    : "bg-card hover:bg-muted/40 border-border/70",
-                )}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">⭐</span>
-                    <div>
-                      <div className="font-bold text-xs sm:text-sm text-foreground">
-                        A) SOLUÇÕES PRÓPRIAS NEXO (In-House Hub)
-                      </div>
-                      <div className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold">
-                        Gestão, Inteligência Estratégica & Execução Direta
-                      </div>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={filtroOrigem === "proprio" ? "default" : "outline"}
-                    className="text-[10px] px-2 py-0.5 shrink-0 bg-sky-600 hover:bg-sky-700 text-white"
-                  >
-                    {filtroOrigem === "proprio" ? "Ativo" : "Filtrar"}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[
-                    "Planejamento Estratégico & Inteligência 360°",
-                    "Criação & Peças (LED, OOH, Digital)",
-                    "Gestão de Tráfego & Performance",
-                    "Coberturas, Eventos & Live Marketing",
-                  ].map((sub) => (
-                    <span
-                      key={sub}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFiltroOrigem("proprio");
-                        setSearch(sub.split(" ")[0]);
-                      }}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800 hover:bg-sky-100 transition-colors"
+        <TabsContent value={tab} className="mt-4 space-y-3">
+            {/* Barra de Filtros Unificada e Sem Redundância */}
+            <Card className="mb-4 shadow-xs">
+              <CardContent className="p-3 flex flex-wrap gap-2.5 items-center">
+                {/* Campo de Busca Rápida */}
+                <div className="relative flex-1 min-w-[240px]">
+                  <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, formato, ponto, praça ou parceiro..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 h-9 text-xs"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      title="Limpar pesquisa"
                     >
-                      {sub}
-                    </span>
-                  ))}
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </div>
-              </div>
 
-              {/* Categoria B: Veículos Representados */}
-              <div
-                onClick={() => setFiltroOrigem(filtroOrigem === "parceiro" ? "all" : "parceiro")}
-                className={cn(
-                  "p-3.5 rounded-xl border transition-all cursor-pointer",
-                  filtroOrigem === "parceiro"
-                    ? "bg-purple-500/10 border-purple-500 ring-2 ring-purple-500/30"
-                    : "bg-card hover:bg-muted/40 border-border/70",
-                )}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">🤝</span>
-                    <div>
-                      <div className="font-bold text-xs sm:text-sm text-foreground">
-                        B) VEÍCULOS REPRESENTADOS (Rede Homologada)
-                      </div>
-                      <div className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">
-                        Espaços de Alto Impacto • DF & Entorno
-                      </div>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={filtroOrigem === "parceiro" ? "default" : "outline"}
-                    className="text-[10px] px-2 py-0.5 shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
+                {/* Segmented Filter: Origem / Veículo */}
+                <div className="flex items-center rounded-lg border p-0.5 bg-muted/40 text-xs shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setFiltroOrigem("all")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition-all font-medium",
+                      filtroOrigem === "all"
+                        ? "bg-background text-foreground shadow-xs font-semibold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
                   >
-                    {filtroOrigem === "parceiro" ? "Ativo" : "Filtrar"}
-                  </Badge>
+                    Todo o Inventário ({allProdutos.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFiltroOrigem("parceiro")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition-all flex items-center gap-1 font-medium",
+                      filtroOrigem === "parceiro"
+                        ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 font-semibold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <span>🤝 De Parceiros ({totalParceiros})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFiltroOrigem("proprio")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition-all flex items-center gap-1 font-medium",
+                      filtroOrigem === "proprio"
+                        ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 font-semibold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <span>🏢 Próprios ({totalProprios})</span>
+                  </button>
                 </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[
-                    "Mídia Exterior & Rodoviária (LEDs/Fronts)",
-                    "Mídia Indoor & Hiperlocal (Elevadores)",
-                    "Mídia em Trânsito (TV Cars)",
-                    "Mídia Sonora & Rádios (Spots/Blitz)",
-                    "Mídia Digital Regional (Portais)",
-                  ].map((sub) => (
-                    <span
-                      key={sub}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFiltroOrigem("parceiro");
-                        setSearch(sub.split(" ")[0]);
-                      }}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800 hover:bg-purple-100 transition-colors"
-                    >
-                      {sub}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
 
-            <Card>
-              <CardContent className="p-3 flex flex-wrap gap-2 items-center">
-                <Input
-                  placeholder="Pesquisar por nome, formato, espaço comercial ou faixa…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="max-w-sm"
-                />
+                {/* Tipo de Ponto / Produto */}
                 <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Tipo" />
+                  <SelectTrigger className="w-[170px] h-9 text-xs">
+                    <SelectValue placeholder="Tipo de ponto" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__all__">Todos os tipos</SelectItem>
@@ -698,52 +842,144 @@ function ProdutosPage() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {/* Status */}
                 <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as any)}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[130px] h-9 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos status</SelectItem>
-                    <SelectItem value="ativo">Ativos</SelectItem>
-                    <SelectItem value="inativo">Inativos</SelectItem>
+                    <SelectItem value="all">Status: Todos</SelectItem>
+                    <SelectItem value="ativo">Apenas Ativos</SelectItem>
+                    <SelectItem value="inativo">Apenas Inativos</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={filtroOrigem} onValueChange={(v) => setFiltroOrigem(v as any)}>
-                  <SelectTrigger className="w-[260px]">
-                    <SelectValue placeholder="Categoria / Origem" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as categorias</SelectItem>
-                    <SelectItem value="proprio">
-                      ⭐ A) SOLUÇÕES PRÓPRIAS NEXO (In-House Hub)
-                    </SelectItem>
-                    <SelectItem value="parceiro">
-                      🤝 B) VEÍCULOS REPRESENTADOS (Rede Homologada)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+
+                {/* Canal Macro */}
                 <Select
                   value={filtroCanalMacro}
                   onValueChange={(v) => setFiltroCanalMacro(v as any)}
                 >
-                  <SelectTrigger className="w-[170px]">
+                  <SelectTrigger className="w-[130px] h-9 text-xs">
                     <SelectValue placeholder="Canal" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os canais</SelectItem>
+                    <SelectItem value="all">Canais: Todos</SelectItem>
                     <SelectItem value="OFF">📻 Mídia OFF</SelectItem>
                     <SelectItem value="ON">🌐 Mídia ON</SelectItem>
                     <SelectItem value="HIBRIDO">⚡ Híbrido 360°</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="text-sm text-muted-foreground ml-auto">
-                  {list.length} resultado{list.length === 1 ? "" : "s"}
+
+                {/* Botão de Limpar Filtros quando houver filtros ativos */}
+                {(search || filtroTipo !== "__all__" || filtroStatus !== "all" || filtroOrigem !== "all" || filtroCanalMacro !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setFiltroTipo("__all__");
+                      setFiltroStatus("all");
+                      setFiltroOrigem("all");
+                      setFiltroCanalMacro("all");
+                      setParceiroFiltro(null);
+                    }}
+                    className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3.5 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+
+                {/* Contador de Resultados */}
+                <div className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
+                  <strong>{list.length}</strong> de {allProdutos.length} item(ns)
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
+
+            {mainView === "cards" ? (
+              isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-96 rounded-2xl bg-muted/40 animate-pulse border border-border/50"
+                    />
+                  ))}
+                </div>
+              ) : list.length === 0 ? (
+                <Card className="p-12 text-center shadow-xs border">
+                  <div className="flex flex-col items-center justify-center max-w-md mx-auto space-y-4">
+                    <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                      {tab === "TV" ? (
+                        <Tv className="size-7" />
+                      ) : tab === "Radio" ? (
+                        <Radio className="size-7" />
+                      ) : (
+                        <Monitor className="size-7" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-lg">
+                        Nenhum produto cadastrado para {midiaLabel[tab] || tab}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {allProdutos.filter((p) => p.midia === tab).length === 0
+                          ? "Você pode cadastrar produtos manualmente um a um ou importar todo o catálogo em lote via planilha Excel ou CSV."
+                          : "Nenhum produto atende aos filtros de busca atuais. Tente limpar os filtros."}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                      <Button onClick={openNew} className="gap-2">
+                        <Plus className="size-4" />
+                        Cadastrar Ponto
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setImportOpen(true)}
+                        className="gap-2"
+                      >
+                        <Upload className="size-4" />
+                        Importar Planilha
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {list.map((prod) => (
+                    <MediaPointCard
+                      key={prod.id}
+                      produto={prod}
+                      isSelected={selectedIds.has(prod.id)}
+                      onSelect={() => toggleSelectOne(prod.id)}
+                      onEdit={openEdit}
+                      onDelete={(item) => {
+                        if (confirm(`Remover "${item.nome}"?`)) delMut.mutate(item.id);
+                      }}
+                      onOpenMap={(item) => {
+                        setSelectedMapProdutoId(item.id);
+                        setMainView("mapa");
+                      }}
+                      onOpenGallery={(fotos, titulo) =>
+                        setGalleryFotos({
+                          fotos,
+                          titulo,
+                          subtitulo: [midiaLabel[prod.midia], prod.tipo, prod.formato]
+                            .filter(Boolean)
+                            .join(" • "),
+                        })
+                      }
+                      canManage={canManage}
+                    />
+                  ))}
+                </div>
+              )
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10">
@@ -938,21 +1174,21 @@ function ProdutosPage() {
                           {p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id ? (
                             <div className="flex flex-col items-start gap-1">
                               <Badge className="bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-200 border-purple-300 text-[10px] font-bold py-0.5">
-                                🤝 B) VEÍCULO REPRESENTADO (Rede Homologada)
+                                🤝 PARCEIRO DE MÍDIA (Representado)
                               </Badge>
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span
                                   className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[190px]"
                                   title={p.parceiro_nome || undefined}
                                 >
-                                  {p.parceiro_nome || "Veículo Parceiro"}
+                                  {p.parceiro_nome || "Parceiro de Mídia"}
                                 </span>
                                 {p.comissao_inquilino_pct != null && (
                                   <Badge
                                     variant="outline"
                                     className="text-[10px] font-bold text-purple-700 dark:text-purple-300 border-purple-300 bg-purple-50 dark:bg-purple-950/40 py-0"
                                   >
-                                    {p.comissao_inquilino_pct}% BV
+                                    {p.comissao_inquilino_pct}% Comissão
                                   </Badge>
                                 )}
                               </div>
@@ -968,10 +1204,10 @@ function ProdutosPage() {
                                 variant="outline"
                                 className="border-sky-500/60 text-sky-900 dark:text-sky-200 bg-sky-50 dark:bg-sky-950/50 text-[10px] py-0.5 font-bold"
                               >
-                                ⭐ A) SOLUÇÃO PRÓPRIA NEXO (In-House Hub)
+                                🏢 PRÓPRIO NEXO (Inventário Direto)
                               </Badge>
                               <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-                                Planejamento 360° • Criação • Tráfego • Ativação
+                                Ponto próprio ou serviços in-house
                               </span>
                             </div>
                           )}
@@ -1042,6 +1278,7 @@ function ProdutosPage() {
                 </Table>
               </CardContent>
             </Card>
+          )}
 
             {/* Barra Flutuante de Ações em Lote */}
             {selectedIds.size > 0 && (
@@ -1108,7 +1345,6 @@ function ProdutosPage() {
               </div>
             )}
           </TabsContent>
-        ))}
       </Tabs>
 
       {/* Modal de Reajuste em Lote */}

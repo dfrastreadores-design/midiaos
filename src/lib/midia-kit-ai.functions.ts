@@ -267,10 +267,12 @@ function extrairProdutosDePlanilha(dadosTabela: Record<string, any>[]): ProdutoE
 }
 
 const ExtrairInputSchema = z.object({
-  texto: z.string().min(1).max(500000),
+  texto: z.string().max(1000000).optional().default(""),
   tabelaPrecosTexto: z.string().optional().nullable(),
   parceiroNome: z.string().optional().nullable(),
   dadosTabela: z.array(z.record(z.any())).optional().nullable(),
+  conteudoBase64: z.string().optional().nullable(),
+  nomeArquivo: z.string().optional().nullable(),
 });
 
 export const extrairProdutosDeMidiaKit = createServerFn({ method: "POST" })
@@ -381,31 +383,64 @@ Retorne JSON no formato:
 
     if (key) {
       try {
-        const isLovable = Boolean(process.env.LOVABLE_API_KEY);
-        const url = isLovable
-          ? "https://ai.gateway.lovable.dev/v1/chat/completions"
-          : "https://openrouter.ai/api/v1/chat/completions";
+        const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+        if (geminiApiKey) {
+          const parts: any[] = [{ text: `${systemPrompt}\n\n${userPrompt}` }];
+          if (data.conteudoBase64) {
+            const cleanBase64 = data.conteudoBase64.replace(/^data:application\/pdf;base64,/, "").trim();
+            parts.push({
+              inlineData: {
+                mimeType: "application/pdf",
+                data: cleanBase64,
+              },
+            });
+          }
 
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${key}`,
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            response_format: { type: "json_object" },
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-          }),
-        });
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+          const geminiRes = await fetch(geminiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts }],
+              generationConfig: {
+                temperature: 0.1,
+                responseMimeType: "application/json",
+              },
+            }),
+          });
 
-        if (res.ok) {
-          const json = await res.json();
-          const content = json?.choices?.[0]?.message?.content || "{}";
-          parsedResult = JSON.parse(content);
+          if (geminiRes.ok) {
+            const geminiJson = await geminiRes.json();
+            const text = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+            parsedResult = JSON.parse(text);
+          }
+        } else {
+          const isLovable = Boolean(process.env.LOVABLE_API_KEY);
+          const url = isLovable
+            ? "https://ai.gateway.lovable.dev/v1/chat/completions"
+            : "https://openrouter.ai/api/v1/chat/completions";
+
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${key}`,
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              response_format: { type: "json_object" },
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+            }),
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            const content = json?.choices?.[0]?.message?.content || "{}";
+            parsedResult = JSON.parse(content);
+          }
         }
       } catch (err) {
         console.warn("Falha na chamada de IA para Mídia Kit, usando fallback semântico:", err);

@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ImportDropdown } from "@/components/ImportDropdown";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Handshake,
+  Network,
   Plus,
   Upload,
   Search,
@@ -56,6 +58,7 @@ import {
   Table as TableIcon,
   FolderSync,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LogoImg } from "@/components/LogoImg";
@@ -81,12 +84,14 @@ import {
 import { ParceiroFormDialog } from "@/components/ParceiroFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
+import { ImportarInventarioLoteModal } from "@/components/ImportarInventarioLoteModal";
 import { DriveSyncResultModal } from "@/components/DriveSyncResultModal";
 import { sincronizarDriveParceiros } from "@/lib/drive-sync.functions";
 import type { DriveSyncSummary } from "@/types/drive-sync.types";
 import { useUserRoles } from "@/hooks/use-roles";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
 import { CircuitosBundlesManager } from "@/components/circuitos/CircuitosBundlesManager";
+import { ParceiroProdutosModal } from "@/components/ParceiroProdutosModal";
 
 export const Route = createFileRoute("/parceiros")({
   head: () => ({ meta: [{ title: "Parceiros & Entidades — Mídia.OS" }] }),
@@ -112,6 +117,7 @@ export function ParceirosPage() {
   const [editingParceiro, setEditingParceiro] = useState<Partial<Parceiro> | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importParceiroId, setImportParceiroId] = useState<string | undefined>(undefined);
+  const [importLoteOpen, setImportLoteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Parceiro | null>(null);
   const [anexoParceiro, setAnexoParceiro] = useState<Parceiro | null>(null);
   const [midiaKitOpen, setMidiaKitOpen] = useState(false);
@@ -119,6 +125,7 @@ export function ParceirosPage() {
   const [driveSyncOpen, setDriveSyncOpen] = useState(false);
   const [driveSyncSummary, setDriveSyncSummary] = useState<DriveSyncSummary | null>(null);
   const [circuitosManagerOpen, setCircuitosManagerOpen] = useState(false);
+  const [previewParceiro, setPreviewParceiro] = useState<Parceiro | null>(null);
 
   const syncDriveFn = useServerFn(sincronizarDriveParceiros);
 
@@ -216,7 +223,7 @@ export function ParceirosPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Parceiros de Mídia
+                Veículos Representados (Parceiros)
                 <Badge
                   variant="secondary"
                   className="text-xs bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300"
@@ -225,83 +232,64 @@ export function ParceirosPage() {
                 </Badge>
               </h1>
               <p className="text-sm text-muted-foreground">
-                Gestão comercial de fornecedores de mídia, remuneração acordada sobre vendas e
-                importação de inventário.
+                Gestão unificada dos veículos de comunicação e exibidoras parceiras que compõem sua rede de inventário representado.
               </p>
             </div>
           </div>
 
           {canManage && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 border-slate-200 dark:border-slate-800"
-                onClick={() => {
-                  downloadModeloProdutosExcel("modelo-importacao-produtos-cliente.xlsx");
-                  toast.success("Modelo de planilha (.xlsx) baixado com sucesso!");
-                }}
-                title="Baixar planilha modelo (.xlsx) para preenchimento de produtos e pontos"
-              >
-                <Download className="size-4 text-emerald-600" />
-                Baixar Modelo (.xlsx)
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-2 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-xs font-semibold"
-                onClick={() => syncDriveMut.mutate()}
-                disabled={syncDriveMut.isPending}
-                title="Varre a pasta compartilhada do Google Drive, cadastra parceiros ausentes e extrai/atualiza inventário e projetos sem duplicidade"
-              >
-                {syncDriveMut.isPending ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin text-emerald-600" />
-                    Varrendo pastas do Drive e atualizando inventário...
-                  </>
-                ) : (
-                  <>
-                    <FolderSync className="size-4 text-emerald-600" />
-                    Sincronizar Drive de Parceiros
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/50"
-                onClick={() => handleOpenImport()}
-              >
-                <FileSpreadsheet className="size-4 text-purple-600" />
-                Importar Planilha
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 shadow-xs"
-                onClick={() => {
+            <div className="flex items-center flex-wrap gap-2.5">
+              {/* Atalho Direto para Rede de Inventário */}
+              <Link to="/rede-inventario">
+                <Button
+                  variant="outline"
+                  className="gap-2 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 font-medium"
+                  title="Acessar a visão integrada da Rede de Inventário"
+                >
+                  <Network className="size-4 text-purple-600" />
+                  <span>Rede de Inventário</span>
+                </Button>
+              </Link>
+
+              {/* Dropdown Consolidado: Importar Dados */}
+              <ImportDropdown
+                buttonLabel="Importar Dados"
+                onImportBatch={() => setImportLoteOpen(true)}
+                onImportMediaKit={() => {
                   setMidiaKitParceiroId(undefined);
                   setMidiaKitOpen(true);
                 }}
-                title="Cadastrar parceiro e produtos a partir de PDF (Mídia Kit) ou Planilha (Excel/CSV)"
-              >
-                <Sparkles className="size-4 text-indigo-600" />
-                Importar PDF ou Excel (IA)
-              </Button>
+                onImportSpreadsheet={() => handleOpenImport()}
+                onSyncGoogleDrive={() => syncDriveMut.mutate()}
+                isSyncingDrive={syncDriveMut.isPending}
+                onDownloadTemplate={() => {
+                  downloadModeloProdutosExcel("modelo-importacao-produtos-cliente.xlsx");
+                  toast.success("Modelo de planilha (.xlsx) baixado!");
+                }}
+              />
+
+              {/* Botão de Produtos e Circuitos */}
               <Button
                 variant="outline"
-                className="gap-2 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 shadow-xs font-semibold"
+                className="gap-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-medium"
                 onClick={() => setCircuitosManagerOpen(true)}
-                title="Gerenciar pacotes de circuitos fechados e regras de desconto para parceiros"
+                title="Gerenciar pacotes de circuitos fechados e produtos dos veículos parceiros"
               >
                 <Layers className="size-4 text-blue-600" />
-                Circuitos & Bundles
+                <span>Produtos e Circuitos</span>
               </Button>
+
+              {/* Botão Primário Fixo no Topo: Novo Veículo/Parceiro */}
               <Button
-                className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-sm font-semibold"
                 onClick={() => {
                   setEditingParceiro(null);
                   setFormOpen(true);
                 }}
+                title="Cadastrar um novo veículo de comunicação / parceiro comercial"
               >
                 <Plus className="size-4" />
-                Novo Parceiro
+                <span>Novo Veículo / Parceiro</span>
               </Button>
             </div>
           )}
@@ -600,7 +588,14 @@ export function ParceirosPage() {
                         {parceiro.cnpj || "—"}
                       </TableCell>
                       <TableCell className="text-center font-bold text-xs text-purple-700 dark:text-purple-300">
-                        {parceiro.produtos_count || 0}
+                        <button
+                          type="button"
+                          onClick={() => setPreviewParceiro(parceiro)}
+                          className="hover:underline cursor-pointer px-1.5 py-0.5 rounded hover:bg-purple-100 dark:hover:bg-purple-950/60 transition-colors"
+                          title="Clique para visualizar os produtos deste parceiro"
+                        >
+                          {parceiro.produtos_count || 0}
+                        </button>
                       </TableCell>
                       <TableCell className="text-right font-bold text-xs text-emerald-600 dark:text-emerald-400">
                         {parceiro.comissao_padrao_percentual || parceiro.comissao_padrao_pct || 20}%
@@ -650,7 +645,14 @@ export function ParceirosPage() {
                             Anexos
                           </Button>
                           <Button variant="outline" size="sm" className="h-7 px-2 text-xs" asChild>
-                            <Link to="/produtos" search={{ parceiro: parceiro.razao_social } as any}>
+                            <Link
+                              to="/produtos"
+                              search={{
+                                parceiro_id: parceiro.id,
+                                parceiro: parceiro.nome_fantasia || parceiro.razao_social,
+                                view: "tabela",
+                              } as any}
+                            >
                               Mídias
                               <ExternalLink className="size-3 ml-1" />
                             </Link>
@@ -985,9 +987,13 @@ export function ParceirosPage() {
 
                     {/* Inventário e Ações de Rodapé */}
                     <div className="pt-2 border-t flex items-center justify-between gap-2 mt-auto">
-                      <div className="flex items-center gap-1.5">
+                      <div
+                        className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setPreviewParceiro(parceiro)}
+                        title="Clique para visualizar os produtos deste parceiro"
+                      >
                         <Layers className="size-3.5 text-purple-600" />
-                        <span className="font-semibold text-foreground">
+                        <span className="font-semibold text-foreground underline decoration-dotted underline-offset-2">
                           {parceiro.produtos_count || 0} produto(s)
                         </span>
                       </div>
@@ -1030,7 +1036,14 @@ export function ParceirosPage() {
                         </Button>
 
                         <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
-                          <Link to="/produtos" search={{ parceiro: parceiro.razao_social } as any}>
+                          <Link
+                            to="/produtos"
+                            search={{
+                              parceiro_id: parceiro.id,
+                              parceiro: parceiro.nome_fantasia || parceiro.razao_social,
+                              view: "tabela",
+                            } as any}
+                          >
                             Ver Produtos
                             <ExternalLink className="size-3 ml-1" />
                           </Link>
@@ -1084,6 +1097,25 @@ export function ParceirosPage() {
           qc.invalidateQueries({ queryKey: ["parceiros"] });
           qc.invalidateQueries({ queryKey: ["produtos"] });
         }}
+      />
+
+      {/* Modal de Importação em Lote & Pasta com IA Gemini 2.5 Flash */}
+      <ImportarInventarioLoteModal
+        open={importLoteOpen}
+        onOpenChange={setImportLoteOpen}
+        parceiroInicialId={midiaKitParceiroId}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ["parceiros"] });
+          qc.invalidateQueries({ queryKey: ["produtos"] });
+        }}
+      />
+
+      {/* Modal de Pré-visualização Instantânea dos Produtos do Parceiro */}
+      <ParceiroProdutosModal
+        open={!!previewParceiro}
+        onOpenChange={(open) => !open && setPreviewParceiro(null)}
+        parceiro={previewParceiro}
+        onOpenImport={handleOpenImport}
       />
 
       {/* Dialog de Confirmação de Exclusão */}

@@ -118,13 +118,18 @@ export type Produto = {
   tiragem_estimada?: number | null;
   formato_impresso?: string | null;
   dimensoes_cm?: string | null;
+  dimensao?: string | null;
   impactos_estimados?: number | null;
+  fluxo_estimado?: number | null;
+  publico_alvo?: string | null;
   detalhes_venda?: string | null;
   parceiro_id?: string | null;
   parceiro_cnpj?: string | null;
   parceiro_nome?: string | null;
   comissao_inquilino_pct?: number | null;
+  foto_principal?: string | null;
   fotos?: string[] | null;
+  valor_negociado?: number | null;
   status_operacional?: "disponivel" | "reservado" | "bloqueado_comercial" | "em_veiculacao" | string | null;
   pi_ativo_id?: string | null;
 };
@@ -841,29 +846,29 @@ export function ProdutoFormDialog({
                 <div>
                   <Label className="text-sm font-semibold flex items-center gap-1.5">
                     <Handshake className="size-4 text-purple-600" />
-                    Categorização: Representação vs. Soluções Próprias
+                    Origem do Inventário: Parceiro de Mídia vs. Próprio Nexo
                   </Label>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Defina se o produto é um <strong>Veículo Representado / Mídia Externa</strong> ou uma <strong>Solução In-House Nexo</strong>.
+                    A Nexo comercializa produtos fornecidos por parceiros de mídia homologados e seu portfólio próprio.
                   </p>
                 </div>
                 {form.parceiro_id || form.parceiro_cnpj?.trim() ? (
                   <Badge className="bg-purple-600 hover:bg-purple-700 text-white gap-1 text-[11px] py-0.5">
-                    🤝 Veículo Representado / Mídia Externa
+                    🤝 Inventário de Parceiro (Representação)
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
                     className="border-sky-500/40 text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 text-[11px] py-0.5 font-bold"
                   >
-                    ⭐ Soluções e Serviços Nexo In-House
+                    🏢 Inventário Próprio Nexo
                   </Badge>
                 )}
               </div>
 
               {/* Seletor rápido de Categoria e Parceiros Cadastrados */}
               <div>
-                <Label className="text-xs font-medium">Categoria Comercial / Veículo Representado</Label>
+                <Label className="text-xs font-medium">Origem do Produto / Parceiro de Mídia</Label>
                 <Select
                   value={form.parceiro_id || (form.parceiro_cnpj ? "outro" : "nenhum")}
                   onValueChange={(val) => {
@@ -902,23 +907,23 @@ export function ProdutoFormDialog({
                   }}
                 >
                   <SelectTrigger className="mt-1 h-9 text-xs bg-background">
-                    <SelectValue placeholder="Selecione a categoria ou veículo..." />
+                    <SelectValue placeholder="Selecione a origem ou parceiro de mídia..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="nenhum" className="font-semibold text-sky-700 dark:text-sky-400">
-                      ⭐ Soluções e Serviços Nexo In-House (Planejamento 360°, Produção OOH/DOOH, Projetos Especiais, PDV)
+                      🏢 Inventário Próprio Nexo (Pontos Próprios e Serviços In-House)
                     </SelectItem>
                     <SelectItem value="novo" className="font-bold text-primary">
-                      ✨ Cadastrar Novo Veículo Representado...
+                      ✨ Cadastrar Novo Parceiro de Mídia...
                     </SelectItem>
                     {parceirosCadastrados.map((p) => (
                       <SelectItem key={p.id} value={p.id!}>
-                        🤝 [Veículo Representado] {p.nome_fantasia || p.razao_social}{" "}
-                        {p.comissao_padrao_pct ? `(${p.comissao_padrao_pct}% remuneração)` : ""}
+                        🤝 [Parceiro] {p.nome_fantasia || p.razao_social}{" "}
+                        {p.comissao_padrao_pct ? `(${p.comissao_padrao_pct}% comissão)` : ""}
                       </SelectItem>
                     ))}
                     <SelectItem value="outro">
-                      ✍️ Outro Veículo Externo (Digitar CNPJ / Razão Social)
+                      ✍️ Outro Parceiro Externo (Digitar CNPJ / Razão Social)
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -1161,27 +1166,94 @@ export function ProdutoFormDialog({
                 </div>
               </div>
             </div>
-            <div>
-              <Label className={errorLabelClass(!!errors.valor_unit)}>Valor unitário (R$) *</Label>
-              <Input
-                data-field="valor_unit"
-                error={errors.valor_unit}
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.valor_unit ?? 0}
-                onChange={(e) => {
-                  set({ valor_unit: Number(e.target.value) });
-                  if (errors.valor_unit) {
-                    setErrors((prev) => {
-                      const copy = { ...prev };
-                      delete copy.valor_unit;
-                      return copy;
-                    });
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className={errorLabelClass(!!errors.valor_unit)}>Valor de Tabela (R$) *</Label>
+                <Input
+                  data-field="valor_unit"
+                  error={errors.valor_unit}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.valor_unit ?? 0}
+                  onChange={(e) => {
+                    set({ valor_unit: Number(e.target.value) });
+                    if (errors.valor_unit) {
+                      setErrors((prev) => {
+                        const copy = { ...prev };
+                        delete copy.valor_unit;
+                        return copy;
+                      });
+                    }
+                  }}
+                />
+                <FormFieldError message={errors.valor_unit} />
+              </div>
+
+              <div>
+                <Label>Valor Negociado Comercial (R$)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Ex: 9800.00"
+                  value={form.valor_negociado ?? ""}
+                  onChange={(e) =>
+                    set({ valor_negociado: e.target.value === "" ? null : Number(e.target.value) })
                   }
-                }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <Label>Dimensão (ex: 9x3m, 1920x1080)</Label>
+                <Input
+                  placeholder="Ex: 9x3m, 1920x1080 px"
+                  value={form.dimensao ?? ""}
+                  onChange={(e) => set({ dimensao: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label>Fluxo Estimado (Impactos / Mês)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Ex: 350000"
+                  value={form.fluxo_estimado ?? ""}
+                  onChange={(e) =>
+                    set({ fluxo_estimado: e.target.value === "" ? null : Number(e.target.value) })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label>Disponibilidade Operacional</Label>
+                <Select
+                  value={form.status_operacional ?? "disponivel"}
+                  onValueChange={(v) => set({ status_operacional: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disponivel">🟢 Disponível</SelectItem>
+                    <SelectItem value="reservado">🟡 Reservado</SelectItem>
+                    <SelectItem value="em_veiculacao">🔵 Em Veiculação</SelectItem>
+                    <SelectItem value="bloqueado_comercial">🔴 Bloqueado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Público-Alvo / Perfil Demográfico</Label>
+              <Input
+                placeholder="Ex: Classes A/B, 25-50 anos, perfil corporativo e decisores"
+                value={form.publico_alvo ?? ""}
+                onChange={(e) => set({ publico_alvo: e.target.value })}
               />
-              <FormFieldError message={errors.valor_unit} />
             </div>
             <div>
               <Label>Link do modelo do produto / Mídia Kit (opcional)</Label>
