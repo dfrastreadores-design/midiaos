@@ -227,50 +227,96 @@
   animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ============ Marketing Site (Midnight Indigo) ============ */
+/* ============ Marketing Site (Ultra-Tech Dark SaaS) ============ */
 .midia-site {
-  --m-bg: #0a0a1a;
-  --m-bg-2: #141432;
-  --m-bg-3: #1e1e5a;
-  --m-accent: #4f46e5;
-  --m-accent-2: #818cf8;
-  --m-text: #e5e7f5;
-  --m-muted: #9ca3c4;
-  --m-border: rgba(129, 140, 248, 0.15);
+  --m-bg: #0A0E17;
+  --m-bg-2: #0F172A;
+  --m-bg-3: #162036;
+  --m-accent-cyan: #00F2FE;
+  --m-accent-blue: #4FACFE;
+  --m-accent-violet: #8B5CF6;
+  --m-accent: #00F2FE;
+  --m-accent-2: #4FACFE;
+  --m-text: #F8FAFC;
+  --m-muted: #94A3B8;
+  --m-border: rgba(0, 242, 254, 0.15);
+  --m-border-glow: rgba(79, 172, 254, 0.35);
   background: var(--m-bg);
   color: var(--m-text);
   font-family: var(--font-sans);
+  scroll-behavior: smooth;
 }
 .midia-site h1,
 .midia-site h2,
 .midia-site h3,
 .midia-site h4 {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 .midia-grad-text {
-  background: linear-gradient(135deg, #818cf8 0%, #4f46e5 50%, #c4b5fd 100%);
+  background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 50%, #A855F7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.midia-grad-text-cyan {
+  background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 .midia-glow {
-  background: radial-gradient(circle at 50% 0%, rgba(79, 70, 229, 0.35), transparent 60%);
+  background: radial-gradient(circle at 50% 0%, rgba(0, 242, 254, 0.18), rgba(79, 172, 254, 0.08) 40%, transparent 70%);
+}
+.midia-glow-bottom {
+  background: radial-gradient(circle at 50% 100%, rgba(139, 92, 246, 0.18), rgba(0, 242, 254, 0.08) 40%, transparent 70%);
 }
 .midia-card {
-  background: linear-gradient(180deg, rgba(30, 30, 90, 0.4) 0%, rgba(20, 20, 50, 0.2) 100%);
-  border: 1px solid var(--m-border);
-  border-radius: 1rem;
-  backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 14, 23, 0.85) 100%);
+  border: 1px solid rgba(0, 242, 254, 0.14);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .midia-card:hover {
-  border-color: rgba(129, 140, 248, 0.35);
+  border-color: rgba(0, 242, 254, 0.38);
+  box-shadow: 0 20px 40px -15px rgba(0, 242, 254, 0.18), 0 0 20px rgba(79, 172, 254, 0.1);
+  transform: translateY(-2px);
+}
+.midia-card-glass {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 .midia-grid-bg {
   background-image:
-    linear-gradient(rgba(129, 140, 248, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(129, 140, 248, 0.06) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(rgba(0, 242, 254, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 254, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.tech-badge-glow {
+  box-shadow: 0 0 20px -3px rgba(0, 242, 254, 0.35);
+}
+.tech-btn-glow {
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.45);
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(0.5deg); }
+}
+.animate-float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.05); }
+}
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
 }
 
 /* ---- Responsive site guards: scale paddings and headings on small screens ---- */

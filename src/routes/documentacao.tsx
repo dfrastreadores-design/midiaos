@@ -1,3 +1,4 @@
+import React, { useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useTenantModulos } from "@/hooks/use-tenant-modulos";
@@ -5,6 +6,14 @@ import { useUserRoles } from "@/hooks/use-roles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SystemPresentationDeck } from "@/components/documentation/SystemPresentationDeck";
+import {
+  exportarApresentacaoSistemaPPTX,
+  exportarManualSistemaPDF,
+} from "@/lib/sistema-presentation.service";
 import {
   BookOpen,
   Mail,
@@ -19,913 +28,832 @@ import {
   FileSignature,
   Wallet,
   BarChart3,
-  FolderOpen,
   ShieldCheck,
   Settings,
   CheckSquare,
-  RefreshCw,
-  Bell,
   Search,
   Sparkles,
-  Megaphone,
-  Repeat,
   Target,
-  Tv,
   Calendar,
-  Paperclip,
-  History,
   Briefcase,
-  Rocket,
-  Lightbulb,
   GitBranch,
   Trash2,
-  UserCog,
   Compass,
   MapPin,
   Layers,
   FileCheck,
   Share2,
+  Download,
+  Presentation,
+  Bot,
+  Network,
+  Palette,
+  CheckCircle2,
+  HelpCircle,
+  ExternalLink,
+  ChevronRight,
+  TrendingUp,
+  Cpu,
+  Lock,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/documentacao")({
   component: DocumentacaoPage,
   head: () => ({
     meta: [
-      { title: "Documentação do Sistema | mídia.OS" },
+      { title: "Manual do Usuário & Apresentação do Sistema | Mídia.OS" },
       {
         name: "description",
         content:
-          "Documentação completa do mídia.OS: módulos, fluxos comerciais, papéis, permissões, integrações e suporte para emissoras, rádios e portais.",
+          "Manual completo e apresentação interativa do Mídia.OS 3.0: planejamento estratégico, copiloto comercial Gemini, catálogo blindado, PIs e financeiro.",
       },
     ],
   }),
 });
 
+type CategoriaModulo =
+  | "Todos"
+  | "Comercial"
+  | "Planejamento & IA"
+  | "Inventário"
+  | "Operação"
+  | "Financeiro"
+  | "Administração";
+
 type ModuloDoc = {
   icon: React.ComponentType<{ className?: string }>;
   titulo: string;
   rota: string;
+  categoria: CategoriaModulo;
   resumo: string;
   recursos: string[];
   passos?: string[];
   dica?: string;
-  /** Chave de módulo do plano. `null` = sempre disponível para o tenant. */
   modulo?: string | null;
+  novo30?: boolean;
 };
 
-// Rotas administrativas visíveis apenas para admin.
-const ADMIN_ONLY_ROTAS = new Set([
-  "/usuarios",
-  "/configuracoes",
-  "/relatorio-sincronizacao",
-  "/historico",
-]);
-
 const MODULOS: ModuloDoc[] = [
+  // 1. Core & IA v3.0
+  {
+    icon: Sparkles,
+    titulo: "Nova Campanha (Venda em 7 Passos)",
+    rota: "/nova-campanha",
+    categoria: "Comercial",
+    novo30: true,
+    resumo:
+      "Fluxo de vendas integrado em esteira ágil que guia o vendedor do cliente à proposta comercial e conversão direta em Pedido de Inserção sem trocar de tela.",
+    recursos: [
+      "Passo a passo com 7 etapas comerciais estruturadas",
+      "Seleção dinâmica de anunciante e metas orçamentárias",
+      "Escolha de praças prioritárias e pontos no mapa interativo",
+      "Controle contínuo do investimento e saldo do budget",
+      "Aplicação de templates executivos (OOH, DOOH, Corporativo)",
+      "Formalização instantânea com link seguro e conversão em PI",
+    ],
+    passos: [
+      "Acesse 'Criar Campanha' no menu lateral.",
+      "Selecione o Cliente, objetivo e orçamento da campanha.",
+      "Escolha as praças e adicione os pontos de mídia desejados.",
+      "Selecione o template visual e clique em 'Gerar Proposta' e 'Converter em PI'.",
+    ],
+    dica: "Reduz o tempo de emissão de propostas de 2 horas para menos de 5 minutos.",
+  },
+  {
+    icon: Bot,
+    titulo: "Copiloto Comercial IA (Gemini)",
+    rota: "/copiloto-comercial",
+    categoria: "Planejamento & IA",
+    novo30: true,
+    resumo:
+      "Assistente inteligente integrado que monta recomendações de mix de mídia, plano estratégico em 3 fases, defesas de investimento e argumentos de fechamento.",
+    recursos: [
+      "Análise multimodal de cliente, segmento, público, região e budget",
+      "Mix recomendado proporcional a 100% com pontos reais do catálogo",
+      "Tese estratégica com cronograma de sustentação em 3 fases",
+      "Defesa de investimento e respostas para quebrar objeções comerciais",
+      "Geração de argumentos persuasivos e gatilhos éticos de venda",
+      "Exportação direta para o Planejamento e Proposta Comercial",
+    ],
+    passos: [
+      "Informe os dados básicos da oportunidade ou briefing.",
+      "Clique em 'Gerar Análise Estratégica com Gemini'.",
+      "Revise os blocos de recomendação, defesa e argumentos.",
+      "Clique em 'Criar Proposta a partir do Copiloto' para formalizar.",
+    ],
+    dica: "A IA apenas recomenda e sugere — o executivo humano mantém 100% do controle da decisão final.",
+  },
+  {
+    icon: Compass,
+    titulo: "Planejamento Estratégico & 5 Pilares",
+    rota: "/planejamento",
+    categoria: "Planejamento & IA",
+    novo30: true,
+    resumo:
+      "Camada de inteligência estratégica baseada nos 5 pilares fundamentais da publicidade: Afinidade Territorial, Frequência, Visibilidade, Mobilidade e Ativação.",
+    recursos: [
+      "Parametrização ponderada dos 5 pilares para a marca",
+      "Seleção de pontos com amarração a produtos reais do inventário",
+      "Cálculo automático de saldo e alocação orçamentária monetária",
+      "Cadeia relacional íntegra: Campanha → Regiões → Pontos → Proposta",
+      "Apresentação estratégica estruturada com métricas de impacto",
+    ],
+    passos: [
+      "Crie um novo planejamento informando cliente e investimento previsto.",
+      "Ajuste os pesos dos pilares estratégicos da campanha.",
+      "Adicione os pontos de mídia alinhados a cada pilar.",
+      "Gere a proposta comercial com as lâminas de estratégia integradas.",
+    ],
+    dica: "Mostre os pilares ao cliente para justificar o valor e a técnica por trás da escolha dos pontos.",
+  },
+  {
+    icon: Network,
+    titulo: "Rede de Inventário (Próprio vs Representado)",
+    rota: "/rede-inventario",
+    categoria: "Inventário",
+    novo30: true,
+    resumo:
+      "Gestão profissional de veículos parceiros e representação comercial com blindagem do nome do fornecedor e controle contratual de comissões.",
+    recursos: [
+      "Classificação estrita entre pontos 'PROPRIO' e 'REPRESENTADO'",
+      "Segregação de Nome Interno (sigiloso) e Nome Comercial (público)",
+      "Controle de CNPJs, dados de contato, contratos e comissões (0% a 100%)",
+      "Vínculo e desvinculação em massa de produtos na rede",
+      "Blindagem contra desintermediação nas propostas e vitrines",
+    ],
+    passos: [
+      "Cadastre o parceiro ou veículo na Rede de Inventário.",
+      "Defina o Nome Interno operacional e o Nome Comercial para o anunciante.",
+      "Vincule os produtos do inventário à respectiva origem.",
+    ],
+    dica: "O cliente final recebe o nome comercial blindado, protegendo sua carteira de representação.",
+  },
+  {
+    icon: Palette,
+    titulo: "Identidade Visual Comercial & Marca d'Água",
+    rota: "/configuracoes?tab=branding",
+    categoria: "Administração",
+    novo30: true,
+    resumo:
+      "Blindagem automática de fotos de pontos de mídia com logotipo do inquilino e marca d'água comercial, prevenindo vazamentos de fornecedores.",
+    recursos: [
+      "Geração dual automática: imagem_original e imagem_comercial",
+      "Aplicação de marca d'água com posição e opacidade configuráveis",
+      "Exibição estrita da imagem blindada em propostas, vitrine e PPTX",
+      "Acesso restrito à imagem original apenas para usuários internos autorizados",
+    ],
+    passos: [
+      "Acesse Configurações → White Label & Branding.",
+      "Envie o logotipo e defina a posição da marca d'água.",
+      "Ao cadastrar ou atualizar fotos de pontos, a blindagem é aplicada instantaneamente.",
+    ],
+  },
   {
     icon: LayoutDashboard,
-    titulo: "Dashboard",
+    titulo: "Dashboard Executivo & Inteligência",
     rota: "/",
+    categoria: "Comercial",
+    novo30: true,
     resumo:
-      "Visão geral do desempenho comercial em tempo real: receita, pipeline, propostas em andamento, PIs ativas, tarefas e metas.",
+      "Painel executivo em tempo real com 8 indicadores vitais, evolução temporal de faturamento vs meta, mídias mais vendidas e top anunciantes.",
     recursos: [
-      "KPIs do mês (receita, propostas, PIs, taxa de conversão)",
-      "Gráfico de evolução mensal",
-      "Top clientes e top executivos",
-      "Atalhos para módulos principais e notificações",
+      "KPIs executivos: Receita, Faturamento vs Meta, Taxa de Conversão e PIs",
+      "Gráfico contínuo de receita e acompanhamento de metas",
+      "Share percentual das mídias mais comercializadas",
+      "Distribuição geográfica por praças e regiões mais utilizadas",
+      "Ranking de clientes principais por volume financeiro",
     ],
     passos: [
-      "Ao entrar no sistema, o Dashboard é exibido automaticamente.",
-      "Use os filtros de período no topo para comparar meses.",
-      "Clique em qualquer KPI para drill-down até o detalhe.",
-    ],
-    dica: "Configure metas em Metas para que o Dashboard exiba progresso e ranking automaticamente.",
-  },
-  {
-    icon: Compass,
-    titulo: "Centralizadores & Planejadores",
-    rota: "/centralizadores",
-    modulo: "centralizadores",
-    resumo:
-      "Hub estratégico de inteligência comercial: centralizador de campanhas integradas, planejador de grade e mapas de concorrência.",
-    recursos: [
-      "Planejamento tático de campanhas cross-media",
-      "Visão centralizada de veiculações e inventário",
-      "Métricas consolidadas de alcance e frequência",
-      "Exportação de cronogramas e grades",
-    ],
-    passos: [
-      "Acesse Centralizadores no menu lateral.",
-      "Crie ou selecione um planejamento para organizar os canais e datas.",
-      "Ajuste as cotas e gere o plano executivo integrado.",
-    ],
-    dica: "Utilize o centralizador para estruturar pacotes integrados com múltiplos veículos e parceiros.",
-  },
-  {
-    icon: Compass,
-    titulo: "Planejamento 360° & Radar DF",
-    rota: "/centralizadores",
-    resumo:
-      "Diagnóstico comercial estratégico em reuniões: análise de público (Classes A/B, B/C, C/D), dores comerciais e recomendação inteligente nos 5 pilares de mídia nas 35 RAs do DF.",
-    recursos: [
-      "Cobertura completa das 35 Regiões Administrativas do Distrito Federal",
-      "5 Pilares Integrados: OOH/DOOH, TV/Rádio, Digital, Influenciadores e Projetos Especiais",
-      "Radar de Expansão: sugestão de eixos troncais (EPTG, Estrutural, Eixo Rodoviário) para regiões sem inventário",
-      "Geração de propostas executivas integradas prontas para apresentação",
-    ],
-    passos: [
-      "Abra o diagnóstico comercial durante a reunião com o cliente.",
-      "Selecione a Região do Desafio, a classe social e o estilo de vida do público-alvo.",
-      "O sistema monta a cesta 360° com produtos próprios e parceiros recomendados.",
-    ],
-    dica: "Se a RA não tiver pontos cadastrados, o Radar indica rotas estruturantes de alto tráfego.",
-  },
-  {
-    icon: MapPin,
-    titulo: "Inventário & Geolocalização OOH/DOOH",
-    rota: "/parceiros",
-    resumo:
-      "Mapeamento georreferenciado de painéis de LED, outdoors e telas urbanas com coordenadas de satélite, sentidos da via e visualização Street View.",
-    recursos: [
-      "Latitude, Longitude e Link direto para Google Maps / Waze",
-      "Sentido da via (ex: Sentido Plano Piloto, Sentido Taguatinga)",
-      "Ponto de referência e especificações técnicas de resolução e inserções/dia",
-      "Visualização interativa no mapa com botão de Google Street View",
-      "Geocodificação automática ao importar Mídia Kits em PDF ou planilhas",
-    ],
-    passos: [
-      "Acesse Parceiros ou o módulo de Inventário.",
-      "Importe o Mídia Kit do parceiro para captura automática de coordenadas.",
-      "Consulte os pontos no mapa e utilize no construtor de propostas e PIs.",
-    ],
-    dica: "Use o Street View para mostrar ao anunciante a perspectiva exata do motorista na via.",
-  },
-  {
-    icon: Layers,
-    titulo: "White-label & Organizações",
-    rota: "/configuracoes",
-    resumo:
-      "Personalização dinâmica de marca, layout e termos para organizações e marcas próprias (ex: Nexo Mídia e Representação).",
-    recursos: [
-      "Logotipo, slogan, site e paleta de cores institucional por organização",
-      "Timbragem automática em propostas executivas (PDF e PPTX)",
-      "Isolamento de produtos próprios: 'PROPRIO' vs 'PARCEIRO'",
-      "Textos contratuais e termos comerciais exclusivos por organização",
-    ],
-    passos: [
-      "Administradores configuram a organização vinculada ao perfil.",
-      "O sistema aplica dinamicamente o branding e termos contratuais.",
-      "Produtos próprios só são visíveis para a organização proprietária.",
-    ],
-    dica: "Usuários da Nexo Mídia visualizam branding e soluções exclusivas automaticamente.",
-  },
-  {
-    icon: FileCheck,
-    titulo: "Contratos Comerciais",
-    rota: "/contratos",
-    modulo: "propostas",
-    resumo:
-      "Geração de minutas contratuais de veiculação e prestação de serviços com cláusulas customizáveis e vínculo direto aos PIs.",
-    recursos: [
-      "Minutas parametrizáveis com dados do anunciante e agência",
-      "Vinculação direta com propostas e Pedidos de Inserção",
-      "Disparo automático para a Central de Assinaturas Digitais",
-      "Controle de status (Minuta, Em Aprovação, Assinado, Vigente)",
+      "Acesse a página inicial para visualizar os dados atualizados.",
+      "Filtre por período (mês, trimestre ou ano).",
+      "Clique nos gráficos para explorar os detalhes de cada segmento.",
     ],
   },
-  {
-    icon: Share2,
-    titulo: "Social Media & Conteúdo",
-    rota: "/social-media",
-    resumo:
-      "Calendário editorial para planejamento, criação e aprovação de publicações e campanhas digitais para marcas e veículos.",
-    recursos: [
-      "Calendário visual de publicações (Stories, Reels, Feed, Carrossel)",
-      "Fluxo de redação, arte e aprovação do anunciante",
-      "Vinculação com pacotes de mídia digital de propostas comerciais",
-    ],
-  },
-  {
-    icon: FileSignature,
-    titulo: "Central de Assinaturas",
-    rota: "/assinaturas",
-    modulo: "assinaturas",
-    resumo:
-      "Central unificada para coleta de assinaturas digitais, aprovações de minutas de contratos e pedidos de inserção (PIs).",
-    recursos: [
-      "Envio de documentos para assinatura com link seguro",
-      "Assinatura na tela via touch/mouse com carimbo de data, IP e hash criptográfico",
-      "Status em tempo real (Pendente, Assinado, Recusado)",
-      "Download de certificado de conformidade digital",
-    ],
-    passos: [
-      "Acesse a Central de Assinaturas ou envie direto da tela de Contratos/PIs.",
-      "O signatário recebe o link e assina no celular ou computador.",
-      "O documento assinado é arquivado automaticamente com validade jurídica.",
-    ],
-    dica: "Todos os contratos gerados pelo sistema possuem gatilho direto para coleta de assinatura digital.",
-  },
-  {
-    icon: KanbanSquare,
-    titulo: "Funil CRM",
-    rota: "/crm",
-    modulo: "crm",
-    resumo:
-      "Gestão visual do funil comercial em formato Kanban — arraste oportunidades entre etapas e acompanhe o pipeline por executivo.",
-    recursos: [
-      "Etapas configuráveis (Prospecção → Negociação → Proposta → Fechado)",
-      "Drag & drop entre etapas",
-      "Filtros por executivo, agência, cliente e período",
-      "Histórico completo de movimentações",
-      "Conversão direta em proposta ou PI",
-    ],
-    passos: [
-      "Clique em ‘Nova oportunidade’ e selecione cliente/agência (ou cadastre on the fly).",
-      "Arraste o card para mover de etapa.",
-      "Clique no card para anexar tarefas, notas e converter em proposta.",
-    ],
-    dica: "Configure tarefas automáticas de follow-up por etapa para que nada esfrie no funil.",
-  },
-  {
-    icon: CheckSquare,
-    titulo: "Tarefas",
-    rota: "/tarefas",
-    resumo:
-      "Controle de tarefas comerciais com prazos, responsáveis, prioridades e vinculação a clientes, propostas e PIs.",
-    recursos: [
-      "Criação e atribuição manual ou automática",
-      "Alertas de vencimento por e-mail e notificação no app",
-      "Vinculação contextual (cliente, PI, proposta, oportunidade)",
-      "Visões: Hoje, Semana, Atrasadas",
-    ],
-    passos: [
-      "Acesse Tarefas e clique em ‘Nova tarefa’.",
-      "Defina responsável, prazo e vincule ao registro relacionado.",
-      "Marque como concluída ao finalizar — o histórico fica registrado.",
-    ],
-    dica: "Tarefas vencidas aparecem destacadas no Dashboard e no sino de notificações.",
-  },
-  {
-    icon: Users,
-    titulo: "Clientes",
-    rota: "/clientes",
-    resumo:
-      "Cadastro de clientes diretos com sincronização automática de dados cadastrais via CNPJ (base da Receita Federal).",
-    recursos: [
-      "Busca por CNPJ com preenchimento automático",
-      "Sincronização diária dos dados cadastrais",
-      "Histórico de propostas, PIs e faturamento por cliente",
-      "Importação em lote por planilha",
-      "Anexos (contratos, briefings históricos)",
-    ],
-    passos: [
-      "Clique em ‘Novo cliente’ e digite o CNPJ — os campos são preenchidos automaticamente.",
-      "Complemente com contatos, segmento e responsável comercial.",
-      "Visualize o histórico completo na aba lateral do cliente.",
-    ],
-    dica: "Use a importação em lote para migrar a base do sistema antigo em minutos.",
-  },
-  {
-    icon: Building2,
-    titulo: "Agências",
-    rota: "/agencias",
-    resumo:
-      "Cadastro de agências de publicidade, seus contatos, clientes representados e comissão padrão.",
-    recursos: [
-      "Sincronização de CNPJ",
-      "Vínculo de agência ↔ clientes representados",
-      "Comissão padrão configurável (sobrescrevível por proposta)",
-      "Histórico de mídia colocada por agência",
-    ],
-    passos: [
-      "Cadastre a agência pelo CNPJ.",
-      "Defina comissão padrão (ex: 20%).",
-      "Vincule os clientes representados — a comissão é aplicada automaticamente nas propostas.",
-    ],
-  },
-  {
-    icon: Tv,
-    titulo: "Veículos",
-    rota: "/veiculos",
-    resumo:
-      "Cadastro dos veículos do grupo (TV, rádio, portal, OOH/DOOH) — base para produtos, programação e relatórios.",
-    recursos: [
-      "Múltiplos veículos por conta",
-      "Tipo: TV, Rádio, Portal, OOH, DOOH",
-      "Vinculação com produtos e programação",
-      "Filtros nos relatórios por veículo",
-    ],
-    dica: "Grupos multi-praça podem rodar tudo em uma única conta com filtros por veículo.",
-  },
+
+  // 2. Módulos Tradicionais Consolidados
   {
     icon: Package,
-    titulo: "Produtos & Catálogo Comercial",
+    titulo: "Catálogo de Produtos & Inventário OOH",
     rota: "/produtos",
+    categoria: "Inventário",
     resumo:
-      "Catálogo de soluções de mídia: programas, painéis, faixas horárias, formatos, segundagens e isolamento de produtos próprios vs parceiros.",
+      "Cadastro e controle de todos os espaços de mídia: painéis de LED, outdoors, frontlights, rádio, TV e digital com coordenadas e galeria de fotos.",
     recursos: [
-      "Distinção inteligente: Soluções Próprias ('PROPRIO') vs Produtos de Parceiros ('PARCEIRO')",
-      "Preços por segundagem (15s, 30s, 45s, 60s) e diárias para DOOH",
-      "Descontos automáticos por faixa de volume e investimento",
-      "Isolamento seguro: produtos próprios aparecem apenas para a organização vinculada",
-      "Histórico de alterações de preço e versionamento",
+      "Atributos completos: formato, medidas, fluxo estimado e público-alvo",
+      "Geolocalização com coordenadas e link para Google Maps / Street View",
+      "Galeria de até 15 fotos de alta resolução com definição de foto principal",
+      "Visualização em Mapa Interativo, Cards Visuais ou Lista",
+      "Status operacional em tempo real (Disponível, Reservado, Ocupado)",
     ],
-    passos: [
-      "Cadastre o produto e selecione a origem (Próprio ou Parceiro).",
-      "Defina a tabela de preços por segundagem ou formato.",
-      "Configure descontos por volume para uso automático nas propostas.",
-    ],
-  },
-  {
-    icon: FileSignature,
-    titulo: "Propostas",
-    rota: "/propostas",
-    modulo: "propostas",
-    resumo:
-      "Construtor de propostas com calculadora de mídia, geração de PDF/PPTX da sua marca e assinatura eletrônica via link público.",
-    recursos: [
-      "Calculadora de preços por produto e período",
-      "Layouts customizáveis (logo, cores, capa)",
-      "Exportação PDF e PowerPoint",
-      "Assinatura eletrônica via link",
-      "Conversão em PI ao ser assinada",
-      "Versionamento de propostas",
-    ],
-    passos: [
-      "Crie a proposta vinculando cliente/agência.",
-      "Adicione produtos, períodos e segundagens — o cálculo é automático.",
-      "Gere o PDF/PPTX, envie por e-mail e acompanhe a abertura.",
-      "Ao ser assinada, a proposta vira PI automaticamente.",
-    ],
-    dica: "Personalize o layout em Configurações → Layout de Proposta para manter a identidade visual.",
   },
   {
     icon: FileText,
-    titulo: "Pedidos de Inserção (PI)",
+    titulo: "Propostas Comerciais & Apresentações",
+    rota: "/propostas",
+    categoria: "Comercial",
+    resumo:
+      "Gerador de propostas com calculadora de descontos, alçada de rentabilidade e exportação em PowerPoint (.PPTX) e PDF diagramado.",
+    recursos: [
+      "Cálculo automático de valor de tabela, descontos e valor negociado",
+      "Simulador de comissões de agência (BV) e margens líquidas",
+      "Exportação nativa de slides executivos em PPTX widescreen",
+      "Geração de link de assinatura eletrônica com validade jurídica",
+      "Conversão direta em Pedido de Inserção com um clique",
+    ],
+  },
+  {
+    icon: KanbanSquare,
+    titulo: "CRM & Funil de Oportunidades",
+    rota: "/crm",
+    categoria: "Comercial",
+    modulo: "crm",
+    resumo:
+      "Pipeline visual no formato Kanban para acompanhamento de leads comerciais, reuniões agendadas e propostas em negociação.",
+    recursos: [
+      "Colunas de funil personalizáveis com arrastar e soltar (drag & drop)",
+      "Controle de datas de retorno e histórico de interações",
+      "Vinculação direta com cadastros de clientes e agências",
+      "Alertas de estagnação de negócios no funil",
+    ],
+  },
+  {
+    icon: Users,
+    titulo: "Clientes & Agências de Publicidade",
+    rota: "/clientes",
+    categoria: "Comercial",
+    resumo:
+      "Base unificada de anunciantes e agências com sincronização automática de dados cadastrais e histórico de campanhas.",
+    recursos: [
+      "Sincronização diária de dados via CNPJ (Receita Federal)",
+      "Histórico de todos os PIs e propostas já veiculadas pelo cliente",
+      "Contatos comerciais, financeiros e executivo de conta responsável",
+    ],
+  },
+  {
+    icon: FileText,
+    titulo: "Pedidos de Inserção (PI) & OPEC",
     rota: "/pi",
+    categoria: "Operação",
     modulo: "pi",
     resumo:
-      "Emissão, aprovação, envio e arquivamento de PIs — com geração de PDF/Excel, fluxo de aprovação multi-nível e importação por IA.",
+      "Controle operacional integral de contratos de veiculação, esteira de aprovação de crédito, materiais de veiculação e checking.",
     recursos: [
-      "Geração automática a partir de proposta assinada",
-      "Importação de PI em PDF com extração via IA",
-      "Fluxo de aprovação (executivo → gerente → financeiro)",
-      "Cancelamento, substituição e re-emissão",
-      "Anexos (autorização, material) e envio por e-mail",
-      "Exportação PDF e Excel",
+      "Duplo fluxo: aprovação comercial e liberação técnica de OPEC",
+      "Importação inteligente de PIs em PDF com extração por IA",
+      "Geração automática de número sequencial único e histórico de revisões",
+      "Módulo de checking fotográfico com comprovantes de exibição",
     ],
-    passos: [
-      "PI pode ser criada manualmente, importada por PDF ou gerada a partir de proposta.",
-      "Após criada, segue o fluxo de aprovação configurado.",
-      "Aprovada, é enviada por e-mail ao cliente/agência e disponibilizada no Financeiro.",
-    ],
-    dica: "Use a importação por IA para migrar PIs históricas — basta arrastar o PDF.",
   },
   {
-    icon: Paperclip,
-    titulo: "PI — Anexos",
-    rota: "/pi-anexos",
-    modulo: "pi",
+    icon: FileSignature,
+    titulo: "Central de Assinaturas Eletrônicas",
+    rota: "/assinaturas",
+    categoria: "Operação",
+    modulo: "assinaturas",
     resumo:
-      "Repositório centralizado dos anexos vinculados às PIs (autorizações, materiais, contratos).",
+      "Plataforma nativa de formalização jurídica de propostas e contratos digitais sem necessidade de serviços externos.",
     recursos: [
-      "Upload de múltiplos arquivos por PI",
-      "Filtro por cliente, agência e período",
-      "Compartilhamento por link",
-    ],
-  },
-  {
-    icon: Briefcase,
-    titulo: "Briefings",
-    rota: "/briefings",
-    modulo: "briefings",
-    resumo:
-      "Recebimento de briefings de parceiros comerciais e agências, com formulário público e devolutiva ao solicitante.",
-    recursos: [
-      "Formulário público (link compartilhável)",
-      "Atribuição a executivo responsável",
-      "Anexos, comentários e status",
-      "Notificações ao solicitante a cada atualização",
-    ],
-    passos: [
-      "Compartilhe o link do formulário público com parceiros.",
-      "Quando um briefing chega, atribua a um executivo.",
-      "Use o briefing como base para gerar a proposta em um clique.",
-    ],
-  },
-  {
-    icon: Rocket,
-    titulo: "Projetos Especiais",
-    rota: "/projetos-especiais",
-    resumo:
-      "Gestão de ações especiais e patrocínios sob medida — diferente do fluxo padrão de mídia.",
-    recursos: [
-      "Cronograma com marcos",
-      "Equipe multidisciplinar",
-      "Orçamento e despesas",
-      "Status e entregáveis",
-    ],
-    dica: "Ideal para naming rights, eventos, patrocínios de programação e ações de merchandising.",
-  },
-  {
-    icon: Megaphone,
-    titulo: "Influenciadores",
-    rota: "/influenciadores",
-    modulo: "influenciadores",
-    resumo:
-      "Cadastro e gestão de influenciadores e criadores parceiros do veículo, com tabela de cachês.",
-    recursos: [
-      "Cadastro com nichos e métricas",
-      "Tabela de cachês por formato (story, post, reels)",
-      "Histórico de campanhas",
-      "Vinculação a propostas integradas",
-    ],
-  },
-  {
-    icon: Repeat,
-    titulo: "Permuta Comercial",
-    rota: "/permuta",
-    resumo: "Controle completo de operações de permuta — entrada, saída e saldo por parceiro.",
-    recursos: [
-      "Saldo de permuta por parceiro",
-      "Movimentações (entrada/saída)",
-      "Vinculação a PIs e propostas",
-      "Relatórios para apuração fiscal",
-    ],
-    dica: "O saldo é atualizado automaticamente sempre que uma PI de permuta é aprovada.",
-  },
-  {
-    icon: Calendar,
-    titulo: "Calendário",
-    rota: "/calendario",
-    resumo:
-      "Calendário compartilhado com tarefas, vencimentos de propostas, PIs e veiculações programadas.",
-    recursos: [
-      "Visões diária, semanal e mensal",
-      "Filtros por executivo e tipo de evento",
-      "Sincronização com Google Calendar (opcional)",
-    ],
-  },
-  {
-    icon: Target,
-    titulo: "Metas",
-    rota: "/metas",
-    resumo:
-      "Definição de metas individuais e por equipe, com ranking de executivos e acompanhamento em tempo real.",
-    recursos: [
-      "Metas mensais e trimestrais",
-      "Ranking de executivos",
-      "Histórico de batimento",
-      "Bonificação configurável",
-    ],
-    passos: [
-      "Defina a meta mensal por executivo ou equipe.",
-      "O sistema calcula o batimento em tempo real conforme PIs são aprovadas.",
-      "Acompanhe o ranking no Dashboard.",
+      "Assinatura por link público seguro via WhatsApp ou e-mail",
+      "Validade jurídica conforme MP 2.200-2/2001 e Código Civil",
+      "Registro de Hash SHA-256, endereço IP, carimbo temporal e User-Agent",
+      "Download do documento assinado com certificado de autenticidade",
     ],
   },
   {
     icon: Wallet,
-    titulo: "Financeiro",
+    titulo: "Faturamento & Conciliação Financeira",
     rota: "/financeiro",
+    categoria: "Financeiro",
     modulo: "financeiro",
     resumo:
-      "Faturamento, contas a receber, comissões de executivos e pagamentos vinculados aos PIs aprovados.",
+      "Gestão de contas a receber e pagar com precisão estrita de centavos, controle de repasses a veículos e relatórios de DRE.",
     recursos: [
-      "Geração de faturamento por PI",
-      "Comissões por executivo e agência",
-      "Contas a receber e status de pagamento",
-      "Exportação Excel para o ERP",
-      "Conciliação manual",
-    ],
-    passos: [
-      "PIs aprovadas alimentam o Financeiro automaticamente.",
-      "Marque pagamentos recebidos para conciliar.",
-      "Exporte para Excel para integrar com o ERP/contabilidade.",
-    ],
-  },
-  {
-    icon: BarChart3,
-    titulo: "Relatórios",
-    rota: "/relatorios",
-    modulo: "relatorios",
-    resumo: "Relatórios consolidados de vendas, performance, metas, mídia colocada e comparativos.",
-    recursos: [
-      "Filtros por período, executivo, agência, cliente, produto e veículo",
-      "Gráficos comparativos (mês a mês, ano a ano)",
-      "Exportação Excel, PDF e CSV",
-      "Relatórios salvos (favoritos)",
-    ],
-  },
-  {
-    icon: FolderOpen,
-    titulo: "Material de Apoio",
-    rota: "/materiais-apoio",
-    resumo:
-      "Repositório central de mídias kit, apresentações institucionais e documentos de apoio comercial.",
-    recursos: ["Upload com categorização", "Compartilhamento por link público", "Versionamento"],
-  },
-  {
-    icon: History,
-    titulo: "Histórico",
-    rota: "/historico",
-    resumo:
-      "Trilha de auditoria de todas as ações relevantes no sistema (criação, edição, exclusão, aprovações).",
-    recursos: [
-      "Quem fez, o quê e quando",
-      "Filtros por usuário, módulo e período",
-      "Indispensável para compliance",
+      "Geração de parcelas a partir do faturamento de PIs aprovados",
+      "Controle de pagamentos, inadimplência e conciliação bancária",
+      "Repasses automáticos para parceiros da rede de inventário",
+      "Visão demonstrativa de receitas, custos e margem operacional",
     ],
   },
   {
     icon: ShieldCheck,
-    titulo: "Usuários & Permissões",
+    titulo: "Governança, Permissões RBAC & Lixeira",
     rota: "/usuarios",
+    categoria: "Administração",
     resumo:
-      "Gestão de usuários, papéis (roles) e permissões granulares por módulo. Acesso exclusivo de Administrador.",
+      "Segurança corporativa em múltiplas camadas com isolamento estrito de inquilino (RLS) e política de zero perda de dados.",
     recursos: [
-      "Papéis: admin, executivo, parceiro_comercial",
-      "Permissões por módulo (role_permissions)",
-      "Convite por e-mail",
-      "Bloqueio e reativação de contas",
+      "Papéis nativos: Admin, Executivo, OPEC, Financeiro, Diretoria, Parceiro",
+      "Gatilho de auditoria integral (`auditoria_alteracoes`)",
+      "Lixeira automática com snapshot JSONB (`trash_items`) para restauração",
+      "Isolamento criptográfico por tenant em todas as tabelas",
     ],
-    dica: "Crie um perfil ‘executivo’ padrão e duplique para novos vendedores — permissões idênticas em segundos.",
-  },
-  {
-    icon: RefreshCw,
-    titulo: "Sincronização CNPJ",
-    rota: "/relatorio-sincronizacao",
-    resumo:
-      "Relatório de sincronização automática dos dados cadastrais (CNPJ) de clientes e agências.",
-    recursos: [
-      "Status da última sincronização",
-      "Job agendado via cron (diário)",
-      "Log de erros e tentativas",
-    ],
-  },
-  {
-    icon: Settings,
-    titulo: "Configurações",
-    rota: "/configuracoes",
-    resumo:
-      "Parametrizações gerais: layouts de PI e Proposta, templates de e-mail, integrações e identidade visual. Acesso exclusivo de Administrador.",
-    recursos: [
-      "Editor de layouts (PI e Proposta) com logo e cores",
-      "Templates de e-mail transacional",
-      "Configurações de mídia, descontos e comissão padrão",
-      "Conexões com Google, WhatsApp, OpenAI",
-      "Notificações de atualização do sistema",
-    ],
-    dica: "A logo configurada aqui aparece automaticamente em todas as PIs, propostas, e-mails e no topo do app.",
-  },
-  {
-    icon: FileSignature,
-    titulo: "Landing Pages",
-    rota: "/landing-pages",
-    resumo:
-      "Criação de páginas de captura (Landing Pages) integradas ao CRM para conversão de leads e vitrine de produtos.",
-    recursos: [
-      "Editor visual de seções (Hero, Features, Formulário)",
-      "Geração automática a partir de dados do cliente (Logo + Produtos)",
-      "Vitrine de produtos com botão de 'Consultar disponibilidade'",
-      "Captura de leads direto para o funil do CRM",
-      "Métricas de visualização e conversão",
-    ],
-    passos: [
-      "Crie uma nova landing e defina o título e a URL (slug).",
-      "Use 'Gerar do cliente' para criar uma página institucional em segundos.",
-      "Personalize as seções no editor e publique a página.",
-    ],
-    dica: "O link da landing page pode ser enviado diretamente para prospecção fria ou campanhas de tráfego pago.",
-  },
-  {
-    icon: Trash2,
-    titulo: "Lixeira do Sistema",
-    rota: "/lixeira",
-    resumo:
-      "Repositório de segurança para itens excluídos, permitindo a restauração de dados em até 45 dias.",
-    recursos: [
-      "Restauração de clientes, PIs, propostas e outros registros",
-      "Contagem regressiva para exclusão definitiva",
-      "Auditoria de quem excluiu e quando",
-      "Limpeza automática após 45 dias",
-    ],
-    dica: "Apenas administradores têm acesso à lixeira para restaurar ou expurgar itens.",
-  },
-  {
-    icon: UserCog,
-    titulo: "Troca de Perfil (Impersonate)",
-    rota: "/usuarios",
-    resumo:
-      "Recurso para administradores visualizarem e operarem o sistema como se fossem outro usuário.",
-    recursos: [
-      "Visualização fiel da interface do usuário selecionado",
-      "Identificação clara de 'Atuando como'",
-      "Logs de auditoria registram ações feitas pelo administrador em nome do usuário",
-    ],
-    dica: "Use este recurso para prestar suporte a executivos ou validar permissões configuradas.",
   },
 ];
 
 function DocumentacaoPage() {
   const { hasModulo, plano } = useTenantModulos();
   const { isAdmin } = useUserRoles();
-  const modulosVisiveis = MODULOS.filter((m) => {
-    if (ADMIN_ONLY_ROTAS.has(m.rota) && !isAdmin) return false;
-    if (!m.modulo) return true;
-    return hasModulo(m.modulo);
-  });
+  const [selectedCategoria, setSelectedCategoria] = useState<CategoriaModulo>("Todos");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isExportingPptx, setIsExportingPptx] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const modulosFiltrados = useMemo(() => {
+    return MODULOS.filter((m) => {
+      // Regra de módulos ativos no plano
+      if (m.modulo && !hasModulo(m.modulo)) return false;
+
+      // Filtro de categoria
+      if (selectedCategoria !== "Todos" && m.categoria !== selectedCategoria) {
+        return false;
+      }
+
+      // Filtro de busca
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchTitle = m.titulo.toLowerCase().includes(query);
+        const matchResumo = m.resumo.toLowerCase().includes(query);
+        const matchRecursos = m.recursos.some((r) => r.toLowerCase().includes(query));
+        const matchRota = m.rota.toLowerCase().includes(query);
+        return matchTitle || matchResumo || matchRecursos || matchRota;
+      }
+
+      return true;
+    });
+  }, [selectedCategoria, searchQuery, hasModulo]);
+
+  const handleDownloadPPTX = async () => {
+    try {
+      setIsExportingPptx(true);
+      toast.info("Compilando apresentação executiva em PowerPoint (.PPTX)...");
+      await exportarApresentacaoSistemaPPTX("Mídia.OS");
+      toast.success("Apresentação PPTX gerada e baixada com sucesso!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao gerar apresentação: " + (err?.message || "Tente novamente."));
+    } finally {
+      setIsExportingPptx(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setIsExportingPdf(true);
+      toast.info("Compilando Manual do Usuário diagramado em PDF...");
+      await exportarManualSistemaPDF("Mídia.OS");
+      toast.success("Manual do Usuário em PDF baixado com sucesso!");
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao gerar manual em PDF: " + (err?.message || "Tente novamente."));
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <AppShell>
-      <div className="container mx-auto max-w-5xl py-8 space-y-8">
-        {/* Cabeçalho */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <BookOpen className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold">Documentação do Sistema</h1>
-          </div>
-          <p className="text-muted-foreground">
-            Guia completo dos módulos, fluxos comerciais, papéis e permissões da plataforma
-            mídia.OS.
-          </p>
-        </div>
-
-        {/* Visão Geral */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Visão Geral</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm leading-relaxed">
-            <p>
-              O <strong>mídia.OS</strong> é a plataforma de gestão comercial para veículos de
-              comunicação — emissoras de TV, rádios, portais e mídia OOH/DOOH. Cobre todo o ciclo:
-              prospecção (CRM) → briefing → proposta → assinatura eletrônica → Pedido de Inserção
-              (PI) → faturamento → relatórios.
-            </p>
-            <p>
-              É multiusuário, multi-veículo, com controle granular de papéis e permissões. Possui
-              geração automática de PDFs/PPTX, importação de PI via IA, assinatura eletrônica,
-              sincronização diária de CNPJ e dashboards em tempo real.
-            </p>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Badge variant="secondary">Multi-veículo</Badge>
-              <Badge variant="secondary">Multi-tenant</Badge>
-              <Badge variant="secondary">SaaS na nuvem</Badge>
-              <Badge variant="secondary">IA integrada</Badge>
-              <Badge variant="secondary">Assinatura eletrônica</Badge>
-              <Badge variant="secondary">RBAC granular</Badge>
+      <div className="container mx-auto max-w-6xl py-6 sm:py-8 space-y-6 sm:space-y-8 px-4 sm:px-6">
+        {/* Banner Superior com Título e Ações Rápidas de Download */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b pb-6">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-sky-500 text-white font-bold px-2.5 py-0.5 text-xs">
+                Mídia.OS 3.0
+              </Badge>
+              <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
+                Homologado em Produção
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2.5">
+              <BookOpen className="h-7 w-7 text-primary shrink-0" />
+              Central de Treinamento & Manual do Usuário
+            </h1>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Apresentação interativa do sistema, playbooks operacionais de venda, manual completo de módulos e documentação para toda a equipe.
+            </p>
+          </div>
 
-        {/* Fluxo Principal */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GitBranch className="h-5 w-5 text-primary" />
-              Fluxo Comercial Principal
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ol className="space-y-3 text-sm list-decimal list-inside">
-              <li>
-                <strong>Prospecção (CRM)</strong> — oportunidade criada e movida entre etapas do
-                funil.
-              </li>
-              <li>
-                <strong>Briefing</strong> — parceiro/agência registra a demanda via formulário
-                público.
-              </li>
-              <li>
-                <strong>Proposta</strong> — montagem com calculadora de mídia + apresentação
-                PDF/PPTX.
-              </li>
-              <li>
-                <strong>Envio e assinatura</strong> — link de assinatura eletrônica com validade
-                jurídica.
-              </li>
-              <li>
-                <strong>Conversão em PI</strong> — proposta assinada vira PI automaticamente.
-              </li>
-              <li>
-                <strong>Aprovação interna</strong> — fluxo executivo → gerência → financeiro.
-              </li>
-              <li>
-                <strong>Faturamento e comissão</strong> — alimenta contas a receber e
-                comissionamento.
-              </li>
-              <li>
-                <strong>Relatórios e metas</strong> — consolidação de resultados e batimento.
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
-
-        {/* Módulos */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-semibold">Módulos do Sistema</h2>
-          <p className="text-sm text-muted-foreground">
-            {modulosVisiveis.length} de {MODULOS.length} módulos disponíveis
-            {plano?.nome ? ` no seu plano (${plano.nome})` : ""}.
-          </p>
-          <div className="grid gap-4 md:grid-cols-2">
-            {modulosVisiveis.map((m) => {
-              const Icon = m.icon;
-              return (
-                <Card key={m.rota} className="flex flex-col">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start gap-3">
-                      <div className="rounded-md bg-primary/10 p-2">
-                        <Icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-base">{m.titulo}</CardTitle>
-                        <code className="text-xs text-muted-foreground">{m.rota}</code>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm flex-1">
-                    <p className="text-muted-foreground">{m.resumo}</p>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                        Recursos
-                      </p>
-                      <ul className="list-disc list-inside space-y-1 text-xs">
-                        {m.recursos.map((r) => (
-                          <li key={r}>{r}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    {m.passos && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-                          Passo a passo
-                        </p>
-                        <ol className="list-decimal list-inside space-y-1 text-xs">
-                          {m.passos.map((p) => (
-                            <li key={p}>{p}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-                    {m.dica && (
-                      <div className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                        <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                        <p className="text-xs">
-                          <span className="font-semibold">Dica:</span> {m.dica}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+          {/* Botões de Ação para Download Imediato */}
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadPPTX}
+              disabled={isExportingPptx}
+              className="h-9 gap-1.5 border-orange-500/30 hover:bg-orange-500/10 text-orange-600 dark:text-orange-400 font-semibold"
+            >
+              <Presentation className="h-4 w-4" />
+              <span>Baixar Slides PPTX</span>
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleDownloadPDF}
+              disabled={isExportingPdf}
+              className="h-9 gap-1.5 font-semibold shadow-sm"
+            >
+              <Download className="h-4 w-4" />
+              <span>Baixar Manual PDF</span>
+            </Button>
           </div>
         </div>
 
-        {/* Permissões */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Papéis e Permissões</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-start gap-3">
-              <Badge variant="default">admin</Badge>
-              <p className="text-muted-foreground">
-                Acesso total — incluindo Usuários, Configurações, Sincronização CNPJ e gestão de
-                tenants.
-              </p>
-            </div>
-            <Separator />
-            <div className="flex items-start gap-3">
-              <Badge variant="secondary">executivo</Badge>
-              <p className="text-muted-foreground">
-                Acesso aos módulos comerciais (CRM, Clientes, Agências, PIs, Propostas, Briefings,
-                Relatórios) conforme permissões atribuídas pelo Administrador.
-              </p>
-            </div>
-            <Separator />
-            <div className="flex items-start gap-3">
-              <Badge variant="outline">parceiro_comercial</Badge>
-              <p className="text-muted-foreground">
-                Acesso restrito a Dashboard, Minha Conta e Briefings (solicitar proposta, receber
-                retorno).
-              </p>
-            </div>
-            <Separator />
-            <p className="text-xs text-muted-foreground">
-              Permissões adicionais por módulo podem ser refinadas em{" "}
-              <code>Usuários → Permissões</code>.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Abas Principais de Navegação */}
+        <Tabs defaultValue="apresentacao" className="space-y-6">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto p-1 bg-muted/80 rounded-xl gap-1">
+            <TabsTrigger value="apresentacao" className="py-2.5 gap-2 text-xs sm:text-sm font-semibold">
+              <Presentation className="h-4 w-4 text-primary" />
+              <span>Apresentação (Deck)</span>
+            </TabsTrigger>
+            <TabsTrigger value="manual" className="py-2.5 gap-2 text-xs sm:text-sm font-semibold">
+              <BookOpen className="h-4 w-4 text-primary" />
+              <span>Manual do Usuário</span>
+            </TabsTrigger>
+            <TabsTrigger value="playbooks" className="py-2.5 gap-2 text-xs sm:text-sm font-semibold">
+              <GitBranch className="h-4 w-4 text-primary" />
+              <span>Playbooks de Venda</span>
+            </TabsTrigger>
+            <TabsTrigger value="suporte" className="py-2.5 gap-2 text-xs sm:text-sm font-semibold">
+              <HelpCircle className="h-4 w-4 text-primary" />
+              <span>FAQ & Suporte</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Recursos Transversais */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recursos Transversais</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 text-sm">
-            <div className="flex items-start gap-3">
-              <Bell className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <p className="font-medium">Notificações em tempo real</p>
-                <p className="text-muted-foreground text-xs">
-                  Sino no topo com alertas (PI aprovado, tarefa vencendo, briefing novo, atualização
-                  do sistema).
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Search className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <p className="font-medium">Busca Global</p>
-                <p className="text-muted-foreground text-xs">
-                  Pesquisa unificada por clientes, agências, PIs e propostas.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Sparkles className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <p className="font-medium">IA integrada</p>
-                <p className="text-muted-foreground text-xs">
-                  Extração automática de dados ao importar PIs em PDF — sem retrabalho.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <RefreshCw className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <p className="font-medium">Sincronização CNPJ</p>
-                <p className="text-muted-foreground text-xs">
-                  Atualização automática dos dados cadastrais via job agendado diário.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <p className="font-medium">Segurança</p>
-                <p className="text-muted-foreground text-xs">
-                  Criptografia em trânsito e em repouso, backups diários, RBAC granular e auditoria
-                  completa.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <FileSignature className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <p className="font-medium">Assinatura eletrônica</p>
-                <p className="text-muted-foreground text-xs">
-                  Propostas assinadas via link público com validade jurídica (MP 2.200-2/2001).
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Suporte / Contato do Desenvolvedor */}
-        <Card className="border-primary/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Suporte e Desenvolvimento
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <p className="text-muted-foreground">
-              Para suporte técnico, dúvidas, sugestões de melhorias ou novas implementações, entre
-              em contato com o desenvolvedor responsável:
-            </p>
-            <div className="rounded-lg border bg-muted/40 p-4 space-y-2">
-              <div className="flex items-center gap-2 font-semibold">
-                <User className="h-4 w-4 text-primary" />
-                Rafael Rodrigo
-              </div>
+          {/* ABA 1: APRESENTAÇÃO EXECUTIVA (SLIDE DECK) */}
+          <TabsContent value="apresentacao" className="space-y-6">
+            <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-sm space-y-2">
               <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <a
-                  href="mailto:Rafaelrodrigo.as@gmail.com"
-                  className="text-primary hover:underline"
-                >
-                  Rafaelrodrigo.as@gmail.com
-                </a>
+                <Sparkles className="h-5 w-5 text-sky-500" />
+                <h2 className="text-lg font-bold text-foreground">
+                  Apresentação Executiva Interativa
+                </h2>
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <a href="tel:+5561984746857" className="text-primary hover:underline">
-                  (61) 98474-6857
-                </a>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Navegue pelos slides abaixo para conhecer a visão geral, diferenciais competitivos e a arquitetura completa da plataforma. Você também pode exportar em formato PowerPoint (.PPTX) para reuniões comerciais e alinhamentos de equipe.
+              </p>
+            </div>
+
+            <SystemPresentationDeck nomeEmpresa="Mídia.OS" />
+          </TabsContent>
+
+          {/* ABA 2: MANUAL COMPLETO DO USUÁRIO */}
+          <TabsContent value="manual" className="space-y-6">
+            {/* Filtros e Busca */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-card border rounded-xl p-4 shadow-sm">
+              {/* Barra de Pesquisa */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar módulo, recurso ou funcionalidade..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 text-xs sm:text-sm"
+                />
+              </div>
+
+              {/* Categorias */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                {(
+                  [
+                    "Todos",
+                    "Comercial",
+                    "Planejamento & IA",
+                    "Inventário",
+                    "Operação",
+                    "Financeiro",
+                    "Administração",
+                  ] as CategoriaModulo[]
+                ).map((cat) => (
+                  <Button
+                    key={cat}
+                    variant={selectedCategoria === cat ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategoria(cat)}
+                    className="h-8 text-xs shrink-0"
+                  >
+                    {cat}
+                  </Button>
+                ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <p className="text-center text-xs text-muted-foreground pt-4">
-          mídia.OS · Desenvolvido por Rafael Rodrigo · Documentação atualizada em{" "}
-          {new Date().toLocaleDateString("pt-BR")}
-        </p>
+            {/* Contador de Módulos */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <span>
+                Exibindo <strong>{modulosFiltrados.length}</strong> de {MODULOS.length} módulos disponíveis
+              </span>
+              {selectedCategoria !== "Todos" && (
+                <span className="font-medium text-primary">Filtrado por: {selectedCategoria}</span>
+              )}
+            </div>
+
+            {/* Grid de Módulos */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {modulosFiltrados.map((m) => {
+                const Icon = m.icon;
+                return (
+                  <Card key={m.rota} className="flex flex-col border hover:border-primary/40 transition-all shadow-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-xl bg-primary/10 p-2.5 text-primary shrink-0">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <CardTitle className="text-base font-bold text-foreground">
+                                {m.titulo}
+                              </CardTitle>
+                              {m.novo30 && (
+                                <Badge className="bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[10px] font-bold py-0">
+                                  NOVO 3.0
+                                </Badge>
+                              )}
+                            </div>
+                            <code className="text-[11px] text-muted-foreground font-mono">{m.rota}</code>
+                          </div>
+                        </div>
+
+                        <Badge variant="secondary" className="text-[10px] uppercase font-semibold shrink-0">
+                          {m.categoria}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-3.5 text-xs sm:text-sm flex-1 flex flex-col justify-between">
+                      <div className="space-y-3">
+                        <p className="text-muted-foreground leading-relaxed">{m.resumo}</p>
+
+                        <div>
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                            Principais Recursos:
+                          </p>
+                          <ul className="grid gap-1 text-xs text-foreground/80 list-disc list-inside">
+                            {m.recursos.map((r, i) => (
+                              <li key={i}>{r}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {m.passos && (
+                          <div className="p-2.5 rounded-lg bg-muted/40 border space-y-1">
+                            <p className="text-[11px] font-bold uppercase text-foreground">
+                              Como Operar:
+                            </p>
+                            <ol className="text-xs space-y-1 text-muted-foreground list-decimal list-inside">
+                              {m.passos.map((p, i) => (
+                                <li key={i}>{p}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                      </div>
+
+                      {m.dica && (
+                        <div className="pt-2 border-t text-xs text-sky-600 dark:text-sky-400 font-medium flex items-center gap-1.5">
+                          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                          <span>Dica: {m.dica}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          {/* ABA 3: PLAYBOOKS DE VENDA E OPERAÇÃO */}
+          <TabsContent value="playbooks" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Playbook 1 */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <Badge className="w-fit mb-2 bg-emerald-500 text-white text-[10px]">
+                    PLAYBOOK COMERCIAL #1
+                  </Badge>
+                  <CardTitle className="text-lg font-bold">
+                    Como Montar e Fechar uma Proposta em Menos de 5 Minutos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-xs sm:text-sm">
+                  <p className="text-muted-foreground">
+                    Utilize o fluxo unificado em <strong>/nova-campanha</strong> para acelerar a negociação:
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">1</span>
+                      <p><strong>Identifique o Cliente</strong>: Selecione o anunciante cadastrado ou informe dados rápidos de oportunidade.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">2</span>
+                      <p><strong>Defina o Budget</strong>: Insira o orçamento máximo planejado para que o sistema monitore o saldo em tempo real.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">3</span>
+                      <p><strong>Selecione os Pontos</strong>: Escolha no mapa interativo com base no fluxo e visibilidade das vias.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0">4</span>
+                      <p><strong>Envie para Assinatura</strong>: Gere o link de assinatura eletrônica e dispare via WhatsApp do decisor.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Playbook 2 */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <Badge className="w-fit mb-2 bg-indigo-500 text-white text-[10px]">
+                    PLAYBOOK ESTRATÉGICO #2
+                  </Badge>
+                  <CardTitle className="text-lg font-bold">
+                    Como Defender uma Campanha com o Copiloto Comercial Gemini
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-xs sm:text-sm">
+                  <p className="text-muted-foreground">
+                    Munir seu executivo de vendas com teses robustas e quebra de objeções em <strong>/copiloto-comercial</strong>:
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-indigo-500/10 text-indigo-600 font-bold text-xs flex items-center justify-center shrink-0">1</span>
+                      <p><strong>Informe o Cenário</strong>: Coloque o segmento do cliente, desafio comercial e o público prioritário.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-indigo-500/10 text-indigo-600 font-bold text-xs flex items-center justify-center shrink-0">2</span>
+                      <p><strong>Gere a Recomendação</strong>: A IA monta a proporção ideal do mix de mídia com base nos produtos reais do catálogo.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-indigo-500/10 text-indigo-600 font-bold text-xs flex items-center justify-center shrink-0">3</span>
+                      <p><strong>Copie os Argumentos</strong>: Utilize a seção de respostas a objeções na reunião presencial ou de videoconferência.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-indigo-500/10 text-indigo-600 font-bold text-xs flex items-center justify-center shrink-0">4</span>
+                      <p><strong>Apresente o Deck</strong>: Exporte o slide deck em PowerPoint (.PPTX) para uma apresentação executiva impactante.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Playbook 3 */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <Badge className="w-fit mb-2 bg-amber-500 text-white text-[10px]">
+                    PLAYBOOK DE INVENTÁRIO #3
+                  </Badge>
+                  <CardTitle className="text-lg font-bold">
+                    Blindagem Comercial de Representados & Vitrine Pública
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-xs sm:text-sm">
+                  <p className="text-muted-foreground">
+                    Proteja suas parcerias e evite a desintermediação de veículos parceiros em <strong>/rede-inventario</strong>:
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-amber-500/10 text-amber-600 font-bold text-xs flex items-center justify-center shrink-0">1</span>
+                      <p><strong>Cadastre a Origem</strong>: Registre a Razão Social real como 'Nome Interno' e o nome fantasia blindado como 'Nome Comercial'.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-amber-500/10 text-amber-600 font-bold text-xs flex items-center justify-center shrink-0">2</span>
+                      <p><strong>Ative a Marca d'Água</strong>: Em Configurações, habilite o branding para estampar seu logotipo nas fotos dos pontos.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-amber-500/10 text-amber-600 font-bold text-xs flex items-center justify-center shrink-0">3</span>
+                      <p><strong>Compartilhe a Vitrine</strong>: Envie o link <code>/site/inventario</code> para prospecção aberta sem expor os fornecedores.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Playbook 4 */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <Badge className="w-fit mb-2 bg-purple-500 text-white text-[10px]">
+                    PLAYBOOK OPERACIONAL #4
+                  </Badge>
+                  <CardTitle className="text-lg font-bold">
+                    Da Aprovação do PI ao Checking e Faturamento
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-xs sm:text-sm">
+                  <p className="text-muted-foreground">
+                    Segurança operacional de veiculação e repasses financeiros em <strong>/pi</strong> e <strong>/financeiro</strong>:
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-purple-500/10 text-purple-600 font-bold text-xs flex items-center justify-center shrink-0">1</span>
+                      <p><strong>Liberação de OPEC</strong>: O departamento operacional valida o material criativo e aloca as inserções no circuito.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-purple-500/10 text-purple-600 font-bold text-xs flex items-center justify-center shrink-0">2</span>
+                      <p><strong>Checking Fotográfico</strong>: A equipe de campo anexa fotos da veiculação comprovando a exibição para o anunciante.</p>
+                    </div>
+                    <div className="flex gap-2.5">
+                      <span className="h-5 w-5 rounded-full bg-purple-500/10 text-purple-600 font-bold text-xs flex items-center justify-center shrink-0">3</span>
+                      <p><strong>Faturamento Automático</strong>: O PI aprovado gera contas a receber e calcula os repasses de comissão dos parceiros.</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ABA 4: FAQ & SUPORTE */}
+          <TabsContent value="suporte" className="space-y-6">
+            <Card className="border shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <HelpCircle className="h-5 w-5 text-primary" />
+                  Perguntas Frequentes (FAQ)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-xs sm:text-sm">
+                <div className="space-y-1.5 border-b pb-3">
+                  <h3 className="font-bold text-foreground">
+                    1. A assinatura eletrônica tem validade jurídica comprovada?
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Sim. O Mídia.OS gera assinaturas eletrônicas com base na Medida Provisória nº 2.200-2/2001 e no Código Civil Brasileiro. Cada assinatura armazena o Hash criptográfico SHA-256 do documento, endereço IP, carimbo de tempo UTC e navegador do signatário.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 border-b pb-3">
+                  <h3 className="font-bold text-foreground">
+                    2. Como o sistema garante que meus dados não vazem para outros clientes (multi-tenant)?
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Todas as tabelas do banco de dados utilizam políticas de Row Level Security (RLS) a nível de banco no PostgreSQL do Supabase. Um inquilino nunca consegue visualizar, alterar ou excluir dados de outra organização, mesmo em caso de requisição direta.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 border-b pb-3">
+                  <h3 className="font-bold text-foreground">
+                    3. O que acontece se alguém excluir um cliente ou proposta por engano?
+                  </h3>
+                  <p className="text-muted-foreground">
+                    O sistema opera sob Política de Zero Perda de Dados. Todas as exclusões de negócio acionam a lixeira com snapshot JSONB integral (tabela <code>trash_items</code>). Um administrador pode restaurar o registro com todos os seus atributos a qualquer momento no módulo Lixeira.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 pb-1">
+                  <h3 className="font-bold text-foreground">
+                    4. Posso exportar as propostas para editar no PowerPoint (.PPTX)?
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Sim! O gerador de apresentações exporta arquivos nativos do PowerPoint em formato widescreen 16:9, permitindo que sua equipe ajuste textos, fontes ou imagens antes de reuniões com clientes.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Suporte Técnico / Contato do Desenvolvedor */}
+            <Card className="border-primary/40 bg-gradient-to-br from-card to-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <User className="h-5 w-5 text-primary" />
+                  Canais de Suporte & Atendimento ao Desenvolvedor
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-xs sm:text-sm">
+                <p className="text-muted-foreground">
+                  Precisa de treinamento dedicado, customizações adicionais ou suporte técnico prioritário? Entre em contato diretamente com o engenheiro responsável pela plataforma:
+                </p>
+
+                <div className="rounded-xl border bg-card p-4 grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 font-bold text-foreground">
+                      <User className="h-4 w-4 text-primary" />
+                      Rafael Rodrigo
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Engenheiro de Software & Arquiteto de Sistemas Mídia.OS
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <a
+                        href="mailto:rafaelrodrigo.as@gmail.com"
+                        className="text-primary hover:underline font-semibold"
+                      >
+                        rafaelrodrigo.as@gmail.com
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <a href="tel:+5561984746857" className="text-primary hover:underline font-semibold">
+                        (61) 98474-6857 (WhatsApp)
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppShell>
   );

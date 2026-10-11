@@ -151,7 +151,7 @@ const nav = [
   { to: "/configuracoes?tab=branding", label: "White Label", icon: Palette, modulo: null, categoria: "Administração" as const },
   { to: "/configuracoes", label: "Configurações", icon: Settings, modulo: null, categoria: "Administração" as const },
   { to: "/lixeira", label: "Lixeira", icon: Trash2, modulo: null, categoria: "Administração" as const },
-  { to: "/documentacao", label: "Manual do Sistema", icon: BookOpen, modulo: null, categoria: "Administração" as const },
+  { to: "/documentacao", label: "Apresentação & Manual", icon: BookOpen, modulo: null, categoria: "Administração" as const },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -710,6 +710,15 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                 Instalar
               </span>
             </Button>
+
+            <Link
+              to="/documentacao"
+              className="h-8 px-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 font-bold text-xs flex items-center gap-1.5 transition-colors shrink-0"
+              title="Acessar Apresentação do Sistema e Manual do Usuário"
+            >
+              <BookOpen className="size-3.5 text-sky-600 dark:text-sky-400" />
+              <span className="hidden xl:inline">Manual & Apresentação</span>
+            </Link>
 
             <NotificacoesBell />
             <div className="h-6 w-px bg-border/40 mx-1 hidden sm:block" />

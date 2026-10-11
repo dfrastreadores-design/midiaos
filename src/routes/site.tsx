@@ -4,33 +4,36 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 export const Route = createFileRoute("/site")({
   head: () => ({
     meta: [
-      { title: "mídia.OS — Sistema comercial para emissoras, rádios e portais" },
+      {
+        title: "MidiaOS — Gestão para Veículos de Comunicação e Representações Comerciais",
+      },
       {
         name: "description",
         content:
-          "Aumente as vendas do seu veículo de comunicação: CRM, propostas, PI digital, briefings, financeiro e dashboards em uma única plataforma. Implantação em 7 dias. Agende uma demonstração gratuita.",
+          "A solução definitiva para Veículos de Comunicação (TV, Rádio, Portais, OOH/DOOH) e Representações Comerciais de Mídia. Centralize reservas, emita PIs em segundos e automatize comissões.",
       },
       {
         property: "og:title",
-        content: "mídia.OS — Sistema comercial para veículos de comunicação",
+        content: "MidiaOS — Plataforma para Veículos de Mídia e Representações",
       },
       {
         property: "og:description",
         content:
-          "Do briefing à PI assinada: a plataforma que organiza e acelera as vendas de TVs, rádios, portais e mídia OOH/DOOH. Demonstração gratuita.",
+          "Elimine planilhas complexas e overbooking na grade. Propostas com assinatura digital e relatórios financeiros precisos.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://midiaos.online/site" },
+      { property: "og:url", content: "https://www.midiaos.online/site" },
       {
         name: "twitter:title",
-        content: "mídia.OS — Sistema comercial para veículos de comunicação",
+        content: "MidiaOS — Gestão Comercial de Mídia",
       },
       {
         name: "twitter:description",
-        content: "Do briefing à PI assinada — uma plataforma feita para quem vende mídia.",
+        content:
+          "Plataforma inteligente para Veículos de Comunicação e Empresas de Representação Comercial.",
       },
     ],
-    links: [{ rel: "canonical", href: "https://midiaos.online/site" }],
+    links: [{ rel: "canonical", href: "https://www.midiaos.online/site" }],
   }),
   component: SiteLayout,
 });
