@@ -23,6 +23,7 @@ import {
   AlertCircle,
   ExternalLink,
   Lock,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -33,6 +34,7 @@ import {
   desvincularProdutoOrigem,
   listarProdutosParaVinculo,
   excluirOrigemInventario,
+  sincronizarParceirosComRedeInventario,
   type OrigemInventario,
   type OrigemInventarioTipo,
   type OrigemInventarioStatus,
@@ -172,6 +174,20 @@ export function RedeInventarioManager() {
     },
   });
 
+  const mutationSincronizar = useMutation({
+    mutationFn: sincronizarParceirosComRedeInventario,
+    onSuccess: (res) => {
+      toast.success(
+        `Sincronização concluída! ${res.parceirosSincronizados} parceiro(s) atualizado(s) e ${res.produtosVinculados} produto(s) conectado(s).`
+      );
+      queryClient.invalidateQueries({ queryKey: ["rede-inventario"] });
+      queryClient.invalidateQueries({ queryKey: ["produtos"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Falha ao sincronizar parceiros.");
+    },
+  });
+
   // Métricas Consolidadas
   const totalOrigens = origens.length;
   const totalProprio = origens.filter((o) => o.tipo_origem === "PROPRIO").length;
@@ -286,13 +302,24 @@ export function RedeInventarioManager() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={() => mutationSincronizar.mutate()}
+            disabled={mutationSincronizar.isPending}
+            className="gap-2 shadow-sm border-purple-500/30 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-xs sm:text-sm"
+            title="Sincroniza todos os parceiros cadastrados na base para a Rede de Inventário"
+          >
+            <RefreshCw className={`w-4 h-4 text-purple-600 ${mutationSincronizar.isPending ? "animate-spin" : ""}`} />
+            {mutationSincronizar.isPending ? "Sincronizando Parceiros..." : "Sincronizar Parceiros"}
+          </Button>
+
           <Button
             onClick={() => {
               limparFormulario();
               setModalFormOpen(true);
             }}
-            className="gap-2 shadow-sm"
+            className="gap-2 shadow-sm text-xs sm:text-sm"
           >
             <Plus className="w-4 h-4" />
             Nova Origem de Inventário
@@ -553,6 +580,14 @@ export function RedeInventarioManager() {
                   </Button>
 
                   <div className="flex items-center gap-1">
+                    <a
+                      href={isProprio ? "/produtos" : `/produtos?parceiro_id=${origem.id}&parceiro=${encodeURIComponent(origem.nome_comercial)}`}
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-primary hover:bg-muted/60 transition-colors"
+                      title="Abrir produtos no catálogo"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+
                     <Button
                       variant="ghost"
                       size="icon"
@@ -795,17 +830,27 @@ export function RedeInventarioManager() {
                 </p>
               </div>
 
-              <Button
-                size="sm"
-                className="gap-1.5"
-                onClick={() => {
-                  setProdutosSelecionadosParaVincular([]);
-                  setModalAdicionarProdutosOpen(true);
-                }}
-              >
-                <Plus className="w-4 h-4" />
-                Vincular Produtos do Catálogo
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href={origemSelecionadaParaProdutos?.tipo_origem === "PROPRIO" ? "/produtos" : `/produtos?parceiro_id=${origemSelecionadaParaProdutos?.id}&parceiro=${encodeURIComponent(origemSelecionadaParaProdutos?.nome_comercial || "")}`}
+                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium border border-primary/20 px-2.5 py-1.5 rounded-md hover:bg-primary/5 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Ver no Catálogo
+                </a>
+
+                <Button
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    setProdutosSelecionadosParaVincular([]);
+                    setModalAdicionarProdutosOpen(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  Vincular Produtos do Catálogo
+                </Button>
+              </div>
             </div>
 
             {loadingDetalhe ? (

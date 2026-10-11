@@ -548,6 +548,7 @@ export function ProdutoFormDialog({
       return;
     }
     setErrors({});
+    const isParceiro = Boolean(form.parceiro_id || form.parceiro_cnpj?.trim() || form.parceiro_nome?.trim());
     const payload = {
       ...form,
       duracao_segundos: Number(form.duracao_segundos) || 0,
@@ -561,6 +562,9 @@ export function ProdutoFormDialog({
       formato_impresso: form.formato_impresso || null,
       dimensoes_cm: form.dimensoes_cm || null,
       impactos_estimados: form.impactos_estimados != null ? Number(form.impactos_estimados) : null,
+      rede_inventario_id: form.rede_inventario_id || form.parceiro_id || null,
+      tipo_origem_inventario: isParceiro ? "REPRESENTADO" : (form.tipo_origem_inventario || "PROPRIO"),
+      origem_produto: isParceiro ? "PARCEIRO" : "PROPRIO",
     };
     saveMut.mutate(payload);
   };
@@ -782,11 +786,14 @@ export function ProdutoFormDialog({
                           onClick={() => {
                             set({
                               parceiro_id: p.id,
+                              rede_inventario_id: p.id,
+                              tipo_origem_inventario: "REPRESENTADO",
+                              origem_produto: "PARCEIRO",
                               parceiro_cnpj: p.cnpj || null,
                               parceiro_nome: p.nome_fantasia || p.razao_social,
                               comissao_inquilino_pct: p.comissao_padrao_pct ?? 20.0,
                             });
-                            toast.info(`Parceiro "${p.nome_fantasia || p.razao_social}" vinculado ao produto!`);
+                            toast.info(`Parceiro "${p.nome_fantasia || p.razao_social}" vinculado à Rede de Inventário!`);
                           }}
                           className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold hover:bg-purple-200 transition-colors cursor-pointer border border-purple-200 dark:border-purple-800 text-[10px]"
                         >
@@ -846,29 +853,29 @@ export function ProdutoFormDialog({
                 <div>
                   <Label className="text-sm font-semibold flex items-center gap-1.5">
                     <Handshake className="size-4 text-purple-600" />
-                    Origem do Inventário: Parceiro de Mídia vs. Próprio Nexo
+                    Origem do Inventário: Rede de Inventário (Próprio vs. Parceiro)
                   </Label>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    A Nexo comercializa produtos fornecidos por parceiros de mídia homologados e seu portfólio próprio.
+                    Defina se o produto pertence ao inventário próprio ou à rede de parceiros representados.
                   </p>
                 </div>
                 {form.parceiro_id || form.parceiro_cnpj?.trim() ? (
                   <Badge className="bg-purple-600 hover:bg-purple-700 text-white gap-1 text-[11px] py-0.5">
-                    🤝 Inventário de Parceiro (Representação)
+                    🤝 Rede de Inventário (Parceiro Representado)
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
                     className="border-sky-500/40 text-sky-800 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 text-[11px] py-0.5 font-bold"
                   >
-                    🏢 Inventário Próprio Nexo
+                    🏢 Inventário Próprio
                   </Badge>
                 )}
               </div>
 
               {/* Seletor rápido de Categoria e Parceiros Cadastrados */}
               <div>
-                <Label className="text-xs font-medium">Origem do Produto / Parceiro de Mídia</Label>
+                <Label className="text-xs font-medium">Origem do Produto / Parceiro da Rede</Label>
                 <Select
                   value={form.parceiro_id || (form.parceiro_cnpj ? "outro" : "nenhum")}
                   onValueChange={(val) => {
@@ -882,9 +889,16 @@ export function ProdutoFormDialog({
                         parceiro_cnpj: null,
                         parceiro_nome: null,
                         comissao_inquilino_pct: null,
+                        rede_inventario_id: null,
+                        tipo_origem_inventario: "PROPRIO",
+                        origem_produto: "PROPRIO",
                       });
                     } else if (val === "outro") {
-                      set({ parceiro_id: null });
+                      set({
+                        parceiro_id: null,
+                        tipo_origem_inventario: "REPRESENTADO",
+                        origem_produto: "PARCEIRO",
+                      });
                     } else {
                       const sel = parceirosCadastrados.find((p) => p.id === val);
                       if (sel) {
@@ -897,6 +911,9 @@ export function ProdutoFormDialog({
 
                         set({
                           parceiro_id: sel.id,
+                          rede_inventario_id: sel.id,
+                          tipo_origem_inventario: "REPRESENTADO",
+                          origem_produto: "PARCEIRO",
                           parceiro_cnpj: sel.cnpj || null,
                           parceiro_nome: sel.nome_fantasia || sel.razao_social,
                           comissao_inquilino_pct: sel.comissao_padrao_pct ?? 20.0,
@@ -911,7 +928,7 @@ export function ProdutoFormDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="nenhum" className="font-semibold text-sky-700 dark:text-sky-400">
-                      🏢 Inventário Próprio Nexo (Pontos Próprios e Serviços In-House)
+                      🏢 Inventário Próprio (Mídia e Serviços Próprios da Empresa)
                     </SelectItem>
                     <SelectItem value="novo" className="font-bold text-primary">
                       ✨ Cadastrar Novo Parceiro de Mídia...
