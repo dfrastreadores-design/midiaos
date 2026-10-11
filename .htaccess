@@ -18,3 +18,10 @@ SetEnv VITE_SUPABASE_PUBLISHABLE_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc
   AddType text/css .css
 </IfModule>
 
+# Redirecionamento canônico: www para sem www (SSL seguro)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP_HOST} ^www\.midiaos\.online$ [NC]
+  RewriteRule ^(.*)$ https://midiaos.online/$1 [L,R=301]
+</IfModule>
+

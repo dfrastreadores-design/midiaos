@@ -10,6 +10,8 @@ import {
   Layers,
   Sparkles,
   ArrowRight,
+  Target,
+  Building2,
   Lock,
   Zap,
 } from "lucide-react";
@@ -49,6 +51,36 @@ export function ModulesTechSection() {
     },
     {
       badge: "MÓDULO 03",
+      icon: Target,
+      title: "Gestão do Time Comercial & Metas",
+      desc: "Liderança de vendas com metas por executivo, ranking gamificado em tempo real e controle de alçadas de desconto.",
+      itens: [
+        "Metas individuais e da equipe com termômetro de atingimento",
+        "Ranking de executivos comerciais e previsão de fechamento (forecast)",
+        "Alçadas de aprovação da diretoria para descontos especiais",
+        "Distribuição inteligente de carteiras e tarefas de follow-up",
+      ],
+      cor: "from-amber-400 to-orange-500",
+      accent: "text-amber-400",
+      border: "border-amber-500/30",
+    },
+    {
+      badge: "MÓDULO 04",
+      icon: Building2,
+      title: "Portal para Agências de Publicidade",
+      desc: "Canal dedicado para agências enviarem briefings, aprovarem PIs, auditarem checking fotográfico e acompanharem o BV.",
+      itens: [
+        "Captura de briefings comerciais estruturados diretamente da agência",
+        "Aprovação e assinatura eletrônica em 1 toque sem papel",
+        "Painel de checking fotográfico e comprovação com geolocalização",
+        "Extrato transparente de Bonificação de Volume (BV) e repasses",
+      ],
+      cor: "from-emerald-400 to-cyan-500",
+      accent: "text-emerald-400",
+      border: "border-emerald-500/30",
+    },
+    {
+      badge: "MÓDULO 05",
       icon: DollarSign,
       title: "Módulo Financeiro & Repasses",
       desc: "Conciliação rápida de faturamento, separação de receita bruta/líquida, BV de agência e extrato transparente para representantes.",
@@ -56,16 +88,16 @@ export function ModulesTechSection() {
         "Cálculo automático de comissões por executivo comercial e meta",
         "Extrato consolidado de repasses para emissoras e veículos parceiros",
         "Dedução automática de BV e alíquotas fiscais configuráveis",
-        "Previsibilidade de fluxo de caixa e relatórios de inadimplência",
+        "Previsibilidade de fluxo de caixa e relatórios de faturamento",
       ],
       cor: "from-purple-400 to-pink-500",
       accent: "text-purple-400",
       border: "border-purple-500/30",
     },
     {
-      badge: "MÓDULO 04",
+      badge: "MÓDULO 06",
       icon: ShieldCheck,
-      title: "Segurança & Nuvem Corporativa",
+      title: "Segurança, Alçadas & Nuvem",
       desc: "Acesso de qualquer lugar, múltiplos níveis de permissão para equipe de vendas e infraestrutura com criptografia avançada.",
       itens: [
         "Níveis de acesso restritos: Diretoria, OPEC, Gerência e Executivo",
@@ -73,9 +105,9 @@ export function ModulesTechSection() {
         "Backups automáticos diários em servidores de alta disponibilidade",
         "Conformidade total com a Lei Geral de Proteção de Dados (LGPD)",
       ],
-      cor: "from-emerald-400 to-cyan-500",
-      accent: "text-emerald-400",
-      border: "border-emerald-500/30",
+      cor: "from-indigo-400 to-cyan-400",
+      accent: "text-indigo-400",
+      border: "border-indigo-500/30",
     },
   ];
 
@@ -93,7 +125,7 @@ export function ModulesTechSection() {
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest">
-            <Cpu className="size-3" /> ARQUITETURA MODULAR
+            <Cpu className="size-3" /> ARQUITETURA MODULAR COMPLETA
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
             Módulos tecnológicos integrados em um{" "}
@@ -103,40 +135,42 @@ export function ModulesTechSection() {
           </h2>
           <p className="text-slate-400 text-base sm:text-lg">
             Cada módulo do MidiaOS foi projetado para dialogar perfeitamente com os demais,
-            eliminando silos de dados entre Comercial, OPEC e Financeiro.
+            conectando Veículos, Agências, Representações e a Liderança Comercial.
           </p>
         </div>
 
-        {/* Grid dos 4 Módulos Principais */}
-        <div className="grid md:grid-cols-2 gap-8">
+        {/* Grid dos 6 Módulos Principais */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modulos.map((mod, i) => (
             <div
               key={i}
-              className={`midia-card p-8 space-y-6 relative overflow-hidden group hover:${mod.border}`}
+              className={`midia-card p-7 space-y-5 relative overflow-hidden group hover:${mod.border} flex flex-col justify-between`}
             >
-              <div className="flex items-center justify-between">
-                <div
-                  className={`size-14 rounded-2xl bg-gradient-to-br ${mod.cor} p-[1.5px] shadow-lg`}
-                >
-                  <div className="w-full h-full rounded-[14px] bg-[#0A0E17] flex items-center justify-center">
-                    <mod.icon className={`size-7 ${mod.accent}`} />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div
+                    className={`size-12 rounded-2xl bg-gradient-to-br ${mod.cor} p-[1.5px] shadow-lg`}
+                  >
+                    <div className="w-full h-full rounded-[14px] bg-[#0A0E17] flex items-center justify-center">
+                      <mod.icon className={`size-6 ${mod.accent}`} />
+                    </div>
                   </div>
+                  <span className="font-mono text-[10px] text-slate-500 font-bold tracking-widest">
+                    {mod.badge}
+                  </span>
                 </div>
-                <span className="font-mono text-xs text-slate-500 font-bold tracking-widest">
-                  {mod.badge}
-                </span>
+
+                <div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">{mod.title}</h3>
+                  <p className="mt-2 text-xs text-slate-400 leading-relaxed">{mod.desc}</p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-2xl font-bold text-white tracking-tight">{mod.title}</h3>
-                <p className="mt-2 text-sm text-slate-400 leading-relaxed">{mod.desc}</p>
-              </div>
-
-              <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
+              <div className="pt-3 border-t border-slate-800/80 space-y-2">
                 {mod.itens.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-300">
-                    <CheckCircle2 className={`size-4 ${mod.accent} shrink-0 mt-0.5`} />
-                    <span className="leading-snug">{item}</span>
+                  <div key={idx} className="flex items-start gap-2 text-xs text-slate-300">
+                    <CheckCircle2 className={`size-3.5 ${mod.accent} shrink-0 mt-0.5`} />
+                    <span className="leading-snug text-[11px]">{item}</span>
                   </div>
                 ))}
               </div>
@@ -153,17 +187,14 @@ export function ModulesTechSection() {
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h4 className="text-base font-bold text-white">
-                  Copiloto Comercial &amp; Extração por IA
-                </h4>
+                <h4 className="text-base font-bold text-white">Copiloto Comercial &amp; Extração por IA</h4>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono font-bold">
                   NOVIDADE
                 </span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Recebeu uma PI ou briefing da agência em PDF? A Inteligência Artificial do MidiaOS
-                extrai anunciante, produtos, períodos e valores automaticamente sem digitação
-                manual.
+                extrai anunciante, produtos, períodos e valores automaticamente sem digitação manual.
               </p>
             </div>
           </div>
@@ -175,15 +206,13 @@ export function ModulesTechSection() {
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h4 className="text-base font-bold text-white">
-                  Aplicativo Nativo Android &amp; iOS
-                </h4>
+                <h4 className="text-base font-bold text-white">Aplicativo Nativo Android &amp; iOS</h4>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold">
                   MULTIDISPOSITIVO
                 </span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Diretores e executivos acompanham metas, consultam a grade e aprovam PIs de qualquer
+                Diretores, executivos e agências acompanham metas, consultam a grade e aprovam PIs de qualquer
                 lugar direto pelo smartphone com notificações push instantâneas.
               </p>
             </div>

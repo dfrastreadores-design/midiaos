@@ -18,6 +18,14 @@ export function FaqSection() {
       a: "A implantação padrão é concluída em até 7 dias úteis. Nossa equipe conduz sessões práticas de treinamento ao vivo para sua equipe comercial, OPEC e setor financeiro, garantindo adesão imediata de todos os usuários.",
     },
     {
+      q: "O MidiaOS faz a gestão completa do time comercial e metas de vendedores?",
+      a: "Sim, de ponta a ponta! O sistema conta com painel de metas individuais e coletivas, ranking gamificado em tempo real, controle estrito de carteiras de clientes e alçadas de desconto progressivas (gerência e diretoria). Tudo integrado automaticamente ao cálculo de comissões por faturamento e liquidação.",
+    },
+    {
+      q: "Como as agências de publicidade utilizam o MidiaOS?",
+      a: "As agências de publicidade parceiras podem receber orçamentos digitais interativos, assinar Pedidos de Inserção (PIs) com 1 clique e acompanhar em tempo real o checking fotográfico/veiculação de suas campanhas, além de contar com conciliação clara e automática de bonificação de volume (BV).",
+    },
+    {
       q: "Como o MidiaOS calcula comissões e repasses para Representações Comerciais?",
       a: "O módulo de repasses permite cadastrar as alíquotas contratuais de cada veículo representado, deduções de BV de agência e impostos. O sistema gera automaticamente o extrato de repasse líquido para a emissora e o extrato de comissão dos executivos comerciais, eliminando horas de conferência em planilhas.",
     },

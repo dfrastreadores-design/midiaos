@@ -17,11 +17,13 @@ import {
 import { useState } from "react";
 
 const navItems = [
-  { href: "/site#veiculos", label: "Soluções para Veículos", icon: Tv },
-  { href: "/site#representacoes", label: "Para Representações", icon: Users2 },
+  { href: "/site#veiculos", label: "Veículos de Mídia", icon: Tv },
+  { href: "/site#representacoes", label: "Representações", icon: Users2 },
+  { href: "/site#agencias", label: "Para Agências", icon: Building2 },
+  { href: "/site#comercial", label: "Gestão do Time", icon: TrendingUp },
   { href: "/site#recursos", label: "Recursos", icon: Cpu },
   { href: "/site#planos", label: "Planos", icon: Layers },
-  { href: "/site#faq", label: "Dúvidas (FAQ)", icon: ShieldCheck },
+  { href: "/site#faq", label: "Dúvidas", icon: ShieldCheck },
 ];
 
 export function SiteHeader() {

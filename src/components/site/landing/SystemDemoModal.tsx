@@ -11,18 +11,17 @@ import {
   Calendar,
   FileSignature,
   DollarSign,
-  Tv,
-  Radio,
-  Globe,
   Sparkles,
   CheckCircle2,
   ArrowRight,
   TrendingUp,
   Shield,
   Layers,
-  Clock,
-  Building2,
+  Target,
+  Trophy,
   Users,
+  Building2,
+  Award,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -32,9 +31,9 @@ interface SystemDemoModalProps {
 }
 
 export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "grade" | "pi" | "repasses">(
-    "dashboard",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "grade" | "pi" | "comercial" | "repasses"
+  >("dashboard");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -50,7 +49,7 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
                 Experimente a interface de alta performance
               </DialogTitle>
               <DialogDescription className="text-xs sm:text-sm text-slate-400 mt-1">
-                Conheça os 4 núcleos do sistema operacional de veículos e representações de mídia.
+                Conheça a plataforma completa para Veículos, Representações, Agências e Gestão de Vendas.
               </DialogDescription>
             </div>
 
@@ -69,7 +68,8 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
             {[
               { id: "dashboard", label: "Dashboard Executivo", icon: BarChart3 },
               { id: "grade", label: "Mapa de Grade & Ocupação", icon: Calendar },
-              { id: "pi", label: "Emissor de P.I. Digital", icon: FileSignature },
+              { id: "comercial", label: "Gestão do Time & Metas", icon: Target },
+              { id: "pi", label: "Emissor de P.I. & Agência", icon: FileSignature },
               { id: "repasses", label: "Repasses & Comissões", icon: DollarSign },
             ].map((tab) => {
               const active = activeTab === tab.id;
@@ -77,7 +77,7 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     active
                       ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_15px_rgba(0,242,254,0.2)]"
                       : "text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent"
@@ -93,9 +93,9 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
 
         {/* Conteúdo Dinâmico do Modal */}
         <div className="p-6 bg-[#070b12] min-h-[380px] max-h-[70vh] overflow-y-auto">
+          {/* TAB 1: DASHBOARD EXECUTIVO */}
           {activeTab === "dashboard" && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              {/* KPIs de Destaque */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
                   <div className="text-[10px] uppercase font-mono tracking-wider text-slate-400">
@@ -112,9 +112,7 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
                     PIs Ativas na Grade
                   </div>
                   <div className="text-xl font-bold text-cyan-400 mt-1">68 Campanhas</div>
-                  <div className="text-[11px] text-cyan-300/80 mt-0.5">
-                    100% assinadas via token
-                  </div>
+                  <div className="text-[11px] text-cyan-300/80 mt-0.5">100% assinadas via token</div>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
@@ -134,15 +132,10 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
                 </div>
               </div>
 
-              {/* Simulação Gráfica do Pipeline */}
               <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-300">
-                  <span className="font-semibold">
-                    Pipeline de Propostas Comerciais por Estágio
-                  </span>
-                  <span className="text-cyan-400 font-mono text-[11px]">
-                    Atualização em Tempo Real
-                  </span>
+                  <span className="font-semibold">Pipeline de Propostas Comerciais por Estágio</span>
+                  <span className="text-cyan-400 font-mono text-[11px]">Atualização em Tempo Real</span>
                 </div>
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">
                   <div className="p-2.5 rounded-lg bg-blue-950/40 border border-blue-500/20">
@@ -170,15 +163,15 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
             </div>
           )}
 
+          {/* TAB 2: GRADE & OCUPAÇÃO */}
           {activeTab === "grade" && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/30 flex items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2 text-cyan-300">
                   <Shield className="size-4 shrink-0 text-cyan-400" />
                   <span>
-                    <strong>Motor de Proteção de Inventário:</strong> O MidiaOS bloqueia
-                    automaticamente conflitos de concorrência na mesma faixa e impede vendas acima
-                    da capacidade.
+                    <strong>Motor de Proteção de Inventário:</strong> O MidiaOS bloqueia automaticamente
+                    conflitos de concorrência na mesma faixa e impede vendas acima da capacidade.
                   </span>
                 </div>
                 <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-[10px] shrink-0">
@@ -186,7 +179,6 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
                 </span>
               </div>
 
-              {/* Tabela de Ocupação da Grade */}
               <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden text-xs">
                 <div className="grid grid-cols-12 bg-slate-800/80 p-2.5 font-mono text-[11px] text-slate-300 font-semibold border-b border-slate-700">
                   <div className="col-span-3">Veículo / Formato</div>
@@ -256,14 +248,85 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
             </div>
           )}
 
+          {/* TAB 3: GESTÃO DO TIME COMERCIAL & METAS */}
+          {activeTab === "comercial" && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-amber-300">
+                  <Target className="size-4 shrink-0 text-amber-400" />
+                  <span>
+                    <strong>Gestão de Vendas &amp; Metas:</strong> Acompanhe a performance individual de
+                    cada executivo, distribua contas e monitore alçadas de desconto com aprovação da diretoria.
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] shrink-0">
+                  LIDERANÇA COMERCIAL
+                </span>
+              </div>
+
+              {/* Ranking dos Executivos */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    rank: "1º Lugar",
+                    nome: "Lucas Andrade",
+                    meta: "R$ 450.000",
+                    faturado: "R$ 512.000",
+                    pct: "114%",
+                    badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+                  },
+                  {
+                    rank: "2º Lugar",
+                    nome: "Mariana Costa",
+                    meta: "R$ 400.000",
+                    faturado: "R$ 388.000",
+                    pct: "97%",
+                    badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+                  },
+                  {
+                    rank: "3º Lugar",
+                    nome: "Gabriel Ramos",
+                    meta: "R$ 350.000",
+                    faturado: "R$ 310.000",
+                    pct: "88%",
+                    badge: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+                  },
+                ].map((exec, idx) => (
+                  <div key={idx} className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-amber-400 font-bold flex items-center gap-1">
+                        <Award className="size-3" /> {exec.rank}
+                      </span>
+                      <span className={`px-2 py-0.2 rounded text-[10px] font-bold border ${exec.badge}`}>
+                        {exec.pct}
+                      </span>
+                    </div>
+                    <div className="font-bold text-white text-sm">{exec.nome}</div>
+                    <div className="flex justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+                      <span>Faturado: <strong className="text-white">{exec.faturado}</strong></span>
+                      <span>Meta: {exec.meta}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 flex items-center justify-between">
+                <span>
+                  🛡️ <strong>Alçada de Diretoria:</strong> Descontos acima de 25% na tabela oficial exigem
+                  aprovação imediata via aplicativo para o Diretor Comercial.
+                </span>
+                <span className="text-[10px] text-cyan-400 font-mono">SEGURANÇA FINANCEIRA</span>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: EMISSOR DE P.I. & AGÊNCIA */}
           {activeTab === "pi" && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
                   <div>
-                    <span className="text-[10px] font-mono text-cyan-400">
-                      PEDIDO DE INSERÇÃO #2026-089
-                    </span>
+                    <span className="text-[10px] font-mono text-cyan-400">PEDIDO DE INSERÇÃO #2026-089</span>
                     <h4 className="text-base font-bold text-white">
                       Campanha Institucional Trimestral
                     </h4>
@@ -277,50 +340,38 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div>
-                    <span className="text-slate-500 text-[10px] uppercase font-mono">
-                      Anunciante
-                    </span>
-                    <div className="font-semibold text-slate-200 mt-0.5">
-                      Grupo Varejista Brasil S.A.
-                    </div>
+                    <span className="text-slate-500 text-[10px] uppercase font-mono">Anunciante</span>
+                    <div className="font-semibold text-slate-200 mt-0.5">Grupo Varejista Brasil S.A.</div>
                   </div>
                   <div>
-                    <span className="text-slate-500 text-[10px] uppercase font-mono">Agência</span>
-                    <div className="font-semibold text-slate-200 mt-0.5">DM9 Publicidade</div>
+                    <span className="text-slate-500 text-[10px] uppercase font-mono">Agência de Publicidade</span>
+                    <div className="font-semibold text-cyan-300 mt-0.5">DM9 Publicidade</div>
                   </div>
                   <div>
-                    <span className="text-slate-500 text-[10px] uppercase font-mono">
-                      Valor Bruto / Líquido
-                    </span>
-                    <div className="font-semibold text-white mt-0.5">
-                      R$ 120.000 (Líq. R$ 96.000)
-                    </div>
+                    <span className="text-slate-500 text-[10px] uppercase font-mono">Valor Bruto / Líquido</span>
+                    <div className="font-semibold text-white mt-0.5">R$ 120.000 (Líq. R$ 96.000)</div>
                   </div>
                   <div>
-                    <span className="text-slate-500 text-[10px] uppercase font-mono">
-                      BV Agência
-                    </span>
-                    <div className="font-semibold text-cyan-300 mt-0.5">20% (R$ 24.000)</div>
+                    <span className="text-slate-500 text-[10px] uppercase font-mono">BV da Agência (20%)</span>
+                    <div className="font-semibold text-emerald-300 mt-0.5">R$ 24.000 (Calculado)</div>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-lg bg-black/40 border border-slate-800 text-[11px] text-slate-400 font-mono space-y-1">
                   <div>• Certificação Digital: MP 2.200-2/2001 (ICP-Brasil compatível)</div>
                   <div>• IP Registrado: 189.40.112.55 | Timestamp: 11/10/2026 10:14:22 GMT-3</div>
-                  <div className="text-cyan-400">
-                    • Hash Criptográfico: SHA-256 f84c201e9389...a721
-                  </div>
+                  <div className="text-cyan-400">• Checking fotográfico liberado diretamente para a agência</div>
                 </div>
               </div>
             </div>
           )}
 
+          {/* TAB 5: REPASSES & COMISSÕES */}
           {activeTab === "repasses" && (
             <div className="space-y-4 animate-in fade-in duration-200">
               <div className="p-3.5 rounded-xl bg-purple-950/30 border border-purple-500/30 text-xs text-purple-200">
                 <strong>Para Empresas de Representação Comercial:</strong> O MidiaOS calcula
-                automaticamente o repasse líquido para as emissoras representadas e o
-                comissionamento da sua equipe.
+                automaticamente o repasse líquido para as emissoras representadas e o comissionamento da sua equipe.
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -352,14 +403,14 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => onOpenChange(false)}
-              className="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Fechar
             </button>
             <Link
               to="/site/demo"
               onClick={() => onOpenChange(false)}
-              className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-bold hover:opacity-90 shadow-md shadow-cyan-500/20"
+              className="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-bold hover:opacity-90 shadow-md shadow-cyan-500/20 cursor-pointer"
             >
               Iniciar Teste 48h Grátis
             </Link>

@@ -47,18 +47,18 @@ export function HeroSection({ onOpenDemoModal }: HeroSectionProps) {
 
             {/* Headline Principal */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight text-white">
-              A Solução Definitiva para a Gestão de{" "}
+              A Solução Definitiva para{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400">
                 Veículos de Comunicação
-              </span>{" "}
-              e Representações Comerciais.
+              </span>
+              , Representações e Agências de Publicidade.
             </h1>
 
             {/* Sub-headline Persuasiva */}
             <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-2xl leading-relaxed font-normal">
               Elimine planilhas complexas e gargalos operacionais. Centralize reservas de espaço,
-              emissão de propostas comerciais (P.I.), controle de grade, comissionamento e
-              faturamento em uma única plataforma inteligente.
+              gestão completa do time comercial com metas, emissão de P.I.s digitais, relacionamento
+              com agências de publicidade e faturamento em uma única plataforma inteligente.
             </p>
 
             {/* CTAs de Alta Conversão */}
