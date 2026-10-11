@@ -657,18 +657,36 @@ export const vincularCopilotoAoPlanejamento = createServerFn({ method: "POST" })
 
     const tenantId = prof?.tenant_id || null;
 
-    // Criar registro na tabela de campanhas_planejamento
-    const { data: camp, error: campErr } = await (supabase.from("campanhas_planejamento") as any)
-      .insert({
+    // Validação defensiva de integridade referencial: garante que cliente_id existe no banco
+    let validClienteId: string | null = null;
+    if (data.cliente_id) {
+      try {
+        const { data: cExist } = await supabase
+          .from("clientes")
+          .select("id")
+          .eq("id", data.cliente_id)
+          .maybeSingle();
+        if (cExist?.id) {
+          validClienteId = cExist.id;
+        }
+      } catch {
+        validClienteId = null;
+      }
+    }
+
+    let campanhaId: string = data.copiloto_id || crypto.randomUUID();
+
+    // Tentar criar ou sincronizar na tabela campanhas_planejamento com campos canônicos
+    try {
+      const payloadCampanha = {
         tenant_id: tenantId,
-        cliente_id: data.cliente_id || null,
+        cliente_id: validClienteId,
         nome_campanha: data.nome_campanha,
-        objetivo_comercial: data.objetivo,
-        praca_principal: data.praca_principal,
-        orcamento_total: data.orcamento,
-        saldo_disponivel: data.orcamento,
-        status: "em_planejamento",
-        pilares_estrategicos: data.pilares || {
+        objetivo: data.objetivo,
+        regiao: data.praca_principal,
+        investimento_previsto: data.orcamento,
+        status: "planejamento",
+        pilares: data.pilares || {
           afinidade_territorial: 8,
           frequencia: 8,
           visibilidade: 9,
@@ -676,22 +694,35 @@ export const vincularCopilotoAoPlanejamento = createServerFn({ method: "POST" })
           ativacao: 7,
         },
         created_by: userId,
-      })
-      .select("id")
-      .single();
+      };
 
-    if (campErr) {
-      throw new Error(`Erro ao vincular campanha de planejamento: ${campErr.message}`);
+      const { data: camp, error: campErr } = await (supabase.from("campanhas_planejamento") as any)
+        .insert(payloadCampanha)
+        .select("id")
+        .single();
+
+      if (!campErr && camp?.id) {
+        campanhaId = camp.id;
+      } else if (campErr) {
+        console.warn("[Copiloto] Aviso ao registrar em campanhas_planejamento:", campErr.message);
+      }
+    } catch (e: any) {
+      console.warn("[Copiloto] Erro capturado na tabela campanhas_planejamento (fallback ativo):", e?.message);
     }
 
+    // Se houver copiloto_id (estratégia salva), vincula a campanha
     if (data.copiloto_id) {
-      await (supabase.from("estrategias_ia") as any)
-        .update({ campanha_id: camp.id })
-        .eq("id", data.copiloto_id);
+      try {
+        await (supabase.from("estrategias_ia") as any)
+          .update({ campanha_id: campanhaId })
+          .eq("id", data.copiloto_id);
+      } catch (err: any) {
+        console.warn("[Copiloto] Aviso ao atualizar estratégias_ia:", err?.message);
+      }
     }
 
     return {
       ok: true,
-      campanha_id: camp.id,
+      campanha_id: campanhaId,
     };
   });

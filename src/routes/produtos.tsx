@@ -491,6 +491,11 @@ function ProdutosPage() {
     setOpen(true);
   };
 
+  const openEdit = (prod: Produto | Partial<Produto>) => {
+    setEditing(prod);
+    setOpen(true);
+  };
+
   const openCfg = () => {
     setCfgEditing(currentCfg ?? { midia: tab as any });
     setCfgOpen(true);
@@ -1251,10 +1256,7 @@ function ProdutosPage() {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                onClick={() => {
-                                  setEditing(p);
-                                  setOpen(true);
-                                }}
+                                onClick={() => openEdit(p)}
                                 title="Editar produto"
                               >
                                 <Pencil className="size-4" />

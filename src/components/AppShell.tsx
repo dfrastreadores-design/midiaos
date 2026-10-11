@@ -227,14 +227,32 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   }, [visibleNav]);
 
   const isItemActive = (to: string) => {
+    // Normalização defensiva: TanStack Router pode expor search como objeto (Record<string, unknown>)
+    // ou searchStr como string. Tratamos todos os formatos com segurança.
+    const rawSearch = (location as any)?.searchStr ?? location?.search;
+    let searchString = "";
+    if (typeof rawSearch === "string") {
+      searchString = rawSearch.startsWith("?") ? rawSearch.slice(1) : rawSearch;
+    } else if (rawSearch && typeof rawSearch === "object") {
+      try {
+        searchString = new URLSearchParams(rawSearch as Record<string, string>).toString();
+      } catch {
+        searchString = "";
+      }
+    } else if (typeof window !== "undefined" && window.location?.search) {
+      searchString = window.location.search.startsWith("?")
+        ? window.location.search.slice(1)
+        : window.location.search;
+    }
+
     if (to === "/") {
-      return location.pathname === "/" && !location.search;
+      return location.pathname === "/" && !searchString;
     }
     if (to.includes("?")) {
       const [path, search] = to.split("?");
       if (location.pathname !== path) return false;
       const params = new URLSearchParams(search);
-      const currentParams = new URLSearchParams(location.search);
+      const currentParams = new URLSearchParams(searchString);
       for (const [key, val] of params.entries()) {
         if (currentParams.get(key) !== val) return false;
       }
@@ -245,7 +263,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         (other) =>
           other.to.includes("?") &&
           other.to.startsWith(to + "?") &&
-          location.search.includes(other.to.split("?")[1]),
+          searchString.includes(other.to.split("?")[1]),
       );
       if (hasSpecificQueryMatch) return false;
       return true;

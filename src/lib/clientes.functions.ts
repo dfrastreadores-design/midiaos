@@ -89,7 +89,95 @@ export const deleteCliente = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("clientes").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    const { supabase, userId } = context;
+
+    // 1. Verificar se o cliente possui vínculos com propostas, PIs, contratos ou campanhas
+    const [propsRes, pisRes, contratosRes] = await Promise.all([
+      supabase.from("propostas").select("id").eq("cliente_id", data.id).limit(1),
+      supabase.from("pis").select("id").eq("cliente_id", data.id).limit(1),
+      supabase.from("contratos").select("id").eq("cliente_id", data.id).limit(1),
+    ]);
+
+    const temPropostas = (propsRes.data?.length ?? 0) > 0;
+    const temPis = (pisRes.data?.length ?? 0) > 0;
+    const temContratos = (contratosRes.data?.length ?? 0) > 0;
+    const temVinculos = temPropostas || temPis || temContratos;
+
+    if (temVinculos) {
+      // Política de Zero Perda de Dados (AGENTS.md): Não deletar registros com histórico financeiro/operacional
+      const { error: updErr } = await (supabase.from("clientes") as any)
+        .update({
+          status: "inativo",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+
+      if (updErr) throw new Error(updErr.message);
+
+      const detalhes = [
+        temPropostas ? "propostas" : null,
+        temPis ? "pedidos de inserção (PI)" : null,
+        temContratos ? "contratos" : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      return {
+        ok: true,
+        softDeleted: true,
+        message: `O cliente possui vínculos obrigatórios em outros cadastros (${detalhes}). O cadastro foi arquivado e desativado com sucesso para preservar o histórico.`,
+      };
+    }
+
+    // 2. Se não possui vínculos conhecidos, tenta excluir gravando snapshot na lixeira lógica
+    try {
+      // Capturar dados antes da exclusão para snapshot em trash_items
+      const { data: clienteAtual } = await supabase
+        .from("clientes")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+
+      if (clienteAtual) {
+        await (supabase.from("trash_items") as any).insert({
+          tabela_origem: "clientes",
+          registro_id: data.id,
+          tenant_id: (clienteAtual as any).tenant_id || null,
+          dados_snapshot_jsonb: clienteAtual,
+          deleted_by: userId,
+        }).catch(() => null);
+      }
+
+      const { error } = await supabase.from("clientes").delete().eq("id", data.id);
+      if (error) {
+        // Se ainda assim disparar violação de foreign key (ex: tabela terciária)
+        if (error.code === "23503" || error.message.toLowerCase().includes("foreign key")) {
+          await (supabase.from("clientes") as any)
+            .update({ status: "inativo", updated_at: new Date().toISOString() })
+            .eq("id", data.id);
+
+          return {
+            ok: true,
+            softDeleted: true,
+            message: "O cliente possui vínculos operacionais em outros módulos e foi arquivado/desativado com sucesso.",
+          };
+        }
+        throw new Error(error.message);
+      }
+
+      return { ok: true, softDeleted: false, message: "Cliente excluído com sucesso." };
+    } catch (err: any) {
+      if (err?.message?.toLowerCase().includes("foreign key")) {
+        await (supabase.from("clientes") as any)
+          .update({ status: "inativo", updated_at: new Date().toISOString() })
+          .eq("id", data.id);
+
+        return {
+          ok: true,
+          softDeleted: true,
+          message: "O cliente possui vínculos operacionais e foi arquivado/desativado com sucesso.",
+        };
+      }
+      throw err;
+    }
   });

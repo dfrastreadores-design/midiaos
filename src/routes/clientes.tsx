@@ -87,8 +87,12 @@ function Clientes() {
 
   const del = useMutation({
     mutationFn: (id: string) => deleteCliente({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Cliente removido");
+    onSuccess: (res: any) => {
+      if (res?.softDeleted) {
+        toast.info(res.message || "Cliente arquivado/desativado devido a vínculos históricos.");
+      } else {
+        toast.success(res?.message || "Cliente removido com sucesso");
+      }
       qc.invalidateQueries({ queryKey: ["clientes"] });
     },
     onError: (e: Error) => toast.error(e.message),

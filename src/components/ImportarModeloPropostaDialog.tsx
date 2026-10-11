@@ -222,8 +222,9 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
       setMapeamento((prev) => ({ ...prev, slideProdutosIndex: index }));
   };
 
-  // Mutação para salvar layout no banco
+  // Mutação para salvar layout no banco com retry automático
   const saveMut = useMutation({
+    retry: 1,
     mutationFn: async () => {
       if (!nomeModelo.trim()) throw new Error("Informe um nome para o modelo");
       if (slides.length === 0) throw new Error("Importe pelo menos 1 slide para o modelo");
@@ -262,7 +263,14 @@ export function ImportarModeloPropostaDialog({ open, onOpenChange, initial, onSa
       onSaved?.(res);
       onOpenChange(false);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      const msg = e?.message?.toLowerCase() || "";
+      if (msg.includes("failed to fetch") || msg.includes("network")) {
+        toast.error("Instabilidade temporária na transmissão do modelo. Tente novamente em instantes.");
+      } else {
+        toast.error("Erro ao salvar modelo: " + e.message);
+      }
+    },
   });
 
   const slideProdutosAtual = slides[mapeamento.slideProdutosIndex] || slides[0];

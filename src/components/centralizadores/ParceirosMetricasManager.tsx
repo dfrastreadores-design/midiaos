@@ -240,12 +240,14 @@ export function ParceirosMetricasManager() {
     }
   };
 
-  const filtrados = metricas.filter(
-    (m) =>
-      m.parceiro_nome.toLowerCase().includes(busca.toLowerCase()) ||
-      m.tipo_midia.toLowerCase().includes(busca.toLowerCase()) ||
-      m.veiculo_programa.toLowerCase().includes(busca.toLowerCase()),
-  );
+  const filtrados = metricas.filter((m) => {
+    const termo = String(busca ?? "").toLowerCase().trim();
+    if (!termo) return true;
+    const parceiro = String(m?.parceiro_nome ?? "").toLowerCase();
+    const tipo = String(m?.tipo_midia ?? "").toLowerCase();
+    const veiculo = String(m?.veiculo_programa ?? "").toLowerCase();
+    return parceiro.includes(termo) || tipo.includes(termo) || veiculo.includes(termo);
+  });
 
   return (
     <div className="space-y-6">
