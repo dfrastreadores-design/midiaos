@@ -13,14 +13,21 @@ import {
   PhoneCall,
   CheckCircle2,
   ExternalLink,
+  Building2,
+  TrendingUp,
+  Flame,
+  MapPin,
+  Presentation,
 } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
-  { href: "/site#veiculos", label: "Veículos de Mídia", icon: Tv },
+  { href: "/site#veiculos", label: "Veículos", icon: Tv },
   { href: "/site#representacoes", label: "Representações", icon: Users2 },
-  { href: "/site#agencias", label: "Para Agências", icon: Building2 },
-  { href: "/site#comercial", label: "Gestão do Time", icon: TrendingUp },
+  { href: "/site#agencias", label: "Agências", icon: Building2 },
+  { href: "/site#comercial", label: "Time Comercial", icon: TrendingUp },
+  { href: "/site#diferenciais", label: "Diferenciais", icon: Flame },
+  { href: "/site/inventario", label: "Vitrine OOH", icon: MapPin },
   { href: "/site#recursos", label: "Recursos", icon: Cpu },
   { href: "/site#planos", label: "Planos", icon: Layers },
   { href: "/site#faq", label: "Dúvidas", icon: ShieldCheck },
@@ -89,12 +96,23 @@ export function SiteHeader() {
           {/* Menu Desktop */}
           <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
             {navItems.map((n) => {
+              if (!n.href.includes("#")) {
+                return (
+                  <Link
+                    key={n.href}
+                    to={n.href}
+                    className="px-3 py-2 rounded-lg text-xs xl:text-sm font-medium text-slate-300 hover:text-cyan-300 hover:bg-cyan-500/5 transition-colors cursor-pointer"
+                  >
+                    {n.label}
+                  </Link>
+                );
+              }
               return (
                 <a
                   key={n.href}
                   href={n.href}
                   onClick={(e) => {
-                    if (loc.pathname === "/site") {
+                    if (loc.pathname === "/site" || loc.pathname === "/site/") {
                       e.preventDefault();
                       handleNavClick(n.href);
                     }
@@ -157,24 +175,39 @@ export function SiteHeader() {
             </Link>
 
             <div className="pt-2 border-t border-slate-800 space-y-1">
-              {navItems.map((n) => (
-                <a
-                  key={n.href}
-                  href={n.href}
-                  onClick={(e) => {
-                    if (loc.pathname === "/site") {
-                      e.preventDefault();
-                      handleNavClick(n.href);
-                    } else {
-                      setOpen(false);
-                    }
-                  }}
-                  className="flex items-center gap-3 py-3 px-3 text-sm text-slate-300 hover:text-cyan-300 rounded-lg hover:bg-cyan-500/10 transition-colors"
-                >
-                  <n.icon className="w-4 h-4 text-cyan-400" />
-                  <span>{n.label}</span>
-                </a>
-              ))}
+              {navItems.map((n) => {
+                if (!n.href.includes("#")) {
+                  return (
+                    <Link
+                      key={n.href}
+                      to={n.href}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 py-3 px-3 text-sm text-slate-300 hover:text-cyan-300 rounded-lg hover:bg-cyan-500/10 transition-colors"
+                    >
+                      <n.icon className="w-4 h-4 text-cyan-400" />
+                      <span>{n.label}</span>
+                    </Link>
+                  );
+                }
+                return (
+                  <a
+                    key={n.href}
+                    href={n.href}
+                    onClick={(e) => {
+                      if (loc.pathname === "/site" || loc.pathname === "/site/") {
+                        e.preventDefault();
+                        handleNavClick(n.href);
+                      } else {
+                        setOpen(false);
+                      }
+                    }}
+                    className="flex items-center gap-3 py-3 px-3 text-sm text-slate-300 hover:text-cyan-300 rounded-lg hover:bg-cyan-500/10 transition-colors"
+                  >
+                    <n.icon className="w-4 h-4 text-cyan-400" />
+                    <span>{n.label}</span>
+                  </a>
+                );
+              })}
             </div>
 
             <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
@@ -272,6 +305,11 @@ export function SiteFooter() {
           </h4>
           <ul className="space-y-2.5 text-sm text-slate-400">
             <li>
+              <a href="/site#diferenciais" className="hover:text-cyan-300 transition-colors">
+                Diferenciais Tecnológicos
+              </a>
+            </li>
+            <li>
               <a href="/site#recursos" className="hover:text-cyan-300 transition-colors">
                 Motor de Propostas &amp; P.I.
               </a>
@@ -280,6 +318,11 @@ export function SiteFooter() {
               <a href="/site#recursos" className="hover:text-cyan-300 transition-colors">
                 Módulo Financeiro &amp; Repasses
               </a>
+            </li>
+            <li>
+              <Link to="/site/inventario" className="hover:text-cyan-300 transition-colors">
+                Vitrine &amp; Mapa OOH ao Vivo
+              </Link>
             </li>
             <li>
               <a href="/site#planos" className="hover:text-cyan-300 transition-colors">

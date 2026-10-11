@@ -4,6 +4,7 @@ import { HeroSection } from "@/components/site/landing/HeroSection";
 import { SegmentationSection } from "@/components/site/landing/SegmentationSection";
 import { BeforeAfterSection } from "@/components/site/landing/BeforeAfterSection";
 import { ModulesTechSection } from "@/components/site/landing/ModulesTechSection";
+import { AdvancedCapabilitiesSection } from "@/components/site/landing/AdvancedCapabilitiesSection";
 import { SocialProofSection } from "@/components/site/landing/SocialProofSection";
 import { PricingSection } from "@/components/site/landing/PricingSection";
 import { FaqSection } from "@/components/site/landing/FaqSection";
@@ -125,7 +126,10 @@ function LandingPage() {
       {/* 4. Módulos & Recursos Tecnológicos */}
       <ModulesTechSection />
 
-      {/* 5. Prova Social e Números de Impacto */}
+      {/* 5. Super-Poderes Comerciais & Diferenciais Tecnológicos */}
+      <AdvancedCapabilitiesSection />
+
+      {/* 6. Prova Social e Números de Impacto */}
       <SocialProofSection />
 
       {/* 6. Planos e Tabela de Preços com Selo de Garantia */}

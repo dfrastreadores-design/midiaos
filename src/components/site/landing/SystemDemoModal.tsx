@@ -360,7 +360,21 @@ export function SystemDemoModal({ open, onOpenChange }: SystemDemoModalProps) {
                 <div className="p-3 rounded-lg bg-black/40 border border-slate-800 text-[11px] text-slate-400 font-mono space-y-1">
                   <div>• Certificação Digital: MP 2.200-2/2001 (ICP-Brasil compatível)</div>
                   <div>• IP Registrado: 189.40.112.55 | Timestamp: 11/10/2026 10:14:22 GMT-3</div>
-                  <div className="text-cyan-400">• Checking fotográfico liberado diretamente para a agência</div>
+                  <div className="text-cyan-400">• Checking fotográfico liberado diretamente para a agência via link exclusivo</div>
+                </div>
+
+                {/* Ações Instantâneas Integradas */}
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800">
+                  <span className="text-[10px] uppercase font-mono text-slate-400">Exportações em 1 Clique:</span>
+                  <span className="px-2.5 py-1 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-300 text-[11px] font-bold flex items-center gap-1">
+                    Deck PowerPoint (PPTX 16:9)
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold flex items-center gap-1">
+                    Link de Checking ao Vivo
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[11px] font-bold flex items-center gap-1">
+                    Consulta CNPJ Receita Federal
+                  </span>
                 </div>
               </div>
             </div>
