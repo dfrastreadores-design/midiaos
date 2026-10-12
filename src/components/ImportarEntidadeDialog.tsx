@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { listClientes, upsertCliente } from "@/lib/clientes.functions";
 import { importAgenciasBulk, listAgencias, upsertAgencia } from "@/lib/agencias.functions";
 import { listExecutivos } from "@/lib/atendimento.functions";
-import { onlyDigits, fetchCnpj } from "@/lib/cnpj";
+import { onlyDigits, fetchCnpj, fetchCpfCnpj } from "@/lib/cnpj";
 
 type Tipo = "cliente" | "agencia";
 
@@ -697,7 +697,7 @@ export function ImportarEntidadeDialog({
       return;
     }
     try {
-      const d = await fetchCnpj(cnpj);
+      const d = await fetchCpfCnpj(cnpj);
       setRows(
         (cur) =>
           cur?.map((r, idx) => {

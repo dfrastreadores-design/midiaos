@@ -44,7 +44,7 @@ import {
   Linkedin,
   Facebook,
 } from "lucide-react";
-import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
+import { fetchCnpj, fetchCpfCnpj, formatCNPJ, formatCPF, onlyDigits } from "@/lib/cnpj";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { listExecutivos, findByCnpj } from "@/lib/atendimento.functions";
@@ -378,24 +378,41 @@ export function EntityFormDialog({
   }, [form.cnpj, open, initial?.id, tipo]);
 
   const doLookup = async (silent = false, specificCnpj?: string) => {
-    const targetCnpj = specificCnpj || form.cnpj;
-    if (onlyDigits(targetCnpj ?? "").length !== 14) {
-      if (!silent) toast.error("Informe um CNPJ válido");
+    const targetDoc = specificCnpj || form.cnpj;
+    const digits = onlyDigits(targetDoc ?? "");
+    if (digits.length !== 11 && digits.length !== 14) {
+      if (!silent) toast.error("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) para consulta");
       return null;
     }
     setLoading(true);
     try {
-      const d = await fetchCnpj(targetCnpj ?? "");
+      const d = await fetchCpfCnpj(targetDoc ?? "");
+
+      // Se for CPF (Pessoa Física), consultar se já existe algum cadastro para puxar dados históricos
+      let cpfExistente: any = null;
+      if (d.tipo === "PF") {
+        try {
+          const { data: clienteBanco } = await supabase
+            .from("clientes")
+            .select("*")
+            .ilike("cnpj", `%${digits}%`)
+            .maybeSingle();
+          if (clienteBanco) cpfExistente = clienteBanco;
+        } catch {
+          // ignora caso falhe a consulta de histórico
+        }
+      }
+
       const updatedData = {
-        cnpj: d.cnpj,
-        razao_social: d.razaoSocial || form.razao_social,
-        nome_fantasia: form.nome_fantasia || d.nomeFantasia,
-        cep: d.cep || form.cep,
-        endereco: [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", ") || form.endereco,
-        cidade: d.cidade || form.cidade,
-        uf: d.estado || form.uf,
-        cnae: d.cnae || form.cnae || "",
-        situacao_cadastral: d.situacaoCadastral || form.situacao_cadastral || "",
+        cnpj: d.tipo === "PF" ? (d.cpf || formatCPF(digits)) : d.cnpj,
+        razao_social: d.razaoSocial || cpfExistente?.razao_social || form.razao_social,
+        nome_fantasia: form.nome_fantasia || d.nomeFantasia || cpfExistente?.nome_fantasia || "",
+        cep: d.cep || cpfExistente?.cep || form.cep,
+        endereco: [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", ") || cpfExistente?.endereco || form.endereco,
+        cidade: d.cidade || cpfExistente?.cidade || form.cidade,
+        uf: d.estado || cpfExistente?.uf || form.uf,
+        cnae: d.cnae || form.cnae || (d.tipo === "PF" ? "PESSOA FÍSICA" : ""),
+        situacao_cadastral: d.situacaoCadastral || form.situacao_cadastral || "REGULAR",
         inscricao_estadual:
           form.inscricao_estadual && form.inscricao_estadual.trim()
             ? form.inscricao_estadual
@@ -404,8 +421,7 @@ export function EntityFormDialog({
           form.inscricao_municipal && form.inscricao_municipal.trim()
             ? form.inscricao_municipal
             : d.inscricaoMunicipal || "ISENTA",
-        // Adicionando campos para evitar erros de tipagem no bulk import
-        website: (d as any).website || "",
+        website: (d as any).website || cpfExistente?.website || "",
       };
 
       if (!specificCnpj) {
@@ -415,7 +431,17 @@ export function EntityFormDialog({
         }));
       }
 
-      if (!silent) toast.success("Dados preenchidos pela Receita Federal");
+      if (!silent) {
+        if (d.tipo === "PJ") {
+          toast.success("Dados preenchidos pela Receita Federal!");
+        } else {
+          toast.success(
+            cpfExistente
+              ? "Dados preenchidos a partir do cadastro de Pessoa Física!"
+              : "CPF validado na Receita Federal!"
+          );
+        }
+      }
       return updatedData;
     } catch (e) {
       if (!silent) toast.error((e as Error).message);
@@ -853,7 +879,7 @@ export function EntityFormDialog({
                   name="cnpj"
                   error={errors.cnpj}
                   value={form.cnpj ?? ""}
-                  placeholder={tipo === "cliente" ? "CPF ou CNPJ" : "00.000.000/0000-00"}
+                  placeholder={tipo === "cliente" ? "Digite CPF ou CNPJ e aperte Enter" : "00.000.000/0000-00"}
                   maxLength={18}
                   inputMode="numeric"
                   onChange={(e) => {
@@ -870,19 +896,32 @@ export function EntityFormDialog({
                       });
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      lookup();
+                    }
+                  }}
                 />
-                <Button type="button" variant="secondary" onClick={lookup} disabled={loading}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={lookup}
+                  disabled={loading}
+                  className="shrink-0 border border-primary/30 text-primary hover:bg-primary/10 gap-1.5"
+                  title="Buscar dados na Receita Federal e preencher automaticamente"
+                >
                   {loading ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    <Search className="size-4" />
+                    <Search className="size-4 text-primary" />
                   )}
-                  <span className="ml-2">Buscar</span>
+                  <span className="font-semibold text-xs">Buscar Receita</span>
                 </Button>
               </div>
               <FormFieldError message={errors.cnpj} />
               <p className="text-[11px] text-muted-foreground">
-                A consulta é automática ao digitar os 14 dígitos.
+                Preenchimento automático na Receita Federal via CNPJ ou validação de CPF (aperte Enter ou clique em Buscar Receita).
               </p>
               {loading && (
                 <p className="text-xs text-primary flex items-center gap-1">

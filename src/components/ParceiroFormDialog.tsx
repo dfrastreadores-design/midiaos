@@ -59,7 +59,7 @@ import {
   type Parceiro,
 } from "@/lib/parceiros.functions";
 import { enriquecerParceiroPorUrl } from "@/lib/parceiro-scraper.functions";
-import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
+import { fetchCnpj, fetchCpfCnpj, formatCNPJ, formatCpfCnpj, onlyDigits } from "@/lib/cnpj";
 import { lookupCep, formatCEP } from "@/lib/geocode.functions";
 import { traduzirErro } from "@/lib/error-translator";
 import { cn } from "@/lib/utils";
@@ -412,27 +412,34 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
   const handleBuscarCnpj = async () => {
     const raw = form.cnpj || "";
     const digits = onlyDigits(raw);
-    if (digits.length !== 14) {
-      toast.error("Informe um CNPJ válido com 14 dígitos.");
+    if (digits.length !== 11 && digits.length !== 14) {
+      toast.error("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) para consulta.");
       return;
     }
     setSearchingCnpj(true);
     try {
-      const data = await fetchCnpj(digits);
-      set({
-        cnpj: formatCNPJ(digits),
-        razao_social: data.razaoSocial || form.razao_social,
-        nome_fantasia: data.nomeFantasia || form.nome_fantasia || data.razaoSocial,
-        contato_email: data.email || form.contato_email,
-        contato_telefone: data.telefone || form.contato_telefone,
-        endereco: [data.logradouro, data.numero, data.bairro].filter(Boolean).join(", "),
-        cidade: data.cidade || form.cidade,
-        uf: data.estado || form.uf,
-        cep: data.cep ? formatCEP(data.cep) : form.cep,
-      });
-      toast.success("Dados da empresa carregados da Receita Federal!");
+      const data = await fetchCpfCnpj(digits);
+      if (data.tipo === "PJ") {
+        set({
+          cnpj: formatCNPJ(digits),
+          razao_social: data.razaoSocial || form.razao_social,
+          nome_fantasia: data.nomeFantasia || form.nome_fantasia || data.razaoSocial,
+          contato_email: data.email || form.contato_email,
+          contato_telefone: data.telefone || form.contato_telefone,
+          endereco: [data.logradouro, data.numero, data.bairro].filter(Boolean).join(", "),
+          cidade: data.cidade || form.cidade,
+          uf: data.estado || form.uf,
+          cep: data.cep ? formatCEP(data.cep) : form.cep,
+        });
+        toast.success("Dados da empresa carregados da Receita Federal!");
+      } else {
+        set({
+          cnpj: data.cpf || digits,
+        });
+        toast.success("CPF validado na Receita Federal!");
+      }
     } catch (err: any) {
-      toast.error(traduzirErro(err) || "Erro ao consultar CNPJ na Receita Federal.");
+      toast.error(traduzirErro(err) || "Erro ao consultar Receita Federal.");
     } finally {
       setSearchingCnpj(false);
     }
@@ -743,17 +750,17 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div data-field="cnpj">
                 <Label htmlFor="parceiro-cnpj" className={errorLabelClass(!!errors.cnpj, "text-xs")}>
-                  CNPJ
+                  CNPJ / CPF
                 </Label>
                 <div className="flex gap-1.5 mt-1">
                   <Input
                     id="parceiro-cnpj"
                     name="cnpj"
                     error={errors.cnpj}
-                    placeholder="00.000.000/0000-00"
+                    placeholder="00.000.000/0000-00 ou CPF"
                     value={form.cnpj ?? ""}
                     onChange={(e) => {
-                      set({ cnpj: formatCNPJ(e.target.value) });
+                      set({ cnpj: formatCpfCnpj(e.target.value) });
                       if (errors.cnpj) {
                         setErrors((prev) => {
                           const next = { ...prev };
@@ -777,17 +784,20 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                     className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
                     disabled={searchingCnpj}
                     onClick={handleBuscarCnpj}
-                    title="Puxar dados da Receita Federal"
+                    title="Puxar dados da Receita Federal e preencher automaticamente"
                   >
                     {searchingCnpj ? (
                       <Loader2 className="size-3.5 animate-spin" />
                     ) : (
                       <Search className="size-3.5" />
                     )}
-                    Receita
+                    <span>Buscar Receita</span>
                   </Button>
                 </div>
                 <FormFieldError message={errors.cnpj} />
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Digite e clique em Buscar Receita para preencher razão social, endereço e contato.
+                </p>
               </div>
 
               <div>

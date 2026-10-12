@@ -24,8 +24,10 @@ import {
   ExternalLink,
   Lock,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchCpfCnpj, formatCpfCnpj } from "@/lib/cnpj";
 import {
   listarOrigensInventario,
   obterOrigemInventario,
@@ -86,6 +88,35 @@ export function RedeInventarioManager() {
   const [formComissao, setFormComissao] = useState("20");
   const [formStatus, setFormStatus] = useState<OrigemInventarioStatus>("ativo");
   const [formObservacoes, setFormObservacoes] = useState("");
+  const [searchingCnpj, setSearchingCnpj] = useState(false);
+
+  const handleBuscarCnpj = async () => {
+    const digits = (formCnpj || "").replace(/\D/g, "");
+    if (digits.length !== 11 && digits.length !== 14) {
+      toast.error("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) para consulta.");
+      return;
+    }
+    setSearchingCnpj(true);
+    try {
+      const data = await fetchCpfCnpj(digits);
+      if (data.tipo === "PJ") {
+        setFormCnpj(data.cnpj);
+        if (!formNomeInterno.trim()) setFormNomeInterno(data.razaoSocial);
+        if (!formNomeComercial.trim()) setFormNomeComercial(data.nomeFantasia || data.razaoSocial);
+        if (!formEmpresa.trim()) setFormEmpresa(data.razaoSocial);
+        const contato = [data.telefone, data.email].filter(Boolean).join(" • ");
+        if (contato && !formContato.trim()) setFormContato(contato);
+        toast.success("Dados preenchidos pela Receita Federal!");
+      } else {
+        setFormCnpj(data.cpf || digits);
+        toast.success("CPF validado na Receita Federal!");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao consultar Receita Federal.");
+    } finally {
+      setSearchingCnpj(false);
+    }
+  };
 
   // Query: Lista de Origens
   const { data: origens = [], isLoading, refetch } = useQuery({
@@ -713,13 +744,40 @@ export function RedeInventarioManager() {
               </div>
 
               <div>
-                <Label className="text-xs font-medium">CNPJ</Label>
-                <Input
-                  placeholder="00.000.000/0000-00"
-                  value={formCnpj}
-                  onChange={(e) => setFormCnpj(e.target.value)}
-                  className="mt-1"
-                />
+                <Label className="text-xs font-medium">CNPJ / CPF</Label>
+                <div className="flex gap-1.5 mt-1">
+                  <Input
+                    placeholder="00.000.000/0000-00"
+                    value={formCnpj}
+                    onChange={(e) => setFormCnpj(formatCpfCnpj(e.target.value))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleBuscarCnpj();
+                      }
+                    }}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                    disabled={searchingCnpj}
+                    onClick={handleBuscarCnpj}
+                    title="Puxar dados da Receita Federal e preencher automaticamente"
+                  >
+                    {searchingCnpj ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Search className="w-3.5 h-3.5" />
+                    )}
+                    <span>Buscar Receita</span>
+                  </Button>
+                </div>
+                <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                  Digite e clique em Buscar Receita para preencher nome e contato automaticamente.
+                </span>
               </div>
             </div>
 

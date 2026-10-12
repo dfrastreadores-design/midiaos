@@ -62,7 +62,7 @@ import { CreatableCombobox } from "@/components/CreatableCombobox";
 import { LocationPickerMap } from "@/components/LocationPickerMap";
 import { ProdutoFotosUploader } from "@/components/ProdutoFotosUploader";
 import { ParceiroFormDialog } from "@/components/ParceiroFormDialog";
-import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
+import { fetchCnpj, fetchCpfCnpj, formatCNPJ, formatCpfCnpj, onlyDigits } from "@/lib/cnpj";
 import {
   geocodeAddress,
   reverseGeocodeCoords,
@@ -469,21 +469,28 @@ export function ProdutoFormDialog({
   const handleBuscarCnpj = async () => {
     const raw = form.parceiro_cnpj || "";
     const digits = onlyDigits(raw);
-    if (digits.length !== 14) {
-      toast.error("Informe um CNPJ válido com 14 dígitos para consultar na Receita Federal.");
+    if (digits.length !== 11 && digits.length !== 14) {
+      toast.error("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) para consultar na Receita Federal.");
       return;
     }
     setSearchingCnpj(true);
     try {
-      const data = await fetchCnpj(digits);
-      const parceiroNome = data.nomeFantasia || data.razaoSocial || "";
-      set({
-        parceiro_cnpj: formatCNPJ(digits),
-        parceiro_nome: parceiroNome,
-      });
-      toast.success("Dados do parceiro carregados da Receita Federal!", {
-        description: `${data.razaoSocial}${data.cidade ? ` • ${data.cidade}/${data.estado}` : ""}`,
-      });
+      const data = await fetchCpfCnpj(digits);
+      if (data.tipo === "PJ") {
+        const parceiroNome = data.nomeFantasia || data.razaoSocial || "";
+        set({
+          parceiro_cnpj: formatCNPJ(digits),
+          parceiro_nome: parceiroNome,
+        });
+        toast.success("Dados do parceiro carregados da Receita Federal!", {
+          description: `${data.razaoSocial}${data.cidade ? ` • ${data.cidade}/${data.estado}` : ""}`,
+        });
+      } else {
+        set({
+          parceiro_cnpj: data.cpf || digits,
+        });
+        toast.success("CPF validado na Receita Federal!");
+      }
     } catch (err: any) {
       toast.error(err.message || "Erro ao consultar dados na Receita Federal.");
     } finally {
@@ -948,14 +955,14 @@ export function ProdutoFormDialog({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
-                  <Label className="text-xs font-medium">CNPJ do Parceiro (opcional)</Label>
+                  <Label className="text-xs font-medium">CNPJ / CPF do Parceiro (opcional)</Label>
                   <div className="flex gap-1.5 mt-1">
                     <Input
-                      placeholder="00.000.000/0000-00"
+                      placeholder="00.000.000/0000-00 ou CPF"
                       value={form.parceiro_cnpj ?? ""}
                       onChange={(e) => {
                         const v = e.target.value;
-                        set({ parceiro_cnpj: formatCNPJ(v) });
+                        set({ parceiro_cnpj: formatCpfCnpj(v) });
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -972,14 +979,14 @@ export function ProdutoFormDialog({
                       className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
                       disabled={searchingCnpj}
                       onClick={handleBuscarCnpj}
-                      title="Puxar dados da Receita Federal"
+                      title="Puxar dados da Receita Federal e preencher automaticamente"
                     >
                       {searchingCnpj ? (
                         <Loader2 className="size-3.5 animate-spin" />
                       ) : (
                         <Search className="size-3.5" />
                       )}
-                      Receita
+                      <span>Buscar Receita</span>
                     </Button>
                   </div>
                 </div>
