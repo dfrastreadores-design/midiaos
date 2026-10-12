@@ -1056,7 +1056,7 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId, onEmi
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap items-center">
             {p?.status === "aprovada" && onEmitirPis && (
               <Button
                 variant="default"
@@ -1069,24 +1069,66 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId, onEmi
             )}
             <Button
               variant="outline"
-              className="gap-1.5 text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium rounded-full px-4"
+              size="sm"
+              className="gap-1.5 border-slate-300 dark:border-slate-700 font-medium rounded-full px-3.5 text-xs"
               onClick={() => {
                 if (!p) return;
-                const msg = [
-                  `📊 *PROPOSTA COMERCIAL — ${p.numero || "OOH"}*`,
-                  `🎯 *Campanha:* ${p.campanha || "Veiculação de Mídia"}`,
-                  `👤 *Cliente:* ${p.cliente?.nome || "Cliente"}`,
-                  `💰 *Investimento Total:* ${fmtBRL(p.valor_total || 0)}`,
-                  `📍 *Total de Pontos:* ${p.itens?.length || 0} ativo(s)`,
-                  `\nAcesse os detalhes pelo Mídia.OS (midiaos.online)`,
-                ].join("\n");
+                const token = (p as any).public_token || p.id;
+                const url = `${window.location.origin}/p/${token}`;
+                navigator.clipboard.writeText(url);
+                toast.success("Link público da proposta copiado!");
+              }}
+              title="Copiar link interativo da proposta"
+            >
+              <Share2 className="size-3.5" />
+              Copiar Link Online
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-semibold rounded-full px-3.5 text-xs"
+              onClick={() => {
+                if (!p) return;
+                const token = (p as any).public_token || p.id;
+                const url = `${window.location.origin}/p/${token}`;
+                const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+                const repNome = (p as any).executivo?.nome || "Representante Comercial";
+                const empNome = (p as any).organizacao?.nome || org?.nome || "Mídia.OS";
+                const msg = `Olá, ${clienteNome}! Aqui é ${repNome} da ${empNome}. Preparamos com exclusividade o planejamento estratégico da sua campanha '${p.campanha || "Veiculação de Mídia"}'. Você pode conferir todos os detalhes, fotos e condições especiais no link interativo: ${url} . Fique à vontade para sugerir ajustes ou validar a aprovação por lá!`;
                 window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, "_blank");
               }}
             >
-              <Share2 className="size-4" />
+              <Share2 className="size-3.5" />
               WhatsApp
             </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-blue-600 border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-950/30 font-semibold rounded-full px-3.5 text-xs"
+              onClick={() => {
+                if (!p) return;
+                const token = (p as any).public_token || p.id;
+                const url = `${window.location.origin}/p/${token}`;
+                const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+                const repNome = (p as any).executivo?.nome || "Equipe Comercial";
+                const empNome = (p as any).organizacao?.nome || org?.nome || "Mídia.OS";
+                const assunto = encodeURIComponent(`Proposta Comercial - ${p.campanha || "Campanha"} | ${empNome}`);
+                const corpo = encodeURIComponent(
+                  `Olá, ${clienteNome}!\n\n` +
+                  `Preparamos com exclusividade o planejamento estratégico da sua campanha "${p.campanha}".\n\n` +
+                  `Para conferir todos os detalhes, mapa de cobertura, fotos reais dos pontos e condições negociadas, acesse o link interativo seguro:\n` +
+                  `${url}\n\n` +
+                  `Você pode sugerir ajustes diretamente pela tela online ou efetuar a aprovação digital formal.\n\n` +
+                  `Atenciosamente,\n` +
+                  `${repNome}\n${empNome}`
+                );
+                window.open(`mailto:?subject=${assunto}&body=${corpo}`, "_blank");
+              }}
+            >
+              <Mail className="size-3.5" />
+              E-mail
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>
             <Button

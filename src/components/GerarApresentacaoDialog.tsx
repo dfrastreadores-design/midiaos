@@ -177,24 +177,45 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     }
   };
 
-  const onLogoFile = (file: File | null) => {
+  const onLogoFile = async (file: File | null) => {
     if (!file) {
       setLogoDataUrl(null);
       void persistirLogo(null);
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Logo muito grande (máx 2MB)");
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx 10MB)");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = reader.result as string;
-      setLogoDataUrl(url);
-      void persistirLogo(url);
-    };
-    reader.onerror = () => toast.error("Falha ao ler imagem");
-    reader.readAsDataURL(file);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const filePath = `logos/${propostaId || "temp"}-${Date.now()}.${ext}`;
+      
+      // Upload multipart direto no Supabase Storage
+      const { error: uploadErr } = await supabase.storage
+        .from("proposta-anexos")
+        .upload(filePath, file, { upsert: true, cacheControl: "3600" });
+
+      if (!uploadErr) {
+        const { data: pubData } = supabase.storage.from("proposta-anexos").getPublicUrl(filePath);
+        const publicUrl = pubData?.publicUrl || filePath;
+        setLogoDataUrl(publicUrl);
+        void persistirLogo(publicUrl);
+        toast.success("Logotipo anexado com sucesso!");
+        return;
+      }
+
+      // Fallback em caso de indisponibilidade de storage
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = reader.result as string;
+        setLogoDataUrl(url);
+        void persistirLogo(url);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      toast.error("Falha ao processar logotipo: " + (err?.message || "Erro desconhecido"));
+    }
   };
 
   const buscar = useMutation({

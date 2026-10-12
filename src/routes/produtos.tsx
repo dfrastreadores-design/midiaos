@@ -477,7 +477,7 @@ function ProdutosPage() {
 
   const currentCfg = ((configs as MidiaConfig[]) ?? []).find((c) => c.midia === tab);
 
-  const openNew = () => {
+  const openNew = useCallback(() => {
     setEditing({
       midia: tab === "TODAS" ? "OOH" : tab,
       nome: "",
@@ -489,17 +489,18 @@ function ProdutosPage() {
       parceiro_nome: parceiroFiltro?.nome,
     });
     setOpen(true);
-  };
+  }, [tab, parceiroFiltro]);
 
-  const openEdit = (prod: Produto | Partial<Produto>) => {
+  const openEdit = useCallback((prod: Produto | Partial<Produto>) => {
+    if (!prod) return;
     setEditing(prod);
     setOpen(true);
-  };
+  }, []);
 
-  const openCfg = () => {
+  const openCfg = useCallback(() => {
     setCfgEditing(currentCfg ?? { midia: tab as any });
     setCfgOpen(true);
-  };
+  }, [currentCfg, tab]);
 
   return (
     <AppShell>

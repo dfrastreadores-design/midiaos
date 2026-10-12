@@ -30,6 +30,8 @@ import {
   Printer,
   Loader2,
   Zap,
+  Share2,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
@@ -417,7 +419,36 @@ function Propostas() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-1 justify-end">
+                    <div className="flex gap-1 justify-end items-center">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                        title="Compartilhar Proposta via WhatsApp"
+                        onClick={() => {
+                          const token = (p as any).public_token || p.id;
+                          const url = `${window.location.origin}/p/${token}`;
+                          const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+                          const repNome = p.criado_por || "Representante Comercial";
+                          const msg = `Olá, ${clienteNome}! Aqui é ${repNome} da Mídia.OS. Preparamos com exclusividade o planejamento estratégico da sua campanha '${p.campanha || "Veiculação de Mídia"}'. Você pode conferir todos os detalhes, fotos e condições especiais no link interativo: ${url} . Fique à vontade para sugerir ajustes ou validar a aprovação por lá!`;
+                          window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, "_blank");
+                        }}
+                      >
+                        <Share2 className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Copiar Link Online Interativo"
+                        onClick={() => {
+                          const token = (p as any).public_token || p.id;
+                          const url = `${window.location.origin}/p/${token}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success("Link público da proposta copiado!");
+                        }}
+                      >
+                        <ExternalLink className="size-4 text-blue-600" />
+                      </Button>
                       <Button
                         size="icon"
                         variant="ghost"

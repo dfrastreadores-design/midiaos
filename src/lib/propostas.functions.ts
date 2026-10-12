@@ -52,6 +52,7 @@ const PropostaSchema = z.object({
   campanha: z.string().min(1).max(200),
   validade: z.string().nullable().optional(),
   observacao: z.string().max(2000).nullable().optional(),
+  publico_interesse: z.string().max(1000).nullable().optional(),
   status: z.enum(["rascunho", "enviada", "aprovada", "recusada", "convertida", "finalizada"]),
   valor_tabela: z.number(),
   valor_desconto: z.number(),

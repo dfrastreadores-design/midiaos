@@ -59,4 +59,10 @@ if (fs.existsSync(outputDest)) {
 }
 fs.cpSync(outputSrc, outputDest, { recursive: true });
 
+const routeTreeSrc = path.join(buildDir, "src", "routeTree.gen.ts");
+const routeTreeDest = path.join(sourceDir, "src", "routeTree.gen.ts");
+if (fs.existsSync(routeTreeSrc)) {
+  fs.copyFileSync(routeTreeSrc, routeTreeDest);
+}
+
 console.log("\n✅ Build incremental concluído com sucesso!");

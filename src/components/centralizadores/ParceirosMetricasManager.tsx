@@ -240,13 +240,14 @@ export function ParceirosMetricasManager() {
     }
   };
 
-  const filtrados = metricas.filter((m) => {
+  const filtrados = (metricas ?? []).filter((m) => {
     const termo = String(busca ?? "").toLowerCase().trim();
     if (!termo) return true;
+    const searchField = String((m as any)?.search ?? "").toLowerCase();
     const parceiro = String(m?.parceiro_nome ?? "").toLowerCase();
     const tipo = String(m?.tipo_midia ?? "").toLowerCase();
     const veiculo = String(m?.veiculo_programa ?? "").toLowerCase();
-    return parceiro.includes(termo) || tipo.includes(termo) || veiculo.includes(termo);
+    return searchField.includes(termo) || parceiro.includes(termo) || tipo.includes(termo) || veiculo.includes(termo);
   });
 
   return (

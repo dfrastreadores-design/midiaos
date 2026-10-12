@@ -20,6 +20,7 @@ import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as ComissoesRouteImport } from './routes/comissoes'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ContratosRouteImport } from './routes/contratos'
+import { Route as CopilotoComercialRouteImport } from './routes/copiloto-comercial'
 import { Route as CrmRouteImport } from './routes/crm'
 import { Route as DocumentacaoRouteImport } from './routes/documentacao'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
@@ -35,15 +36,18 @@ import { Route as MateriaisApoioRouteImport } from './routes/materiais-apoio'
 import { Route as MetasRouteImport } from './routes/metas'
 import { Route as MinhaContaRouteImport } from './routes/minha-conta'
 import { Route as MonitoramentoRouteImport } from './routes/monitoramento'
+import { Route as NovaCampanhaRouteImport } from './routes/nova-campanha'
 import { Route as OwnerRouteImport } from './routes/owner'
 import { Route as ParceirosRouteImport } from './routes/parceiros'
 import { Route as PedidosInsercaoRouteImport } from './routes/pedidos-insercao'
 import { Route as PermutaRouteImport } from './routes/permuta'
 import { Route as PiRouteImport } from './routes/pi'
 import { Route as PiAnexosRouteImport } from './routes/pi-anexos'
+import { Route as PlanejamentoRouteImport } from './routes/planejamento'
 import { Route as ProdutosRouteImport } from './routes/produtos'
 import { Route as ProjetosEspeciaisRouteImport } from './routes/projetos-especiais'
 import { Route as PropostasRouteImport } from './routes/propostas'
+import { Route as RedeInventarioRouteImport } from './routes/rede-inventario'
 import { Route as RelatorioSincronizacaoRouteImport } from './routes/relatorio-sincronizacao'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as SiteRouteImport } from './routes/site'
@@ -57,7 +61,9 @@ import { Route as AssinarTokenRouteImport } from './routes/assinar.$token'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as LandingPagesIdRouteImport } from './routes/landing-pages.$id'
 import { Route as LpSlugRouteImport } from './routes/lp.$slug'
+import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as PosVendaTokenRouteImport } from './routes/pos-venda.$token'
+import { Route as PropostaOnlineTokenRouteImport } from './routes/proposta-online.$token'
 import { Route as SiteIndexRouteImport } from './routes/site.index'
 import { Route as SiteContatoRouteImport } from './routes/site.contato'
 import { Route as SiteDemoRouteImport } from './routes/site.demo'
@@ -130,6 +136,11 @@ const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
 const ContratosRoute = ContratosRouteImport.update({
   id: '/contratos',
   path: '/contratos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CopilotoComercialRoute = CopilotoComercialRouteImport.update({
+  id: '/copiloto-comercial',
+  path: '/copiloto-comercial',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CrmRoute = CrmRouteImport.update({
@@ -207,6 +218,11 @@ const MonitoramentoRoute = MonitoramentoRouteImport.update({
   path: '/monitoramento',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NovaCampanhaRoute = NovaCampanhaRouteImport.update({
+  id: '/nova-campanha',
+  path: '/nova-campanha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OwnerRoute = OwnerRouteImport.update({
   id: '/owner',
   path: '/owner',
@@ -237,6 +253,11 @@ const PiAnexosRoute = PiAnexosRouteImport.update({
   path: '/pi-anexos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlanejamentoRoute = PlanejamentoRouteImport.update({
+  id: '/planejamento',
+  path: '/planejamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProdutosRoute = ProdutosRouteImport.update({
   id: '/produtos',
   path: '/produtos',
@@ -250,6 +271,11 @@ const ProjetosEspeciaisRoute = ProjetosEspeciaisRouteImport.update({
 const PropostasRoute = PropostasRouteImport.update({
   id: '/propostas',
   path: '/propostas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedeInventarioRoute = RedeInventarioRouteImport.update({
+  id: '/rede-inventario',
+  path: '/rede-inventario',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RelatorioSincronizacaoRoute = RelatorioSincronizacaoRouteImport.update({
@@ -317,9 +343,19 @@ const LpSlugRoute = LpSlugRouteImport.update({
   path: '/lp/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PTokenRoute = PTokenRouteImport.update({
+  id: '/p/$token',
+  path: '/p/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PosVendaTokenRoute = PosVendaTokenRouteImport.update({
   id: '/pos-venda/$token',
   path: '/pos-venda/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropostaOnlineTokenRoute = PropostaOnlineTokenRouteImport.update({
+  id: '/proposta-online/$token',
+  path: '/proposta-online/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SiteIndexRoute = SiteIndexRouteImport.update({
@@ -430,6 +466,7 @@ export interface FileRoutesByFullPath {
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
+  '/copiloto-comercial': typeof CopilotoComercialRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
@@ -445,15 +482,18 @@ export interface FileRoutesByFullPath {
   '/metas': typeof MetasRoute
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
+  '/nova-campanha': typeof NovaCampanhaRoute
   '/owner': typeof OwnerRoute
   '/parceiros': typeof ParceirosRoute
   '/pedidos-insercao': typeof PedidosInsercaoRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/produtos': typeof ProdutosRoute
   '/projetos-especiais': typeof ProjetosEspeciaisRoute
   '/propostas': typeof PropostasRoute
+  '/rede-inventario': typeof RedeInventarioRoute
   '/relatorio-sincronizacao': typeof RelatorioSincronizacaoRoute
   '/relatorios': typeof RelatoriosRoute
   '/site': typeof SiteRouteWithChildren
@@ -467,7 +507,9 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/landing-pages/$id': typeof LandingPagesIdRoute
   '/lp/$slug': typeof LpSlugRoute
+  '/p/$token': typeof PTokenRoute
   '/pos-venda/$token': typeof PosVendaTokenRoute
+  '/proposta-online/$token': typeof PropostaOnlineTokenRoute
   '/site/contato': typeof SiteContatoRoute
   '/site/demo': typeof SiteDemoRoute
   '/site/inventario': typeof SiteInventarioRoute
@@ -499,6 +541,7 @@ export interface FileRoutesByTo {
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
+  '/copiloto-comercial': typeof CopilotoComercialRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
@@ -514,15 +557,18 @@ export interface FileRoutesByTo {
   '/metas': typeof MetasRoute
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
+  '/nova-campanha': typeof NovaCampanhaRoute
   '/owner': typeof OwnerRoute
   '/parceiros': typeof ParceirosRoute
   '/pedidos-insercao': typeof PedidosInsercaoRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/produtos': typeof ProdutosRoute
   '/projetos-especiais': typeof ProjetosEspeciaisRoute
   '/propostas': typeof PropostasRoute
+  '/rede-inventario': typeof RedeInventarioRoute
   '/relatorio-sincronizacao': typeof RelatorioSincronizacaoRoute
   '/relatorios': typeof RelatoriosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -535,7 +581,9 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/landing-pages/$id': typeof LandingPagesIdRoute
   '/lp/$slug': typeof LpSlugRoute
+  '/p/$token': typeof PTokenRoute
   '/pos-venda/$token': typeof PosVendaTokenRoute
+  '/proposta-online/$token': typeof PropostaOnlineTokenRoute
   '/site/contato': typeof SiteContatoRoute
   '/site/demo': typeof SiteDemoRoute
   '/site/inventario': typeof SiteInventarioRoute
@@ -568,6 +616,7 @@ export interface FileRoutesById {
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
+  '/copiloto-comercial': typeof CopilotoComercialRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
@@ -583,15 +632,18 @@ export interface FileRoutesById {
   '/metas': typeof MetasRoute
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
+  '/nova-campanha': typeof NovaCampanhaRoute
   '/owner': typeof OwnerRoute
   '/parceiros': typeof ParceirosRoute
   '/pedidos-insercao': typeof PedidosInsercaoRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/produtos': typeof ProdutosRoute
   '/projetos-especiais': typeof ProjetosEspeciaisRoute
   '/propostas': typeof PropostasRoute
+  '/rede-inventario': typeof RedeInventarioRoute
   '/relatorio-sincronizacao': typeof RelatorioSincronizacaoRoute
   '/relatorios': typeof RelatoriosRoute
   '/site': typeof SiteRouteWithChildren
@@ -605,7 +657,9 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/landing-pages/$id': typeof LandingPagesIdRoute
   '/lp/$slug': typeof LpSlugRoute
+  '/p/$token': typeof PTokenRoute
   '/pos-venda/$token': typeof PosVendaTokenRoute
+  '/proposta-online/$token': typeof PropostaOnlineTokenRoute
   '/site/contato': typeof SiteContatoRoute
   '/site/demo': typeof SiteDemoRoute
   '/site/inventario': typeof SiteInventarioRoute
@@ -639,6 +693,7 @@ export interface FileRouteTypes {
     | '/comissoes'
     | '/configuracoes'
     | '/contratos'
+    | '/copiloto-comercial'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
@@ -654,15 +709,18 @@ export interface FileRouteTypes {
     | '/metas'
     | '/minha-conta'
     | '/monitoramento'
+    | '/nova-campanha'
     | '/owner'
     | '/parceiros'
     | '/pedidos-insercao'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
+    | '/planejamento'
     | '/produtos'
     | '/projetos-especiais'
     | '/propostas'
+    | '/rede-inventario'
     | '/relatorio-sincronizacao'
     | '/relatorios'
     | '/site'
@@ -676,7 +734,9 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/landing-pages/$id'
     | '/lp/$slug'
+    | '/p/$token'
     | '/pos-venda/$token'
+    | '/proposta-online/$token'
     | '/site/contato'
     | '/site/demo'
     | '/site/inventario'
@@ -708,6 +768,7 @@ export interface FileRouteTypes {
     | '/comissoes'
     | '/configuracoes'
     | '/contratos'
+    | '/copiloto-comercial'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
@@ -723,15 +784,18 @@ export interface FileRouteTypes {
     | '/metas'
     | '/minha-conta'
     | '/monitoramento'
+    | '/nova-campanha'
     | '/owner'
     | '/parceiros'
     | '/pedidos-insercao'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
+    | '/planejamento'
     | '/produtos'
     | '/projetos-especiais'
     | '/propostas'
+    | '/rede-inventario'
     | '/relatorio-sincronizacao'
     | '/relatorios'
     | '/sitemap.xml'
@@ -744,7 +808,9 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/landing-pages/$id'
     | '/lp/$slug'
+    | '/p/$token'
     | '/pos-venda/$token'
+    | '/proposta-online/$token'
     | '/site/contato'
     | '/site/demo'
     | '/site/inventario'
@@ -776,6 +842,7 @@ export interface FileRouteTypes {
     | '/comissoes'
     | '/configuracoes'
     | '/contratos'
+    | '/copiloto-comercial'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
@@ -791,15 +858,18 @@ export interface FileRouteTypes {
     | '/metas'
     | '/minha-conta'
     | '/monitoramento'
+    | '/nova-campanha'
     | '/owner'
     | '/parceiros'
     | '/pedidos-insercao'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
+    | '/planejamento'
     | '/produtos'
     | '/projetos-especiais'
     | '/propostas'
+    | '/rede-inventario'
     | '/relatorio-sincronizacao'
     | '/relatorios'
     | '/site'
@@ -813,7 +883,9 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/landing-pages/$id'
     | '/lp/$slug'
+    | '/p/$token'
     | '/pos-venda/$token'
+    | '/proposta-online/$token'
     | '/site/contato'
     | '/site/demo'
     | '/site/inventario'
@@ -846,6 +918,7 @@ export interface RootRouteChildren {
   ComissoesRoute: typeof ComissoesRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContratosRoute: typeof ContratosRoute
+  CopilotoComercialRoute: typeof CopilotoComercialRoute
   CrmRoute: typeof CrmRoute
   DocumentacaoRoute: typeof DocumentacaoRoute
   FinanceiroRoute: typeof FinanceiroRoute
@@ -861,15 +934,18 @@ export interface RootRouteChildren {
   MetasRoute: typeof MetasRoute
   MinhaContaRoute: typeof MinhaContaRoute
   MonitoramentoRoute: typeof MonitoramentoRoute
+  NovaCampanhaRoute: typeof NovaCampanhaRoute
   OwnerRoute: typeof OwnerRoute
   ParceirosRoute: typeof ParceirosRoute
   PedidosInsercaoRoute: typeof PedidosInsercaoRoute
   PermutaRoute: typeof PermutaRoute
   PiRoute: typeof PiRoute
   PiAnexosRoute: typeof PiAnexosRoute
+  PlanejamentoRoute: typeof PlanejamentoRoute
   ProdutosRoute: typeof ProdutosRoute
   ProjetosEspeciaisRoute: typeof ProjetosEspeciaisRoute
   PropostasRoute: typeof PropostasRoute
+  RedeInventarioRoute: typeof RedeInventarioRoute
   RelatorioSincronizacaoRoute: typeof RelatorioSincronizacaoRoute
   RelatoriosRoute: typeof RelatoriosRoute
   SiteRoute: typeof SiteRouteWithChildren
@@ -882,7 +958,9 @@ export interface RootRouteChildren {
   AssinarTokenRoute: typeof AssinarTokenRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   LpSlugRoute: typeof LpSlugRoute
+  PTokenRoute: typeof PTokenRoute
   PosVendaTokenRoute: typeof PosVendaTokenRoute
+  PropostaOnlineTokenRoute: typeof PropostaOnlineTokenRoute
   ApiAdminResetPasswordRoute: typeof ApiAdminResetPasswordRoute
   ApiPublicInventoryAssetsRoute: typeof ApiPublicInventoryAssetsRoute
   ApiSocialPublishDueRoute: typeof ApiSocialPublishDueRoute
@@ -972,6 +1050,13 @@ declare module '@tanstack/react-router' {
       path: '/contratos'
       fullPath: '/contratos'
       preLoaderRoute: typeof ContratosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/copiloto-comercial': {
+      id: '/copiloto-comercial'
+      path: '/copiloto-comercial'
+      fullPath: '/copiloto-comercial'
+      preLoaderRoute: typeof CopilotoComercialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/crm': {
@@ -1079,6 +1164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MonitoramentoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nova-campanha': {
+      id: '/nova-campanha'
+      path: '/nova-campanha'
+      fullPath: '/nova-campanha'
+      preLoaderRoute: typeof NovaCampanhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/owner': {
       id: '/owner'
       path: '/owner'
@@ -1121,6 +1213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PiAnexosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/planejamento': {
+      id: '/planejamento'
+      path: '/planejamento'
+      fullPath: '/planejamento'
+      preLoaderRoute: typeof PlanejamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/produtos': {
       id: '/produtos'
       path: '/produtos'
@@ -1140,6 +1239,13 @@ declare module '@tanstack/react-router' {
       path: '/propostas'
       fullPath: '/propostas'
       preLoaderRoute: typeof PropostasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rede-inventario': {
+      id: '/rede-inventario'
+      path: '/rede-inventario'
+      fullPath: '/rede-inventario'
+      preLoaderRoute: typeof RedeInventarioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/relatorio-sincronizacao': {
@@ -1233,11 +1339,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LpSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/p/$token': {
+      id: '/p/$token'
+      path: '/p/$token'
+      fullPath: '/p/$token'
+      preLoaderRoute: typeof PTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pos-venda/$token': {
       id: '/pos-venda/$token'
       path: '/pos-venda/$token'
       fullPath: '/pos-venda/$token'
       preLoaderRoute: typeof PosVendaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proposta-online/$token': {
+      id: '/proposta-online/$token'
+      path: '/proposta-online/$token'
+      fullPath: '/proposta-online/$token'
+      preLoaderRoute: typeof PropostaOnlineTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/site/': {
@@ -1417,6 +1537,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComissoesRoute: ComissoesRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContratosRoute: ContratosRoute,
+  CopilotoComercialRoute: CopilotoComercialRoute,
   CrmRoute: CrmRoute,
   DocumentacaoRoute: DocumentacaoRoute,
   FinanceiroRoute: FinanceiroRoute,
@@ -1432,15 +1553,18 @@ const rootRouteChildren: RootRouteChildren = {
   MetasRoute: MetasRoute,
   MinhaContaRoute: MinhaContaRoute,
   MonitoramentoRoute: MonitoramentoRoute,
+  NovaCampanhaRoute: NovaCampanhaRoute,
   OwnerRoute: OwnerRoute,
   ParceirosRoute: ParceirosRoute,
   PedidosInsercaoRoute: PedidosInsercaoRoute,
   PermutaRoute: PermutaRoute,
   PiRoute: PiRoute,
   PiAnexosRoute: PiAnexosRoute,
+  PlanejamentoRoute: PlanejamentoRoute,
   ProdutosRoute: ProdutosRoute,
   ProjetosEspeciaisRoute: ProjetosEspeciaisRoute,
   PropostasRoute: PropostasRoute,
+  RedeInventarioRoute: RedeInventarioRoute,
   RelatorioSincronizacaoRoute: RelatorioSincronizacaoRoute,
   RelatoriosRoute: RelatoriosRoute,
   SiteRoute: SiteRouteWithChildren,
@@ -1453,7 +1577,9 @@ const rootRouteChildren: RootRouteChildren = {
   AssinarTokenRoute: AssinarTokenRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   LpSlugRoute: LpSlugRoute,
+  PTokenRoute: PTokenRoute,
   PosVendaTokenRoute: PosVendaTokenRoute,
+  PropostaOnlineTokenRoute: PropostaOnlineTokenRoute,
   ApiAdminResetPasswordRoute: ApiAdminResetPasswordRoute,
   ApiPublicInventoryAssetsRoute: ApiPublicInventoryAssetsRoute,
   ApiSocialPublishDueRoute: ApiSocialPublishDueRoute,
@@ -1478,4 +1604,3 @@ declare module '@tanstack/react-start' {
     config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
-

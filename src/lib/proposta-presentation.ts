@@ -31,6 +31,59 @@ const pickLogoUrl = (clienteLogo?: string | null, agenciaLogo?: string | null) =
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
+export function aplicarMarcaDaguaCorporativa(
+  doc: jsPDF,
+  logoDataUrl?: string | null,
+  emissorNome?: string | null,
+) {
+  try {
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+
+      doc.saveGraphicsState();
+
+      if (logoDataUrl) {
+        try {
+          const gState = new (doc as any).GState({ opacity: 0.05 });
+          doc.setGState(gState);
+          const imgW = 90;
+          const imgH = 45;
+          doc.addImage(
+            logoDataUrl,
+            "PNG",
+            W / 2 - imgW / 2,
+            H / 2 - imgH / 2,
+            imgW,
+            imgH,
+            undefined,
+            "FAST",
+            -35,
+          );
+        } catch {
+          const gState = new (doc as any).GState({ opacity: 0.04 });
+          doc.setGState(gState);
+          doc.setFontSize(32);
+          doc.setTextColor(160, 160, 160);
+          doc.text(emissorNome || "MÍDIA.OS", W / 2, H / 2, { align: "center", angle: 35 });
+        }
+      } else {
+        const gState = new (doc as any).GState({ opacity: 0.04 });
+        doc.setGState(gState);
+        doc.setFontSize(32);
+        doc.setTextColor(160, 160, 160);
+        doc.text(emissorNome || "MÍDIA.OS", W / 2, H / 2, { align: "center", angle: 35 });
+      }
+
+      doc.restoreGraphicsState();
+    }
+  } catch (err) {
+    console.warn("[MarcaDagua] Aviso ao aplicar marca d'água corporativa:", err);
+  }
+}
+
 type Item = {
   tipo: string;
   programa?: string | null;
@@ -1461,6 +1514,7 @@ async function gerarPdfPropostaCustomizada(
     }
   }
 
+  aplicarMarcaDaguaCorporativa(doc, (p as any).organizacao?.logo_url, (p as any).organizacao?.nome);
   applyTrialWatermark(doc);
   const blob = doc.output("blob") as Blob;
   if (options?.returnBlob) return blob;
@@ -2840,6 +2894,7 @@ export async function gerarPdfProposta(
     doc.text(partes.join("  ·  "), W - 10, rodapeY, { align: "right" });
   }
 
+  aplicarMarcaDaguaCorporativa(doc, logoData || (p as any).organizacao?.logo_url, (p as any).organizacao?.nome);
   applyTrialWatermark(doc);
   const blob = doc.output("blob") as Blob;
   if (options?.returnBlob) return blob;
@@ -3244,6 +3299,7 @@ export async function gerarPdfPropostaSimplificada(
       ].filter(Boolean);
   doc.text(footerParts.join("  •  "), W / 2, H - 8, { align: "center" });
 
+  aplicarMarcaDaguaCorporativa(doc, emissorLogo, emissorNome);
   applyTrialWatermark(doc);
   saveBlob(doc.output("blob"), `${slugify(clienteNome)}-Proposta-Simplificada-${p.numero}.pdf`);
 }
@@ -4746,6 +4802,7 @@ export async function gerarPdfPropostaNexo(
     { align: "center" },
   );
 
+  aplicarMarcaDaguaCorporativa(doc, emissorLogo, emissorNome);
   applyTrialWatermark(doc);
   const blob = doc.output("blob") as Blob;
   if (options?.returnBlob) return blob;
@@ -5236,6 +5293,7 @@ export async function gerarPdfPropostaExecutivaCoBranding(
     { align: "center" },
   );
 
+  aplicarMarcaDaguaCorporativa(doc, emissorLogo, emissorNome);
   applyTrialWatermark(doc);
   const blob = doc.output("blob") as Blob;
   if (options?.returnBlob) return blob;

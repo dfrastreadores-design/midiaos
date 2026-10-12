@@ -242,10 +242,10 @@ export function ContratosPage() {
 
   // Filtros
   const contratosFiltrados = useMemo(() => {
-    return contratos.filter((c) => {
+    return (contratos ?? []).filter((c) => {
       const matchSearch =
-        c.numero.toLowerCase().includes(search.toLowerCase()) ||
-        c.titulo.toLowerCase().includes(search.toLowerCase()) ||
+        (c.numero || "").toLowerCase().includes(search.toLowerCase()) ||
+        (c.titulo || "").toLowerCase().includes(search.toLowerCase()) ||
         c.cliente?.razao_social?.toLowerCase().includes(search.toLowerCase()) ||
         c.parceiro?.razao_social?.toLowerCase().includes(search.toLowerCase());
 
@@ -256,13 +256,13 @@ export function ContratosPage() {
 
   // Handler para pré-preenchimento ao selecionar Modelo
   function handleSelectModelo(modeloId: string) {
-    const mod = modelos.find((m) => m.id === modeloId);
+    const mod = (modelos ?? []).find((m) => m.id === modeloId);
     if (!mod) return;
 
-    const cli = clientes.find((c: any) => c.id === formData.cliente_id);
-    const age = agencias.find((a: any) => a.id === formData.agencia_id);
-    const parc = parceiros.find((p: any) => p.id === formData.parceiro_id);
-    const pi = pis.find((p: any) => p.id === formData.pi_id);
+    const cli = (clientes ?? []).find((c: any) => c.id === formData.cliente_id);
+    const age = (agencias ?? []).find((a: any) => a.id === formData.agencia_id);
+    const parc = (parceiros ?? []).find((p: any) => p.id === formData.parceiro_id);
+    const pi = (pis ?? []).find((p: any) => p.id === formData.pi_id);
 
     const dadosSubstituicao: Record<string, string | number> = {
       NOME_EMPRESA: empresaNome || "Mídia OS",

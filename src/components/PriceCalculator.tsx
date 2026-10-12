@@ -965,18 +965,18 @@ export function PriceCalculator({
         <Separator />
 
         <div className="grid sm:grid-cols-4 gap-3">
-          <SummaryItem label="Inserções totais" value={String(totals.insercoes)} />
-          <SummaryItem label="Valor Tabela" value={formatBRL(totals.tabela)} />
+          <SummaryItem label="Inserções Totais" value={String(totals.insercoes)} />
+          <SummaryItem label="Valor Bruto de Tabela" value={formatBRL(totals.tabela)} />
           <SummaryItem
-            label="Desconto"
+            label="Economia Total Concedida"
             value={
               totals.tabela > 0
-                ? `- ${formatBRL(totals.desconto)} (${((totals.desconto / totals.tabela) * 100).toFixed(0)}%)`
+                ? `- ${formatBRL(totals.desconto)} (${((totals.desconto / totals.tabela) * 100).toFixed(1)}%)`
                 : `- ${formatBRL(totals.desconto)}`
             }
             muted
           />
-          <SummaryItem label="Total Negociado" value={formatBRL(totals.negociado)} highlight />
+          <SummaryItem label="Investimento Final Líquido" value={formatBRL(totals.negociado)} highlight />
         </div>
       </CardContent>
     </Card>
@@ -1887,17 +1887,50 @@ function ItemRow({
           </p>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Desconto (%)</Label>
+          <Label className="text-xs font-semibold">Desc. (%)</Label>
           <Input
             type="number"
             min={0}
             max={100}
             step="0.01"
-            value={t.descontoPct}
-            onChange={(e) =>
-              onChange({ desconto: parseFloat(e.target.value) || 0, negociadoOverride: null })
-            }
+            placeholder="0%"
+            value={t.descontoPct > 0 ? t.descontoPct : ""}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              if (val === "") {
+                onChange({ desconto: 0, negociadoOverride: null });
+                return;
+              }
+              const pct = Math.min(100, Math.max(0, parseFloat(val) || 0));
+              onChange({ desconto: pct, negociadoOverride: null });
+            }}
+            className="font-mono"
           />
+          <p className="text-[10px] text-muted-foreground">Opcional por item.</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold">Desc. (R$)</Label>
+          <Input
+            type="number"
+            min={0}
+            max={t.valorTabela}
+            step="0.01"
+            placeholder="R$ 0,00"
+            value={t.descontoVal > 0 ? t.descontoVal : ""}
+            onChange={(e) => {
+              const val = e.target.value.trim();
+              if (val === "") {
+                onChange({ desconto: 0, negociadoOverride: null });
+                return;
+              }
+              const descR$ = Math.min(t.valorTabela, Math.max(0, parseFloat(val) || 0));
+              const pct = t.valorTabela > 0 ? Math.round((descR$ / t.valorTabela) * 10000) / 100 : 0;
+              const novoNegociado = Math.max(0, Math.round((t.valorTabela - descR$) * 100) / 100);
+              onChange({ desconto: pct, negociadoOverride: novoNegociado });
+            }}
+            className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold"
+          />
+          <p className="text-[10px] text-muted-foreground">Economia concedida.</p>
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Dias de veiculação</Label>
@@ -1913,20 +1946,21 @@ function ItemRow({
             }
           />
           <p className="text-[10px] text-muted-foreground">
-            Opcional. Informe a duração da campanha.
+            Duração da campanha.
           </p>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Valor negociado (R$)</Label>
+          <Label className="text-xs font-semibold">Valor negociado (R$)</Label>
           <Input
             type="number"
             min={0}
             step="0.01"
             value={t.valorNegociado}
             onChange={(e) => onChange({ negociadoOverride: parseFloat(e.target.value) || 0 })}
+            className="font-mono font-bold text-foreground"
           />
           <p className="text-[10px] text-muted-foreground">
-            Trava o líquido fechado da negociação.
+            Líquido do item.
           </p>
         </div>
       </div>

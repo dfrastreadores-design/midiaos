@@ -361,6 +361,17 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
                   className={errorInputClass(hasError("campanha"))}
                 />
               </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold">Público de Interesse (Target da Campanha)</Label>
+                <Input
+                  value={state.publicoInteresse || ""}
+                  onChange={(e) => state.setPublicoInteresse(e.target.value)}
+                  placeholder="Ex.: Classes A/B, tomadores de decisão, moradores de condomínios verticais, condutores em vias de grande fluxo"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Variável chave utilizada para calibrar a defesa estratégica e o alinhamento de canais da proposta.
+                </p>
+              </div>
               <div className="space-y-1.5">
                 <Label>Validade</Label>
                 <QuickDateInput

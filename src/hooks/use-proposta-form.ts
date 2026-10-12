@@ -31,6 +31,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
   const [executivoParceiroId, setExecutivoParceiroId] = useState("");
   const [clienteAvulso, setClienteAvulso] = useState("");
   const [campanha, setCampanha] = useState("");
+  const [publicoInteresse, setPublicoInteresse] = useState("");
   const [validade, setValidade] = useState("");
   const [observacao, setObservacao] = useState("");
   const [items, setItems] = useState<CalcItemOut[]>([]);
@@ -148,6 +149,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
             setExecutivoParceiroId((p as any).executivo_parceiro_id ?? "");
             setClienteAvulso(p.cliente_avulso ?? "");
             setCampanha(p.campanha ?? "");
+            setPublicoInteresse((p as any).publico_interesse ?? "");
             setValidade(p.validade ?? "");
             setObservacao(p.observacao ?? "");
             setItems(p.itens || []);
@@ -165,6 +167,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
         setExecutivoParceiroId(initial?.executivo_parceiro_id ?? "");
         setClienteAvulso(initial?.cliente_avulso ?? "");
         setCampanha(initial?.campanha ?? "");
+        setPublicoInteresse(initial?.publico_interesse ?? "");
         setValidade(initial?.validade ?? "");
         setObservacao(initial?.observacao ?? "");
         setItems(initial?.itens || []);
@@ -199,6 +202,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
           executivo_parceiro_id: executivoParceiroId || null,
           cliente_avulso: clienteAvulso.trim() || null,
           campanha: campanha.trim(),
+          publico_interesse: publicoInteresse.trim() || null,
           validade: validadeFinal,
           observacao: mergeObservacao(observacao, obsProdutos),
           status,
@@ -265,6 +269,8 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
       setClienteAvulso,
       campanha,
       setCampanha,
+      publicoInteresse,
+      setPublicoInteresse,
       validade,
       setValidade,
       observacao,
