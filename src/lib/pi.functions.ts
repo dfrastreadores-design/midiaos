@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchCnpj, onlyDigits } from "@/lib/cnpj";
@@ -190,23 +189,34 @@ export const listPis = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    // Buscar roles do usuário
-    const { data: roleRows } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
+    // Buscar roles e perfil do usuário
+    const [{ data: roleRows }, { data: userAuth }, { data: profile }] = await Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id, role, cnpj_vinculado, cnpj, is_superadmin")
+        .eq("id", userId)
+        .maybeSingle(),
+    ]);
+
     const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+    const isMaster =
+      isMasterEmail(userAuth?.user?.email) ||
+      profile?.is_superadmin ||
+      String(profile?.role).toUpperCase() === "MASTER" ||
+      userAuth?.user?.user_metadata?.role === "MASTER" ||
+      userAuth?.user?.user_metadata?.is_superadmin === true;
+
     const isProducaoOnly =
+      !isMaster &&
       roles.includes("producao") &&
       !roles.includes("admin") &&
       !roles.includes("executivo") &&
       !roles.includes("opec");
 
-    // Verificar se o usuário possui acesso amplo ou se é executivo restrito aos seus próprios PIs
-    const { data: userAuth } = await supabase.auth.getUser();
-    const isSuper = isMasterEmail(userAuth?.user?.email);
     const hasBroadRole =
-      isSuper ||
+      isMaster ||
       roles.some((r: string) =>
         ["admin", "diretoria", "opec", "financeiro", "super_admin"].includes(r),
       );
@@ -224,15 +234,41 @@ export const listPis = createServerFn({ method: "GET" })
     let query = supabase
       .from("pis")
       .select(
-        "*, cliente:clientes(id,razao_social,nome_fantasia), agencia:agencias(id,razao_social,nome_fantasia)",
+        "*, cliente:clientes(id,razao_social,nome_fantasia,cnpj), agencia:agencias(id,razao_social,nome_fantasia,cnpj), parceiro:parceiros(id,razao_social,nome_fantasia,cnpj)",
       );
 
-    // Se for perfil produção exclusivo, só vê PIs que têm produção interna agendada
-    if (isProducaoOnly) {
-      query = query.eq("producao_tipo", "interna");
-    } else if (!canViewAll) {
-      // Executivo / Usuário restrito: visualiza apenas os PIs atribuídos a ele ou criados por ele
-      query = query.or(`executivo_id.eq.${userId},created_by.eq.${userId}`);
+    if (!isMaster) {
+      const userCnpj = (profile?.cnpj_vinculado || profile?.cnpj)?.trim();
+      if (userCnpj) {
+        // Usuário vinculado a CNPJ específico só pode visualizar registros do seu CNPJ (cliente, agência ou parceiro)
+        const [{ data: matchingClientes }, { data: matchingAgencias }, { data: matchingParceiros }] = await Promise.all([
+          supabase.from("clientes").select("id").eq("cnpj", userCnpj),
+          supabase.from("agencias").select("id").eq("cnpj", userCnpj),
+          supabase.from("parceiros").select("id").eq("cnpj", userCnpj),
+        ]);
+        const clientIds = (matchingClientes || []).map((c: any) => c.id);
+        const agencyIds = (matchingAgencias || []).map((a: any) => a.id);
+        const parceiroIds = (matchingParceiros || []).map((p: any) => p.id);
+        const orClauses: string[] = [];
+        if (clientIds.length > 0) orClauses.push(`cliente_id.in.(${clientIds.join(",")})`);
+        if (agencyIds.length > 0) orClauses.push(`agencia_id.in.(${agencyIds.join(",")})`);
+        if (parceiroIds.length > 0) orClauses.push(`parceiro_id.in.(${parceiroIds.join(",")})`);
+
+        if (orClauses.length > 0) {
+          query = query.or(orClauses.join(","));
+        } else {
+          return [];
+        }
+      } else {
+        if (profile?.tenant_id) {
+          query = query.eq("tenant_id", profile.tenant_id);
+        }
+        if (isProducaoOnly) {
+          query = query.eq("producao_tipo", "interna");
+        } else if (!canViewAll) {
+          query = query.or(`executivo_id.eq.${userId},created_by.eq.${userId}`);
+        }
+      }
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });
@@ -253,6 +289,67 @@ export const getPi = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .single();
     if (error) throw new Error(error.message);
+
+    const [{ data: userAuth }, { data: profile }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id, role, cnpj_vinculado, cnpj, is_superadmin")
+        .eq("id", context.userId)
+        .maybeSingle(),
+    ]);
+
+    const isMaster =
+      isMasterEmail(userAuth?.user?.email) ||
+      profile?.is_superadmin ||
+      String(profile?.role).toUpperCase() === "MASTER" ||
+      userAuth?.user?.user_metadata?.role === "MASTER" ||
+      userAuth?.user?.user_metadata?.is_superadmin === true;
+
+    if (!isMaster) {
+      const userCnpj = (profile?.cnpj_vinculado || profile?.cnpj)?.trim();
+      if (userCnpj) {
+        const matchesClient = pi.cliente?.cnpj === userCnpj;
+        const matchesAgency = pi.agencia?.cnpj === userCnpj;
+        const matchesEmissora = (pi.emissora as any)?.cnpj === userCnpj;
+        if (!matchesClient && !matchesAgency && !matchesEmissora) {
+          throw new Error("Acesso negado: este Pedido de Inserção pertence a outra organização.");
+        }
+      } else if (profile?.tenant_id && pi.tenant_id && pi.tenant_id !== profile.tenant_id) {
+        throw new Error("Acesso negado: registro pertencente a outro tenant.");
+      } else {
+        // Validação de carteira para executivos
+        const { data: roleRows } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", context.userId);
+        const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+        const hasBroadRole = roles.some((r: string) =>
+          ["admin", "master_empresa", "diretoria", "opec", "financeiro", "super_admin"].includes(r),
+        );
+
+        if (!hasBroadRole) {
+          let canViewAll = false;
+          if (roles.length > 0) {
+            const { data: permRows } = await supabase
+              .from("role_permissions")
+              .select("permission_key")
+              .in("role", roles)
+              .eq("permission_key", "pi.view_all");
+            canViewAll = (permRows?.length ?? 0) > 0;
+          }
+
+          const isAuthorOrAssigned =
+            pi.executivo_id === context.userId ||
+            pi.created_by === context.userId ||
+            pi.responsavel_negociacao_id === context.userId;
+
+          if (!canViewAll && !isAuthorOrAssigned) {
+            throw new Error("Acesso negado: Pedido de Inserção fora da sua carteira comercial autorizada.");
+          }
+        }
+      }
+    }
     let atendimento: { nome: string; email: string } | null = null;
     if (pi?.executivo_id) {
       const { data: prof } = await supabase
@@ -343,18 +440,59 @@ export const upsertPi = createServerFn({ method: "POST" })
     );
 
     // Permite que Admin e Diretoria definam ou reatribuam o executivo responsável
-    const { data: privCheck } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .in("role", ["admin", "super_admin", "diretoria"]);
-    const isPrivileged = (privCheck ?? []).length > 0;
+    const [{ data: userAuth }, { data: prof }, { data: privCheck }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .in("role", ["admin", "super_admin", "diretoria", "master_empresa", "opec"]),
+    ]);
+
+    const isMaster = isMasterEmail(userAuth?.user?.email);
+    const tenantId = prof?.tenant_id ?? null;
+    const isPrivileged = isMaster || (privCheck ?? []).length > 0;
+
+    if (!isMaster && !tenantId) {
+      throw new Error("Acesso negado: Usuário sem empresa associada no servidor.");
+    }
 
     if (piId) {
+      // 1. Validar tenant e titularidade antes de atualizar PI existente
+      const { data: existente, error: fetchErr } = await supabase
+        .from("pis")
+        .select("id, tenant_id, executivo_id, created_by, responsavel_negociacao_id")
+        .eq("id", piId)
+        .maybeSingle();
+
+      if (fetchErr) throw new Error(fetchErr.message);
+      if (!existente) throw new Error("Pedido de Inserção não encontrado.");
+
+      if (!isMaster) {
+        if (existente.tenant_id && existente.tenant_id !== tenantId) {
+          throw new Error("Acesso negado: Pedido de Inserção pertence a outra organização.");
+        }
+        if (!isPrivileged) {
+          const isOwner =
+            existente.executivo_id === userId ||
+            existente.created_by === userId ||
+            existente.responsavel_negociacao_id === userId;
+          if (!isOwner) {
+            throw new Error("Acesso negado: Você não pode alterar um PI de outro executivo.");
+          }
+        }
+      }
+
       const updatePayload: Record<string, unknown> = {
         ...piData,
         responsavel_negociacao_id,
         executivo_execucao_id,
+        ...(tenantId ? { tenant_id: tenantId } : {}),
       };
       // Preserva o executivo original ao editar: só atualiza quando admin ou diretoria
       // selecionar explicitamente um novo executivo (valor truthy).
@@ -378,6 +516,7 @@ export const upsertPi = createServerFn({ method: "POST" })
           created_by: userId,
           responsavel_negociacao_id,
           executivo_execucao_id,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
         } as never)
         .select("id")
         .single();
@@ -634,12 +773,55 @@ export const cancelarPi = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Lê IDs do PI para rodar refresh do cadastro antes de qualquer alteração
-    const { data: piRef } = await supabase
+    // 1. Obter perfil e papéis confiáveis do usuário
+    const [{ data: userAuth }, { data: prof }, { data: roleRows }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+    ]);
+
+    const isMaster = isMasterEmail(userAuth?.user?.email);
+    const tenantId = prof?.tenant_id ?? null;
+    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+    const hasBroadRole =
+      isMaster ||
+      roles.some((r: string) =>
+        ["admin", "master_empresa", "diretoria", "opec", "super_admin"].includes(r),
+      );
+
+    if (!isMaster && !tenantId) {
+      throw new Error("Acesso negado: Usuário sem empresa associada no servidor.");
+    }
+
+    // 2. Lê PI para validar permissão de cancelamento
+    const { data: piRef, error: piRefErr } = await supabase
       .from("pis")
-      .select("cliente_id, agencia_id")
+      .select("cliente_id, agencia_id, tenant_id, executivo_id, created_by, responsavel_negociacao_id")
       .eq("id", data.id)
       .maybeSingle();
+
+    if (piRefErr) throw new Error(piRefErr.message);
+    if (!piRef) throw new Error("Pedido de Inserção não encontrado.");
+
+    if (!isMaster) {
+      if (piRef.tenant_id && piRef.tenant_id !== tenantId) {
+        throw new Error("Acesso negado: Pedido de Inserção pertence a outra organização.");
+      }
+      if (!hasBroadRole) {
+        const isOwner =
+          piRef.executivo_id === userId ||
+          piRef.created_by === userId ||
+          piRef.responsavel_negociacao_id === userId;
+        if (!isOwner) {
+          throw new Error("Acesso negado: Você não pode cancelar um Pedido de Inserção de outro executivo.");
+        }
+      }
+    }
+
     await refreshPartesPi(
       supabase as unknown as SupabaseLike,
       (piRef?.cliente_id as string | null) ?? null,
@@ -734,7 +916,8 @@ export const enviarPiParaAprovacao = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const request = getRequest();
+    const { safeGetRequest } = await import("@/lib/server-request.server");
+    const request = safeGetRequest();
     const { data: pi, error } = await supabase
       .from("pis")
       .update({
@@ -816,7 +999,6 @@ export const aprovarPi = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const request = getRequest();
     const { data: isAdmin } = await supabase
       .from("user_roles")
       .select("role")
@@ -923,16 +1105,67 @@ export const getPiPorNumero = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ numero: z.string().min(1).max(50) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data: pi, error } = await supabase
       .from("pis")
       .select(
-        "*, cliente:clientes(razao_social,nome_fantasia), agencia:agencias(razao_social,nome_fantasia), itens:pi_itens(*)",
+        "*, cliente:clientes(razao_social,nome_fantasia,cnpj), agencia:agencias(razao_social,nome_fantasia,cnpj), itens:pi_itens(*)",
       )
       .eq("numero", data.numero)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!pi) throw new Error(`PI ${data.numero} não encontrado`);
+
+    const [{ data: userAuth }, { data: profile }, { data: roleRows }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id, cnpj_vinculado, cnpj")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+    ]);
+
+    const isMaster = isMasterEmail(userAuth?.user?.email);
+    if (!isMaster) {
+      const userCnpj = (profile?.cnpj_vinculado || profile?.cnpj)?.trim();
+      if (userCnpj) {
+        const matchesClient = pi.cliente?.cnpj === userCnpj;
+        const matchesAgency = pi.agencia?.cnpj === userCnpj;
+        if (!matchesClient && !matchesAgency) {
+          throw new Error("Acesso negado: este Pedido de Inserção pertence a outra organização.");
+        }
+      } else if (profile?.tenant_id && pi.tenant_id && pi.tenant_id !== profile.tenant_id) {
+        throw new Error("Acesso negado: registro pertencente a outro tenant.");
+      } else {
+        const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+        const hasBroadRole = roles.some((r: string) =>
+          ["admin", "master_empresa", "diretoria", "opec", "financeiro", "super_admin"].includes(r),
+        );
+
+        if (!hasBroadRole) {
+          let canViewAll = false;
+          if (roles.length > 0) {
+            const { data: permRows } = await supabase
+              .from("role_permissions")
+              .select("permission_key")
+              .in("role", roles)
+              .eq("permission_key", "pi.view_all");
+            canViewAll = (permRows?.length ?? 0) > 0;
+          }
+
+          const isAuthorOrAssigned =
+            pi.executivo_id === userId ||
+            pi.created_by === userId ||
+            pi.responsavel_negociacao_id === userId;
+
+          if (!canViewAll && !isAuthorOrAssigned) {
+            throw new Error("Acesso negado: Pedido de Inserção fora da sua carteira comercial autorizada.");
+          }
+        }
+      }
+    }
+
     return pi;
   });
 

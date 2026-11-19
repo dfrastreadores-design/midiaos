@@ -1,0 +1,137 @@
+{
+  "metadata": {
+    "data_iso": "2026-09-29T14:11:48.989Z",
+    "timestamp": 1790691108989,
+    "url": "https://odgowgvhjhvpeazglsly.supabase.co",
+    "versao": "1.0-producao"
+  },
+  "tabelas": {
+    "clientes": [],
+    "agencias": [],
+    "propostas": [],
+    "proposta_itens": [],
+    "pis": [],
+    "pi_itens": [],
+    "pi_historico": [],
+    "produtos": [],
+    "produto_tipos": [],
+    "landing_pages": [],
+    "planos": [],
+    "comissoes_regras": [],
+    "projetos_especiais": [],
+    "metas_executivo": [],
+    "tenants": [],
+    "trash_items": [],
+    "auditoria_alteracoes": []
+  },
+  "resumo": {
+    "clientes": {
+      "status": "ok",
+      "count": 0
+    },
+    "agencias": {
+      "status": "ok",
+      "count": 0
+    },
+    "propostas": {
+      "status": "ok",
+      "count": 0
+    },
+    "proposta_itens": {
+      "status": "ok",
+      "count": 0
+    },
+    "pis": {
+      "status": "ok",
+      "count": 0
+    },
+    "pi_itens": {
+      "status": "ok",
+      "count": 0
+    },
+    "pi_historico": {
+      "status": "ok",
+      "count": 0
+    },
+    "briefings": {
+      "status": "erro",
+      "erro": "401 - {\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"permission denied for function has_role\"}",
+      "count": 0
+    },
+    "produtos": {
+      "status": "ok",
+      "count": 0
+    },
+    "produto_tipos": {
+      "status": "ok",
+      "count": 0
+    },
+    "parceiros": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":\"Perhaps you meant the table 'public.pi_financeiro'\",\"message\":\"Could not find the table 'public.parceiros' in the schema cache\"}",
+      "count": 0
+    },
+    "parceiro_tipos_midia": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":\"Perhaps you meant the table 'public.produto_tipos'\",\"message\":\"Could not find the table 'public.parceiro_tipos_midia' in the schema cache\"}",
+      "count": 0
+    },
+    "social_contas": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":\"Perhaps you meant the table 'public.midia_config'\",\"message\":\"Could not find the table 'public.social_contas' in the schema cache\"}",
+      "count": 0
+    },
+    "social_posts": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":\"Perhaps you meant the table 'public.solicitacoes_producao'\",\"message\":\"Could not find the table 'public.social_posts' in the schema cache\"}",
+      "count": 0
+    },
+    "social_metricas": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":\"Perhaps you meant the table 'public.solicitacoes_producao'\",\"message\":\"Could not find the table 'public.social_metricas' in the schema cache\"}",
+      "count": 0
+    },
+    "landing_pages": {
+      "status": "ok",
+      "count": 0
+    },
+    "planos": {
+      "status": "ok",
+      "count": 0
+    },
+    "comissoes_regras": {
+      "status": "ok",
+      "count": 0
+    },
+    "pos_venda_atendimentos": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":\"Perhaps you meant the table 'public.pos_venda_anexos'\",\"message\":\"Could not find the table 'public.pos_venda_atendimentos' in the schema cache\"}",
+      "count": 0
+    },
+    "emissoras": {
+      "status": "erro",
+      "erro": "401 - {\"code\":\"42501\",\"details\":null,\"hint\":null,\"message\":\"permission denied for function current_tenant_id\"}",
+      "count": 0
+    },
+    "projetos_especiais": {
+      "status": "ok",
+      "count": 0
+    },
+    "metas_executivo": {
+      "status": "ok",
+      "count": 0
+    },
+    "tenants": {
+      "status": "ok",
+      "count": 0
+    },
+    "trash_items": {
+      "status": "ok",
+      "count": 0
+    },
+    "auditoria_alteracoes": {
+      "status": "ok",
+      "count": 0
+    }
+  }
+}

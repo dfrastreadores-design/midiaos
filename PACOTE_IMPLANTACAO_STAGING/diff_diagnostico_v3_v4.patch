@@ -1,0 +1,394 @@
+--- diagnostico_auditoria_pos_falhas_01B1_v3.sql (V3)
++++ diagnostico_auditoria_pos_falhas_01B1_v4.sql (V4)
+@@ -1,28 +1,32 @@
+ -- ==============================================================================
+--- MIDIA OS v2.6.0 — AUDITORIA READ-ONLY APÓS DUAS FALHAS DA 01B1 (VERSÃO V3)
+--- Arquivo: diagnostico_auditoria_pos_falhas_01B1_v3.sql
++-- MIDIA OS v2.6.0 — AUDITORIA READ-ONLY APÓS DUAS FALHAS DA 01B1 (VERSÃO V4)
++-- Arquivo: diagnostico_auditoria_pos_falhas_01B1_v4.sql
+ -- Ambiente: Supabase STAGING (Project ID: wsologhmptielhhnbgob) / PostgreSQL 17.11
+ --
+ -- NATUREZA: ESTRITAMENTE LEITURA (READ-ONLY)
+ -- REGRAS: Zero DDL, Zero DML, Zero alteração de dados, Zero comandos de configuração.
+--- AVISO DE COMPATIBILIDADE: A sintaxe deste script foi concebida e revisada para
+--- a gramática e catálogos do PostgreSQL 17.11. Em estrito cumprimento às regras
+--- de isolamento e não execução remota, sua compatibilidade final no Supabase Staging
+--- AINDA NÃO FOI COMPROVADA EM EXECUÇÃO REAL e depende de execução manual autorizada.
++-- AVISO DE COMPATIBILIDADE: A sintaxe deste script foi concebida e revisada estaticamente
++-- para a gramática e os catálogos de sistema do PostgreSQL 17.11. Em estrito cumprimento
++-- às diretrizes de isolamento e bloqueio de execução remota, sua compatibilidade final
++-- no Supabase Staging AINDA NÃO FOI COMPROVADA EM EXECUÇÃO REAL e dependerá de execução
++-- manual supervisionada após expressa autorização do usuário.
+ --
+ -- OBJETIVO:
+ --   1. Inspecionar exaustivamente todos os objetos e alterações declarados no lote
+ --      01B1 antes da linha 141 (ponto exato do erro 42701 em public.produtos.formato).
+---   2. Verificar tabelas, colunas, constraints completas (tipo, colunas locais, tabela
+---      e colunas referenciadas, regra ON DELETE e expressões CHECK).
+---   3. Validar EFETIVAMENTE todas as 15 políticas RLS: comando (polcmd), roles (polroles),
+---      permissividade (polpermissive), expressão USING (polqual) e expressão WITH CHECK (polwithcheck).
+---   4. Proteger consultas a storage.buckets e storage.objects via query_to_xml() e to_regclass()
+---      para prevenir erro 42P01 caso o schema ou tabelas de storage estejam ausentes.
+---   5. Comparar conjunto completo de GRANTs com DISTINCT na agregação para eliminar duplicidades.
+---   6. Diferenciar contagens reais de métricas estimadas do catálogo, sem inferir INSERTs.
+---   7. Evitar conclusões causais automáticas sobre transações, classificando explicitamente
+---      o que é comprovado, o que é indício e o que é indeterminável no catálogo.
++--   2. CONSTRAINTS: Remoção de LIMIT 1. Validação simultânea e determinística de tabela,
++--      tipo, colunas locais, tabela e colunas referenciadas e regras ON DELETE. Para CHECK,
++--      comparação exata de expressões normalizadas, classificando como INCONCLUSIVO qualquer
++--      discrepância ou formato não normalizado, sem aprovações automáticas.
++--   3. POLÍTICAS RLS: Validação rigorosa de roles exatas ([authenticated]), comando e
++--      permissividade. Para expressões USING e WITH CHECK, validação exata quando viável
++--      ou classificação explícita como NÃO VALIDADO (sem aprovação por LIKE amplo).
++--   4. SÍNTESE: Esclarecimento técnico de que IF NOT EXISTS e ON CONFLICT não validam tipos,
++--      defaults ou nulabilidade de colunas pré-existentes. Não autorização da execução de 01B1.
++--   5. DEFENSIVA: Proteção de storage.buckets e storage.objects via query_to_xml() e to_regclass(),
++--      evitando erro 42P01 caso o schema ou tabelas de storage estejam ausentes.
++--   6. GRANTS: Deduplicação com DISTINCT na agregação e comparação de arrays completos.
++--   7. DADOS: Separação de contagem real (storage) e métricas estimadas do catálogo (tabelas de app).
+ -- ==============================================================================
+ 
+ WITH 
+@@ -130,7 +134,7 @@
+ ),
+ 
+ -- ------------------------------------------------------------------------------
+--- 3. CONSTRAINTS RIGOROSAS (Tabela, Tipo, Colunas, Ref Tabela/Colunas, On Delete e CHECK)
++-- 3. CONSTRAINTS (Sem LIMIT 1, Validação Simultânea e Rigor Semântico de CHECK)
+ -- ------------------------------------------------------------------------------
+ audit_constraints AS (
+   SELECT
+@@ -140,40 +144,40 @@
+     c.declarado_em::text AS declarado_em,
+     c.origem_historica::text AS origem_historica,
+     CASE 
+-      WHEN con.conname IS NULL THEN 'AUSENTE'
+-      WHEN (
+-        -- Tipo compatível
+-        con.contype = c.expected_type
+-        -- Colunas locais compatíveis
+-        AND con.actual_cols = c.expected_cols
+-        -- Se Foreign Key: tabela referenciada, colunas referenciadas e regra de delete compatíveis
+-        AND (c.expected_type <> 'f' OR (
+-          con.actual_ref_table = c.expected_ref_table
+-          AND con.actual_ref_cols = c.expected_ref_cols
+-          AND con.actual_delrule = c.expected_delrule
+-        ))
+-        -- Se CHECK: expressão contém os literais exigidos
+-        AND (c.expected_type <> 'c' OR (
+-          con.check_expr ILIKE '%status%' 
+-          AND con.check_expr ILIKE '%pendente%' 
+-          AND con.check_expr ILIKE '%assinado%' 
+-          AND con.check_expr ILIKE '%expirado%'
+-        ))
+-      ) THEN 'PRESENTE_COMPATÍVEL'
+-      ELSE 'DIVERGENTE_ESTRUTURAL'
++      WHEN con.match_count = 0 THEN 'AUSENTE'
++      WHEN con.match_count > 1 THEN 'DUPLICADA_OU_MÚLTIPLA'
++      -- Para PK, UNIQUE e FK validadas com match_count = 1: todos os predicados relacionais foram atendidos
++      WHEN c.expected_type IN ('p', 'u') THEN 'PRESENTE_COMPATÍVEL_EXATO'
++      WHEN c.expected_type = 'f' THEN 'PRESENTE_COMPATÍVEL_EXATO'
++      WHEN c.expected_type = 'c' THEN
++        CASE 
++          -- Comparação semântica estrita da expressão normalizada do PostgreSQL para status IN (...)
++          WHEN regexp_replace(con.check_exprs[1], '\s+', ' ', 'g') IN (
++            '((status = ANY (ARRAY[''pendente''::text, ''assinado''::text, ''expirado''::text])))',
++            '(status = ANY (ARRAY[''pendente''::text, ''assinado''::text, ''expirado''::text]))',
++            'status = ANY (ARRAY[''pendente''::text, ''assinado''::text, ''expirado''::text])',
++            '((status = ANY (''{pendente,assinado,expirado}''::text[])))',
++            '(status = ANY (''{pendente,assinado,expirado}''::text[]))',
++            '(status IN (''pendente''::text, ''assinado''::text, ''expirado''::text))',
++            '((status IN (''pendente''::text, ''assinado''::text, ''expirado''::text)))'
++          ) THEN 'PRESENTE_COMPATÍVEL_EXATO'
++          ELSE 'INCONCLUSIVO (EXPRESSÃO NÃO NORMALIZADA / REQUER ANÁLISE MANUAL)'
++        END
++      ELSE 'INCONCLUSIVO'
+     END::text AS status_catalogo,
+     CASE 
+-      WHEN con.conname IS NULL THEN 'Constraint não encontrada para a tabela, tipo e colunas especificadas'
++      WHEN con.match_count = 0 THEN 'Constraint não encontrada para a tabela, tipo, colunas locais, tabela referenciada e regras relacionais esperadas'
++      WHEN con.match_count > 1 THEN 'Foram encontradas ' || con.match_count || ' constraints compatíveis: [' || array_to_string(con.connames, ', ') || ']. Requer averiguação de duplicidade no banco.'
+       ELSE
+-        'Nome real: ' || con.conname ||
+-        ' | Tipo: ' || CASE con.contype WHEN 'p' THEN 'PRIMARY KEY' WHEN 'f' THEN 'FOREIGN KEY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' ELSE con.contype END ||
+-        ' | Colunas: [' || COALESCE(array_to_string(con.actual_cols, ', '), '') || ']' ||
+-        CASE WHEN con.contype = 'f' THEN
+-          ' | Ref: ' || COALESCE(con.actual_ref_table, '') || '([' || COALESCE(array_to_string(con.actual_ref_cols, ', '), '') || '])' ||
+-          ' | ON DELETE: ' || CASE con.actual_delrule WHEN 'c' THEN 'CASCADE' WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' ELSE con.actual_delrule END
++        'Nome real: ' || con.connames[1] ||
++        ' | Tipo: ' || CASE con.contypes[1] WHEN 'p' THEN 'PRIMARY KEY' WHEN 'f' THEN 'FOREIGN KEY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' ELSE con.contypes[1] END ||
++        ' | Colunas esperadas: [' || array_to_string(c.expected_cols, ', ') || ']' ||
++        CASE WHEN c.expected_type = 'f' THEN
++          ' | Ref esperada: ' || c.expected_ref_table || '([' || array_to_string(c.expected_ref_cols, ', ') || '])' ||
++          ' | ON DELETE esperado: ' || CASE c.expected_delrule WHEN 'c' THEN 'CASCADE' WHEN 'a' THEN 'NO ACTION' ELSE c.expected_delrule END
+         ELSE '' END ||
+-        CASE WHEN con.contype = 'c' THEN ' | Expressão: ' || COALESCE(con.check_expr, '') ELSE '' END ||
+-        ' | Def: ' || con.full_def
++        CASE WHEN c.expected_type = 'c' THEN ' | Expressão real: ' || COALESCE(con.check_exprs[1], '<VAZIA>') ELSE '' END ||
++        ' | Definição catálogo: ' || con.full_defs[1]
+     END::text AS detalhes_estrutura,
+     c.classificacao::text AS classificacao_origem
+   FROM (
+@@ -187,27 +191,29 @@
+   ) AS c(ordem, expected_table, expected_type, expected_cols, expected_ref_table, expected_ref_cols, expected_delrule, declarado_em, origem_historica, description, classificacao)
+   LEFT JOIN LATERAL (
+     SELECT
+-      con.oid,
+-      con.conname,
+-      con.contype,
+-      ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey) ORDER BY array_position(con.conkey, a.attnum)) AS actual_cols,
+-      CASE WHEN con.confrelid <> 0 THEN (SELECT n.nspname || '.' || cl.relname FROM pg_class cl JOIN pg_namespace n ON n.oid = cl.relnamespace WHERE cl.oid = con.confrelid) ELSE NULL END AS actual_ref_table,
+-      CASE WHEN con.confrelid <> 0 THEN ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = ANY(con.confkey) ORDER BY array_position(con.confkey, a.attnum)) ELSE NULL END AS actual_ref_cols,
+-      con.confdeltype::text AS actual_delrule,
+-      CASE WHEN con.contype = 'c' THEN pg_get_expr(con.conbin, con.conrelid) ELSE NULL END AS check_expr,
+-      pg_get_constraintdef(con.oid) AS full_def
++      count(*) AS match_count,
++      array_agg(con.conname::text ORDER BY con.conname) AS connames,
++      array_agg(con.contype::text ORDER BY con.conname) AS contypes,
++      array_agg(COALESCE(pg_get_expr(con.conbin, con.conrelid), '') ORDER BY con.conname) AS check_exprs,
++      array_agg(pg_get_constraintdef(con.oid) ORDER BY con.conname) AS full_defs
+     FROM pg_constraint con
+-    JOIN pg_class cl ON cl.oid = con.conrelid
+-    JOIN pg_namespace ns ON ns.oid = cl.relnamespace
+-    WHERE ns.nspname = 'public'
+-      AND cl.relname = c.expected_table
++    WHERE con.conrelid = to_regclass('public.' || c.expected_table)
+       AND con.contype = c.expected_type
+       AND (
+-        (c.expected_type IN ('p', 'u', 'f') AND ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey) ORDER BY array_position(con.conkey, a.attnum)) = c.expected_cols)
++        (c.expected_type IN ('p', 'u') 
++           AND ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey) ORDER BY array_position(con.conkey, a.attnum)) = c.expected_cols)
+         OR
+-        (c.expected_type = 'c' AND (c.expected_cols <@ ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey)) OR pg_get_expr(con.conbin, con.conrelid) ILIKE '%status%'))
++        (c.expected_type = 'f' 
++           AND ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey) ORDER BY array_position(con.conkey, a.attnum)) = c.expected_cols
++           AND con.confrelid = to_regclass(c.expected_ref_table)
++           AND ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = con.confrelid AND a.attnum = ANY(con.confkey) ORDER BY array_position(con.confkey, a.attnum)) = c.expected_ref_cols
++           AND con.confdeltype = c.expected_delrule
++        )
++        OR
++        (c.expected_type = 'c'
++           AND c.expected_cols <@ ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = con.conrelid AND a.attnum = ANY(con.conkey))
++        )
+       )
+-    LIMIT 1
+   ) con ON true
+ ),
+ 
+@@ -296,7 +302,7 @@
+ ),
+ 
+ -- ------------------------------------------------------------------------------
+--- 6. POLÍTICAS RLS COM VALIDAÇÃO EFETIVA (Comando, Roles, Permissividade, USING e WITH CHECK)
++-- 6. POLÍTICAS RLS (Roles Exatas, Comando, Permissividade e Expressões sem LIKE Amplo)
+ -- ------------------------------------------------------------------------------
+ audit_policies AS (
+   SELECT
+@@ -306,65 +312,75 @@
+     pol.declarado_em::text AS declarado_em,
+     pol.origem_historica::text AS origem_historica,
+     CASE 
+-      WHEN p.polname IS NULL THEN 'AUSENTE'
+-      WHEN p.polcmd <> pol.expected_cmd THEN 'DIVERGENTE_COMANDO'
+-      WHEN NOT (ARRAY[pol.expected_role]::text[] <@ p.actual_roles) THEN 'DIVERGENTE_ROLES'
+-      WHEN p.polpermissive <> pol.expected_permissive THEN 'DIVERGENTE_PERMISSIVIDADE'
+-      WHEN pol.expected_has_using AND (p.actual_using IS NULL OR NOT (p.actual_using LIKE pol.expected_using_pattern)) THEN 'DIVERGENTE_USING'
+-      WHEN NOT pol.expected_has_using AND p.actual_using IS NOT NULL THEN 'DIVERGENTE_USING_INESPERADO'
+-      WHEN pol.expected_has_with_check AND (p.actual_with_check IS NULL OR NOT (p.actual_with_check LIKE pol.expected_with_check_pattern)) THEN 'DIVERGENTE_WITH_CHECK'
+-      WHEN NOT pol.expected_has_with_check AND p.actual_with_check IS NOT NULL THEN 'DIVERGENTE_WITH_CHECK_INESPERADO'
+-      ELSE 'PRESENTE_CONFORME'
++      WHEN p.match_count = 0 THEN 'AUSENTE'
++      WHEN p.match_count > 1 THEN 'DUPLICADA_OU_MÚLTIPLA'
++      -- 1. Comando confere?
++      WHEN p.polcmds[1] <> pol.expected_cmd THEN 'DIVERGENTE_COMANDO'
++      -- 2. Conjunto exato de roles confere? (Sem aceitar público ou papéis adicionais)
++      WHEN p.roles_array[1] <> ARRAY[pol.expected_role]::text[] THEN 'DIVERGENTE_ROLES'
++      -- 3. Permissividade confere?
++      WHEN p.polpermissives[1] <> pol.expected_permissive THEN 'DIVERGENTE_PERMISSIVIDADE'
++      -- 4. Validação de expressões determinísticas exatas (onde aplicável)
++      WHEN pol.exact_using_expr IS NOT NULL AND regexp_replace(p.usings[1], '\s+', ' ', 'g') <> pol.exact_using_expr THEN 'DIVERGENTE_USING'
++      WHEN pol.exact_using_expr IS NULL AND pol.has_using = false AND p.usings[1] <> '<NENHUM>' THEN 'DIVERGENTE_USING_INESPERADO'
++      WHEN pol.exact_with_check_expr IS NOT NULL AND regexp_replace(p.with_checks[1], '\s+', ' ', 'g') <> pol.exact_with_check_expr THEN 'DIVERGENTE_WITH_CHECK'
++      WHEN pol.exact_with_check_expr IS NULL AND pol.has_with_check = false AND p.with_checks[1] <> '<NENHUM>' THEN 'DIVERGENTE_WITH_CHECK_INESPERADO'
++      -- 5. Para políticas onde a comparação exata foi executada com sucesso
++      WHEN (pol.exact_using_expr IS NOT NULL OR pol.has_using = false) AND (pol.exact_with_check_expr IS NOT NULL OR pol.has_with_check = false)
++        THEN 'PRESENTE_COMPATÍVEL_EXATO'
++      -- 6. Para expressões complexas onde comparação semântica exata não é estaticamente viável: NÃO VALIDADO
++      ELSE 'NÃO VALIDADO (REQUER INSPEÇÃO VISUAL DA EXPRESSÃO)'
+     END::text AS status_catalogo,
+     CASE 
+-      WHEN p.polname IS NULL THEN 'Política RLS não encontrada no catálogo'
++      WHEN p.match_count = 0 THEN 'Política RLS não encontrada no catálogo'
++      WHEN p.match_count > 1 THEN 'Foram encontradas ' || p.match_count || ' políticas homônimas no catálogo'
+       ELSE
+-        'Cmd: ' || (CASE p.polcmd WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' WHEN '*' THEN 'ALL' END) ||
+-        ' (Esp: ' || (CASE pol.expected_cmd WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' WHEN '*' THEN 'ALL' END) || ')' ||
+-        ' | Roles: [' || COALESCE(array_to_string(p.actual_roles, ', '), 'PUBLIC') || ']' ||
+-        ' (Esp: [' || pol.expected_role || '])' ||
+-        ' | Permissiva: ' || CASE WHEN p.polpermissive THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END ||
+-        ' | USING: ' || COALESCE(p.actual_using, '<NENHUM>') ||
+-        ' | WITH CHECK: ' || COALESCE(p.actual_with_check, '<NENHUM>')
++        'Cmd: ' || (CASE p.polcmds[1] WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' WHEN '*' THEN 'ALL' END) ||
++        ' (Esperado: ' || (CASE pol.expected_cmd WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' WHEN '*' THEN 'ALL' END) || ')' ||
++        ' | Roles: [' || COALESCE(array_to_string(p.roles_array[1], ', '), 'PUBLIC') || ']' ||
++        ' (Esperado: [' || pol.expected_role || '])' ||
++        ' | Permissiva: ' || CASE WHEN p.polpermissives[1] THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END ||
++        ' | USING real: ' || p.usings[1] ||
++        ' | WITH CHECK real: ' || p.with_checks[1]
+     END::text AS detalhes_estrutura,
+     pol.classificacao::text AS classificacao_origem
+   FROM (
+     VALUES
+       -- pi_anexos (Linhas 35-69)
+-      (1, 'public', 'pi_anexos', 'read pi_anexos', 'r', 'authenticated', true, true, '%is_admin%auth.uid()%created_by%clientes%agencias%pis%', false, NULL::text, '01B1: Linha 36', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (SELECT authenticated)'),
+-      (2, 'public', 'pi_anexos', 'insert pi_anexos', 'a', 'authenticated', true, false, NULL::text, true, '%auth.uid() IS NOT NULL%', '01B1: Linha 58', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (INSERT authenticated)'),
+-      (3, 'public', 'pi_anexos', 'update pi_anexos', 'w', 'authenticated', true, true, '%is_admin%auth.uid()%created_by = auth.uid()%', true, '%is_admin%auth.uid()%created_by = auth.uid()%', '01B1: Linha 62', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (UPDATE authenticated)'),
+-      (4, 'public', 'pi_anexos', 'delete pi_anexos', 'd', 'authenticated', true, true, '%is_admin%auth.uid()%created_by = auth.uid()%', false, NULL::text, '01B1: Linha 67', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (DELETE authenticated)'),
++      (1, 'public', 'pi_anexos', 'read pi_anexos', 'r', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 36', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Expressão complexa com subconsultas)'),
++      (2, 'public', 'pi_anexos', 'insert pi_anexos', 'a', 'authenticated', true, false, NULL::text, true, '(auth.uid() IS NOT NULL)', '01B1: Linha 58', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação exata WITH CHECK)'),
++      (3, 'public', 'pi_anexos', 'update pi_anexos', 'w', 'authenticated', true, true, NULL::text, true, NULL::text, '01B1: Linha 62', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação visual USING e WITH CHECK)'),
++      (4, 'public', 'pi_anexos', 'delete pi_anexos', 'd', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 67', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação visual USING)'),
+       -- storage.objects para bucket pi-anexos (Linhas 75-86)
+-      (5, 'storage', 'objects', 'pi-anexos read auth', 'r', 'authenticated', true, true, '%bucket_id%pi-anexos%', false, NULL::text, '01B1: Linha 76', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (SELECT authenticated)'),
+-      (6, 'storage', 'objects', 'pi-anexos insert auth', 'a', 'authenticated', true, false, NULL::text, true, '%bucket_id%pi-anexos%auth.uid() IS NOT NULL%', '01B1: Linha 80', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (INSERT authenticated)'),
+-      (7, 'storage', 'objects', 'pi-anexos delete owner/admin', 'd', 'authenticated', true, true, '%bucket_id%pi-anexos%is_admin%owner = auth.uid()%', false, NULL::text, '01B1: Linha 84', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (DELETE owner/admin)'),
++      (5, 'storage', 'objects', 'pi-anexos read auth', 'r', 'authenticated', true, true, '(bucket_id = ''pi-anexos''::text)', false, NULL::text, '01B1: Linha 76', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação exata USING)'),
++      (6, 'storage', 'objects', 'pi-anexos insert auth', 'a', 'authenticated', true, false, NULL::text, true, '((bucket_id = ''pi-anexos''::text) AND (auth.uid() IS NOT NULL))', '01B1: Linha 80', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação exata WITH CHECK)'),
++      (7, 'storage', 'objects', 'pi-anexos delete owner/admin', 'd', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 84', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação visual USING)'),
+       -- pi_assinaturas_cliente (Linhas 113-122)
+-      (8, 'public', 'pi_assinaturas_cliente', 'auth read pi_assin', 'r', 'authenticated', true, true, '%true%', false, NULL::text, '01B1: Linha 114', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (SELECT authenticated)'),
+-      (9, 'public', 'pi_assinaturas_cliente', 'auth insert pi_assin', 'a', 'authenticated', true, false, NULL::text, true, '%auth.uid() = criado_por%', '01B1: Linha 117', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (INSERT criado_por)'),
+-      (10, 'public', 'pi_assinaturas_cliente', 'auth delete pi_assin', 'd', 'authenticated', true, true, '%true%', false, NULL::text, '01B1: Linha 120', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (DELETE authenticated)'),
++      (8, 'public', 'pi_assinaturas_cliente', 'auth read pi_assin', 'r', 'authenticated', true, true, 'true', false, NULL::text, '01B1: Linha 114', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Validação exata USING true)'),
++      (9, 'public', 'pi_assinaturas_cliente', 'auth insert pi_assin', 'a', 'authenticated', true, false, NULL::text, true, '(auth.uid() = criado_por)', '01B1: Linha 117', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Validação exata WITH CHECK)'),
++      (10, 'public', 'pi_assinaturas_cliente', 'auth delete pi_assin', 'd', 'authenticated', true, true, 'true', false, NULL::text, '01B1: Linha 120', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Validação exata USING true)'),
+       -- storage.objects para bucket assinaturas (Linhas 123-138)
+-      (11, 'storage', 'objects', 'assin own read', 'r', 'authenticated', true, true, '%bucket_id%assinaturas%foldername%auth.uid()%', false, NULL::text, '01B1: Linha 124', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (SELECT folder/user)'),
+-      (12, 'storage', 'objects', 'assin own write', 'a', 'authenticated', true, false, NULL::text, true, '%bucket_id%assinaturas%foldername%auth.uid()%', '01B1: Linha 127', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (INSERT folder/user)'),
+-      (13, 'storage', 'objects', 'assin own update', 'w', 'authenticated', true, true, '%bucket_id%assinaturas%foldername%auth.uid()%', false, NULL::text, '01B1: Linha 130', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (UPDATE folder/user)'),
+-      (14, 'storage', 'objects', 'assin own delete', 'd', 'authenticated', true, true, '%bucket_id%assinaturas%foldername%auth.uid()%', false, NULL::text, '01B1: Linha 133', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (DELETE folder/user)'),
+-      (15, 'storage', 'objects', 'assin admin all', '*', 'authenticated', true, true, '%bucket_id%assinaturas%is_admin%auth.uid()%', true, '%bucket_id%assinaturas%is_admin%auth.uid()%', '01B1: Linha 136', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (ALL is_admin)')
+-  ) AS pol(ordem, schema_name, table_name, policy_name, expected_cmd, expected_role, expected_permissive, expected_has_using, expected_using_pattern, expected_has_with_check, expected_with_check_pattern, declarado_em, origem_historica, classificacao)
++      (11, 'storage', 'objects', 'assin own read', 'r', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 124', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Expressão storage.foldername)'),
++      (12, 'storage', 'objects', 'assin own write', 'a', 'authenticated', true, false, NULL::text, true, NULL::text, '01B1: Linha 127', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Expressão storage.foldername)'),
++      (13, 'storage', 'objects', 'assin own update', 'w', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 130', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Expressão storage.foldername)'),
++      (14, 'storage', 'objects', 'assin own delete', 'd', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 133', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Expressão storage.foldername)'),
++      (15, 'storage', 'objects', 'assin admin all', '*', 'authenticated', true, true, NULL::text, true, NULL::text, '01B1: Linha 136', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Validação visual USING e WITH CHECK)')
++  ) AS pol(ordem, schema_name, table_name, policy_name, expected_cmd, expected_role, expected_permissive, has_using, exact_using_expr, has_with_check, exact_with_check_expr, declarado_em, origem_historica, classificacao)
+   LEFT JOIN LATERAL (
+     SELECT
+-      p.polname,
+-      p.polcmd,
+-      p.polpermissive,
+-      ARRAY(SELECT rolname::text FROM pg_roles WHERE oid = ANY(p.polroles)) AS actual_roles,
+-      pg_get_expr(p.polqual, p.polrelid) AS actual_using,
+-      pg_get_expr(p.polwithcheck, p.polrelid) AS actual_with_check
++      count(*) AS match_count,
++      array_agg(p.polname::text ORDER BY p.polname) AS polnames,
++      array_agg(p.polcmd::text ORDER BY p.polname) AS polcmds,
++      array_agg(p.polpermissive ORDER BY p.polname) AS polpermissives,
++      array_agg(ARRAY(SELECT rolname::text FROM pg_roles WHERE oid = ANY(p.polroles) ORDER BY rolname)) AS roles_array,
++      array_agg(COALESCE(pg_get_expr(p.polqual, p.polrelid), '<NENHUM>') ORDER BY p.polname) AS usings,
++      array_agg(COALESCE(pg_get_expr(p.polwithcheck, p.polrelid), '<NENHUM>') ORDER BY p.polname) AS with_checks
+     FROM pg_policy p
+     JOIN pg_class c ON c.oid = p.polrelid
+     JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = pol.schema_name
+       AND c.relname = pol.table_name
+       AND p.polname = pol.policy_name
+-    LIMIT 1
+   ) p ON true
+ ),
+ 
+@@ -382,7 +398,7 @@
+     b.detalhes_estrutura::text AS detalhes_estrutura,
+     b.classificacao::text AS classificacao_origem
+   FROM (
+-    -- Bucket pi-anexos (Linha 71) - Protegido contra ausência de storage.buckets
++    -- Bucket pi-anexos (Linha 71) - Protegido dinamicamente contra ausência de storage.buckets
+     SELECT
+       1 AS ordem,
+       'storage.buckets -> pi-anexos'::text AS objeto,
+@@ -430,7 +446,7 @@
+ 
+     UNION ALL
+     
+-    -- Bucket assinaturas (Linhas 123-138) - Protegido contra ausência de storage.buckets
++    -- Bucket assinaturas (Linhas 123-138) - Protegido dinamicamente contra ausência de storage.buckets
+     SELECT
+       3,
+       'storage.buckets -> assinaturas',
+@@ -478,7 +494,7 @@
+ 
+     UNION ALL
+ 
+-    -- Registros em public.pi_anexos (MÉTRICA ESTIMADA)
++    -- Registros em public.pi_anexos (MÉTRICA ESTIMADA DO CATÁLOGO)
+     SELECT
+       5,
+       'public.pi_anexos (contagem registros)',
+@@ -489,7 +505,7 @@
+         WHEN to_regclass('public.pi_anexos') IS NOT NULL THEN
+           'MÉTRICA ESTIMADA DO CATÁLOGO: reltuples (planejador) = ' || COALESCE((SELECT reltuples::bigint::text FROM pg_class WHERE oid = to_regclass('public.pi_anexos')), '0') ||
+           ', n_live_tup (estatísticas) = ' || COALESCE((SELECT n_live_tup::bigint::text FROM pg_stat_user_tables WHERE relid = to_regclass('public.pi_anexos')), '0') ||
+-          '. AVISO: Contagem estimada. O lote 01B1 NÃO possui instruções INSERT para esta tabela; nenhum dado foi inserido pelo script 01B1.'
++          '. AVISO: Contagem estimada do catálogo. O lote 01B1 NÃO possui instruções INSERT para esta tabela; nenhum dado foi inserido pelo script 01B1.'
+         ELSE 'Tabela inexistente no catálogo' 
+       END::text,
+       'DADOS_APLICACAO_ESTIMATIVA'::text
+@@ -497,7 +513,7 @@
+ 
+     UNION ALL
+ 
+-    -- Registros em public.pi_assinaturas_cliente (MÉTRICA ESTIMADA)
++    -- Registros em public.pi_assinaturas_cliente (MÉTRICA ESTIMADA DO CATÁLOGO)
+     SELECT
+       6,
+       'public.pi_assinaturas_cliente (contagem registros)',
+@@ -508,7 +524,7 @@
+         WHEN to_regclass('public.pi_assinaturas_cliente') IS NOT NULL THEN
+           'MÉTRICA ESTIMADA DO CATÁLOGO: reltuples (planejador) = ' || COALESCE((SELECT reltuples::bigint::text FROM pg_class WHERE oid = to_regclass('public.pi_assinaturas_cliente')), '0') ||
+           ', n_live_tup (estatísticas) = ' || COALESCE((SELECT n_live_tup::bigint::text FROM pg_stat_user_tables WHERE relid = to_regclass('public.pi_assinaturas_cliente')), '0') ||
+-          '. AVISO: Contagem estimada. O lote 01B1 NÃO possui instruções INSERT para esta tabela; nenhum dado foi inserido pelo script 01B1.'
++          '. AVISO: Contagem estimada do catálogo. O lote 01B1 NÃO possui instruções INSERT para esta tabela; nenhum dado foi inserido pelo script 01B1.'
+         ELSE 'Tabela inexistente no catálogo' 
+       END::text,
+       'DADOS_APLICACAO_ESTIMATIVA'::text
+@@ -564,7 +580,7 @@
+ ),
+ 
+ -- ------------------------------------------------------------------------------
+--- 9. INDICADORES TRANSACIONAIS E FATOS OBSERVADOS (Sem Conclusões Automáticas)
++-- 9. INDICADORES TRANSACIONAIS E LIMITAÇÕES TÉCNICAS (Sem Conclusões Automáticas)
+ -- ------------------------------------------------------------------------------
+ audit_sintese AS (
+   SELECT
+@@ -611,11 +627,19 @@
+       ),
+       (
+         4,
+-        'AVALIAÇÃO DE PRONTIDÃO: Mitigação Estrutural pelo 01B1 Corrigido',
++        'LIMITAÇÃO TÉCNICA: Escopo de Proteção do IF NOT EXISTS e ON CONFLICT',
++        'Cláusulas IF NOT EXISTS (23 colunas) e ON CONFLICT (produto_tipos)',
++        'PROTEÇÃO APENAS SINTÁTICA (NÃO VALIDA COMPATIBILIDADE ESTRUTURAL)',
++        'A cláusula IF NOT EXISTS e a instrução ON CONFLICT apenas evitam que o PostgreSQL aborte a execução com erros 42701 (coluna já existe) ou 23505 (chave duplicada). Elas NÃO validam se colunas preexistentes possuem o tipo de dados correto, DEFAULT esperado, nulabilidade ou foreign keys compatíveis. Se uma coluna preexistir com tipo incompatível, IF NOT EXISTS irá ignorá-la silenciosamente, mantendo a incompatibilidade estrutural no banco. A validação estrutural prévia das 23 colunas é estritamente necessária.',
++        'LIMITAÇÃO_DE_SEGURANÇA'
++      ),
++      (
++        5,
++        'DECISÃO OPERACIONAL: Bloqueio Estrito de Execução do 01B1',
+         '01B1_midiaos_v260_core_parte2A_corrigido.sql',
+-        'PROTEGIDO (44 ADD COLUMN IF NOT EXISTS + 1 ON CONFLICT)',
+-        'Como a versão corrigida possui proteções IF NOT EXISTS em todas as 44 colunas e ON CONFLICT na tabela produto_tipos, a execução subsequente será estruturalmente segura e idempotente em ambos os cenários (tábula rasa ou presença histórica de objetos).',
+-        'REQUISITO_DE_SEGURANÇA'
++        'BLOQUEADO (EXECUÇÃO NÃO AUTORIZADA)',
++        'Este diagnóstico possui finalidade estrita de leitura e averiguação do estado corrente. A execução do lote 01B1 (original ou corrigido) permanece expressamente bloqueada e não autorizada com base apenas neste diagnóstico.',
++        'BLOQUEIO_OPERACIONAL'
+       )
+   ) AS s(ordem, indicador, escopo, status, detalhes, classificacao)
+ )
+@@ -641,4 +665,3 @@
+ UNION ALL
+ SELECT * FROM audit_sintese
+ ORDER BY ordem;
+-

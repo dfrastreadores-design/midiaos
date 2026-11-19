@@ -14,29 +14,35 @@ if (!fs.existsSync(buildDir)) {
   process.exit(1);
 }
 
-console.log("\n📁 [1/3] Sincronizando código-fonte e configurações para D:\\midiaos_build...");
-const itemsToSync = [
-  "src",
-  "public",
-  "scripts",
-  "supabase",
-  ".env",
-  "package.json",
-  "vite.config.ts",
-  "tsconfig.json",
-  "hostinger.mjs",
-  "tailwind.config.ts",
-  "postcss.config.js"
-];
-for (const item of itemsToSync) {
-  const srcPath = path.join(sourceDir, item);
-  const destPath = path.join(buildDir, item);
-  if (!fs.existsSync(srcPath)) continue;
-  const stat = fs.statSync(srcPath);
-  if (stat.isDirectory()) {
-    fs.cpSync(srcPath, destPath, { recursive: true });
-  } else {
-    fs.copyFileSync(srcPath, destPath);
+const isSameDir = path.resolve(sourceDir).toLowerCase() === path.resolve(buildDir).toLowerCase();
+
+if (isSameDir) {
+  console.log("\n📁 [1/3] Executando diretamente em D:\\midiaos_build. Sincronização redundante ignorada.");
+} else {
+  console.log("\n📁 [1/3] Sincronizando código-fonte e configurações para D:\\midiaos_build...");
+  const itemsToSync = [
+    "src",
+    "public",
+    "scripts",
+    "supabase",
+    ".env",
+    "package.json",
+    "vite.config.ts",
+    "tsconfig.json",
+    "hostinger.mjs",
+    "tailwind.config.ts",
+    "postcss.config.js"
+  ];
+  for (const item of itemsToSync) {
+    const srcPath = path.join(sourceDir, item);
+    const destPath = path.join(buildDir, item);
+    if (!fs.existsSync(srcPath)) continue;
+    const stat = fs.statSync(srcPath);
+    if (stat.isDirectory()) {
+      fs.cpSync(srcPath, destPath, { recursive: true });
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
   }
 }
 
@@ -50,13 +56,23 @@ execSync("npx vite build", {
   },
 });
 
-console.log("\n📥 [3/3] Sincronizando novo .output de volta para o projeto...");
-const outputSrc = path.join(buildDir, ".output");
-const outputDest = path.join(sourceDir, ".output");
+if (isSameDir) {
+  console.log("\n📥 [3/3] Compilação concluída no próprio diretório de build.");
+} else {
+  console.log("\n📥 [3/3] Sincronizando novo .output de volta para o projeto...");
+  const outputSrc = path.join(buildDir, ".output");
+  const outputDest = path.join(sourceDir, ".output");
 
-if (fs.existsSync(outputDest)) {
-  fs.rmSync(outputDest, { recursive: true, force: true });
+  if (fs.existsSync(outputDest)) {
+    fs.rmSync(outputDest, { recursive: true, force: true });
+  }
+  fs.cpSync(outputSrc, outputDest, { recursive: true });
 }
-fs.cpSync(outputSrc, outputDest, { recursive: true });
+
+const routeTreeSrc = path.join(buildDir, "src", "routeTree.gen.ts");
+const routeTreeDest = path.join(sourceDir, "src", "routeTree.gen.ts");
+if (fs.existsSync(routeTreeSrc)) {
+  fs.copyFileSync(routeTreeSrc, routeTreeDest);
+}
 
 console.log("\n✅ Build incremental concluído com sucesso!");

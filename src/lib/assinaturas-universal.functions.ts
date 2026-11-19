@@ -1009,12 +1009,8 @@ export const registrarAssinaturaDigitalPublica = createServerFn({ method: "POST"
   )
   .handler(async ({ data }) => {
     await ensureBucket();
-    const { getRequestHeader } = await import("@tanstack/react-start/server");
-    const ip =
-      getRequestHeader("cf-connecting-ip") ||
-      getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ||
-      getRequestHeader("x-real-ip") ||
-      null;
+    const { getClientIp } = await import("@/lib/server-request.server");
+    const ip = getClientIp();
 
     const { data: sig } = await supabaseAdmin
       .from("assinatura_signatarios")

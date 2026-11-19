@@ -90,10 +90,10 @@ export function SessionExpiredDialog() {
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-foreground">
-                Sessão Expirada por Inatividade
+                Sessão Expirada (Limite de 24 Horas)
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Renove seu acesso para salvar sem perder o que já preencheu.
+                Por segurança, sua sessão atingiu o limite de 24 horas ou requer nova autenticação. Informe sua senha para continuar sem perder seus dados.
               </DialogDescription>
             </div>
           </div>

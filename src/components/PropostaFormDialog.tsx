@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, FileUp } from "lucide-react";
+import { Loader2, FileUp, RotateCcw, History } from "lucide-react";
 import { PriceCalculator } from "@/components/PriceCalculator";
 import { listClientes } from "@/lib/clientes.functions";
 import { listAgencias } from "@/lib/agencias.functions";
@@ -37,6 +37,7 @@ import { Planejamento360Modal } from "@/components/planejamento360/Planejamento3
 import { Badge } from "@/components/ui/badge";
 import { Compass } from "lucide-react";
 import { errorFieldClass, errorInputClass } from "@/lib/form-errors";
+import { QuickDateInput } from "@/components/ui/quick-date-input";
 
 type Props = {
   open: boolean;
@@ -73,7 +74,14 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
   });
 
   const executivos = usuarios
-    .filter((u) => !u.roles?.includes("parceiro_comercial") && !u.roles?.includes("teste"))
+    .filter(
+      (u) =>
+        u.ativo !== false &&
+        (u.roles?.includes("executivo") ||
+          u.roles?.includes("admin") ||
+          u.roles?.includes("diretoria") ||
+          (!u.roles?.includes("parceiro_comercial") && !u.roles?.includes("teste"))),
+    )
     .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
   const parceiros = usuarios.filter((u) => u.roles?.includes("parceiro_comercial"));
   const obsProdutos = buildProdutoObservacoes(state.items, produtos || []);
@@ -166,6 +174,27 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
 
         {!state.isLoading ? (
           <div className="space-y-4 py-2">
+            {state.draftRestored && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-3 text-xs animate-in fade-in slide-in-from-top-1">
+                <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                  <History className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>
+                    <strong>Rascunho recuperado:</strong> Os dados desta proposta foram restaurados automaticamente do seu navegador.
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 h-7 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 gap-1"
+                  onClick={state.handleDiscardDraft}
+                >
+                  <RotateCcw className="size-3" />
+                  Descartar Rascunho
+                </Button>
+              </div>
+            )}
+
             {!initial?.id && onOpenImport && (
               <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
@@ -339,12 +368,22 @@ export function PropostaFormDialog({ open, onOpenChange, initial, onOpenImport }
                   className={errorInputClass(hasError("campanha"))}
                 />
               </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold">Público de Interesse (Target da Campanha)</Label>
+                <Input
+                  value={state.publicoInteresse || ""}
+                  onChange={(e) => state.setPublicoInteresse(e.target.value)}
+                  placeholder="Ex.: Classes A/B, tomadores de decisão, moradores de condomínios verticais, condutores em vias de grande fluxo"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Variável chave utilizada para calibrar a defesa estratégica e o alinhamento de canais da proposta.
+                </p>
+              </div>
               <div className="space-y-1.5">
                 <Label>Validade</Label>
-                <Input
-                  type="date"
+                <QuickDateInput
                   value={state.validade}
-                  onChange={(e) => state.setValidade(e.target.value)}
+                  onChange={(v) => state.setValidade(v)}
                 />
                 <p className="text-xs text-muted-foreground">
                   Se vazio, ao enviar será preenchido com 10 dias úteis.

@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,8 @@ import {
   Monitor,
   CheckCircle2,
   ArrowRight,
+  Palette,
+  ShieldCheck,
 } from "lucide-react";
 import { useCurrentOrg } from "@/hooks/use-current-org";
 import { upsertTemplatePropostaConfig } from "@/lib/organizacoes.functions";
@@ -63,6 +66,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { getLogoSignedUrl } from "@/lib/logo-url";
 import { usePlatformConfig } from "@/hooks/use-platform-config";
 import { getMeuTenantPerfil, updateMeuTenantPerfil } from "@/lib/tenants.functions";
+import {
+  getTenantSettings,
+  updateTenantSettings,
+  MODULOS_DISPONIVEIS,
+  DEFAULT_MODULOS_ATIVOS,
+} from "@/lib/tenant-settings.functions";
+import { cn } from "@/lib/utils";
 
 const ROLES: {
   key:
@@ -173,116 +183,205 @@ function Inner({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const location = useLocation();
+  const searchParams = useMemo(() => {
+    try {
+      const s = typeof (location as any)?.searchStr === "string"
+        ? (location as any).searchStr
+        : typeof location?.search === "string"
+        ? location.search
+        : new URLSearchParams(location?.search as any).toString();
+      return new URLSearchParams(s.startsWith("?") ? s.slice(1) : s);
+    } catch {
+      return new URLSearchParams();
+    }
+  }, [(location as any)?.searchStr, location?.search]);
+
+  const initialTab = searchParams.get("tab");
+  const [tabAtiva, setTabAtiva] = useState<"geral" | "branding" | "permissoes" | "emissoras" | "avisos">(
+    () => {
+      if (initialTab === "branding") return "branding";
+      if (initialTab === "permissoes") return "permissoes";
+      if (initialTab === "emissoras") return "emissoras";
+      if (initialTab === "avisos") return "avisos";
+      return "geral";
+    },
+  );
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t === "branding") setTabAtiva("branding");
+    else if (t === "permissoes") setTabAtiva("permissoes");
+    else if (t === "emissoras") setTabAtiva("emissoras");
+    else if (t === "avisos") setTabAtiva("avisos");
+    else if (t === "geral") setTabAtiva("geral");
+  }, [searchParams]);
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-display font-semibold">Configurações da Empresa</h1>
         <p className="text-sm text-muted-foreground">
-          Perfil da empresa vinculada, CNPJs emissores, permissões e notificações.
+          Perfil da empresa vinculada, customização White-Label, módulos ativos, veículos emissores e notificações.
         </p>
       </div>
 
-      <PerfilEmpresaCard />
-      <TemplatePropostaConfigCard />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Notificações de campanhas e propostas</CardTitle>
-          <CardDescription>
-            O agendador roda diariamente e avisa o executivo responsável + administradores.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Bloco
-            title="Campanha próxima de iniciar"
-            ativo={form.ativo_inicio}
-            onAtivo={(v) => setForm((f) => ({ ...f, ativo_inicio: v }))}
+      <Tabs value={tabAtiva} onValueChange={(v) => setTabAtiva(v as any)} className="space-y-6">
+        <TabsList className="bg-muted/70 p-1 rounded-xl h-auto border flex-wrap">
+          <TabsTrigger
+            value="geral"
+            className="gap-2 py-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
-            <Label className="text-xs">Dias de antecedência</Label>
-            <Input
-              type="number"
-              min={0}
-              max={60}
-              value={form.dias_antes_inicio}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, dias_antes_inicio: Number(e.target.value) }))
-              }
-              className="w-28"
-            />
-          </Bloco>
-
-          <Separator />
-
-          <Bloco
-            title="Campanha próxima de terminar"
-            ativo={form.ativo_fim}
-            onAtivo={(v) => setForm((f) => ({ ...f, ativo_fim: v }))}
+            <span>Notificações & Módulos</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="branding"
+            className="gap-2 py-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
-            <Label className="text-xs">Dias de antecedência</Label>
-            <Input
-              type="number"
-              min={0}
-              max={60}
-              value={form.dias_antes_fim}
-              onChange={(e) => setForm((f) => ({ ...f, dias_antes_fim: Number(e.target.value) }))}
-              className="w-28"
-            />
-          </Bloco>
-
-          <Separator />
-
-          <Bloco
-            title="Campanha em andamento (marcos de %)"
-            ativo={form.ativo_progresso}
-            onAtivo={(v) => setForm((f) => ({ ...f, ativo_progresso: v }))}
+            <Palette className="size-3.5 text-primary" />
+            <span>White-Label & Marca</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="permissoes"
+            className="gap-2 py-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
-            <Label className="text-xs">Marcos (separados por vírgula, ex: 50,75,90)</Label>
-            <Input
-              value={form.marcos_percentual}
-              onChange={(e) => setForm((f) => ({ ...f, marcos_percentual: e.target.value }))}
-              className="w-64"
-            />
-          </Bloco>
-
-          <Separator />
-
-          <Bloco
-            title="Proposta próxima do vencimento"
-            ativo={form.ativo_validade}
-            onAtivo={(v) => setForm((f) => ({ ...f, ativo_validade: v }))}
+            <ShieldCheck className="size-3.5 text-blue-600" />
+            <span>Permissões por Perfil</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="emissoras"
+            className="gap-2 py-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
-            <Label className="text-xs">Dias de antecedência</Label>
-            <Input
-              type="number"
-              min={0}
-              max={60}
-              value={form.dias_antes_validade}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, dias_antes_validade: Number(e.target.value) }))
-              }
-              className="w-28"
-            />
-          </Bloco>
+            <Radio className="size-3.5 text-purple-600" />
+            <span>Veículos Emissores</span>
+          </TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger
+              value="avisos"
+              className="gap-2 py-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <Megaphone className="size-3.5 text-amber-500" />
+              <span>Avisos do Sistema</span>
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-          <div className="flex gap-3 pt-2">
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>
-              Salvar configuração
-            </Button>
-            <Button variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
-              {run.isPending ? "Executando…" : "Executar agora"}
-            </Button>
-            <Button asChild variant="ghost">
-              <Link to="/">Voltar</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="branding" className="space-y-6 m-0 focus-visible:outline-none">
+          <PerfilEmpresaCard />
+          <TemplatePropostaConfigCard />
+        </TabsContent>
 
-      {isSuperAdmin && <AnnouncementsCard />}
+        <TabsContent value="geral" className="space-y-6 m-0 focus-visible:outline-none">
+          <ModulosTenantCard />
 
-      <EmissorasCard />
+          <Card>
+            <CardHeader>
+              <CardTitle>Notificações de campanhas e propostas</CardTitle>
+              <CardDescription>
+                O agendador roda diariamente e avisa o executivo responsável + administradores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Bloco
+                title="Campanha próxima de iniciar"
+                ativo={form.ativo_inicio}
+                onAtivo={(v) => setForm((f) => ({ ...f, ativo_inicio: v }))}
+              >
+                <Label className="text-xs">Dias de antecedência</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={form.dias_antes_inicio}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, dias_antes_inicio: Number(e.target.value) }))
+                  }
+                  className="w-28"
+                />
+              </Bloco>
 
-      <PermissoesCard />
+              <Separator />
+
+              <Bloco
+                title="Campanha próxima de terminar"
+                ativo={form.ativo_fim}
+                onAtivo={(v) => setForm((f) => ({ ...f, ativo_fim: v }))}
+              >
+                <Label className="text-xs">Dias de antecedência</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={form.dias_antes_fim}
+                  onChange={(e) => setForm((f) => ({ ...f, dias_antes_fim: Number(e.target.value) }))}
+                  className="w-28"
+                />
+              </Bloco>
+
+              <Separator />
+
+              <Bloco
+                title="Campanha em andamento (marcos de %)"
+                ativo={form.ativo_progresso}
+                onAtivo={(v) => setForm((f) => ({ ...f, ativo_progresso: v }))}
+              >
+                <Label className="text-xs">Marcos (separados por vírgula, ex: 50,75,90)</Label>
+                <Input
+                  value={form.marcos_percentual}
+                  onChange={(e) => setForm((f) => ({ ...f, marcos_percentual: e.target.value }))}
+                  className="w-64"
+                />
+              </Bloco>
+
+              <Separator />
+
+              <Bloco
+                title="Proposta próxima do vencimento"
+                ativo={form.ativo_validade}
+                onAtivo={(v) => setForm((f) => ({ ...f, ativo_validade: v }))}
+              >
+                <Label className="text-xs">Dias de antecedência</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={form.dias_antes_validade}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, dias_antes_validade: Number(e.target.value) }))
+                  }
+                  className="w-28"
+                />
+              </Bloco>
+
+              <div className="flex gap-3 pt-2">
+                <Button onClick={() => save.mutate()} disabled={save.isPending}>
+                  Salvar configuração
+                </Button>
+                <Button variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
+                  {run.isPending ? "Executando…" : "Executar agora"}
+                </Button>
+                <Button asChild variant="ghost">
+                  <Link to="/">Voltar</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="permissoes" className="space-y-6 m-0 focus-visible:outline-none">
+          <PermissoesCard />
+        </TabsContent>
+
+        <TabsContent value="emissoras" className="space-y-6 m-0 focus-visible:outline-none">
+          <EmissorasCard />
+        </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="avisos" className="space-y-6 m-0 focus-visible:outline-none">
+            <AnnouncementsCard />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }
@@ -747,7 +846,7 @@ function EmissorasCard() {
         } as any,
       }),
     onSuccess: () => {
-      toast.success(editing ? "Emissora atualizada" : "Emissora cadastrada");
+      toast.success(editing ? "Veículo emissor atualizado" : "Veículo emissor cadastrado");
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["emissoras"] });
     },
@@ -757,7 +856,7 @@ function EmissorasCard() {
   const delMut = useMutation({
     mutationFn: async (id: string) => del({ data: { id } }),
     onSuccess: () => {
-      toast.success("Emissora excluída");
+      toast.success("Veículo emissor excluído");
       qc.invalidateQueries({ queryKey: ["emissoras"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -769,10 +868,10 @@ function EmissorasCard() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" /> Emissoras (CNPJs emissores do PI)
+              <Building2 className="h-5 w-5" /> Veículos Emissores & CNPJs de Faturamento do PI
             </CardTitle>
             <CardDescription>
-              Cadastre os CNPJs da sua empresa que podem emitir Pedidos de Inserção. No momento de
+              Cadastre os CNPJs da sua empresa ou veículos parceiros que podem emitir Pedidos de Inserção. No momento de
               criar um PI, o usuário escolhe qual CNPJ aparecerá no documento.
             </CardDescription>
           </div>
@@ -784,7 +883,7 @@ function EmissorasCard() {
           <div className="text-sm text-muted-foreground">Carregando…</div>
         ) : (data ?? []).length === 0 ? (
           <div className="text-sm text-muted-foreground">
-            Nenhuma emissora cadastrada. Cadastre ao menos uma para emitir PIs com o CNPJ correto.
+            Nenhum veículo emissor cadastrado. Cadastre ao menos um para emitir PIs com o CNPJ correto.
           </div>
         ) : (
           <div className="space-y-2">
@@ -829,7 +928,7 @@ function EmissorasCard() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editing ? "Editar emissora" : "Nova emissora"}</DialogTitle>
+            <DialogTitle>{editing ? "Editar veículo emissor" : "Novo veículo emissor"}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
@@ -837,7 +936,7 @@ function EmissorasCard() {
               <Input
                 value={form.nome}
                 onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                placeholder="Ex: Mídia.OS Matriz / Emissora Parceira / João Silva"
+                placeholder="Ex: Mídia.OS Matriz / Veículo Parceiro / Exibidora / João Silva"
               />
             </div>
             <div>
@@ -1037,7 +1136,7 @@ function EmissorasCard() {
               />
             </div>
             <div className="col-span-2">
-              <Label className="text-xs">Logo da emissora (aparece no PDF do PI)</Label>
+              <Label className="text-xs">Logo do veículo emissor (aparece no PDF do PI)</Label>
               <div className="flex items-center gap-3 mt-1">
                 {logoPreview ? (
                   <img
@@ -1080,7 +1179,7 @@ function EmissorasCard() {
                 rows={4}
                 value={form.observacoes}
                 onChange={(e) => setForm((f) => ({ ...f, observacoes: e.target.value }))}
-                placeholder="Ex: condições de pagamento padrão, cláusulas fiscais, dados bancários da emissora…"
+                placeholder="Ex: condições de pagamento padrão, cláusulas fiscais, dados bancários do veículo emissor…"
               />
             </div>
             <div className="col-span-2">
@@ -1089,7 +1188,7 @@ function EmissorasCard() {
                 rows={3}
                 value={form.entrega_material}
                 onChange={(e) => setForm((f) => ({ ...f, entrega_material: e.target.value }))}
-                placeholder="Ex: enviar material em MP4 H.264, 1920x1080, 25fps, até 48h antes da veiculação para tráfego@emissora.com.br"
+                placeholder="Ex: enviar material / arte / vídeo até 48h antes da veiculação para trafego@empresa.com.br"
               />
             </div>
             <div className="col-span-2 flex items-center gap-4 pt-1">
@@ -1098,14 +1197,14 @@ function EmissorasCard() {
                   checked={form.padrao}
                   onCheckedChange={(v) => setForm((f) => ({ ...f, padrao: v }))}
                 />
-                Emissora padrão (selecionada automaticamente no novo PI)
+                Veículo emissor padrão (selecionado automaticamente no novo PI)
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Switch
                   checked={form.ativo}
                   onCheckedChange={(v) => setForm((f) => ({ ...f, ativo: v }))}
                 />
-                Ativa
+                Ativo
               </label>
             </div>
           </div>
@@ -1131,8 +1230,158 @@ function NovaEmissoraGate({ count, onNew }: { count: number; onNew: () => void }
   if (!isAdmin) return null;
   return (
     <Button onClick={onNew}>
-      <Plus className="h-4 w-4 mr-1" /> Nova emissora
+      <Plus className="h-4 w-4 mr-1" /> Novo veículo emissor
     </Button>
+  );
+}
+
+function ModulosTenantCard() {
+  const qc = useQueryClient();
+  const fetchSettings = useServerFn(getTenantSettings);
+  const saveSettings = useServerFn(updateTenantSettings);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ["tenant-settings"],
+    queryFn: () => fetchSettings(),
+  });
+
+  const [activeModules, setActiveModules] = useState<string[]>(DEFAULT_MODULOS_ATIVOS);
+  const [terminologia, setTerminologia] = useState("Veículo de Comunicação");
+
+  useEffect(() => {
+    if (settings) {
+      setActiveModules(
+        settings.active_modules || settings.modulos_ativos || DEFAULT_MODULOS_ATIVOS,
+      );
+      setTerminologia(settings.terminologia_veiculo || "Veículo de Comunicação");
+    }
+  }, [settings]);
+
+  const saveMut = useMutation({
+    mutationFn: async () =>
+      saveSettings({
+        data: {
+          active_modules: activeModules,
+          modulos_ativos: activeModules,
+          terminologia_veiculo: terminologia,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Módulos e preferências do inquilino atualizados com sucesso!");
+      qc.invalidateQueries({ queryKey: ["tenant-settings"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleModule = (id: string) => {
+    setActiveModules((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length <= 1) {
+          toast.warning("Mantenha ao menos um módulo ativo para a sua operação.");
+          return prev;
+        }
+        return prev.filter((m) => m !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Layers className="h-5 w-5 text-primary" /> Módulos & Formatos Comerciais Ativos
+            </CardTitle>
+            <CardDescription>
+              Personalize os formatos comerciais habilitados para o seu CNPJ. Telas, formulários e relatórios se adaptam automaticamente para exibir apenas os segmentos de mídia que sua empresa opera.
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="font-semibold text-xs bg-primary/5">
+            {activeModules.length} módulo(s) habilitado(s)
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid sm:grid-cols-2 gap-3.5">
+          {MODULOS_DISPONIVEIS.map((mod) => {
+            const isActive = activeModules.includes(mod.id);
+            return (
+              <div
+                key={mod.id}
+                onClick={() => toggleModule(mod.id)}
+                className={cn(
+                  "flex items-start justify-between gap-3 p-3.5 rounded-xl border transition-all cursor-pointer",
+                  isActive
+                    ? "bg-primary/5 border-primary/40 shadow-xs ring-1 ring-primary/20"
+                    : "bg-muted/30 border-border/60 opacity-60 hover:opacity-90",
+                )}
+              >
+                <div className="space-y-1 pr-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">{mod.label}</span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] px-1.5 py-0",
+                        mod.canal === "ON"
+                          ? "bg-sky-50 text-sky-700 border-sky-300 dark:bg-sky-950/50 dark:text-sky-300"
+                          : mod.canal === "FIN"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300"
+                            : "bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/50 dark:text-purple-300",
+                      )}
+                    >
+                      {mod.canal === "ON" ? "Digital" : mod.canal === "FIN" ? "Financeiro" : "Físico / OFF"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{mod.desc}</p>
+                </div>
+                <Switch
+                  checked={isActive}
+                  onCheckedChange={() => toggleModule(mod.id)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="p-4 rounded-xl border bg-muted/20 space-y-3">
+          <Label className="text-xs font-semibold">Terminologia Preferencial para Veículos de Mídia</Label>
+          <div className="grid sm:grid-cols-3 gap-2">
+            {[
+              "Veículo de Comunicação",
+              "Exibidora de Mídia",
+              "Veículo Parceiro",
+              "Emissora / Grupo",
+              "Escritório de Representação",
+            ].map((term) => (
+              <button
+                key={term}
+                type="button"
+                onClick={() => setTerminologia(term)}
+                className={cn(
+                  "px-3 py-2 text-xs rounded-lg border font-medium text-left transition-all",
+                  terminologia === term
+                    ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
+                    : "bg-background hover:bg-muted text-muted-foreground",
+                )}
+              >
+                {term}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || isLoading}>
+            {saveMut.isPending ? "Salvando…" : "Salvar Configurações de Módulos"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

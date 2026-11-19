@@ -7,10 +7,17 @@ async function assertSuperAdmin(ctx: { supabase: any; userId: string }) {
   if (isMasterEmail(userAuth?.user?.email)) {
     return;
   }
+  const { data: prof } = await ctx.supabase
+    .from("profiles")
+    .select("is_superadmin")
+    .eq("id", ctx.userId)
+    .maybeSingle();
+  if (prof?.is_superadmin === true) {
+    return;
+  }
   const { data, error } = await ctx.supabase.rpc("is_super_admin", { _user_id: ctx.userId });
-  if (error) throw new Error(error.message);
-  if (!data)
-    throw new Error("Acesso restrito ao proprietário da plataforma");
+  if (!error && data === true) return;
+  throw new Error("Acesso restrito ao proprietário da plataforma");
 }
 
 export type TenantInput = {
@@ -329,7 +336,7 @@ export const getTenantDetails = createServerFn({ method: "POST" })
 
     const { data: profiles } = await context.supabase
       .from("profiles")
-      .select("id, nome, email, cargo, ativo, created_at, last_active_at")
+      .select("id, nome, email, cargo, telefone, whatsapp, ativo, created_at, last_active_at")
       .eq("tenant_id", data.id);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -842,4 +849,102 @@ export const desvincularUsuarioTenant = createServerFn({ method: "POST" })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** Edita os dados cadastrais de um usuário vinculado ao inquilino (Master/SuperAdmin). */
+export const updateTenantUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      user_id: string;
+      nome: string;
+      email?: string;
+      cargo?: string | null;
+      telefone?: string | null;
+      ativo?: boolean;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const nome = (data.nome ?? "").trim();
+    if (nome.length < 3) throw new Error("Informe o nome completo (mínimo de 3 caracteres)");
+
+    const profileUpdates: Record<string, unknown> = {
+      nome,
+      cargo: data.cargo ? data.cargo.trim() : null,
+      telefone: data.telefone ? data.telefone.trim() : null,
+    };
+    if (typeof data.ativo === "boolean") {
+      profileUpdates.ativo = data.ativo;
+    }
+
+    if (data.email) {
+      const email = data.email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("E-mail inválido");
+      profileUpdates.email = email;
+      const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, { email });
+      if (authErr) throw new Error(authErr.message);
+    }
+
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(profileUpdates)
+      .eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+/** Altera a senha de um usuário vinculado ao inquilino (Master/SuperAdmin). */
+export const resetSenhaTenantUsuario = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      user_id: string;
+      password: string;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const password = data.password ?? "";
+    if (password.length < 6) throw new Error("A senha deve ter no mínimo 6 caracteres");
+
+    const { supabaseAdmin, hasServiceRoleKey } = await import("@/integrations/supabase/client.server");
+
+    // Tentativa primária: Supabase Auth Admin API
+    let error: any = null;
+    if (hasServiceRoleKey()) {
+      const res = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+        password,
+      });
+      error = res.error;
+    } else {
+      error = { message: "User not allowed: SUPABASE_SERVICE_ROLE_KEY ausente" };
+    }
+
+    if (!error) {
+      return { ok: true };
+    }
+
+    // Tentativa secundária: RPC segura com SECURITY DEFINER (caso criada no banco)
+    const { data: rpcRes, error: rpcErr } = await context.supabase.rpc(
+      "admin_reset_user_password" as any,
+      {
+        target_user_id: data.user_id,
+        new_plain_password: password,
+      },
+    );
+
+    if (!rpcErr && (rpcRes as any)?.success) {
+      return { ok: true };
+    }
+
+    if (error.message.includes("not allowed") || !hasServiceRoleKey()) {
+      throw new Error(
+        "Erro 'User not allowed': A chave SUPABASE_SERVICE_ROLE_KEY precisa estar preenchida no arquivo .env para permitir redefinir a senha de outros usuários via painel administrativo."
+      );
+    }
+
+    throw new Error(error.message);
   });

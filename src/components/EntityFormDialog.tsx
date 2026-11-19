@@ -44,7 +44,7 @@ import {
   Linkedin,
   Facebook,
 } from "lucide-react";
-import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
+import { fetchCnpj, fetchCpfCnpj, formatCNPJ, formatCPF, onlyDigits } from "@/lib/cnpj";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { listExecutivos, findByCnpj } from "@/lib/atendimento.functions";
@@ -60,6 +60,8 @@ import { traduzirErro } from "@/lib/error-translator";
 import { FormFieldError, errorLabelClass, scrollToFirstError } from "@/lib/form-errors";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Building2 } from "lucide-react";
+import { consultarCep } from "@/lib/cep-lookup";
+import { maskCep } from "@/lib/form-masks";
 
 export type Contato = {
   nome: string;
@@ -70,13 +72,6 @@ export type Contato = {
   aniversario?: string;
 };
 
-function formatCPF(s: string): string {
-  const d = (s || "").replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
 function formatDoc(s: string): string {
   const d = (s || "").replace(/\D/g, "");
   if (d.length <= 11) return formatCPF(d);
@@ -254,6 +249,7 @@ export function EntityFormDialog({
   const [importResults, setImportResults] = useState<ImportResult[] | null>(null);
   const [isImportingBulk, setIsImportingBulk] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loadingCep, setLoadingCep] = useState(false);
 
   // Quando estiver cadastrando/editando uma agência, listar clientes para vincular.
   const { data: clientesAll = [] } = useQuery({
@@ -375,24 +371,41 @@ export function EntityFormDialog({
   }, [form.cnpj, open, initial?.id, tipo]);
 
   const doLookup = async (silent = false, specificCnpj?: string) => {
-    const targetCnpj = specificCnpj || form.cnpj;
-    if (onlyDigits(targetCnpj ?? "").length !== 14) {
-      if (!silent) toast.error("Informe um CNPJ válido");
+    const targetDoc = specificCnpj || form.cnpj;
+    const digits = onlyDigits(targetDoc ?? "");
+    if (digits.length !== 11 && digits.length !== 14) {
+      if (!silent) toast.error("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) para consulta");
       return null;
     }
     setLoading(true);
     try {
-      const d = await fetchCnpj(targetCnpj ?? "");
+      const d = await fetchCpfCnpj(targetDoc ?? "");
+
+      // Se for CPF (Pessoa Física), consultar se já existe algum cadastro para puxar dados históricos
+      let cpfExistente: any = null;
+      if (d.tipo === "PF") {
+        try {
+          const { data: clienteBanco } = await supabase
+            .from("clientes")
+            .select("*")
+            .ilike("cnpj", `%${digits}%`)
+            .maybeSingle();
+          if (clienteBanco) cpfExistente = clienteBanco;
+        } catch {
+          // ignora caso falhe a consulta de histórico
+        }
+      }
+
       const updatedData = {
-        cnpj: d.cnpj,
-        razao_social: d.razaoSocial || form.razao_social,
-        nome_fantasia: form.nome_fantasia || d.nomeFantasia,
-        cep: d.cep || form.cep,
-        endereco: [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", ") || form.endereco,
-        cidade: d.cidade || form.cidade,
-        uf: d.estado || form.uf,
-        cnae: d.cnae || form.cnae || "",
-        situacao_cadastral: d.situacaoCadastral || form.situacao_cadastral || "",
+        cnpj: d.tipo === "PF" ? (d.cpf || formatCPF(digits)) : d.cnpj,
+        razao_social: d.razaoSocial || cpfExistente?.razao_social || form.razao_social,
+        nome_fantasia: form.nome_fantasia || d.nomeFantasia || cpfExistente?.nome_fantasia || "",
+        cep: d.cep || cpfExistente?.cep || form.cep,
+        endereco: [d.logradouro, d.numero, d.bairro].filter(Boolean).join(", ") || cpfExistente?.endereco || form.endereco,
+        cidade: d.cidade || cpfExistente?.cidade || form.cidade,
+        uf: d.estado || cpfExistente?.uf || form.uf,
+        cnae: d.cnae || form.cnae || (d.tipo === "PF" ? "PESSOA FÍSICA" : ""),
+        situacao_cadastral: d.situacaoCadastral || form.situacao_cadastral || "REGULAR",
         inscricao_estadual:
           form.inscricao_estadual && form.inscricao_estadual.trim()
             ? form.inscricao_estadual
@@ -401,8 +414,7 @@ export function EntityFormDialog({
           form.inscricao_municipal && form.inscricao_municipal.trim()
             ? form.inscricao_municipal
             : d.inscricaoMunicipal || "ISENTA",
-        // Adicionando campos para evitar erros de tipagem no bulk import
-        website: (d as any).website || "",
+        website: (d as any).website || cpfExistente?.website || "",
       };
 
       if (!specificCnpj) {
@@ -412,7 +424,17 @@ export function EntityFormDialog({
         }));
       }
 
-      if (!silent) toast.success("Dados preenchidos pela Receita Federal");
+      if (!silent) {
+        if (d.tipo === "PJ") {
+          toast.success("Dados preenchidos pela Receita Federal!");
+        } else {
+          toast.success(
+            cpfExistente
+              ? "Dados preenchidos a partir do cadastro de Pessoa Física!"
+              : "CPF validado na Receita Federal!"
+          );
+        }
+      }
       return updatedData;
     } catch (e) {
       if (!silent) toast.error((e as Error).message);
@@ -805,6 +827,12 @@ export function EntityFormDialog({
               e.preventDefault();
             }
           }}
+          onEscapeKeyDown={(e) => {
+            e.stopPropagation();
+          }}
+          onPointerDownOutside={(e) => {
+            e.stopPropagation();
+          }}
         >
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
@@ -844,7 +872,7 @@ export function EntityFormDialog({
                   name="cnpj"
                   error={errors.cnpj}
                   value={form.cnpj ?? ""}
-                  placeholder={tipo === "cliente" ? "CPF ou CNPJ" : "00.000.000/0000-00"}
+                  placeholder={tipo === "cliente" ? "Digite CPF ou CNPJ e aperte Enter" : "00.000.000/0000-00"}
                   maxLength={18}
                   inputMode="numeric"
                   onChange={(e) => {
@@ -861,19 +889,32 @@ export function EntityFormDialog({
                       });
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      lookup();
+                    }
+                  }}
                 />
-                <Button type="button" variant="secondary" onClick={lookup} disabled={loading}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={lookup}
+                  disabled={loading}
+                  className="shrink-0 border border-primary/30 text-primary hover:bg-primary/10 gap-1.5"
+                  title="Buscar dados na Receita Federal e preencher automaticamente"
+                >
                   {loading ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    <Search className="size-4" />
+                    <Search className="size-4 text-primary" />
                   )}
-                  <span className="ml-2">Buscar</span>
+                  <span className="font-semibold text-xs">Buscar Receita</span>
                 </Button>
               </div>
               <FormFieldError message={errors.cnpj} />
               <p className="text-[11px] text-muted-foreground">
-                A consulta é automática ao digitar os 14 dígitos.
+                Preenchimento automático na Receita Federal via CNPJ ou validação de CPF (aperte Enter ou clique em Buscar Receita).
               </p>
               {loading && (
                 <p className="text-xs text-primary flex items-center gap-1">
@@ -1059,11 +1100,13 @@ export function EntityFormDialog({
                           ➕ Cadastrar Novo Indicador...
                         </SelectItem>
                         <SelectItem value="__none">Nenhuma indicação (Cliente Direto / Próprio)</SelectItem>
-                        {(indicadoresList as any[]).map((ind: any) => (
-                          <SelectItem key={ind.id} value={ind.id}>
-                            {ind.nome} ({ind.percentual_comissao_padrao}% padrão)
-                          </SelectItem>
-                        ))}
+                        {(indicadoresList as any[])
+                          .filter((ind: any) => ind.ativo !== false && ind.status !== "blocked" && ind.status !== "inactive")
+                          .map((ind: any) => (
+                            <SelectItem key={ind.id} value={ind.id}>
+                              {ind.nome} ({ind.person_type === "PJ" ? "PJ" : "PF"} — {ind.percentual_comissao_padrao}% comissão)
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1158,7 +1201,7 @@ export function EntityFormDialog({
 
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5 sm:col-span-2">
-                <Label className={errors.razao_social ? errorLabelClass : undefined}>Razão Social *</Label>
+                <Label className={errorLabelClass(!!errors.razao_social)}>Razão Social *</Label>
                 <Input
                   data-field="razao_social"
                   error={errors.razao_social}
@@ -1204,10 +1247,40 @@ export function EntityFormDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>CEP</Label>
+                <div className="flex items-center justify-between">
+                  <Label>CEP</Label>
+                  {loadingCep && (
+                    <span className="text-[10px] text-primary animate-pulse font-medium">
+                      Buscando endereço...
+                    </span>
+                  )}
+                </div>
                 <Input
+                  placeholder="00000-000"
+                  maxLength={9}
                   value={form.cep ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, cep: e.target.value }))}
+                  onChange={async (e) => {
+                    const masked = maskCep(e.target.value);
+                    setForm((f) => ({ ...f, cep: masked }));
+                    const clean = masked.replace(/\D/g, "");
+                    if (clean.length === 8) {
+                      setLoadingCep(true);
+                      const res = await consultarCep(clean);
+                      setLoadingCep(false);
+                      if (res) {
+                        setForm((f) => ({
+                          ...f,
+                          cep: masked,
+                          endereco: res.logradouro
+                            ? `${res.logradouro}${res.bairro ? ` - ${res.bairro}` : ""}`
+                            : f.endereco,
+                          cidade: res.cidade || f.cidade,
+                          uf: res.uf || f.uf,
+                        }));
+                        toast.success(`Endereço localizado via CEP: ${res.cidade}/${res.uf}`);
+                      }
+                    }
+                  }}
                 />
               </div>
               <div className="space-y-1.5">

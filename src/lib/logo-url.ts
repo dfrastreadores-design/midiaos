@@ -6,24 +6,57 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export function logoStoragePath(stored: string | null | undefined): string | null {
-  if (!stored) return null;
+  if (!stored || typeof stored !== "string") return null;
+  const s = stored.trim();
+  if (!s || s === "undefined" || s === "null" || s === "[object Object]") return null;
+
   const marker = "/client-logos/";
-  const i = stored.indexOf(marker);
-  if (i >= 0) return stored.slice(i + marker.length).split("?")[0];
-  // já é um path puro
-  if (stored.startsWith("http")) return null;
-  return stored;
+  const i = s.indexOf(marker);
+  if (i >= 0) {
+    const extracted = s.slice(i + marker.length).split("?")[0].trim();
+    return extracted && extracted !== "undefined" && extracted !== "null" ? extracted : null;
+  }
+
+  // Se já for uma URL absoluta externa ou data URI, não é um path do storage
+  if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("data:") || s.startsWith("//")) {
+    return null;
+  }
+
+  return s;
 }
 
 export async function getLogoSignedUrl(
   stored: string | null | undefined,
   expiresInSeconds = 3600,
 ): Promise<string | null> {
-  const path = logoStoragePath(stored);
-  if (!path) return null;
-  const { data, error } = await supabase.storage
-    .from("client-logos")
-    .createSignedUrl(path, expiresInSeconds);
-  if (error) return null;
-  return data.signedUrl;
+  if (!stored || typeof stored !== "string") return null;
+  const s = stored.trim();
+  if (!s || s === "undefined" || s === "null" || s === "[object Object]") return null;
+
+  // Se for URL externa completa ou Data URI, usa diretamente sem consultar o storage
+  if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("data:") || s.startsWith("//")) {
+    return s;
+  }
+
+  const rawPath = logoStoragePath(s);
+  if (!rawPath) return null;
+  const cleanPath = rawPath.replace(/^\/+/, "").trim();
+  if (!cleanPath || cleanPath === "undefined" || cleanPath === "null") return null;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from("client-logos")
+      .createSignedUrl(cleanPath, expiresInSeconds);
+
+    if (!error && data?.signedUrl) {
+      return data.signedUrl;
+    }
+
+    // Fallback defensivo para o bucket parceiro público caso não encontre no client-logos
+    const { data: pubData } = supabase.storage.from("partner-logos").getPublicUrl(cleanPath);
+    return pubData?.publicUrl || null;
+  } catch {
+    return null;
+  }
 }
+

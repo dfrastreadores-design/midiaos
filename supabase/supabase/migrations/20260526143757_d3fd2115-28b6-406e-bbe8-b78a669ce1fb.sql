@@ -1,0 +1,1 @@
+ALTER TABLE public.pis ADD COLUMN IF NOT EXISTS permuta boolean NOT NULL DEFAULT false;

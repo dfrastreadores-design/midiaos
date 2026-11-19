@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ImportDropdown } from "@/components/ImportDropdown";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Plus,
   Pencil,
   Trash2,
@@ -47,6 +55,21 @@ import {
   Download,
   FileSpreadsheet,
   Camera,
+  Sparkles,
+  Layers,
+  Globe,
+  LayoutGrid,
+  Newspaper,
+  MapPin,
+  ExternalLink,
+  CheckSquare,
+  Square,
+  CheckCheck,
+  X,
+  SlidersHorizontal,
+  Search,
+  ChevronDown,
+  MoreVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -56,10 +79,12 @@ import {
   listProdutoTipos,
   upsertProdutoTipo,
   deleteProdutoTipo,
+  batchUpdateProdutos,
 } from "@/lib/produtos.functions";
 import { listMidiaConfig, upsertMidiaConfig } from "@/lib/midia-config.functions";
 import { SUGESTOES_TIPOS_POR_MIDIA } from "@/lib/catalogo-midias";
 import { useUserRoles } from "@/hooks/use-roles";
+import { useTenantSettings } from "@/hooks/use-tenant-settings";
 import { useCurrentOrg } from "@/hooks/use-current-org";
 import { formatBRL } from "@/lib/mock-data";
 import { LogoImg } from "@/components/LogoImg";
@@ -68,20 +93,59 @@ import { ProdutoFotoGalleryModal } from "@/components/ProdutoFotoGalleryModal";
 import { ProdutoFormDialog, type Produto } from "@/components/ProdutoFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
+import { CatalogoEspacosTab } from "@/components/CatalogoEspacosTab";
+import { FluxOohSplitScreen } from "@/components/inventory/FluxOohSplitScreen";
+import { MediaPointCard } from "@/components/inventory/MediaPointCard";
+import { MediaInventoryMap } from "@/components/inventory/MediaInventoryMap";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/produtos")({
   head: () => ({ meta: [{ title: "Produtos — Mídia.OS" }] }),
   validateSearch: (search: Record<string, unknown>) => ({
     parceiro: typeof search.parceiro === "string" ? search.parceiro : undefined,
+    parceiro_id: typeof search.parceiro_id === "string" ? search.parceiro_id : undefined,
+    view: typeof search.view === "string" ? (search.view as "catalogo" | "tabela" | "mapa" | "cards") : undefined,
   }),
   component: ProdutosPage,
 });
 
 type Midia = string;
 
-const midiaLabel: Record<string, string> = { TV: "TV", Radio: "Rádio", DOOH: "DOOH" };
+const midiaLabel: Record<string, string> = {
+  TODAS: "Todas as Mídias",
+  OOH: "OOH",
+  DOOH: "DOOH",
+  Radio: "Rádio",
+  RADIO: "Rádio",
+  Digital: "Digital",
+  DIGITAL: "Digital",
+  Print: "Impresso",
+  PRINT: "Impresso",
+  Impresso: "Impresso",
+  TV: "TV",
+  CUSTOM: "Personalizado",
+};
 const getMidiaLabel = (m: string) => midiaLabel[m] || m;
+
+function matchMidia(prodMidia: string | undefined | null, activeTab: string): boolean {
+  if (activeTab === "TODAS") return true;
+  if (!prodMidia) return false;
+  if (prodMidia === activeTab) return true;
+
+  const mProd = prodMidia.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const mTab = activeTab.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (mProd === mTab) return true;
+
+  if (mTab === "RADIO" && (mProd.includes("RADIO") || mProd.includes("AUDIO") || mProd.includes("SPOT"))) return true;
+  if (mTab === "TV" && (mProd.includes("TV") || mProd.includes("TELEVISAO"))) return true;
+  if (mTab === "DIGITAL" && (mProd.includes("DIGITAL") || mProd.includes("SOCIAL") || mProd.includes("WEB") || mProd.includes("PORTAL"))) return true;
+  if (mTab === "DOOH" && (mProd.includes("DOOH") || mProd.includes("TRANSPORTE") || mProd.includes("PAINEL LED") || mProd.includes("ELEVADOR") || mProd.includes("TELA"))) return true;
+  if (mTab === "OOH" && (mProd.includes("OOH") || mProd.includes("OUTDOOR") || mProd.includes("FRONTLIGHT") || mProd.includes("EMPENA") || mProd.includes("BUSDOOR"))) return true;
+  if (mTab === "PRINT" && (mProd.includes("PRINT") || mProd.includes("IMPRESS") || mProd.includes("JORNAL") || mProd.includes("REVISTA"))) return true;
+
+  return false;
+}
 
 type MidiaConfig = {
   midia: Midia;
@@ -116,14 +180,27 @@ function ProdutosPage() {
   const fetchConfigs = useServerFn(listMidiaConfig);
   const upsertConfigFn = useServerFn(upsertMidiaConfig);
   const fetchTipos = useServerFn(listProdutoTipos);
+  const batchUpdateFn = useServerFn(batchUpdateProdutos);
 
   const searchParams = Route.useSearch();
-  const [tab, setTab] = useState<Midia>("TV");
-  const [search, setSearch] = useState(searchParams.parceiro || "");
+  const { isNexo } = useCurrentOrg();
+  const [mainView, setMainView] = useState<"cards" | "tabela" | "mapa" | "catalogo">(() => {
+    if (searchParams.view) return searchParams.view;
+    return "cards";
+  });
+  const [selectedMapProdutoId, setSelectedMapProdutoId] = useState<string | null>(null);
+  const [tab, setTab] = useState<Midia>("TODAS");
+  const [parceiroFiltro, setParceiroFiltro] = useState<{ id?: string; nome?: string } | null>(() => {
+    if (searchParams.parceiro_id || searchParams.parceiro) {
+      return { id: searchParams.parceiro_id, nome: searchParams.parceiro };
+    }
+    return null;
+  });
+  const [search, setSearch] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("__all__");
   const [filtroStatus, setFiltroStatus] = useState<"all" | "ativo" | "inativo">("all");
   const [filtroOrigem, setFiltroOrigem] = useState<"all" | "proprio" | "parceiro">(
-    searchParams.parceiro ? "parceiro" : "all",
+    searchParams.parceiro || searchParams.parceiro_id ? "parceiro" : "all",
   );
   const [filtroCanalMacro, setFiltroCanalMacro] = useState<"all" | "OFF" | "ON" | "HIBRIDO">("all");
   const [editing, setEditing] = useState<Partial<Produto> | null>(null);
@@ -141,6 +218,30 @@ function ProdutosPage() {
   const [novaMidiaOpen, setNovaMidiaOpen] = useState(false);
   const [novaMidiaNome, setNovaMidiaNome] = useState("");
   const [customMidias, setCustomMidias] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchPriceOpen, setBatchPriceOpen] = useState(false);
+  const [batchPricePercent, setBatchPricePercent] = useState<string>("");
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (items: Produto[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = items.every((i) => prev.has(i.id));
+      if (allSelected) {
+        return new Set();
+      }
+      return new Set(items.map((i) => i.id));
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
 
   const { data, isLoading } = useQuery({ queryKey: ["produtos"], queryFn: () => fetchList() });
   const { data: configs } = useQuery({ queryKey: ["midia_config"], queryFn: () => fetchConfigs() });
@@ -150,29 +251,67 @@ function ProdutosPage() {
   });
 
   const allProdutos = (data as Produto[]) ?? [];
+  const { isMediaTypeActive } = useTenantSettings();
 
   const listaMidias = useMemo<string[]>(() => {
     const fromConfigs = ((configs as MidiaConfig[]) ?? []).map((c) => c.midia).filter(Boolean);
     const fromProdutos = allProdutos.map((p) => p.midia).filter(Boolean);
     const fromTipos = ((todosTipos as ProdutoTipo[]) ?? []).map((t) => t.midia).filter(Boolean);
-    return Array.from(
-      new Set(["TV", "Radio", "DOOH", ...fromConfigs, ...fromProdutos, ...fromTipos, ...customMidias]),
+    const universais = ["OOH", "DOOH", "DIGITAL", "RADIO", "PRINT", "TV", "CUSTOM"];
+    const all = Array.from(
+      new Set([...universais, ...fromConfigs, ...fromProdutos, ...fromTipos, ...customMidias]),
     );
-  }, [configs, allProdutos, todosTipos, customMidias]);
+    const filtered = all.filter((m) => isMediaTypeActive(m));
+    const activeMidias = filtered.length > 0 ? filtered : all;
+    return ["TODAS", ...activeMidias];
+  }, [configs, allProdutos, todosTipos, customMidias, isMediaTypeActive]);
 
   useEffect(() => {
-    if (searchParams.parceiro && allProdutos.length > 0) {
-      setSearch(searchParams.parceiro);
-      setFiltroOrigem("parceiro");
-      const hasInDooh = allProdutos.some(
-        (p) =>
-          p.midia === "DOOH" &&
-          (p.parceiro_nome?.toLowerCase().includes(searchParams.parceiro!.toLowerCase()) ||
-            p.parceiro_cnpj?.includes(searchParams.parceiro!)),
-      );
-      if (hasInDooh) setTab("DOOH");
+    if (listaMidias.length > 0 && !listaMidias.includes(tab)) {
+      setTab(listaMidias[0]);
     }
-  }, [searchParams.parceiro, allProdutos]);
+  }, [listaMidias, tab]);
+
+  useEffect(() => {
+    if (searchParams.view) {
+      setMainView(searchParams.view);
+    } else if (searchParams.parceiro || searchParams.parceiro_id) {
+      setMainView("tabela");
+    }
+    if (searchParams.parceiro || searchParams.parceiro_id) {
+      setParceiroFiltro({ id: searchParams.parceiro_id, nome: searchParams.parceiro });
+      setFiltroOrigem("parceiro");
+    }
+  }, [searchParams.view, searchParams.parceiro, searchParams.parceiro_id]);
+
+  useEffect(() => {
+    if ((parceiroFiltro?.id || parceiroFiltro?.nome) && allProdutos.length > 0) {
+      const pid = parceiroFiltro.id;
+      const pNome = parceiroFiltro.nome?.toLowerCase().trim();
+
+      const matching = allProdutos.filter((p) => {
+        if (pid && (p.parceiro_id === pid || p.partner_id === pid)) return true;
+        if (pNome) {
+          const nomeProd = (p.parceiro_nome || "").toLowerCase().trim();
+          if (nomeProd && (nomeProd.includes(pNome) || pNome.includes(nomeProd))) return true;
+          if (p.parceiro_cnpj && pNome.includes(p.parceiro_cnpj.replace(/\D/g, ""))) return true;
+          const words = pNome.split(/\s+/).filter((w) => w.length >= 3 && !["ltda", "epp", "me", "e", "paineis"].includes(w));
+          if (words.some((w) => nomeProd.includes(w))) return true;
+        }
+        return false;
+      });
+
+      if (matching.length > 0) {
+        setMainView("tabela");
+        setFiltroOrigem("parceiro");
+        const partnerMedias = Array.from(new Set(matching.map((p) => p.midia).filter(Boolean)));
+        // Se a aba atual não for TODAS e não estiver entre as mídias deste parceiro, selecionar a primeira mídia do parceiro
+        if (tab !== "TODAS" && !partnerMedias.includes(tab)) {
+          setTab(partnerMedias[0]);
+        }
+      }
+    }
+  }, [parceiroFiltro, allProdutos]);
 
   const delMut = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
@@ -187,25 +326,87 @@ function ProdutosPage() {
     mutationFn: (c: any) => upsertConfigFn({ data: c }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["midia_config"] });
-      toast.success("Dados da emissora salvos");
+      toast.success("Dados cadastrais do veículo/canal salvos");
       setCfgOpen(false);
       setCfgEditing(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const batchMut = useMutation({
+    mutationFn: (payload: {
+      ids: string[];
+      status_operacional?: "disponivel" | "reservado" | "bloqueado_comercial";
+      ativo?: boolean;
+      reajuste_percentual?: number;
+      valor_unit_fixo?: number;
+    }) => batchUpdateFn({ data: payload }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+      toast.success(`${res.count} produto(s) atualizado(s) com sucesso!`);
+      clearSelection();
+      setBatchPriceOpen(false);
+      setBatchPricePercent("");
+    },
+    onError: (e: Error) => toast.error(`Erro ao atualizar em lote: ${e.message}`),
+  });
+
+  const totalParceiros = useMemo(() => {
+    return allProdutos.filter((p) =>
+      Boolean(
+        p.parceiro_cnpj ||
+        p.parceiro_nome ||
+        p.parceiro_id ||
+        p.partner_id ||
+        p.origem_produto === "PARCEIRO"
+      )
+    ).length;
+  }, [allProdutos]);
+  const totalProprios = allProdutos.length - totalParceiros;
+
   const q = search.trim().toLowerCase();
   const list = allProdutos.filter((p) => {
-    if (p.midia !== tab) return false;
+    if (!matchMidia(p.midia, tab)) return false;
     if (filtroTipo !== "__all__" && (p.tipo ?? "") !== filtroTipo) return false;
     if (filtroStatus === "ativo" && !p.ativo) return false;
     if (filtroStatus === "inativo" && p.ativo) return false;
-    if (filtroOrigem === "proprio" && (p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id))
-      return false;
-    if (filtroOrigem === "parceiro" && !p.parceiro_cnpj && !p.parceiro_nome && !p.parceiro_id)
-      return false;
+
+    const isParceiro = Boolean(
+      p.parceiro_cnpj ||
+      p.parceiro_nome ||
+      p.parceiro_id ||
+      p.partner_id ||
+      p.origem_produto === "PARCEIRO"
+    );
+    if (filtroOrigem === "proprio" && isParceiro) return false;
+    if (filtroOrigem === "parceiro" && !isParceiro) return false;
+
     if (filtroCanalMacro !== "all" && (p.canal_macro || "OFF") !== filtroCanalMacro)
       return false;
+
+    // Se filtro de parceiro específico estiver ativo
+    if (parceiroFiltro) {
+      const pid = parceiroFiltro.id;
+      const pNome = parceiroFiltro.nome?.toLowerCase().trim();
+      let matchParceiro = false;
+      if (pid && (p.parceiro_id === pid || p.partner_id === pid)) {
+        matchParceiro = true;
+      } else if (pNome) {
+        const prodPartner = (p.parceiro_nome || "").toLowerCase().trim();
+        if (prodPartner && (prodPartner.includes(pNome) || pNome.includes(prodPartner))) {
+          matchParceiro = true;
+        } else if (p.parceiro_cnpj && pNome.includes(p.parceiro_cnpj.replace(/\D/g, ""))) {
+          matchParceiro = true;
+        } else {
+          const words = pNome.split(/\s+/).filter((w) => w.length >= 3 && !["ltda", "epp", "me", "e", "paineis"].includes(w));
+          if (words.some((w) => prodPartner.includes(w))) {
+            matchParceiro = true;
+          }
+        }
+      }
+      if (!matchParceiro) return false;
+    }
+
     if (!q) return true;
     return [
       p.nome,
@@ -217,6 +418,9 @@ function ProdutosPage() {
       p.parceiro_cnpj,
       p.plataforma_rede,
       p.canal_macro,
+      p.cidade,
+      p.bairro,
+      p.localizacao,
     ]
       .filter(Boolean)
       .some((v) => String(v).toLowerCase().includes(q));
@@ -224,6 +428,13 @@ function ProdutosPage() {
 
   // Função para retornar os tipos cadastrados para uma mídia específica deste inquilino
   const getTiposPorMidia = (m: Midia) => {
+    if (m === "TODAS") {
+      const allTiposCadastrados = (todosTipos as ProdutoTipo[]).map((t) => t.nome.trim()).filter(Boolean);
+      const tiposDosProdutos = allProdutos.map((p) => p.tipo?.trim()).filter(Boolean) as string[];
+      return Array.from(new Set([...allTiposCadastrados, ...tiposDosProdutos])).sort((a, b) =>
+        a.localeCompare(b, "pt-BR"),
+      );
+    }
     const tiposDaMidia = (todosTipos as ProdutoTipo[])
       .filter((t) => t.midia === m)
       .map((t) => t.nome.trim())
@@ -242,7 +453,7 @@ function ProdutosPage() {
   const programasSugeridos = Array.from(
     new Set(
       allProdutos
-        .filter((p) => p.midia === tab)
+        .filter((p) => tab === "TODAS" || p.midia === tab)
         .map((p) => p.programa)
         .filter(Boolean),
     ),
@@ -250,7 +461,7 @@ function ProdutosPage() {
   const formatosSugeridos = Array.from(
     new Set(
       allProdutos
-        .filter((p) => p.midia === tab)
+        .filter((p) => tab === "TODAS" || p.midia === tab)
         .map((p) => p.formato)
         .filter(Boolean),
     ),
@@ -258,7 +469,7 @@ function ProdutosPage() {
   const faixasSugeridas = Array.from(
     new Set(
       allProdutos
-        .filter((p) => p.midia === tab)
+        .filter((p) => tab === "TODAS" || p.midia === tab)
         .map((p) => p.faixa)
         .filter(Boolean),
     ),
@@ -266,107 +477,195 @@ function ProdutosPage() {
 
   const currentCfg = ((configs as MidiaConfig[]) ?? []).find((c) => c.midia === tab);
 
-  const openNew = () => {
+  const openNew = useCallback(() => {
     setEditing({
-      midia: tab,
+      midia: tab === "TODAS" ? "OOH" : tab,
       nome: "",
       duracao_segundos: 30,
       insercoes_padrao: 1,
       valor_unit: 0,
       ativo: true,
+      parceiro_id: parceiroFiltro?.id,
+      parceiro_nome: parceiroFiltro?.nome,
     });
     setOpen(true);
-  };
+  }, [tab, parceiroFiltro]);
 
-  const openCfg = () => {
+  const openEdit = useCallback((prod: Produto | Partial<Produto>) => {
+    if (!prod) return;
+    setEditing(prod);
+    setOpen(true);
+  }, []);
+
+  const openCfg = useCallback(() => {
     setCfgEditing(currentCfg ?? { midia: tab as any });
     setCfgOpen(true);
-  };
+  }, [currentCfg, tab]);
 
   return (
     <AppShell>
+      {/* Top Header Unificado */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
-              {isNexo ? "Soluções Próprias Nexo & Veículos Representados" : "Produtos & Inventário Comercial"}
+              {isNexo ? "Produtos & Inventário Comercial" : "Produtos & Inventário Comercial"}
             </h1>
-            {isNexo && (
-              <Badge variant="outline" className="bg-sky-500/10 text-sky-600 border-sky-500/30 text-xs font-bold py-0.5">
-                Hub Nexo 360° DF
-              </Badge>
-            )}
+            <Badge variant="outline" className="text-xs font-semibold py-0.5">
+              {allProdutos.length} cadastrados
+            </Badge>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            {isNexo
-              ? "Catálogo estratégico de inventário comercial: soluções próprias e veículos parceiros homologados no Distrito Federal."
-              : "Cadastro de produtos de TV, Rádio, DOOH e canais digitais (valor, tempo e inserções padrão)."}
+            Gerencie pontos comerciais, tabelas de preço, espaços de mídia e veículos homologados.
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap items-center">
-          <Button
-            variant="outline"
-            asChild
-            className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/40"
-          >
-            <Link to="/parceiros">
-              <Handshake className="size-4 text-purple-600" />
-              <span>Parceiros de Mídia</span>
-            </Link>
-          </Button>
 
-          <Button
-            variant="outline"
-            onClick={() => {
+        <div className="flex gap-2 flex-wrap items-center">
+          {/* Dropdown Principal: Importar Dados */}
+          <ImportDropdown
+            buttonLabel="Importar Dados"
+            onImportMediaKit={() => setMidiaKitOpen(true)}
+            onImportSpreadsheet={() => setImportOpen(true)}
+            onDownloadTemplate={() => {
               downloadModeloProdutosExcel("modelo-importacao-produtos-cliente.xlsx");
               toast.success("Modelo de planilha (.xlsx) baixado com sucesso!");
             }}
-            className="gap-2 text-xs"
-            title="Baixar planilha modelo (.xlsx) com instruções e exemplos de produtos para preenchimento"
-          >
-            <Download className="size-4 text-emerald-600" />
-            <span>Baixar Modelo (.xlsx)</span>
-          </Button>
+          />
 
-          <Button
-            variant="outline"
-            onClick={() => setMidiaKitOpen(true)}
-            className="gap-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 shadow-xs"
-            title="Importar produtos e cadastrar parceiro via PDF (Mídia Kit) ou Planilha Excel com IA"
-          >
-            <Sparkles className="size-4 text-indigo-600" />
-            <span>Importar PDF / Excel (IA)</span>
-          </Button>
+          {/* Dropdown de Mais Opções */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="size-9" title="Mais opções">
+                <MoreVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => setTiposOpen(true)} className="gap-2 cursor-pointer">
+                <Tags className="size-4" />
+                <span>Tipos de Produto</span>
+              </DropdownMenuItem>
 
-          <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
-            <Upload className="size-4" />
-            <span>Importar Planilha</span>
-          </Button>
+              {(isAdmin || canManage) && tab !== "TODAS" && (
+                <DropdownMenuItem onClick={openCfg} className="gap-2 cursor-pointer">
+                  <Building2 className="size-4" />
+                  <span>Dados do Veículo ({getMidiaLabel(tab)})</span>
+                </DropdownMenuItem>
+              )}
 
-          <Button variant="outline" onClick={() => setTiposOpen(true)} className="gap-2">
-            <Tags className="size-4" />
-            <span>Tipos de Produto</span>
-          </Button>
+              <DropdownMenuSeparator />
 
-          {(isAdmin || canManage) && (
-            <Button variant="outline" onClick={openCfg} className="gap-2">
-              <Building2 className="size-4" />
-              <span>Dados da emissora ({midiaLabel[tab]})</span>
-            </Button>
-          )}
+              <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                <Link to="/site/inventario" target="_blank">
+                  <ExternalLink className="size-4 text-emerald-600" />
+                  <span>Vitrine Pública OOH</span>
+                </Link>
+              </DropdownMenuItem>
 
-          <Button onClick={openNew} className="gap-2 shadow-sm">
+              <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                <Link to="/parceiros">
+                  <Handshake className="size-4 text-purple-600" />
+                  <span>Parceiros Comerciais</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Botão de Criação Principal */}
+          <Button onClick={openNew} className="gap-2 shadow-sm font-semibold">
             <Plus className="size-4" />
             <span>Novo Produto</span>
           </Button>
         </div>
       </div>
 
-      {currentCfg && (currentCfg.cnpj || currentCfg.razao_social) && (
+      {/* Switcher de Visão: Cards de Mídia / Tabela / Mapa Interativo / Nexo Hub */}
+      <div className="flex items-center gap-1.5 border rounded-xl p-1 bg-muted/40 w-fit mb-5 shadow-xs flex-wrap">
+        <button
+          type="button"
+          onClick={() => setMainView("cards")}
+          className={cn(
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+            mainView === "cards"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <LayoutGrid className="size-3.5 text-primary" />
+          <span>Cards de Mídia</span>
+          <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+            {allProdutos.length}
+          </Badge>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainView("tabela")}
+          className={cn(
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+            mainView === "tabela"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <FileSpreadsheet className="size-3.5" />
+          <span>Inventário / Tabela</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainView("mapa")}
+          className={cn(
+            "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+            mainView === "mapa"
+              ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <MapPin className="size-3.5 text-rose-500" />
+          <span>Mapa Interativo</span>
+        </button>
+
+        {isNexo && (
+          <button
+            type="button"
+            onClick={() => setMainView("catalogo")}
+            className={cn(
+              "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2",
+              mainView === "catalogo"
+                ? "bg-background text-foreground shadow-xs ring-1 ring-border"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Layers className="size-3.5 text-primary" />
+            <span>Hub Nexo 360°</span>
+          </button>
+        )}
+      </div>
+
+      {mainView === "mapa" ? (
+        <div className="h-[calc(100vh-210px)] min-h-[620px] rounded-2xl overflow-hidden border shadow-sm bg-card">
+          <MediaInventoryMap
+            produtos={allProdutos}
+            selectedProdutoId={selectedMapProdutoId}
+            onSelectProduto={(prod) => setSelectedMapProdutoId(prod?.id ?? null)}
+            onEditProduto={openEdit}
+            onOpenGallery={(fotos, titulo) =>
+              setGalleryFotos({
+                fotos,
+                titulo,
+              })
+            }
+          />
+        </div>
+      ) : mainView === "catalogo" ? (
+        <CatalogoEspacosTab initialPartnerId={searchParams.parceiro} />
+      ) : (
+        <>
+          {currentCfg && (currentCfg.cnpj || currentCfg.razao_social) && (
         <Card className="mb-4">
           <CardContent className="py-3 px-4 text-sm flex flex-wrap gap-x-6 gap-y-1">
             <span>
-              <strong>{midiaLabel[tab]}:</strong> {currentCfg.razao_social ?? "—"}
+              <strong>{getMidiaLabel(tab)}:</strong> {currentCfg.razao_social ?? "—"}
             </span>
             {currentCfg.cnpj && (
               <span>
@@ -384,18 +683,73 @@ function ProdutosPage() {
       )}
 
       <ImportarMidiaKitDialog open={midiaKitOpen} onOpenChange={setMidiaKitOpen} />
-      <ImportarProdutosDialog open={importOpen} onOpenChange={setImportOpen} midiaPadrao={tab as any} />
+      <ImportarProdutosDialog open={importOpen} onOpenChange={setImportOpen} midiaPadrao={(tab === "TODAS" ? "OOH" : tab) as any} />
+
+      {/* Banner de Filtro de Parceiro Comercial Ativo */}
+      {parceiroFiltro && (
+        <div className="flex items-center justify-between flex-wrap gap-3 p-3.5 mb-4 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/80 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-lg bg-purple-100 dark:bg-purple-900/60 flex items-center justify-center shrink-0 text-purple-700 dark:text-purple-300">
+              <Handshake className="size-5" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold flex items-center gap-2 flex-wrap">
+                <span>Exibindo inventário da Rede de Parceiros:</span>
+                <Badge className="bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs py-0.5 px-2">
+                  {parceiroFiltro.nome || "Parceiro Selecionado"}
+                </Badge>
+                <span className="text-xs text-purple-600 dark:text-purple-400 font-normal">
+                  ({list.length} item{list.length === 1 ? "" : "s"} na rede)
+                </span>
+              </div>
+              <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">
+                Inventário disponibilizado pelo parceiro para representação e venda comercial pela Nexo.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="h-7 text-xs border-purple-300 dark:border-purple-800 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50"
+            >
+              <Link to="/parceiros">
+                ← Rede de Parceiros
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setParceiroFiltro(null);
+                setFiltroOrigem("all");
+              }}
+              className="h-7 text-xs text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50"
+            >
+              <X className="size-3.5 mr-1" />
+              Ver Todo o Inventário
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v)}>
         <TabsList className="flex flex-wrap h-auto gap-1">
           {listaMidias.map((m) => (
             <TabsTrigger key={m} value={m} className="gap-1.5">
-              {m === "TV" ? (
+              {m === "TODAS" ? (
+                <Layers className="size-4" />
+              ) : m === "TV" ? (
                 <Tv className="size-4" />
-              ) : m === "Radio" ? (
+              ) : m === "Radio" || m === "RADIO" ? (
                 <Radio className="size-4" />
-              ) : m === "DOOH" ? (
+              ) : m === "DOOH" || m === "OOH" ? (
                 <Monitor className="size-4" />
+              ) : m === "DIGITAL" || m === "Digital" ? (
+                <Globe className="size-4" />
+              ) : m === "PRINT" || m === "Impresso" ? (
+                <Newspaper className="size-4" />
               ) : (
                 <Tags className="size-3.5" />
               )}
@@ -415,125 +769,75 @@ function ProdutosPage() {
           </Button>
         </TabsList>
 
-        {listaMidias.map((m) => (
-          <TabsContent key={m} value={m} className="mt-4 space-y-3">
-            {/* Seletor Visual de Categorias Híbridas Nexo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Categoria A: Soluções Próprias Nexo */}
-              <div
-                onClick={() => setFiltroOrigem(filtroOrigem === "proprio" ? "all" : "proprio")}
-                className={cn(
-                  "p-3.5 rounded-xl border transition-all cursor-pointer",
-                  filtroOrigem === "proprio"
-                    ? "bg-sky-500/10 border-sky-500 ring-2 ring-sky-500/30"
-                    : "bg-card hover:bg-muted/40 border-border/70",
-                )}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">⭐</span>
-                    <div>
-                      <div className="font-bold text-xs sm:text-sm text-foreground">
-                        A) SOLUÇÕES PRÓPRIAS NEXO (In-House Hub)
-                      </div>
-                      <div className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold">
-                        Gestão, Inteligência Estratégica & Execução Direta
-                      </div>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={filtroOrigem === "proprio" ? "default" : "outline"}
-                    className="text-[10px] px-2 py-0.5 shrink-0 bg-sky-600 hover:bg-sky-700 text-white"
-                  >
-                    {filtroOrigem === "proprio" ? "Ativo" : "Filtrar"}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[
-                    "Planejamento Estratégico & Inteligência 360°",
-                    "Criação & Peças (LED, OOH, Digital)",
-                    "Gestão de Tráfego & Performance",
-                    "Coberturas, Eventos & Live Marketing",
-                  ].map((sub) => (
-                    <span
-                      key={sub}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFiltroOrigem("proprio");
-                        setSearch(sub.split(" ")[0]);
-                      }}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800 hover:bg-sky-100 transition-colors"
+        <TabsContent value={tab} className="mt-4 space-y-3">
+            {/* Barra de Filtros Unificada e Sem Redundância */}
+            <Card className="mb-4 shadow-xs">
+              <CardContent className="p-3 flex flex-wrap gap-2.5 items-center">
+                {/* Campo de Busca Rápida */}
+                <div className="relative flex-1 min-w-[240px]">
+                  <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, formato, ponto, praça ou parceiro..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 h-9 text-xs"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      title="Limpar pesquisa"
                     >
-                      {sub}
-                    </span>
-                  ))}
+                      <X className="size-3.5" />
+                    </button>
+                  )}
                 </div>
-              </div>
 
-              {/* Categoria B: Veículos Representados */}
-              <div
-                onClick={() => setFiltroOrigem(filtroOrigem === "parceiro" ? "all" : "parceiro")}
-                className={cn(
-                  "p-3.5 rounded-xl border transition-all cursor-pointer",
-                  filtroOrigem === "parceiro"
-                    ? "bg-purple-500/10 border-purple-500 ring-2 ring-purple-500/30"
-                    : "bg-card hover:bg-muted/40 border-border/70",
-                )}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">🤝</span>
-                    <div>
-                      <div className="font-bold text-xs sm:text-sm text-foreground">
-                        B) VEÍCULOS REPRESENTADOS (Rede Homologada)
-                      </div>
-                      <div className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">
-                        Espaços de Alto Impacto • DF & Entorno
-                      </div>
-                    </div>
-                  </div>
-                  <Badge
-                    variant={filtroOrigem === "parceiro" ? "default" : "outline"}
-                    className="text-[10px] px-2 py-0.5 shrink-0 bg-purple-600 hover:bg-purple-700 text-white"
+                {/* Segmented Filter: Origem / Veículo */}
+                <div className="flex items-center rounded-lg border p-0.5 bg-muted/40 text-xs shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setFiltroOrigem("all")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition-all font-medium",
+                      filtroOrigem === "all"
+                        ? "bg-background text-foreground shadow-xs font-semibold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
                   >
-                    {filtroOrigem === "parceiro" ? "Ativo" : "Filtrar"}
-                  </Badge>
+                    Todo o Inventário ({allProdutos.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFiltroOrigem("parceiro")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition-all flex items-center gap-1 font-medium",
+                      filtroOrigem === "parceiro"
+                        ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 font-semibold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <span>🤝 Rede de Parceiros ({totalParceiros})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFiltroOrigem("proprio")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition-all flex items-center gap-1 font-medium",
+                      filtroOrigem === "proprio"
+                        ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 font-semibold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <span>🏢 Inventário Próprio ({totalProprios})</span>
+                  </button>
                 </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[
-                    "Mídia Exterior & Rodoviária (LEDs/Fronts)",
-                    "Mídia Indoor & Hiperlocal (Elevadores)",
-                    "Mídia em Trânsito (TV Cars)",
-                    "Mídia Sonora & Rádios (Spots/Blitz)",
-                    "Mídia Digital Regional (Portais)",
-                  ].map((sub) => (
-                    <span
-                      key={sub}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFiltroOrigem("parceiro");
-                        setSearch(sub.split(" ")[0]);
-                      }}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800 hover:bg-purple-100 transition-colors"
-                    >
-                      {sub}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
 
-            <Card>
-              <CardContent className="p-3 flex flex-wrap gap-2 items-center">
-                <Input
-                  placeholder="Pesquisar por nome, tipo, programa, formato ou faixa…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="max-w-sm"
-                />
+                {/* Tipo de Ponto / Produto */}
                 <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Tipo" />
+                  <SelectTrigger className="w-[170px] h-9 text-xs">
+                    <SelectValue placeholder="Tipo de ponto" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__all__">Todos os tipos</SelectItem>
@@ -544,57 +848,158 @@ function ProdutosPage() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                {/* Status */}
                 <Select value={filtroStatus} onValueChange={(v) => setFiltroStatus(v as any)}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[130px] h-9 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos status</SelectItem>
-                    <SelectItem value="ativo">Ativos</SelectItem>
-                    <SelectItem value="inativo">Inativos</SelectItem>
+                    <SelectItem value="all">Status: Todos</SelectItem>
+                    <SelectItem value="ativo">Apenas Ativos</SelectItem>
+                    <SelectItem value="inativo">Apenas Inativos</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={filtroOrigem} onValueChange={(v) => setFiltroOrigem(v as any)}>
-                  <SelectTrigger className="w-[260px]">
-                    <SelectValue placeholder="Categoria / Origem" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as categorias</SelectItem>
-                    <SelectItem value="proprio">
-                      ⭐ A) SOLUÇÕES PRÓPRIAS NEXO (In-House Hub)
-                    </SelectItem>
-                    <SelectItem value="parceiro">
-                      🤝 B) VEÍCULOS REPRESENTADOS (Rede Homologada)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+
+                {/* Canal Macro */}
                 <Select
                   value={filtroCanalMacro}
                   onValueChange={(v) => setFiltroCanalMacro(v as any)}
                 >
-                  <SelectTrigger className="w-[170px]">
+                  <SelectTrigger className="w-[130px] h-9 text-xs">
                     <SelectValue placeholder="Canal" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os canais</SelectItem>
+                    <SelectItem value="all">Canais: Todos</SelectItem>
                     <SelectItem value="OFF">📻 Mídia OFF</SelectItem>
                     <SelectItem value="ON">🌐 Mídia ON</SelectItem>
                     <SelectItem value="HIBRIDO">⚡ Híbrido 360°</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="text-sm text-muted-foreground ml-auto">
-                  {list.length} resultado{list.length === 1 ? "" : "s"}
+
+                {/* Botão de Limpar Filtros quando houver filtros ativos */}
+                {(search || filtroTipo !== "__all__" || filtroStatus !== "all" || filtroOrigem !== "all" || filtroCanalMacro !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setFiltroTipo("__all__");
+                      setFiltroStatus("all");
+                      setFiltroOrigem("all");
+                      setFiltroCanalMacro("all");
+                      setParceiroFiltro(null);
+                    }}
+                    className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3.5 mr-1" />
+                    Limpar
+                  </Button>
+                )}
+
+                {/* Contador de Resultados */}
+                <div className="text-xs text-muted-foreground ml-auto whitespace-nowrap">
+                  <strong>{list.length}</strong> de {allProdutos.length} item(ns)
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-0">
-                <Table>
+
+            {mainView === "cards" ? (
+              isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-96 rounded-2xl bg-muted/40 animate-pulse border border-border/50"
+                    />
+                  ))}
+                </div>
+              ) : list.length === 0 ? (
+                <Card className="p-12 text-center shadow-xs border">
+                  <div className="flex flex-col items-center justify-center max-w-md mx-auto space-y-4">
+                    <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                      {tab === "TV" ? (
+                        <Tv className="size-7" />
+                      ) : tab === "Radio" ? (
+                        <Radio className="size-7" />
+                      ) : (
+                        <Monitor className="size-7" />
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-lg">
+                        Nenhum produto cadastrado para {midiaLabel[tab] || tab}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {allProdutos.filter((p) => p.midia === tab).length === 0
+                          ? "Você pode cadastrar produtos manualmente um a um ou importar todo o catálogo em lote via planilha Excel ou CSV."
+                          : "Nenhum produto atende aos filtros de busca atuais. Tente limpar os filtros."}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                      <Button onClick={openNew} className="gap-2">
+                        <Plus className="size-4" />
+                        Cadastrar Ponto
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setImportOpen(true)}
+                        className="gap-2"
+                      >
+                        <Upload className="size-4" />
+                        Importar Planilha
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {list.map((prod) => (
+                    <MediaPointCard
+                      key={prod.id}
+                      produto={prod}
+                      isSelected={selectedIds.has(prod.id)}
+                      onSelect={() => toggleSelectOne(prod.id)}
+                      onEdit={openEdit}
+                      onDelete={(item) => {
+                        if (confirm(`Remover "${item.nome}"?`)) delMut.mutate(item.id);
+                      }}
+                      onOpenMap={(item) => {
+                        setSelectedMapProdutoId(item.id);
+                        setMainView("mapa");
+                      }}
+                      onOpenGallery={(fotos, titulo) =>
+                        setGalleryFotos({
+                          fotos,
+                          titulo,
+                          subtitulo: [midiaLabel[prod.midia], prod.tipo, prod.formato]
+                            .filter(Boolean)
+                            .join(" • "),
+                        })
+                      }
+                      canManage={canManage}
+                    />
+                  ))}
+                </div>
+              )
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-primary focus:ring-primary size-4 cursor-pointer"
+                          checked={list.length > 0 && list.every((p) => selectedIds.has(p.id))}
+                          onChange={() => toggleSelectAll(list)}
+                          aria-label="Selecionar todos os itens da página"
+                        />
+                      </TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead>Origem / Parceiro</TableHead>
-                      <TableHead>Programa / Faixa</TableHead>
+                      <TableHead>Posição / Espaço / Faixa</TableHead>
                       <TableHead className="text-right">Duração</TableHead>
                       <TableHead className="text-right">Inserções</TableHead>
                       <TableHead className="text-right">Valor unit.</TableHead>
@@ -605,7 +1010,7 @@ function ProdutosPage() {
                   <TableBody>
                     {isLoading && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                           Carregando…
                         </TableCell>
                       </TableRow>
@@ -617,7 +1022,7 @@ function ProdutosPage() {
                         if (totalMidia === 0) {
                           return (
                             <TableRow>
-                              <TableCell colSpan={8} className="py-12">
+                              <TableCell colSpan={9} className="py-12">
                                 <div className="flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
                                   <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                                     {tab === "TV" ? (
@@ -658,29 +1063,50 @@ function ProdutosPage() {
                         }
                         return (
                           <TableRow>
-                            <TableCell colSpan={8} className="py-10 text-center space-y-2">
+                            <TableCell colSpan={9} className="py-10 text-center space-y-2">
                               <p className="text-sm text-muted-foreground">
                                 Nenhum produto encontrado com os filtros aplicados.
                               </p>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSearch("");
-                                  setFiltroTipo("__all__");
-                                  setFiltroStatus("all");
-                                  setFiltroOrigem("all");
-                                  setFiltroCanalMacro("all");
-                                }}
-                              >
-                                Limpar filtros
-                              </Button>
+                              <div className="flex items-center justify-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSearch("");
+                                    setFiltroTipo("__all__");
+                                    setFiltroStatus("all");
+                                    setFiltroOrigem("all");
+                                    setFiltroCanalMacro("all");
+                                  }}
+                                >
+                                  Limpar filtros
+                                </Button>
+                                <Button size="sm" onClick={openNew} className="gap-1.5">
+                                  <Plus className="size-3.5" />
+                                  Cadastrar Novo Ponto
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
                       })()}
                     {list.map((p) => (
-                      <TableRow key={p.id}>
+                      <TableRow
+                        key={p.id}
+                        className={cn(
+                          selectedIds.has(p.id) && "bg-primary/5 dark:bg-primary/10",
+                          "transition-colors",
+                        )}
+                      >
+                        <TableCell className="w-10">
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-300 text-primary focus:ring-primary size-4 cursor-pointer"
+                            checked={selectedIds.has(p.id)}
+                            onChange={() => toggleSelectOne(p.id)}
+                            aria-label={`Selecionar ${p.nome}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             {p.fotos && p.fotos.length > 0 ? (
@@ -710,12 +1136,15 @@ function ProdutosPage() {
                                 )}
                               </button>
                             ) : (
-                              <div
-                                className="size-11 rounded-lg bg-muted/30 border border-dashed border-border/70 flex items-center justify-center text-muted-foreground/40 shrink-0"
-                                title="Sem foto cadastrada"
+                              <button
+                                type="button"
+                                onClick={() => handleEditar(p)}
+                                className="size-11 rounded-lg bg-muted/30 border border-dashed border-border/70 flex flex-col items-center justify-center text-muted-foreground/60 shrink-0 hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer group"
+                                title="Foto real não cadastrada — Clique para adicionar foto real"
                               >
-                                <Camera className="size-4" />
-                              </div>
+                                <Camera className="size-4 group-hover:text-primary transition-colors" />
+                                <span className="text-[8px] leading-tight mt-0.5 font-medium group-hover:text-primary">Sem foto</span>
+                              </button>
                             )}
                             <div className="flex flex-col min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -754,21 +1183,21 @@ function ProdutosPage() {
                           {p.parceiro_cnpj || p.parceiro_nome || p.parceiro_id ? (
                             <div className="flex flex-col items-start gap-1">
                               <Badge className="bg-purple-100 text-purple-900 dark:bg-purple-950 dark:text-purple-200 border-purple-300 text-[10px] font-bold py-0.5">
-                                🤝 B) VEÍCULO REPRESENTADO (Rede Homologada)
+                                🤝 Rede de Parceiros (Representado)
                               </Badge>
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span
                                   className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[190px]"
                                   title={p.parceiro_nome || undefined}
                                 >
-                                  {p.parceiro_nome || "Veículo Parceiro"}
+                                  {p.parceiro_nome || "Parceiro de Mídia"}
                                 </span>
                                 {p.comissao_inquilino_pct != null && (
                                   <Badge
                                     variant="outline"
                                     className="text-[10px] font-bold text-purple-700 dark:text-purple-300 border-purple-300 bg-purple-50 dark:bg-purple-950/40 py-0"
                                   >
-                                    {p.comissao_inquilino_pct}% BV
+                                    {p.comissao_inquilino_pct}% Comissão
                                   </Badge>
                                 )}
                               </div>
@@ -784,10 +1213,10 @@ function ProdutosPage() {
                                 variant="outline"
                                 className="border-sky-500/60 text-sky-900 dark:text-sky-200 bg-sky-50 dark:bg-sky-950/50 text-[10px] py-0.5 font-bold"
                               >
-                                ⭐ A) SOLUÇÃO PRÓPRIA NEXO (In-House Hub)
+                                🏢 PRÓPRIO NEXO (Inventário Direto)
                               </Badge>
                               <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-                                Planejamento 360° • Criação • Tráfego • Ativação
+                                Ponto próprio ou serviços in-house
                               </span>
                             </div>
                           )}
@@ -806,9 +1235,24 @@ function ProdutosPage() {
                           {formatBRL(Number(p.valor_unit))}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={p.ativo ? "default" : "outline"}>
-                            {p.ativo ? "Ativo" : "Inativo"}
-                          </Badge>
+                          <div className="flex flex-col gap-1 items-start">
+                            <Badge variant={p.ativo ? "default" : "outline"} className="text-[11px]">
+                              {p.ativo ? "Ativo" : "Inativo"}
+                            </Badge>
+                            {p.status_operacional === "em_veiculacao" || p.pi_ativo_id ? (
+                              <Badge className="bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 text-[10px] font-bold">
+                                🟢 PI Emitido — Veiculação Autorizada
+                              </Badge>
+                            ) : p.status_operacional === "bloqueado_comercial" || p.status_operacional === "reservado" ? (
+                              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-300 text-[10px] font-bold">
+                                🟡 Aguardando Emissão de PI para Veiculação
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                Disponível Comercial
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           {canManage && (
@@ -816,10 +1260,7 @@ function ProdutosPage() {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                onClick={() => {
-                                  setEditing(p);
-                                  setOpen(true);
-                                }}
+                                onClick={() => openEdit(p)}
                                 title="Editar produto"
                               >
                                 <Pencil className="size-4" />
@@ -843,9 +1284,136 @@ function ProdutosPage() {
                 </Table>
               </CardContent>
             </Card>
+          )}
+
+            {/* Barra Flutuante de Ações em Lote */}
+            {selectedIds.size > 0 && (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white backdrop-blur-md px-5 py-3 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-3 flex-wrap animate-in fade-in slide-in-from-bottom-3 max-w-[95vw]">
+                <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
+                  <CheckSquare className="size-4 text-primary shrink-0" />
+                  <span className="text-xs font-bold text-slate-100 whitespace-nowrap">
+                    {selectedIds.size} selecionado{selectedIds.size > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/40 hover:border-amber-400"
+                    disabled={batchMut.isPending}
+                    onClick={() =>
+                      batchMut.mutate({
+                        ids: Array.from(selectedIds),
+                        status_operacional: "reservado",
+                      })
+                    }
+                  >
+                    Marcar como Reservado
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-emerald-300 border-emerald-500/40 hover:border-emerald-400"
+                    disabled={batchMut.isPending}
+                    onClick={() =>
+                      batchMut.mutate({
+                        ids: Array.from(selectedIds),
+                        status_operacional: "disponivel",
+                      })
+                    }
+                  >
+                    Marcar como Disponível
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-600"
+                    disabled={batchMut.isPending}
+                    onClick={() => setBatchPriceOpen(true)}
+                  >
+                    <SlidersHorizontal className="size-3.5 mr-1" />
+                    Reajustar Valores
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs text-slate-400 hover:text-white hover:bg-slate-800"
+                    onClick={clearSelection}
+                  >
+                    <X className="size-3.5 mr-1" />
+                    Desmarcar
+                  </Button>
+                </div>
+              </div>
+            )}
           </TabsContent>
-        ))}
       </Tabs>
+
+      {/* Modal de Reajuste em Lote */}
+      <Dialog open={batchPriceOpen} onOpenChange={setBatchPriceOpen}>
+        <DialogContent className="sm:max-w-[420px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Reajustar Valores em Lote</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Aplicar reajuste percentual para os <strong>{selectedIds.size}</strong> produtos selecionados.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Percentual de Reajuste (%)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="Ex: 5 para +5%, -10 para -10%"
+                  value={batchPricePercent}
+                  onChange={(e) => setBatchPricePercent(e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div className="flex gap-1.5 pt-1">
+                {[5, 10, 15, -5, -10].map((pct) => (
+                  <Button
+                    key={pct}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs px-2"
+                    onClick={() => setBatchPricePercent(String(pct))}
+                  >
+                    {pct > 0 ? `+${pct}%` : `${pct}%`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setBatchPriceOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={!batchPricePercent || batchMut.isPending}
+              onClick={() => {
+                const pct = parseFloat(batchPricePercent);
+                if (isNaN(pct)) return;
+                batchMut.mutate({
+                  ids: Array.from(selectedIds),
+                  reajuste_percentual: pct,
+                });
+              }}
+            >
+              {batchMut.isPending ? "Aplicando..." : "Confirmar Reajuste"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+        </>
+      )}
 
       <ProdutoFormDialog
         open={open}
@@ -1126,7 +1694,7 @@ function MidiaConfigDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Dados da emissora — {midiaLabel[value.midia as Midia]}</DialogTitle>
+          <DialogTitle>Dados cadastrais do veículo — {getMidiaLabel(value.midia as Midia)}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={(e) => {

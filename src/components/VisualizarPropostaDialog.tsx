@@ -40,6 +40,8 @@ import {
   Compass,
   TrendingUp,
   MonitorPlay,
+  Zap,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentOrg } from "@/hooks/use-current-org";
@@ -56,13 +58,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropostaAnexosSection } from "@/components/PropostaAnexosSection";
 
-type Props = { open: boolean; onOpenChange: (v: boolean) => void; propostaId: string | null };
+type Props = {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  propostaId: string | null;
+  onEmitirPis?: (proposta: any) => void;
+};
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 const fmtData = (s?: string | null) => (s ? new Date(s).toLocaleDateString("pt-BR") : "—");
 
-export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Props) {
+export function VisualizarPropostaDialog({ open, onOpenChange, propostaId, onEmitirPis }: Props) {
   const [p, setP] = useState<(PropostaApresentacao & { numero: string; status?: string }) | null>(
     null,
   );
@@ -517,9 +524,15 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                                 <span className="text-[10px] text-neutral-400">{currentSlide.item.formato || "Full HD 1920x1080"}</span>
                               </div>
                             )}
-                            <Badge className="absolute top-2 left-2 bg-[#ff6b00] text-white text-[9px] font-bold">
-                              FOTO FRONTAL / STREET VIEW
-                            </Badge>
+                            {currentSlide.item.foto_url ? (
+                              <Badge className="absolute top-2 left-2 bg-[#ff6b00] text-white text-[9px] font-bold">
+                                FOTO REAL HOMOLOGADA
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="absolute top-2 left-2 border-neutral-700 bg-neutral-900/80 text-neutral-400 text-[9px]">
+                                FOTO REAL PENDENTE
+                              </Badge>
+                            )}
                           </div>
 
                           {/* Ficha técnica completa */}
@@ -756,14 +769,14 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="p-3.5 rounded-xl border border-purple-200 dark:border-purple-800/80 bg-purple-50/50 dark:bg-purple-950/20 space-y-1">
                     <div className="text-[10px] uppercase font-bold text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                      <span>🤝</span>
-                      <span>Veiculação de Mídia / Espaços Representados</span>
+                      <span>📍</span>
+                      <span>Veiculação de Mídia / Espaços de Impacto</span>
                     </div>
                     <div className="text-lg font-bold text-purple-900 dark:text-purple-200">
                       {fmtBRL(totalRepresentados)}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
-                      Rede Homologada de Painéis LED, OOH & Veículos Parceiros
+                      Rede Homologada de Painéis LED, OOH & Mídia Exterior
                     </div>
                   </div>
 
@@ -856,16 +869,6 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
                             <TableCell>{it.tipo}</TableCell>
                             <TableCell>
                               <div className="font-medium">{it.programa || "—"}</div>
-                              {((it as any).parceiro_nome || (it as any).parceiro_cnpj) && (
-                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mt-0.5">
-                                  <span>🤝 {(it as any).parceiro_nome}</span>
-                                  {(it as any).parceiro_cnpj && (
-                                    <span className="font-mono text-[10px] text-muted-foreground">
-                                      ({(it as any).parceiro_cnpj})
-                                    </span>
-                                  )}
-                                </div>
-                              )}
                               {/* Dados de Geolocalização / Mídia Exterior */}
                               {((it as any).link_maps ||
                                 (it as any).latitude ||
@@ -1059,8 +1062,79 @@ export function VisualizarPropostaDialog({ open, onOpenChange, propostaId }: Pro
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 flex-wrap items-center">
+            {p?.status === "aprovada" && onEmitirPis && (
+              <Button
+                variant="default"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-5 font-semibold gap-1.5 shadow-xs"
+                onClick={() => onEmitirPis(p)}
+              >
+                <Zap className="size-4 fill-current" />
+                Gerar PIs Imediatamente
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 border-slate-300 dark:border-slate-700 font-medium rounded-full px-3.5 text-xs"
+              onClick={() => {
+                if (!p) return;
+                const token = (p as any).public_token || p.id;
+                const url = `${window.location.origin}/p/${token}`;
+                navigator.clipboard.writeText(url);
+                toast.success("Link público da proposta copiado!");
+              }}
+              title="Copiar link interativo da proposta"
+            >
+              <Share2 className="size-3.5" />
+              Copiar Link Online
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-semibold rounded-full px-3.5 text-xs"
+              onClick={() => {
+                if (!p) return;
+                const token = (p as any).public_token || p.id;
+                const url = `${window.location.origin}/p/${token}`;
+                const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+                const repNome = (p as any).executivo?.nome || "Representante Comercial";
+                const empNome = (p as any).organizacao?.nome || org?.nome || "Mídia.OS";
+                const msg = `Olá, ${clienteNome}! Aqui é ${repNome} da ${empNome}. Preparamos com exclusividade o planejamento estratégico da sua campanha '${p.campanha || "Veiculação de Mídia"}'. Você pode conferir todos os detalhes, fotos e condições especiais no link interativo: ${url} . Fique à vontade para sugerir ajustes ou validar a aprovação por lá!`;
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, "_blank");
+              }}
+            >
+              <Share2 className="size-3.5" />
+              WhatsApp
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-blue-600 border-blue-500/30 hover:bg-blue-50 dark:hover:bg-blue-950/30 font-semibold rounded-full px-3.5 text-xs"
+              onClick={() => {
+                if (!p) return;
+                const token = (p as any).public_token || p.id;
+                const url = `${window.location.origin}/p/${token}`;
+                const clienteNome = p.cliente?.nome_fantasia || p.cliente?.razao_social || p.cliente_avulso || "Cliente";
+                const repNome = (p as any).executivo?.nome || "Equipe Comercial";
+                const empNome = (p as any).organizacao?.nome || org?.nome || "Mídia.OS";
+                const assunto = encodeURIComponent(`Proposta Comercial - ${p.campanha || "Campanha"} | ${empNome}`);
+                const corpo = encodeURIComponent(
+                  `Olá, ${clienteNome}!\n\n` +
+                  `Preparamos com exclusividade o planejamento estratégico da sua campanha "${p.campanha}".\n\n` +
+                  `Para conferir todos os detalhes, mapa de cobertura, fotos reais dos pontos e condições negociadas, acesse o link interativo seguro:\n` +
+                  `${url}\n\n` +
+                  `Você pode sugerir ajustes diretamente pela tela online ou efetuar a aprovação digital formal.\n\n` +
+                  `Atenciosamente,\n` +
+                  `${repNome}\n${empNome}`
+                );
+                window.open(`mailto:?subject=${assunto}&body=${corpo}`, "_blank");
+              }}
+            >
+              <Mail className="size-3.5" />
+              E-mail
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>
             <Button

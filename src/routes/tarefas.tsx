@@ -77,7 +77,7 @@ const PRIO_LABEL: Record<Prioridade, string> = { baixa: "Baixa", media: "Média"
 const fmtDate = (s?: string | null) =>
   s ? new Date(s + "T00:00:00").toLocaleDateString("pt-BR") : null;
 
-function TarefasPage() {
+export function TarefasPage({ embedded = false }: { embedded?: boolean } = {}) {
   const qc = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Tarefa | null>(null);
@@ -109,25 +109,26 @@ function TarefasPage() {
     return map;
   }, [tarefas]);
 
-  return (
-    <AppShell>
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+  const content = (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
-            Minhas Tarefas
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Organize seu trabalho em um quadro pessoal estilo Kanban.
+          <h2 className="text-xl font-display font-semibold tracking-tight">
+            Quadro Operacional de Tarefas
+          </h2>
+          <p className="text-muted-foreground text-xs mt-0.5">
+            Organize seu fluxo de trabalho, prazos e follow-up comercial.
           </p>
         </div>
         <Button
+          size="sm"
           onClick={() => {
             setEditing(null);
             setDefaultStatus("a_fazer");
             setFormOpen(true);
           }}
         >
-          <Plus className="size-4 mr-2" /> Nova tarefa
+          <Plus className="size-4 mr-1.5" /> Nova tarefa
         </Button>
       </div>
 
@@ -292,9 +293,14 @@ function TarefasPage() {
         defaultStatus={defaultStatus}
         onSaved={() => qc.invalidateQueries({ queryKey: ["tarefas"] })}
       />
-    </AppShell>
+    </div>
   );
+
+  if (embedded) return content;
+  return <AppShell>{content}</AppShell>;
 }
+
+export const TarefasKanbanView = TarefasPage;
 
 function TarefaFormDialog({
   open,

@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,9 +76,42 @@ export function CentralizadoresPage() {
   const detectarInconsistenciasFn = useServerFn(detectarInconsistenciasSistema);
   const validarCalculoFn = useServerFn(validarRegrasCalculoFinanceiro);
 
+  const location = useLocation();
+  const searchParams = useMemo(() => {
+    try {
+      const s = typeof (location as any)?.searchStr === "string"
+        ? (location as any).searchStr
+        : typeof location?.search === "string"
+        ? location.search
+        : new URLSearchParams(location?.search as any).toString();
+      return new URLSearchParams(s.startsWith("?") ? s.slice(1) : s);
+    } catch {
+      return new URLSearchParams();
+    }
+  }, [(location as any)?.searchStr, location?.search]);
+
+  const initialTab = searchParams.get("tab");
   const [tab, setTab] = useState<
     "planejador_ia" | "metricas_parceiros" | "esteira" | "calculadora" | "inconsistencias" | "modelos"
-  >("planejador_ia");
+  >(() => {
+    if (initialTab === "ia" || initialTab === "planejador_ia") return "planejador_ia";
+    if (initialTab === "metricas_parceiros" || initialTab === "parceiros") return "metricas_parceiros";
+    if (initialTab === "esteira") return "esteira";
+    if (initialTab === "calculadora") return "calculadora";
+    if (initialTab === "inconsistencias") return "inconsistencias";
+    if (initialTab === "modelos") return "modelos";
+    return "planejador_ia";
+  });
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t === "ia" || t === "planejador_ia") setTab("planejador_ia");
+    else if (t === "metricas_parceiros" || t === "parceiros") setTab("metricas_parceiros");
+    else if (t === "esteira") setTab("esteira");
+    else if (t === "calculadora") setTab("calculadora");
+    else if (t === "inconsistencias") setTab("inconsistencias");
+    else if (t === "modelos") setTab("modelos");
+  }, [searchParams]);
 
   // Estado da Calculadora Interativa da Regra Fundamental
   const [calcBruto, setCalcBruto] = useState<number>(100000);

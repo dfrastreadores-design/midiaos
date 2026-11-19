@@ -57,6 +57,14 @@ export const ParceiroSchema = z.object({
   razao_social: z.string().min(1, "Razão Social é obrigatória").max(200),
   nome_fantasia: nullableString(200),
   cnpj: nullableString(30),
+  logo_url: nullableString(1000),
+  tipo_veiculo: z.string().default("Painel OOH/DOOH"),
+  perfil_comercial: z
+    .enum(["VEICULO_EXIBIDOR", "AGENCIA", "REPRESENTANTE", "ANUNCIANTE", "FORNECEDOR_PRODUCAO"])
+    .default("VEICULO_EXIBIDOR")
+    .optional(),
+  status: z.enum(["ativo", "inativo", "em_negociacao"]).default("ativo"),
+  comissao_padrao_percentual: z.number().min(0).max(100).default(20.0),
   site: nullableString(300),
   instagram: nullableString(150),
   linkedin: nullableString(300),
@@ -82,6 +90,9 @@ export const ParceiroSchema = z.object({
   uf: nullableString(10),
   cep: nullableString(20),
   observacoes: nullableString(2000),
+  media_kit_defenses: z.any().optional().nullable(),
+  commercial_discounts_rules: z.any().optional().nullable(),
+  allows_circuit_bundles: z.boolean().default(false),
   ativo: z.boolean().default(true),
 });
 
@@ -112,7 +123,7 @@ export const listParceiros = createServerFn({ method: "GET" })
     // Busca parceiros
     let query = supabase.from("parceiros").select("*");
     if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
+      query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
     }
     let { data: parceiros, error: pErr } = await query.order("razao_social");
 
@@ -121,7 +132,7 @@ export const listParceiros = createServerFn({ method: "GET" })
       console.warn("[listParceiros] Falha na consulta de parceiros via client:", pErr.message, "- Tentando via supabaseAdmin...");
       let adminQuery = supabaseAdmin.from("parceiros").select("*");
       if (tenantId) {
-        adminQuery = adminQuery.eq("tenant_id", tenantId);
+        adminQuery = adminQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
       }
       const adminRes = await adminQuery.order("razao_social");
       if (!adminRes.error && adminRes.data) {
@@ -141,7 +152,7 @@ export const listParceiros = createServerFn({ method: "GET" })
       let pQuery = supabase
         .from("produtos")
         .select("id, parceiro_id, parceiro_cnpj, parceiro_nome, valor_unit, ativo");
-      if (tenantId) pQuery = pQuery.eq("tenant_id", tenantId);
+      if (tenantId) pQuery = pQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
       const { data: prodData, error: prodErr } = await pQuery;
       if (!prodErr && prodData) {
         produtos = prodData;
@@ -149,7 +160,7 @@ export const listParceiros = createServerFn({ method: "GET" })
         let adminPQuery = supabaseAdmin
           .from("produtos")
           .select("id, parceiro_id, parceiro_cnpj, parceiro_nome, valor_unit, ativo");
-        if (tenantId) adminPQuery = adminPQuery.eq("tenant_id", tenantId);
+        if (tenantId) adminPQuery = adminPQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
         const { data: adminProdData } = await adminPQuery;
         if (adminProdData) produtos = adminProdData;
       }
@@ -158,16 +169,21 @@ export const listParceiros = createServerFn({ method: "GET" })
     }
 
     return (parceiros ?? []).map((parceiro: any) => {
-      const prods = (produtos ?? []).filter(
-        (p: any) =>
-          (p.parceiro_id && p.parceiro_id === parceiro.id) ||
-          (p.parceiro_cnpj &&
-            parceiro.cnpj &&
-            p.parceiro_cnpj.replace(/\D/g, "") === parceiro.cnpj.replace(/\D/g, "")) ||
-          (p.parceiro_nome &&
-            parceiro.razao_social &&
-            p.parceiro_nome.toLowerCase().trim() === parceiro.razao_social.toLowerCase().trim()),
-      );
+      const cleanCnpj = parceiro.cnpj ? parceiro.cnpj.replace(/\D/g, "") : null;
+      const razaoNorm = parceiro.razao_social ? parceiro.razao_social.toLowerCase().trim() : "";
+      const fantasiaNorm = parceiro.nome_fantasia ? parceiro.nome_fantasia.toLowerCase().trim() : "";
+
+      const prods = (produtos ?? []).filter((p: any) => {
+        if (p.parceiro_id && p.parceiro_id === parceiro.id) return true;
+        if (cleanCnpj && p.parceiro_cnpj && p.parceiro_cnpj.replace(/\D/g, "") === cleanCnpj) return true;
+        if (p.parceiro_nome) {
+          const pNomeNorm = p.parceiro_nome.toLowerCase().trim();
+          if (razaoNorm && pNomeNorm === razaoNorm) return true;
+          if (fantasiaNorm && pNomeNorm === fantasiaNorm) return true;
+          if (fantasiaNorm && (pNomeNorm.includes(fantasiaNorm) || fantasiaNorm.includes(pNomeNorm))) return true;
+        }
+        return false;
+      });
 
       const valorTotal = prods.reduce(
         (acc: number, cur: any) => acc + (Number(cur.valor_unit) || 0),
@@ -273,6 +289,19 @@ export const upsertParceiro = createServerFn({ method: "POST" })
       }
     }
 
+    // Se o erro for referente à coluna perfil_comercial ou allows_circuit_bundles ausente no cache do banco:
+    if (res.error && (res.error.message.toLowerCase().includes("perfil_comercial") || res.error.message.toLowerCase().includes("allows_circuit_bundles"))) {
+      if (res.error.message.toLowerCase().includes("perfil_comercial")) delete payload.perfil_comercial;
+      if (res.error.message.toLowerCase().includes("allows_circuit_bundles")) delete payload.allows_circuit_bundles;
+      const retryQ = id
+        ? supabaseAdmin.from("parceiros").update(payload).eq("id", id).select().single()
+        : supabaseAdmin.from("parceiros").insert(payload).select().single();
+      const retryRes = await retryQ;
+      if (!retryRes.error) {
+        res = retryRes;
+      }
+    }
+
     if (res.error) throw new Error(traduzirErro(res.error.message));
 
     // Se o parceiro tiver CNPJ ou Razão Social atualizada, atualiza vínculos de produtos
@@ -295,6 +324,36 @@ export const upsertParceiro = createServerFn({ method: "POST" })
       }
     }
 
+    // Sincroniza também na tabela partners
+    try {
+      const partnerPayload: any = {
+        id: res.data.id,
+        tenant_id: tenantId,
+        razao_social: res.data.razao_social,
+        nome_fantasia: res.data.nome_fantasia,
+        cnpj: res.data.cnpj,
+        logo_url: res.data.logo_url,
+        contato_nome: res.data.contato_nome,
+        email: res.data.contato_email,
+        telefone: res.data.contato_telefone,
+        site: res.data.site,
+        tipo_veiculo: res.data.tipo_veiculo || "Painel OOH/DOOH",
+        comissao_padrao_percentual: Number(res.data.comissao_padrao_pct || res.data.comissao_padrao_percentual || 20),
+        status: res.data.status || (res.data.ativo === false ? "inativo" : "ativo"),
+        endereco: res.data.endereco,
+        cidade: res.data.cidade,
+        uf: res.data.uf,
+        cep: res.data.cep,
+        observacoes: res.data.observacoes,
+        media_kit_defenses: res.data.media_kit_defenses ?? null,
+        commercial_discounts_rules: res.data.commercial_discounts_rules ?? null,
+        updated_at: new Date().toISOString(),
+      };
+      await (supabaseAdmin.from("partners") as any).upsert(partnerPayload);
+    } catch (e) {
+      // Ignora se tabela partners estiver em transição
+    }
+
     return res.data;
   });
 
@@ -307,6 +366,7 @@ export const deleteParceiro = createServerFn({ method: "POST" })
     // Desvincula produtos deste parceiro antes de remover
     try {
       await supabaseAdmin.from("produtos").update({ parceiro_id: null }).eq("parceiro_id", data.id);
+      await (supabaseAdmin.from("partners") as any).delete().eq("id", data.id);
     } catch {
       // ignora
     }

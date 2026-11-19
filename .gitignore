@@ -1,79 +1,27 @@
 # ==============================================================================
-# Mídia.OS — .gitignore
-# Blindagem contra envio de arquivos pesados, caches, relatórios e envs locais
+# MIDIA OS - .gitignore de Segurança
+# Impede o versionamento de qualquer credencial ou arquivo de ambiente local.
 # ==============================================================================
 
-# 1. Logs & Relatórios de Debug
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# 2. Dependências & Builds
-node_modules/
-dist/
-dist-ssr/
-.output/
-.vinxi/
-.tanstack/**
-.nitro/
-
-# 3. Pastas Temporárias & Caches de Compilação
-.cache/
-.temp/
-.turbo/
-*.tmp
-supabase/.temp/
-hostinger_staging_*
-
-# 4. Arquivos Compactados & Pacotes de Deploy
-*.zip
-*.tar
-*.tar.gz
-*.tgz
-*.rar
-*.7z
-hostinger_deploy.zip
-hostinger/
-
-# 5. Variáveis de Ambiente & Segredos Locais
+# Arquivos de ambiente e segredos locais (NUNCA versionar)
 .env
 .env.*
+.env.staging
 .env.local
-.env.development
-.env.test
-.env.production.local
+.env.production
+.env.backup
+*.bak
+*.bak2
+
+# Preservar apenas exemplos públicos sem segredos
 !.env.example
+!.env.staging.example
 
-# 6. Mídias Pesadas & Relatórios Locais Soltos
-*.pdf
-*.xlsx
-*.xls
-*.csv
-*.mp4
-*.mov
-*.avi
-*.mkv
-
-# 7. Backups Locais de Banco de Dados
-backups/
-*.backup.json
-
-# 8. Cloudflare / Wrangler
-.wrangler/
-.dev.vars
-
-# 9. Editores & Sistema Operacional
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/*
-!.vscode/extensions.json
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Dependências e compilação
+node_modules/
+.output/
+.nitro/
+dist/
+build/
+.tanstack/
+.tmp.*

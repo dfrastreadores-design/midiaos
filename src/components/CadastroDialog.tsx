@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { fetchCnpj, formatCNPJ, onlyDigits, type CnpjData } from "@/lib/cnpj";
+import { fetchCnpj, fetchCpfCnpj, formatCNPJ, formatCpfCnpj, onlyDigits, type CnpjData } from "@/lib/cnpj";
 
 type Kind = "cliente" | "agencia";
 
@@ -93,33 +93,43 @@ export function CadastroDialog({
   const [form, setForm] = useState(empty());
 
   const lookup = async () => {
-    if (onlyDigits(form.cnpj).length !== 14) {
-      toast.error("Informe um CNPJ válido (14 dígitos)");
+    const digits = onlyDigits(form.cnpj);
+    if (digits.length !== 11 && digits.length !== 14) {
+      toast.error("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) para consulta");
       return;
     }
     setLoading(true);
     try {
-      const data: CnpjData = await fetchCnpj(form.cnpj);
-      setForm((f) => ({
-        ...f,
-        cnpj: data.cnpj,
-        razaoSocial: data.razaoSocial,
-        nome: f.nome || data.nomeFantasia,
-        emails: data.email
-          ? [data.email, ...f.emails.filter((e) => e && e !== data.email)]
-          : f.emails,
-        telefones: data.telefone
-          ? [data.telefone, ...f.telefones.filter((t) => t && t !== data.telefone)]
-          : f.telefones,
-        cep: data.cep || f.cep,
-        logradouro: data.logradouro || f.logradouro,
-        numero: data.numero || f.numero,
-        bairro: data.bairro || f.bairro,
-        cidade: data.cidade,
-        estado: data.estado,
-      }));
-      setFilled(true);
-      toast.success("Dados preenchidos pela Receita Federal");
+      const data = await fetchCpfCnpj(form.cnpj);
+      if (data.tipo === "PJ") {
+        setForm((f) => ({
+          ...f,
+          cnpj: data.cnpj,
+          razaoSocial: data.razaoSocial,
+          nome: f.nome || data.nomeFantasia,
+          emails: data.email
+            ? [data.email, ...f.emails.filter((e) => e && e !== data.email)]
+            : f.emails,
+          telefones: data.telefone
+            ? [data.telefone, ...f.telefones.filter((t) => t && t !== data.telefone)]
+            : f.telefones,
+          cep: data.cep || f.cep,
+          logradouro: data.logradouro || f.logradouro,
+          numero: data.numero || f.numero,
+          bairro: data.bairro || f.bairro,
+          cidade: data.cidade,
+          estado: data.estado,
+        }));
+        setFilled(true);
+        toast.success("Dados preenchidos pela Receita Federal");
+      } else {
+        setForm((f) => ({
+          ...f,
+          cnpj: data.cpf || form.cnpj,
+        }));
+        setFilled(true);
+        toast.success("CPF validado na Receita Federal");
+      }
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -178,30 +188,29 @@ export function CadastroDialog({
               : "Cadastrar Agência de Publicidade"}
           </DialogTitle>
           <DialogDescription>
-            Digite o CNPJ e clique em <strong>Buscar</strong> para preencher automaticamente via
-            Receita Federal.
+            Digite o CPF ou CNPJ e clique em <strong>Buscar Receita</strong> (ou aperte Enter) para preencher automaticamente.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
-          {/* CNPJ */}
+          {/* CNPJ / CPF */}
           <div className="space-y-1.5">
-            <Label htmlFor="cnpj">CNPJ</Label>
+            <Label htmlFor="cnpj">CPF / CNPJ</Label>
             <div className="flex gap-2">
               <Input
                 id="cnpj"
-                placeholder="00.000.000/0000-00"
+                placeholder="00.000.000/0000-00 ou CPF"
                 value={form.cnpj}
-                onChange={(e) => setForm((f) => ({ ...f, cnpj: formatCNPJ(e.target.value) }))}
+                onChange={(e) => setForm((f) => ({ ...f, cnpj: formatCpfCnpj(e.target.value) }))}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), lookup())}
               />
-              <Button type="button" variant="secondary" onClick={lookup} disabled={loading}>
+              <Button type="button" variant="secondary" onClick={lookup} disabled={loading} className="shrink-0 gap-1.5 border border-primary/30 text-primary hover:bg-primary/10">
                 {loading ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Search className="size-4" />
+                  <Search className="size-4 text-primary" />
                 )}
-                <span className="ml-2">Buscar</span>
+                <span className="font-semibold text-xs">Buscar Receita</span>
               </Button>
             </div>
             {filled && (

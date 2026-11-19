@@ -46,6 +46,10 @@ import {
 } from "@/components/ui/select";
 import { ImportarModeloPropostaDialog } from "@/components/ImportarModeloPropostaDialog";
 import { useCurrentOrg } from "@/hooks/use-current-org";
+import {
+  TEMPLATES_PROPOSTA,
+  type TemplateTipo,
+} from "@/lib/proposta-estrategica";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void; propostaId: string | null };
 
@@ -58,6 +62,8 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
   const [logoResultados, setLogoResultados] = useState<LogoResultado[]>([]);
   const [logoQuery, setLogoQuery] = useState("");
   const [selectedLayoutId, setSelectedLayoutId] = useState<string>("default");
+  const [templateEstrategico, setTemplateEstrategico] = useState<TemplateTipo>("nexo");
+  const [formatoApresentacao, setFormatoApresentacao] = useState<"estrategico" | "classico">("estrategico");
   const [importarModeloOpen, setImportarModeloOpen] = useState(false);
   const [modoApresentacao, setModoApresentacao] = useState<"detalhado" | "pacote_midia">(
     "detalhado",
@@ -171,24 +177,45 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     }
   };
 
-  const onLogoFile = (file: File | null) => {
+  const onLogoFile = async (file: File | null) => {
     if (!file) {
       setLogoDataUrl(null);
       void persistirLogo(null);
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Logo muito grande (máx 2MB)");
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx 10MB)");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = reader.result as string;
-      setLogoDataUrl(url);
-      void persistirLogo(url);
-    };
-    reader.onerror = () => toast.error("Falha ao ler imagem");
-    reader.readAsDataURL(file);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const filePath = `logos/${propostaId || "temp"}-${Date.now()}.${ext}`;
+      
+      // Upload multipart direto no Supabase Storage
+      const { error: uploadErr } = await supabase.storage
+        .from("proposta-anexos")
+        .upload(filePath, file, { upsert: true, cacheControl: "3600" });
+
+      if (!uploadErr) {
+        const { data: pubData } = supabase.storage.from("proposta-anexos").getPublicUrl(filePath);
+        const publicUrl = pubData?.publicUrl || filePath;
+        setLogoDataUrl(publicUrl);
+        void persistirLogo(publicUrl);
+        toast.success("Logotipo anexado com sucesso!");
+        return;
+      }
+
+      // Fallback em caso de indisponibilidade de storage
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = reader.result as string;
+        setLogoDataUrl(url);
+        void persistirLogo(url);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      toast.error("Falha ao processar logotipo: " + (err?.message || "Erro desconhecido"));
+    }
   };
 
   const buscar = useMutation({
@@ -239,6 +266,42 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     };
   };
 
+  const exportarPdfEstrategico = async () => {
+    const p = propostaParaExport();
+    if (!p) return;
+    try {
+      const { gerarApresentacaoEstrategicaPdf } = await import("@/lib/proposta-estrategica");
+      await gerarApresentacaoEstrategicaPdf(p, {
+        customizados: {
+          template: templateEstrategico,
+          resumoExecutivo: resumo || undefined,
+        },
+      });
+      toast.success(`Apresentação Estratégica em PDF (${TEMPLATES_PROPOSTA[templateEstrategico].nome}) gerada!`);
+    } catch (e) {
+      console.error("Erro exportarPdfEstrategico:", e);
+      toast.error("Erro ao gerar PDF Estratégico: " + (e as Error).message);
+    }
+  };
+
+  const exportarPptxEstrategico = async () => {
+    const p = propostaParaExport();
+    if (!p) return;
+    try {
+      const { gerarApresentacaoEstrategicaPptx } = await import("@/lib/proposta-estrategica");
+      await gerarApresentacaoEstrategicaPptx(p, {
+        customizados: {
+          template: templateEstrategico,
+          resumoExecutivo: resumo || undefined,
+        },
+      });
+      toast.success(`Apresentação Estratégica em PPTX (${TEMPLATES_PROPOSTA[templateEstrategico].nome}) gerada!`);
+    } catch (e) {
+      console.error("Erro exportarPptxEstrategico:", e);
+      toast.error("Erro ao gerar PPTX Estratégico: " + (e as Error).message);
+    }
+  };
+
   const exportarPptx = async () => {
     const p = propostaParaExport();
     if (!p) return;
@@ -267,6 +330,18 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
     } catch (e) {
       console.error("Erro exportarPdf:", e);
       toast.error("Erro ao gerar PDF: " + (e as Error).message);
+    }
+  };
+  const exportarPdfExecutivoCoBranding = async () => {
+    const p = propostaParaExport();
+    if (!p) return;
+    try {
+      const { gerarPdfPropostaExecutivaCoBranding } = await import("@/lib/proposta-presentation");
+      await gerarPdfPropostaExecutivaCoBranding(p);
+      toast.success("PDF Executivo Co-Branding gerado com sucesso!");
+    } catch (e) {
+      console.error("Erro exportarPdfExecutivoCoBranding:", e);
+      toast.error("Erro ao gerar PDF Co-Branding: " + (e as Error).message);
     }
   };
   const visualizar = async () => {
@@ -438,6 +513,56 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              {/* Apresentação Estratégica & Templates Exclusivos */}
+              <div className="rounded-xl border p-4 bg-gradient-to-br from-primary/5 via-card to-background space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <Label className="text-sm font-bold flex items-center gap-1.5 text-foreground">
+                      <Sparkles className="size-4 text-primary" />
+                      Template da Apresentação Estratégica (9 Seções)
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Transforma a proposta em uma defesa estratégica completa: Capa, Resumo Executivo, Estratégia, Mapa Territorial, Pontos, Fotos, Investimento, Justificativa e Conclusão.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    4 Templates Temáticos
+                  </div>
+                </div>
+
+                {/* Grid dos 4 Templates */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+                  {(Object.keys(TEMPLATES_PROPOSTA) as TemplateTipo[]).map((tipo) => {
+                    const t = TEMPLATES_PROPOSTA[tipo];
+                    const isSelected = templateEstrategico === tipo;
+                    return (
+                      <button
+                        key={tipo}
+                        type="button"
+                        onClick={() => setTemplateEstrategico(tipo)}
+                        className={`p-3 rounded-xl border text-left transition relative flex flex-col gap-1.5 ${
+                          isSelected
+                            ? "border-primary bg-primary/10 ring-2 ring-primary/30 shadow-xs"
+                            : "border-border hover:border-primary/40 bg-card hover:bg-muted/30"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground">
+                            {t.nome}
+                          </span>
+                          {isSelected && (
+                            <span className="size-2 rounded-full bg-primary" />
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
+                          {t.descricao}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -706,8 +831,35 @@ export function GerarApresentacaoDialog({ open, onOpenChange, propostaId }: Prop
               )}
               Visualizar
             </Button>
+            <Button
+              variant="default"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs"
+              disabled={!proposta || carregando}
+              onClick={exportarPdfEstrategico}
+              title="Gera a apresentação estratégica completa em PDF com as 9 seções"
+            >
+              <Sparkles className="size-4 mr-2" /> PDF Estratégico
+            </Button>
+            <Button
+              variant="outline"
+              className="border-primary/40 text-foreground hover:bg-primary/5 font-semibold"
+              disabled={!proposta || carregando}
+              onClick={exportarPptxEstrategico}
+              title="Gera a apresentação estratégica completa em PowerPoint (16:9)"
+            >
+              <Presentation className="size-4 mr-2 text-primary" /> PPTX Estratégico
+            </Button>
             <Button variant="secondary" disabled={!proposta || carregando} onClick={exportarPdf}>
-              <FileText className="size-4 mr-2" /> Baixar PDF
+              <FileText className="size-4 mr-2" /> PDF Clássico
+            </Button>
+            <Button
+              variant="outline"
+              disabled={!proposta || carregando}
+              onClick={exportarPdfExecutivoCoBranding}
+              className="border-primary/40 text-primary hover:bg-primary/10"
+              title="Gera o PDF Executivo sob medida com o co-branding do anunciante"
+            >
+              <Sparkles className="size-4 mr-2" /> PDF Co-Branding
             </Button>
             <Button disabled={!proposta || carregando} onClick={exportarPptx}>
               <Presentation className="size-4 mr-2" /> Baixar PPTX

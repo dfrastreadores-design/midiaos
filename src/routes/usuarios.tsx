@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
-import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -35,6 +36,7 @@ import {
   listAuditoriaAcessos,
   adminResetPassword,
   deleteUsuario,
+  updateUsuarioPerfil,
 } from "@/lib/usuarios.functions";
 import { uploadAssinaturaExecutivo, removerAssinaturaExecutivo } from "@/lib/assinaturas.functions";
 import { listPermissions, setRolePermission } from "@/lib/permissions.functions";
@@ -42,7 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/use-roles";
 import { useTenantModulos } from "@/hooks/use-tenant-modulos";
 import { toast } from "sonner";
-import { UserPlus, ShieldAlert, History, PenLine, Trash2, KeyRound, Lock } from "lucide-react";
+import { UserPlus, ShieldAlert, History, PenLine, Trash2, KeyRound, Lock, Pencil, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/usuarios")({
   head: () => ({ meta: [{ title: "Usuários e Perfis — Mídia.OS" }] }),
@@ -124,6 +126,31 @@ function UsuariosPage() {
   const toggleAtivo = useServerFn(toggleUserAtivo);
   const createFn = useServerFn(createUsuario);
 
+  const location = useLocation();
+  const searchParams = useMemo(() => {
+    try {
+      const s = typeof (location as any)?.searchStr === "string"
+        ? (location as any).searchStr
+        : typeof location?.search === "string"
+        ? location.search
+        : new URLSearchParams(location?.search as any).toString();
+      return new URLSearchParams(s.startsWith("?") ? s.slice(1) : s);
+    } catch {
+      return new URLSearchParams();
+    }
+  }, [(location as any)?.searchStr, location?.search]);
+
+  const initialTab = searchParams.get("tab");
+  const [tabAtiva, setTabAtiva] = useState<"usuarios" | "permissoes">(() =>
+    initialTab === "permissoes" ? "permissoes" : "usuarios",
+  );
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t === "permissoes") setTabAtiva("permissoes");
+    else if (t === "usuarios") setTabAtiva("usuarios");
+  }, [searchParams]);
+
   const { data, isLoading } = useQuery({
     queryKey: ["usuarios"],
     queryFn: () => fetchList(),
@@ -175,7 +202,25 @@ function UsuariosPage() {
     <AppShell>
       <UsuariosHeader createFn={createFn} />
 
-      {data && data.length > 0 && (
+      <Tabs value={tabAtiva} onValueChange={(v) => setTabAtiva(v as any)} className="space-y-4">
+        <TabsList className="bg-muted/70 p-1 rounded-xl h-auto border">
+          <TabsTrigger
+            value="usuarios"
+            className="gap-2 py-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <span>Equipe & Usuários ({data?.length ?? 0})</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="permissoes"
+            className="gap-2 py-2 px-4 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
+            <ShieldAlert className="size-3.5 text-primary" />
+            <span>Matriz de Permissões por Perfil</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="usuarios" className="space-y-4 m-0">
+          {data && data.length > 0 && (
         <Card className="mb-4">
           <CardContent className="p-4">
             <div className="text-xs font-medium text-muted-foreground mb-2">
@@ -284,7 +329,13 @@ function UsuariosPage() {
                       />
                     </TableCell>
                     <TableCell className="text-right">
-                      <ExcluirUsuarioButton userId={u.id} userEmail={u.email} />
+                      <div className="flex items-center justify-end gap-1">
+                        <EditarUsuarioDialog
+                          usuario={u}
+                          onSaved={() => qc.invalidateQueries({ queryKey: ["usuarios"] })}
+                        />
+                        <ExcluirUsuarioButton userId={u.id} userEmail={u.email} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -293,6 +344,25 @@ function UsuariosPage() {
           </Table>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="permissoes" className="space-y-4 m-0">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ShieldAlert className="size-4 text-primary" />
+                Matriz Geral de Permissões RBAC
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Defina o que cada perfil pode visualizar e editar dentro dos módulos e rotas do sistema.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4">
+              <MatrizPermissoesTabela />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </AppShell>
   );
 }
@@ -536,8 +606,7 @@ function AuditoriaDialog() {
   );
 }
 
-function PermissoesGeraisDialog() {
-  const [open, setOpen] = useState(false);
+function MatrizPermissoesTabela() {
   const qc = useQueryClient();
   const fetchPerms = useServerFn(listPermissions);
   const setPerm = useServerFn(setRolePermission);
@@ -545,7 +614,6 @@ function PermissoesGeraisDialog() {
   const { data, isLoading } = useQuery({
     queryKey: ["permissions-matrix"],
     queryFn: () => fetchPerms(),
-    enabled: open,
   });
 
   const permMut = useMutation({
@@ -557,6 +625,65 @@ function PermissoesGeraisDialog() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[280px]">Módulo / Permissão</TableHead>
+            {ROLES.map((r) => (
+              <TableHead key={r.key} className="text-center">
+                {r.label}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading && (
+            <TableRow>
+              <TableCell colSpan={ROLES.length + 1} className="text-center py-8">
+                Carregando…
+              </TableCell>
+            </TableRow>
+          )}
+          {data?.permissions.map((p: any) => (
+            <TableRow key={p.key}>
+              <TableCell>
+                <div className="font-medium text-sm">{p.name || p.key}</div>
+                {p.description && (
+                  <div className="text-[10px] text-muted-foreground">{p.description}</div>
+                )}
+              </TableCell>
+              {ROLES.map((r) => {
+                const has = data.rolePermissions.some(
+                  (rp: any) => rp.role === r.key && rp.permission_key === p.key,
+                );
+                return (
+                  <TableCell key={r.key} className="text-center">
+                    <Checkbox
+                      checked={has}
+                      onCheckedChange={(v) =>
+                        permMut.mutate({
+                          role: r.key,
+                          permission_key: p.key,
+                          enabled: Boolean(v),
+                        })
+                      }
+                    />
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function PermissoesGeraisDialog() {
+  const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -571,56 +698,7 @@ function PermissoesGeraisDialog() {
           <DialogTitle>Gerenciar permissões por perfil</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-auto mt-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[200px]">Módulo / Permissão</TableHead>
-                {ROLES.map((r) => (
-                  <TableHead key={r.key} className="text-center">
-                    {r.label}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={ROLES.length + 1} className="text-center py-8">
-                    Carregando…
-                  </TableCell>
-                </TableRow>
-              )}
-              {data?.permissions.map((p: any) => (
-                <TableRow key={p.key}>
-                  <TableCell>
-                    <div className="font-medium text-sm">{p.name || p.key}</div>
-                    {p.description && (
-                      <div className="text-[10px] text-muted-foreground">{p.description}</div>
-                    )}
-                  </TableCell>
-                  {ROLES.map((r) => {
-                    const has = data.rolePermissions.some(
-                      (rp: any) => rp.role === r.key && rp.permission_key === p.key,
-                    );
-                    return (
-                      <TableCell key={r.key} className="text-center">
-                        <Checkbox
-                          checked={has}
-                          onCheckedChange={(v) =>
-                            permMut.mutate({
-                              role: r.key,
-                              permission_key: p.key,
-                              enabled: Boolean(v),
-                            })
-                          }
-                        />
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <MatrizPermissoesTabela />
         </div>
       </DialogContent>
     </Dialog>
@@ -751,15 +829,64 @@ function RedefinirSenhaDialog({ userId, userEmail }: { userId: string; userEmail
 
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) return toast.error("Mínimo 6 caracteres");
+    if (password.length < 6) return toast.error("A nova senha deve possuir no mínimo 6 caracteres");
     setBusy(true);
+
     try {
-      await resetFn({ data: { user_id: userId, password } });
-      toast.success(`Senha de ${userEmail} alterada com sucesso`);
+      // 1. Obtém token de autenticação da sessão ativa
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        throw new Error("Sessão expirada ou não encontrada. Por favor, realize login novamente.");
+      }
+
+      // 2. Dispara a chamada POST para o endpoint backend dedicado /api/admin/reset-password
+      let succeeded = false;
+      let lastErrorMessage = "";
+
+      try {
+        const res = await fetch("/api/admin/reset-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId,
+            newPassword: password,
+          }),
+        });
+
+        const json = await res.json().catch(() => ({}));
+
+        if (res.ok && json.success !== false) {
+          succeeded = true;
+          if (json.message) {
+            lastErrorMessage = json.message;
+          }
+        } else {
+          lastErrorMessage = json.error || `Erro HTTP ${res.status}`;
+        }
+      } catch (fetchErr: any) {
+        lastErrorMessage = fetchErr?.message || "Falha ao conectar com o endpoint administrativo";
+      }
+
+      // 3. Fallback pela Server Action segura caso o endpoint HTTP encontre restrição de proxy
+      if (!succeeded) {
+        try {
+          await resetFn({ data: { user_id: userId, password } });
+          succeeded = true;
+        } catch (serverFnErr: any) {
+          throw new Error(lastErrorMessage || serverFnErr?.message || "Não foi possível alterar a senha");
+        }
+      }
+
+      toast.success(lastErrorMessage || `Senha de ${userEmail} alterada com sucesso!`);
       setOpen(false);
       setPassword("");
-    } catch (e) {
-      toast.error((e as Error).message);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao alterar a senha do usuário");
     } finally {
       setBusy(false);
     }
@@ -867,6 +994,121 @@ function ExcluirUsuarioButton({ userId, userEmail }: { userId: string; userEmail
             {busy ? "Excluindo…" : "Excluir definitivamente"}
           </Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditarUsuarioDialog({
+  usuario,
+  onSaved,
+}: {
+  usuario: any;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [nome, setNome] = useState(usuario.nome ?? "");
+  const [cargo, setCargo] = useState(usuario.cargo ?? "");
+  const [telefone, setTelefone] = useState(usuario.telefone ?? usuario.whatsapp ?? "");
+  const [email, setEmail] = useState(usuario.email ?? "");
+  const [saving, setSaving] = useState(false);
+  const updateFn = useServerFn(updateUsuarioPerfil);
+
+  useEffect(() => {
+    if (open) {
+      setNome(usuario.nome ?? "");
+      setCargo(usuario.cargo ?? "");
+      setTelefone(usuario.telefone ?? usuario.whatsapp ?? "");
+      setEmail(usuario.email ?? "");
+    }
+  }, [open, usuario]);
+
+  const handle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (nome.trim().length < 3) {
+      toast.error("Nome deve ter no mínimo 3 caracteres");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateFn({
+        data: {
+          user_id: usuario.id,
+          nome: nome.trim(),
+          cargo: cargo.trim() || null,
+          telefone: telefone.trim() || null,
+          email: email.trim() || undefined,
+        },
+      });
+      toast.success("Usuário atualizado com sucesso");
+      setOpen(false);
+      onSaved();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar usuário");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" title="Editar dados do usuário">
+          <Pencil className="size-4 text-blue-600" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="size-4 text-primary" /> Editar dados do usuário
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handle} className="space-y-4">
+          <div>
+            <Label>Nome completo</Label>
+            <Input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Nome e sobrenome"
+              required
+            />
+          </div>
+          <div>
+            <Label>Função na empresa (cargo)</Label>
+            <Input
+              value={cargo}
+              onChange={(e) => setCargo(e.target.value)}
+              placeholder="Ex: Executivo de contas, Diretor Comercial…"
+            />
+          </div>
+          <div>
+            <Label>Telefone / WhatsApp</Label>
+            <Input
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
+              placeholder="(61) 99999-9999"
+            />
+          </div>
+          <div>
+            <Label>E-mail</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={saving} className="gap-2">
+              {saving && <Loader2 className="size-4 animate-spin" />}
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -14,6 +14,15 @@ const ContatoSchema = z.object({
     .regex(/^(\d{2}\/\d{2})?$/)
     .optional()
     .default(""),
+  // Metadados enriquecidos do Midia OS Prospect (Fase 1)
+  departamento: z.string().max(80).optional().default(""),
+  tipo_canal: z.enum(["whatsapp", "email", "telefone", "telefone_fixo", "linkedin", "outro"]).optional().default("email"),
+  fonte_origem: z.string().max(100).optional().default(""),
+  url_fonte: z.string().max(500).optional().default(""),
+  coletado_em: z.string().optional(),
+  atualizado_em: z.string().optional(),
+  confiabilidade: z.enum(["baixa", "media", "alta", "verificada"]).optional().default("media"),
+  situacao_contato: z.enum(["ativo", "bloqueado_optout", "invalido", "desatualizado"]).optional().default("ativo"),
 });
 
 const AgenciaSchema = z.object({

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sparkles,
   ChevronDown,
@@ -31,6 +39,8 @@ import {
   Briefcase,
   HelpCircle,
   TrendingUp,
+  MapPin,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -42,6 +52,8 @@ import {
   type SugestaoPropostaIa,
 } from "@/lib/proposta-ia.functions";
 import { formatBRL } from "@/lib/mock-data";
+import { UFS_BRASIL, TODAS_RAS_DF } from "@/lib/df-regioes-inteligencia";
+import { getDistinctPracasECidades } from "@/lib/representacao-comercial.functions";
 
 type Props = {
   clienteNome?: string | null;
@@ -53,25 +65,39 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
   const [loading, setLoading] = useState(false);
   const [sugestao, setSugestao] = useState<SugestaoPropostaIa | null>(null);
 
+  // Consulta de praças e estados do catálogo de representação
+  const getDistinctLocsFn = useServerFn(getDistinctPracasECidades);
+  const { data: locsData } = useQuery({
+    queryKey: ["distinct_pracas_cidades_ia"],
+    queryFn: () => getDistinctLocsFn(),
+    enabled: expanded,
+  });
+
   // Bloco 1: Dados do Cliente e Alinhamento Inicial
   const [empresaCliente, setEmpresaCliente] = useState(clienteNome || "");
   const [contatoDecisor, setContatoDecisor] = useState("");
   const [segmentoAtuacao, setSegmentoAtuacao] = useState("");
   const [dorOuMomento, setDorOuMomento] = useState("");
 
-  // Bloco 2: Seleção de Soluções (O Portfólio Nexo)
+  // Bloco 2: Abrangência Geográfica e Praça da Campanha (Pergunta 2 do Briefing)
+  const [tipoAbrangencia, setTipoAbrangencia] = useState<"local" | "regional" | "nacional">("regional");
+  const [estadoUf, setEstadoUf] = useState<string>("DF");
+  const [cidade, setCidade] = useState<string>("Brasília");
+  const [bairroRegiao, setBairroRegiao] = useState<string>("");
+
+  // Bloco 3: Seleção de Soluções (O Portfólio Nexo)
   const [solucoesSelecionadas, setSolucoesSelecionadas] = useState<string[]>([]);
   const [midias, setMidias] = useState<string[]>(["TV", "Radio", "DOOH", "Digital"]);
   const [canalMacroPreferencia, setCanalMacroPreferencia] = useState<
     "TODOS" | "OFF" | "ON" | "HIBRIDO"
   >("HIBRIDO");
 
-  // Bloco 3: Especificações Técnicas e Escopo
+  // Bloco 4: Especificações Técnicas e Escopo
   const [entregaveisVolumes, setEntregaveisVolumes] = useState("");
   const [prazosCronograma, setPrazosCronograma] = useState("");
   const [periodoDias, setPeriodoDias] = useState<number>(30);
 
-  // Bloco 4: Condições Comerciais e Investimento
+  // Bloco 5: Condições Comerciais e Investimento
   const [modeloPrecificacao, setModeloPrecificacao] = useState("");
   const [orcamento, setOrcamento] = useState<string>("");
   const [condicoesPagamento, setCondicoesPagamento] = useState("");
@@ -110,6 +136,42 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
     }
   };
 
+  // Cidades disponíveis para o estado selecionado
+  const cidadesDisponiveis = useMemo(() => {
+    if (estadoUf === "DF") return ["Brasília", "Taguatinga", "Ceilândia", "Águas Claras"];
+    const doEstado = locsData?.cidadesPorEstado?.[estadoUf] || [];
+    if (doEstado.length > 0) return doEstado;
+    if (estadoUf === "GO") return ["Luziânia", "Valparaíso de Goiás", "Goiânia", "Anápolis"];
+    if (estadoUf === "SP") return ["São Paulo", "Campinas", "Guarulhos", "Ribeirão Preto"];
+    if (estadoUf === "RJ") return ["Rio de Janeiro", "Niterói", "Duque de Caxias"];
+    if (estadoUf === "MG") return ["Belo Horizonte", "Uberlândia", "Juiz de Fora"];
+    return locsData?.cidadesCadastradas || [];
+  }, [estadoUf, locsData]);
+
+  const handleSelectTipoAbrangencia = (tipo: "local" | "regional" | "nacional") => {
+    setTipoAbrangencia(tipo);
+    if (tipo === "nacional") {
+      setEstadoUf("BR");
+      setCidade("Todo o Brasil");
+    } else {
+      if (estadoUf === "BR") setEstadoUf("DF");
+      if (cidade === "Todo o Brasil") setCidade("Brasília");
+    }
+  };
+
+  const handleSelectUf = (uf: string) => {
+    setEstadoUf(uf);
+    if (uf === "DF") {
+      setCidade("Brasília");
+    } else {
+      const cidadesDesteEstado = locsData?.cidadesPorEstado?.[uf] || [];
+      const primeiraCidade =
+        cidadesDesteEstado[0] ||
+        (uf === "GO" ? "Luziânia" : uf === "SP" ? "São Paulo" : uf === "RJ" ? "Rio de Janeiro" : "");
+      setCidade(primeiraCidade);
+    }
+  };
+
   const handleGerar = async () => {
     try {
       setLoading(true);
@@ -123,17 +185,23 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
           segmento_atuacao: segmentoAtuacao.trim() || null,
           dor_ou_momento: dorOuMomento.trim() || null,
 
-          // Bloco 2
+          // Bloco Geográfico
+          tipo_abrangencia: tipoAbrangencia,
+          estado_uf: estadoUf,
+          cidade: cidade,
+          bairro_regiao: bairroRegiao.trim() || null,
+
+          // Bloco Soluções
           solucoes: solucoesSelecionadas.length > 0 ? solucoesSelecionadas : undefined,
           midias: midias.length > 0 ? midias : undefined,
           canal_macro_preferencia: canalMacroPreferencia,
 
-          // Bloco 3
+          // Bloco Escopo
           entregaveis_volumes: entregaveisVolumes.trim() || null,
           prazos_cronograma: prazosCronograma.trim() || null,
           periodo_dias: periodoDias > 0 ? periodoDias : 30,
 
-          // Bloco 4
+          // Bloco Condições Comerciais
           modelo_precificacao: modeloPrecificacao.trim() || null,
           orcamento_estimado: orcNum && orcNum > 0 ? orcNum : null,
           condicoes_pagamento: condicoesPagamento.trim() || null,
@@ -155,6 +223,7 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
       setLoading(false);
     }
   };
+
 
   const handleAplicar = () => {
     if (!sugestao) return;
@@ -326,12 +395,157 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                 </div>
               </div>
 
-              {/* BLOCO 2: SELEÇÃO DE SOLUÇÕES (O PORTFÓLIO NEXO) */}
+              {/* BLOCO 2: ABRANGÊNCIA GEOGRÁFICA & PRAÇA DA CAMPANHA */}
               <div className="rounded-xl border border-purple-100 dark:border-purple-900/40 p-3.5 bg-background/60 space-y-3">
                 <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">
                       2
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-purple-950 dark:text-purple-200">
+                        Abrangência Geográfica & Praça da Campanha
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Defina se a campanha é Local, Regional ou Nacional
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] bg-purple-100/50 text-purple-700 dark:text-purple-300 border-purple-200"
+                  >
+                    DF • Goiás/Entorno • Todo o Brasil
+                  </Badge>
+                </div>
+
+                {/* Tipo de Abrangência */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-semibold text-muted-foreground block">
+                    Tipo de Abrangência:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      {
+                        id: "local",
+                        label: "Local / Hiperlocal",
+                        desc: "Bairros ou RAs específicas (ex: Ceilândia, Taguatinga, Jardins)",
+                      },
+                      {
+                        id: "regional",
+                        label: "Regional / Estadual",
+                        desc: "Cidades ou Estados (ex: DF, Entorno-GO, Goiânia, SP, MG)",
+                      },
+                      {
+                        id: "nacional",
+                        label: "Multi-estadual / Nacional",
+                        desc: "Campanhas amplas em múltiplas capitais e todo o Brasil",
+                      },
+                    ].map((t) => {
+                      const active = tipoAbrangencia === t.id;
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => handleSelectTipoAbrangencia(t.id as any)}
+                          className={`p-2.5 rounded-lg border cursor-pointer select-none transition-all ${
+                            active
+                              ? "bg-purple-50 dark:bg-purple-950/40 border-purple-400 dark:border-purple-600 shadow-xs"
+                              : "bg-background/80 hover:bg-muted/40 border-border/70"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span>{t.label}</span>
+                            {active && <CheckCircle2 className="size-3.5 text-purple-600" />}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                            {t.desc}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Seleção Dinâmica de Estados e Cidades */}
+                {tipoAbrangencia !== "nacional" ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-1">
+                    <div className="sm:col-span-3 space-y-1">
+                      <Label className="text-[11px] font-medium">Estado / UF</Label>
+                      <Select value={estadoUf} onValueChange={handleSelectUf}>
+                        <SelectTrigger className="h-8 text-xs bg-background">
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-56">
+                          {UFS_BRASIL.map((u) => (
+                            <SelectItem key={u.uf} value={u.uf} className="text-xs">
+                              {u.uf} — {u.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="sm:col-span-5 space-y-1">
+                      <Label className="text-[11px] font-medium">Cidade / Praça</Label>
+                      <div className="relative">
+                        <Input
+                          value={cidade}
+                          onChange={(e) => setCidade(e.target.value)}
+                          placeholder="Digite ou escolha a Cidade..."
+                          className="h-8 text-xs bg-background"
+                          list="cidades-ia-sugeridas"
+                        />
+                        <datalist id="cidades-ia-sugeridas">
+                          {cidadesDisponiveis.map((c) => (
+                            <option key={c} value={c} />
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-4 space-y-1">
+                      <Label className="text-[11px] font-medium">
+                        {estadoUf === "DF" ? "Região Administrativa" : "Bairro / Região"}
+                      </Label>
+                      {estadoUf === "DF" ? (
+                        <Select value={bairroRegiao || "Ceilândia"} onValueChange={setBairroRegiao}>
+                          <SelectTrigger className="h-8 text-xs bg-background">
+                            <SelectValue placeholder="Selecione a RA" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-56">
+                            {TODAS_RAS_DF.map((ra) => (
+                              <SelectItem key={ra} value={ra} className="text-xs">
+                                📍 {ra}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={bairroRegiao}
+                          onChange={(e) => setBairroRegiao(e.target.value)}
+                          placeholder="Ex: Centro, Setor Bueno, Zona Sul..."
+                          className="h-8 text-xs bg-background"
+                        />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-lg border border-purple-300 dark:border-purple-800 bg-purple-50/60 dark:bg-purple-950/30 flex items-center gap-2">
+                    <Globe className="size-4 text-purple-600 shrink-0" />
+                    <p className="text-xs text-purple-950 dark:text-purple-200">
+                      <strong>Cobertura Nacional:</strong> A IA priorizará mídias digitais, TV/rádio nacional e circuitos nas principais capitais/aeroportos, com prioridade máxima para produtos próprios.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* BLOCO 3: SELEÇÃO DE SOLUÇÕES (O PORTFÓLIO NEXO) */}
+              <div className="rounded-xl border border-purple-100 dark:border-purple-900/40 p-3.5 bg-background/60 space-y-3">
+                <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center justify-center size-5 rounded-full bg-purple-600 text-white text-[11px] font-bold">
+                      3
                     </span>
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-purple-950 dark:text-purple-200">
@@ -355,6 +569,7 @@ export function PropostaIaAssistant({ clienteNome, onApplySuggestion }: Props) {
                       : "Selecionar todas"}
                   </Button>
                 </div>
+
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                   {SOLUCOES_PORTFOLIO_NEXO.map((sol) => {

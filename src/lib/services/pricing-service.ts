@@ -21,6 +21,19 @@ export type ProductDatabaseItem = {
   parceiro_nome?: string | null;
   parceiro_cnpj?: string | null;
   comissao_inquilino_pct?: number | null;
+  canal_macro?: "OFF" | "ON" | "HIBRIDO" | string | null;
+  plataforma_rede?: string | null;
+  metricas_digitais?: Record<string, any> | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  link_maps?: string | null;
+  sentido_via?: string | null;
+  sentido_fluxo?: string | null;
+  ponto_referencia?: string | null;
+  endereco_ponto?: string | null;
+  detalhes_venda?: string | null;
+  fotos?: string[] | null;
+  [key: string]: any;
 };
 
 export function findDatabaseProduct(item: PricingItemInput, products: ProductDatabaseItem[]) {

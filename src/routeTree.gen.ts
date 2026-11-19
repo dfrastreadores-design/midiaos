@@ -9,261 +9,85 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VeiculosRouteImport } from './routes/veiculos'
-import { Route as UsuariosRouteImport } from './routes/usuarios'
-import { Route as TarefasRouteImport } from './routes/tarefas'
-import { Route as SocialMediaRouteImport } from './routes/social-media'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SiteRouteImport } from './routes/site'
-import { Route as RelatoriosRouteImport } from './routes/relatorios'
-import { Route as RelatorioSincronizacaoRouteImport } from './routes/relatorio-sincronizacao'
-import { Route as PropostasRouteImport } from './routes/propostas'
-import { Route as ProjetosEspeciaisRouteImport } from './routes/projetos-especiais'
-import { Route as ProdutosRouteImport } from './routes/produtos'
-import { Route as PiAnexosRouteImport } from './routes/pi-anexos'
-import { Route as PiRouteImport } from './routes/pi'
-import { Route as PermutaRouteImport } from './routes/permuta'
-import { Route as ParceirosRouteImport } from './routes/parceiros'
-import { Route as OwnerRouteImport } from './routes/owner'
-import { Route as MonitoramentoRouteImport } from './routes/monitoramento'
-import { Route as MinhaContaRouteImport } from './routes/minha-conta'
-import { Route as MetasRouteImport } from './routes/metas'
-import { Route as MateriaisApoioRouteImport } from './routes/materiais-apoio'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as LixeiraRouteImport } from './routes/lixeira'
-import { Route as LayoutsRouteImport } from './routes/layouts'
-import { Route as LandingPagesRouteImport } from './routes/landing-pages'
-import { Route as InfluenciadoresRouteImport } from './routes/influenciadores'
-import { Route as HistoricoVeiculacaoRouteImport } from './routes/historico-veiculacao'
-import { Route as HistoricoRouteImport } from './routes/historico'
-import { Route as FinanceiroRouteImport } from './routes/financeiro'
-import { Route as DocumentacaoRouteImport } from './routes/documentacao'
-import { Route as CrmRouteImport } from './routes/crm'
-import { Route as ContratosRouteImport } from './routes/contratos'
-import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
-import { Route as ComissoesRouteImport } from './routes/comissoes'
-import { Route as ClientesRouteImport } from './routes/clientes'
-import { Route as CentralizadoresRouteImport } from './routes/centralizadores'
-import { Route as CalendarioRouteImport } from './routes/calendario'
-import { Route as BriefingsRouteImport } from './routes/briefings'
-import { Route as AssinaturasRouteImport } from './routes/assinaturas'
-import { Route as AgenciasRouteImport } from './routes/agencias'
-import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SiteIndexRouteImport } from './routes/site.index'
-import { Route as SiteTermosRouteImport } from './routes/site.termos'
-import { Route as SiteRecursosRouteImport } from './routes/site.recursos'
-import { Route as SitePrivacidadeRouteImport } from './routes/site.privacidade'
-import { Route as SitePrecosRouteImport } from './routes/site.precos'
-import { Route as SiteDemoRouteImport } from './routes/site.demo'
-import { Route as SiteContatoRouteImport } from './routes/site.contato'
-import { Route as PosVendaTokenRouteImport } from './routes/pos-venda.$token'
-import { Route as LpSlugRouteImport } from './routes/lp.$slug'
-import { Route as LandingPagesIdRouteImport } from './routes/landing-pages.$id'
-import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
-import { Route as AssinarTokenRouteImport } from './routes/assinar.$token'
+import { Route as SlugRouteImport } from './routes/$slug'
+import { Route as AgenciasRouteImport } from './routes/agencias'
+import { Route as AssinaturasRouteImport } from './routes/assinaturas'
+import { Route as BriefingsRouteImport } from './routes/briefings'
+import { Route as CalendarioRouteImport } from './routes/calendario'
+import { Route as CentralizadoresRouteImport } from './routes/centralizadores'
+import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as ComissoesRouteImport } from './routes/comissoes'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ContratosRouteImport } from './routes/contratos'
+import { Route as CopilotoComercialRouteImport } from './routes/copiloto-comercial'
+import { Route as CrmRouteImport } from './routes/crm'
+import { Route as DocumentacaoRouteImport } from './routes/documentacao'
+import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as HistoricoRouteImport } from './routes/historico'
+import { Route as HistoricoVeiculacaoRouteImport } from './routes/historico-veiculacao'
+import { Route as InfluenciadoresRouteImport } from './routes/influenciadores'
+import { Route as InventarioRouteImport } from './routes/inventario'
+import { Route as LandingPagesRouteImport } from './routes/landing-pages'
+import { Route as LayoutsRouteImport } from './routes/layouts'
+import { Route as LixeiraRouteImport } from './routes/lixeira'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MateriaisApoioRouteImport } from './routes/materiais-apoio'
+import { Route as MetasRouteImport } from './routes/metas'
+import { Route as MinhaContaRouteImport } from './routes/minha-conta'
+import { Route as MonitoramentoRouteImport } from './routes/monitoramento'
+import { Route as NovaCampanhaRouteImport } from './routes/nova-campanha'
+import { Route as OohIntelligenceRouteImport } from './routes/ooh-intelligence'
+import { Route as OwnerRouteImport } from './routes/owner'
+import { Route as ParceirosRouteImport } from './routes/parceiros'
+import { Route as PedidosInsercaoRouteImport } from './routes/pedidos-insercao'
+import { Route as PermutaRouteImport } from './routes/permuta'
+import { Route as PiRouteImport } from './routes/pi'
+import { Route as PiAnexosRouteImport } from './routes/pi-anexos'
+import { Route as PlanejamentoRouteImport } from './routes/planejamento'
+import { Route as ProdutosRouteImport } from './routes/produtos'
+import { Route as ProjetosEspeciaisRouteImport } from './routes/projetos-especiais'
+import { Route as PropostasRouteImport } from './routes/propostas'
+import { Route as RedeInventarioRouteImport } from './routes/rede-inventario'
+import { Route as RelatorioSincronizacaoRouteImport } from './routes/relatorio-sincronizacao'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as SalesCopilotRouteImport } from './routes/sales-copilot'
+import { Route as SiteRouteImport } from './routes/site'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SocialMediaRouteImport } from './routes/social-media'
+import { Route as TarefasRouteImport } from './routes/tarefas'
+import { Route as UsuariosRouteImport } from './routes/usuarios'
+import { Route as VeiculosRouteImport } from './routes/veiculos'
 import { Route as AprovarDiretoriaTokenRouteImport } from './routes/aprovar-diretoria.$token'
+import { Route as AssinarTokenRouteImport } from './routes/assinar.$token'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as LandingPagesIdRouteImport } from './routes/landing-pages.$id'
+import { Route as LpSlugRouteImport } from './routes/lp.$slug'
+import { Route as PTokenRouteImport } from './routes/p.$token'
+import { Route as PosVendaTokenRouteImport } from './routes/pos-venda.$token'
+import { Route as PropostaOnlineTokenRouteImport } from './routes/proposta-online.$token'
+import { Route as SiteIndexRouteImport } from './routes/site.index'
+import { Route as SiteContatoRouteImport } from './routes/site.contato'
+import { Route as SiteDemoRouteImport } from './routes/site.demo'
+import { Route as SiteInventarioRouteImport } from './routes/site.inventario'
+import { Route as SitePrecosRouteImport } from './routes/site.precos'
+import { Route as SitePrivacidadeRouteImport } from './routes/site.privacidade'
+import { Route as SiteRecursosRouteImport } from './routes/site.recursos'
+import { Route as SiteTermosRouteImport } from './routes/site.termos'
+import { Route as ApiAdminResetPasswordRouteImport } from './routes/api/admin/reset-password'
+import { Route as ApiPublicInventoryAssetsRouteImport } from './routes/api/public/inventory-assets'
+import { Route as ApiSocialPublishDueRouteImport } from './routes/api/social/publish-due'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
-import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
-import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
-import { Route as ApiPublicPiShareTokenRouteImport } from './routes/api/public/pi-share.$token'
-import { Route as ApiPublicHooksSyncCnpjRouteImport } from './routes/api/public/hooks/sync-cnpj'
 import { Route as ApiPublicHooksNotificacoesJobRouteImport } from './routes/api/public/hooks/notificacoes-job'
+import { Route as ApiPublicHooksSyncCnpjRouteImport } from './routes/api/public/hooks/sync-cnpj'
+import { Route as ApiPublicPiShareTokenRouteImport } from './routes/api/public/pi-share.$token'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 
-const VeiculosRoute = VeiculosRouteImport.update({
-  id: '/veiculos',
-  path: '/veiculos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsuariosRoute = UsuariosRouteImport.update({
-  id: '/usuarios',
-  path: '/usuarios',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TarefasRoute = TarefasRouteImport.update({
-  id: '/tarefas',
-  path: '/tarefas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SocialMediaRoute = SocialMediaRouteImport.update({
-  id: '/social-media',
-  path: '/social-media',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SiteRoute = SiteRouteImport.update({
-  id: '/site',
-  path: '/site',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RelatoriosRoute = RelatoriosRouteImport.update({
-  id: '/relatorios',
-  path: '/relatorios',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RelatorioSincronizacaoRoute = RelatorioSincronizacaoRouteImport.update({
-  id: '/relatorio-sincronizacao',
-  path: '/relatorio-sincronizacao',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PropostasRoute = PropostasRouteImport.update({
-  id: '/propostas',
-  path: '/propostas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProjetosEspeciaisRoute = ProjetosEspeciaisRouteImport.update({
-  id: '/projetos-especiais',
-  path: '/projetos-especiais',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProdutosRoute = ProdutosRouteImport.update({
-  id: '/produtos',
-  path: '/produtos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PiAnexosRoute = PiAnexosRouteImport.update({
-  id: '/pi-anexos',
-  path: '/pi-anexos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PiRoute = PiRouteImport.update({
-  id: '/pi',
-  path: '/pi',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PermutaRoute = PermutaRouteImport.update({
-  id: '/permuta',
-  path: '/permuta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ParceirosRoute = ParceirosRouteImport.update({
-  id: '/parceiros',
-  path: '/parceiros',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OwnerRoute = OwnerRouteImport.update({
-  id: '/owner',
-  path: '/owner',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MonitoramentoRoute = MonitoramentoRouteImport.update({
-  id: '/monitoramento',
-  path: '/monitoramento',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MinhaContaRoute = MinhaContaRouteImport.update({
-  id: '/minha-conta',
-  path: '/minha-conta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MetasRoute = MetasRouteImport.update({
-  id: '/metas',
-  path: '/metas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MateriaisApoioRoute = MateriaisApoioRouteImport.update({
-  id: '/materiais-apoio',
-  path: '/materiais-apoio',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LixeiraRoute = LixeiraRouteImport.update({
-  id: '/lixeira',
-  path: '/lixeira',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LayoutsRoute = LayoutsRouteImport.update({
-  id: '/layouts',
-  path: '/layouts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LandingPagesRoute = LandingPagesRouteImport.update({
-  id: '/landing-pages',
-  path: '/landing-pages',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InfluenciadoresRoute = InfluenciadoresRouteImport.update({
-  id: '/influenciadores',
-  path: '/influenciadores',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoricoVeiculacaoRoute = HistoricoVeiculacaoRouteImport.update({
-  id: '/historico-veiculacao',
-  path: '/historico-veiculacao',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoricoRoute = HistoricoRouteImport.update({
-  id: '/historico',
-  path: '/historico',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FinanceiroRoute = FinanceiroRouteImport.update({
-  id: '/financeiro',
-  path: '/financeiro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentacaoRoute = DocumentacaoRouteImport.update({
-  id: '/documentacao',
-  path: '/documentacao',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CrmRoute = CrmRouteImport.update({
-  id: '/crm',
-  path: '/crm',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContratosRoute = ContratosRouteImport.update({
-  id: '/contratos',
-  path: '/contratos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
-  id: '/configuracoes',
-  path: '/configuracoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ComissoesRoute = ComissoesRouteImport.update({
-  id: '/comissoes',
-  path: '/comissoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClientesRoute = ClientesRouteImport.update({
-  id: '/clientes',
-  path: '/clientes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CentralizadoresRoute = CentralizadoresRouteImport.update({
-  id: '/centralizadores',
-  path: '/centralizadores',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CalendarioRoute = CalendarioRouteImport.update({
-  id: '/calendario',
-  path: '/calendario',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BriefingsRoute = BriefingsRouteImport.update({
-  id: '/briefings',
-  path: '/briefings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AssinaturasRoute = AssinaturasRouteImport.update({
-  id: '/assinaturas',
-  path: '/assinaturas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgenciasRoute = AgenciasRouteImport.update({
-  id: '/agencias',
-  path: '/agencias',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SlugRoute = SlugRouteImport.update({
@@ -271,69 +95,239 @@ const SlugRoute = SlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AgenciasRoute = AgenciasRouteImport.update({
+  id: '/agencias',
+  path: '/agencias',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SiteIndexRoute = SiteIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SiteRoute,
-} as any)
-const SiteTermosRoute = SiteTermosRouteImport.update({
-  id: '/termos',
-  path: '/termos',
-  getParentRoute: () => SiteRoute,
-} as any)
-const SiteRecursosRoute = SiteRecursosRouteImport.update({
-  id: '/recursos',
-  path: '/recursos',
-  getParentRoute: () => SiteRoute,
-} as any)
-const SitePrivacidadeRoute = SitePrivacidadeRouteImport.update({
-  id: '/privacidade',
-  path: '/privacidade',
-  getParentRoute: () => SiteRoute,
-} as any)
-const SitePrecosRoute = SitePrecosRouteImport.update({
-  id: '/precos',
-  path: '/precos',
-  getParentRoute: () => SiteRoute,
-} as any)
-const SiteDemoRoute = SiteDemoRouteImport.update({
-  id: '/demo',
-  path: '/demo',
-  getParentRoute: () => SiteRoute,
-} as any)
-const SiteContatoRoute = SiteContatoRouteImport.update({
-  id: '/contato',
-  path: '/contato',
-  getParentRoute: () => SiteRoute,
-} as any)
-const PosVendaTokenRoute = PosVendaTokenRouteImport.update({
-  id: '/pos-venda/$token',
-  path: '/pos-venda/$token',
+const AssinaturasRoute = AssinaturasRouteImport.update({
+  id: '/assinaturas',
+  path: '/assinaturas',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LpSlugRoute = LpSlugRouteImport.update({
-  id: '/lp/$slug',
-  path: '/lp/$slug',
+const BriefingsRoute = BriefingsRouteImport.update({
+  id: '/briefings',
+  path: '/briefings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LandingPagesIdRoute = LandingPagesIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => LandingPagesRoute,
-} as any)
-const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
-  id: '/email/unsubscribe',
-  path: '/email/unsubscribe',
+const CalendarioRoute = CalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AssinarTokenRoute = AssinarTokenRouteImport.update({
-  id: '/assinar/$token',
-  path: '/assinar/$token',
+const CentralizadoresRoute = CentralizadoresRouteImport.update({
+  id: '/centralizadores',
+  path: '/centralizadores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientesRoute = ClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComissoesRoute = ComissoesRouteImport.update({
+  id: '/comissoes',
+  path: '/comissoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContratosRoute = ContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CopilotoComercialRoute = CopilotoComercialRouteImport.update({
+  id: '/copiloto-comercial',
+  path: '/copiloto-comercial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CrmRoute = CrmRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentacaoRoute = DocumentacaoRouteImport.update({
+  id: '/documentacao',
+  path: '/documentacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoricoRoute = HistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoricoVeiculacaoRoute = HistoricoVeiculacaoRouteImport.update({
+  id: '/historico-veiculacao',
+  path: '/historico-veiculacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InfluenciadoresRoute = InfluenciadoresRouteImport.update({
+  id: '/influenciadores',
+  path: '/influenciadores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventarioRoute = InventarioRouteImport.update({
+  id: '/inventario',
+  path: '/inventario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandingPagesRoute = LandingPagesRouteImport.update({
+  id: '/landing-pages',
+  path: '/landing-pages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LayoutsRoute = LayoutsRouteImport.update({
+  id: '/layouts',
+  path: '/layouts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LixeiraRoute = LixeiraRouteImport.update({
+  id: '/lixeira',
+  path: '/lixeira',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MateriaisApoioRoute = MateriaisApoioRouteImport.update({
+  id: '/materiais-apoio',
+  path: '/materiais-apoio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetasRoute = MetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MinhaContaRoute = MinhaContaRouteImport.update({
+  id: '/minha-conta',
+  path: '/minha-conta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonitoramentoRoute = MonitoramentoRouteImport.update({
+  id: '/monitoramento',
+  path: '/monitoramento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NovaCampanhaRoute = NovaCampanhaRouteImport.update({
+  id: '/nova-campanha',
+  path: '/nova-campanha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OohIntelligenceRoute = OohIntelligenceRouteImport.update({
+  id: '/ooh-intelligence',
+  path: '/ooh-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerRoute = OwnerRouteImport.update({
+  id: '/owner',
+  path: '/owner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParceirosRoute = ParceirosRouteImport.update({
+  id: '/parceiros',
+  path: '/parceiros',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PedidosInsercaoRoute = PedidosInsercaoRouteImport.update({
+  id: '/pedidos-insercao',
+  path: '/pedidos-insercao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PermutaRoute = PermutaRouteImport.update({
+  id: '/permuta',
+  path: '/permuta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PiRoute = PiRouteImport.update({
+  id: '/pi',
+  path: '/pi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PiAnexosRoute = PiAnexosRouteImport.update({
+  id: '/pi-anexos',
+  path: '/pi-anexos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanejamentoRoute = PlanejamentoRouteImport.update({
+  id: '/planejamento',
+  path: '/planejamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProdutosRoute = ProdutosRouteImport.update({
+  id: '/produtos',
+  path: '/produtos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjetosEspeciaisRoute = ProjetosEspeciaisRouteImport.update({
+  id: '/projetos-especiais',
+  path: '/projetos-especiais',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropostasRoute = PropostasRouteImport.update({
+  id: '/propostas',
+  path: '/propostas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedeInventarioRoute = RedeInventarioRouteImport.update({
+  id: '/rede-inventario',
+  path: '/rede-inventario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatorioSincronizacaoRoute = RelatorioSincronizacaoRouteImport.update({
+  id: '/relatorio-sincronizacao',
+  path: '/relatorio-sincronizacao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SalesCopilotRoute = SalesCopilotRouteImport.update({
+  id: '/sales-copilot',
+  path: '/sales-copilot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteRoute = SiteRouteImport.update({
+  id: '/site',
+  path: '/site',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SocialMediaRoute = SocialMediaRouteImport.update({
+  id: '/social-media',
+  path: '/social-media',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TarefasRoute = TarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsuariosRoute = UsuariosRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VeiculosRoute = VeiculosRouteImport.update({
+  id: '/veiculos',
+  path: '/veiculos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AprovarDiretoriaTokenRoute = AprovarDiretoriaTokenRouteImport.update({
@@ -341,15 +335,122 @@ const AprovarDiretoriaTokenRoute = AprovarDiretoriaTokenRouteImport.update({
   path: '/aprovar-diretoria/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssinarTokenRoute = AssinarTokenRouteImport.update({
+  id: '/assinar/$token',
+  path: '/assinar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandingPagesIdRoute = LandingPagesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => LandingPagesRoute,
+} as any)
+const LpSlugRoute = LpSlugRouteImport.update({
+  id: '/lp/$slug',
+  path: '/lp/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PTokenRoute = PTokenRouteImport.update({
+  id: '/p/$token',
+  path: '/p/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PosVendaTokenRoute = PosVendaTokenRouteImport.update({
+  id: '/pos-venda/$token',
+  path: '/pos-venda/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropostaOnlineTokenRoute = PropostaOnlineTokenRouteImport.update({
+  id: '/proposta-online/$token',
+  path: '/proposta-online/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SiteIndexRoute = SiteIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteContatoRoute = SiteContatoRouteImport.update({
+  id: '/contato',
+  path: '/contato',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteDemoRoute = SiteDemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteInventarioRoute = SiteInventarioRouteImport.update({
+  id: '/inventario',
+  path: '/inventario',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SitePrecosRoute = SitePrecosRouteImport.update({
+  id: '/precos',
+  path: '/precos',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SitePrivacidadeRoute = SitePrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteRecursosRoute = SiteRecursosRouteImport.update({
+  id: '/recursos',
+  path: '/recursos',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteTermosRoute = SiteTermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => SiteRoute,
+} as any)
+const ApiAdminResetPasswordRoute = ApiAdminResetPasswordRouteImport.update({
+  id: '/api/admin/reset-password',
+  path: '/api/admin/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicInventoryAssetsRoute =
+  ApiPublicInventoryAssetsRouteImport.update({
+    id: '/api/public/inventory-assets',
+    path: '/api/public/inventory-assets',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiSocialPublishDueRoute = ApiSocialPublishDueRouteImport.update({
+  id: '/api/social/publish-due',
+  path: '/api/social/publish-due',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LovableEmailTransactionalSendRoute =
-  LovableEmailTransactionalSendRouteImport.update({
-    id: '/lovable/email/transactional/send',
-    path: '/lovable/email/transactional/send',
+const ApiPublicHooksNotificacoesJobRoute =
+  ApiPublicHooksNotificacoesJobRouteImport.update({
+    id: '/api/public/hooks/notificacoes-job',
+    path: '/api/public/hooks/notificacoes-job',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSyncCnpjRoute = ApiPublicHooksSyncCnpjRouteImport.update({
+  id: '/api/public/hooks/sync-cnpj',
+  path: '/api/public/hooks/sync-cnpj',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPiShareTokenRoute = ApiPublicPiShareTokenRouteImport.update({
+  id: '/api/public/pi-share/$token',
+  path: '/api/public/pi-share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
 const LovableEmailTransactionalPreviewRoute =
@@ -358,26 +459,10 @@ const LovableEmailTransactionalPreviewRoute =
     path: '/lovable/email/transactional/preview',
     getParentRoute: () => rootRouteImport,
   } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicPiShareTokenRoute = ApiPublicPiShareTokenRouteImport.update({
-  id: '/api/public/pi-share/$token',
-  path: '/api/public/pi-share/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicHooksSyncCnpjRoute = ApiPublicHooksSyncCnpjRouteImport.update({
-  id: '/api/public/hooks/sync-cnpj',
-  path: '/api/public/hooks/sync-cnpj',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicHooksNotificacoesJobRoute =
-  ApiPublicHooksNotificacoesJobRouteImport.update({
-    id: '/api/public/hooks/notificacoes-job',
-    path: '/api/public/hooks/notificacoes-job',
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -393,12 +478,14 @@ export interface FileRoutesByFullPath {
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
+  '/copiloto-comercial': typeof CopilotoComercialRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
   '/historico': typeof HistoricoRoute
   '/historico-veiculacao': typeof HistoricoVeiculacaoRoute
   '/influenciadores': typeof InfluenciadoresRoute
+  '/inventario': typeof InventarioRoute
   '/landing-pages': typeof LandingPagesRouteWithChildren
   '/layouts': typeof LayoutsRoute
   '/lixeira': typeof LixeiraRoute
@@ -407,16 +494,22 @@ export interface FileRoutesByFullPath {
   '/metas': typeof MetasRoute
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
+  '/nova-campanha': typeof NovaCampanhaRoute
+  '/ooh-intelligence': typeof OohIntelligenceRoute
   '/owner': typeof OwnerRoute
   '/parceiros': typeof ParceirosRoute
+  '/pedidos-insercao': typeof PedidosInsercaoRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/produtos': typeof ProdutosRoute
   '/projetos-especiais': typeof ProjetosEspeciaisRoute
   '/propostas': typeof PropostasRoute
+  '/rede-inventario': typeof RedeInventarioRoute
   '/relatorio-sincronizacao': typeof RelatorioSincronizacaoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/sales-copilot': typeof SalesCopilotRoute
   '/site': typeof SiteRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/social-media': typeof SocialMediaRoute
@@ -428,14 +521,20 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/landing-pages/$id': typeof LandingPagesIdRoute
   '/lp/$slug': typeof LpSlugRoute
+  '/p/$token': typeof PTokenRoute
   '/pos-venda/$token': typeof PosVendaTokenRoute
+  '/proposta-online/$token': typeof PropostaOnlineTokenRoute
   '/site/contato': typeof SiteContatoRoute
   '/site/demo': typeof SiteDemoRoute
+  '/site/inventario': typeof SiteInventarioRoute
   '/site/precos': typeof SitePrecosRoute
   '/site/privacidade': typeof SitePrivacidadeRoute
   '/site/recursos': typeof SiteRecursosRoute
   '/site/termos': typeof SiteTermosRoute
   '/site/': typeof SiteIndexRoute
+  '/api/admin/reset-password': typeof ApiAdminResetPasswordRoute
+  '/api/public/inventory-assets': typeof ApiPublicInventoryAssetsRoute
+  '/api/social/publish-due': typeof ApiSocialPublishDueRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/notificacoes-job': typeof ApiPublicHooksNotificacoesJobRoute
   '/api/public/hooks/sync-cnpj': typeof ApiPublicHooksSyncCnpjRoute
@@ -456,12 +555,14 @@ export interface FileRoutesByTo {
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
+  '/copiloto-comercial': typeof CopilotoComercialRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
   '/historico': typeof HistoricoRoute
   '/historico-veiculacao': typeof HistoricoVeiculacaoRoute
   '/influenciadores': typeof InfluenciadoresRoute
+  '/inventario': typeof InventarioRoute
   '/landing-pages': typeof LandingPagesRouteWithChildren
   '/layouts': typeof LayoutsRoute
   '/lixeira': typeof LixeiraRoute
@@ -470,16 +571,22 @@ export interface FileRoutesByTo {
   '/metas': typeof MetasRoute
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
+  '/nova-campanha': typeof NovaCampanhaRoute
+  '/ooh-intelligence': typeof OohIntelligenceRoute
   '/owner': typeof OwnerRoute
   '/parceiros': typeof ParceirosRoute
+  '/pedidos-insercao': typeof PedidosInsercaoRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/produtos': typeof ProdutosRoute
   '/projetos-especiais': typeof ProjetosEspeciaisRoute
   '/propostas': typeof PropostasRoute
+  '/rede-inventario': typeof RedeInventarioRoute
   '/relatorio-sincronizacao': typeof RelatorioSincronizacaoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/sales-copilot': typeof SalesCopilotRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/social-media': typeof SocialMediaRoute
   '/tarefas': typeof TarefasRoute
@@ -490,14 +597,20 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/landing-pages/$id': typeof LandingPagesIdRoute
   '/lp/$slug': typeof LpSlugRoute
+  '/p/$token': typeof PTokenRoute
   '/pos-venda/$token': typeof PosVendaTokenRoute
+  '/proposta-online/$token': typeof PropostaOnlineTokenRoute
   '/site/contato': typeof SiteContatoRoute
   '/site/demo': typeof SiteDemoRoute
+  '/site/inventario': typeof SiteInventarioRoute
   '/site/precos': typeof SitePrecosRoute
   '/site/privacidade': typeof SitePrivacidadeRoute
   '/site/recursos': typeof SiteRecursosRoute
   '/site/termos': typeof SiteTermosRoute
   '/site': typeof SiteIndexRoute
+  '/api/admin/reset-password': typeof ApiAdminResetPasswordRoute
+  '/api/public/inventory-assets': typeof ApiPublicInventoryAssetsRoute
+  '/api/social/publish-due': typeof ApiSocialPublishDueRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/notificacoes-job': typeof ApiPublicHooksNotificacoesJobRoute
   '/api/public/hooks/sync-cnpj': typeof ApiPublicHooksSyncCnpjRoute
@@ -519,12 +632,14 @@ export interface FileRoutesById {
   '/comissoes': typeof ComissoesRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/contratos': typeof ContratosRoute
+  '/copiloto-comercial': typeof CopilotoComercialRoute
   '/crm': typeof CrmRoute
   '/documentacao': typeof DocumentacaoRoute
   '/financeiro': typeof FinanceiroRoute
   '/historico': typeof HistoricoRoute
   '/historico-veiculacao': typeof HistoricoVeiculacaoRoute
   '/influenciadores': typeof InfluenciadoresRoute
+  '/inventario': typeof InventarioRoute
   '/landing-pages': typeof LandingPagesRouteWithChildren
   '/layouts': typeof LayoutsRoute
   '/lixeira': typeof LixeiraRoute
@@ -533,16 +648,22 @@ export interface FileRoutesById {
   '/metas': typeof MetasRoute
   '/minha-conta': typeof MinhaContaRoute
   '/monitoramento': typeof MonitoramentoRoute
+  '/nova-campanha': typeof NovaCampanhaRoute
+  '/ooh-intelligence': typeof OohIntelligenceRoute
   '/owner': typeof OwnerRoute
   '/parceiros': typeof ParceirosRoute
+  '/pedidos-insercao': typeof PedidosInsercaoRoute
   '/permuta': typeof PermutaRoute
   '/pi': typeof PiRoute
   '/pi-anexos': typeof PiAnexosRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/produtos': typeof ProdutosRoute
   '/projetos-especiais': typeof ProjetosEspeciaisRoute
   '/propostas': typeof PropostasRoute
+  '/rede-inventario': typeof RedeInventarioRoute
   '/relatorio-sincronizacao': typeof RelatorioSincronizacaoRoute
   '/relatorios': typeof RelatoriosRoute
+  '/sales-copilot': typeof SalesCopilotRoute
   '/site': typeof SiteRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/social-media': typeof SocialMediaRoute
@@ -554,14 +675,20 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/landing-pages/$id': typeof LandingPagesIdRoute
   '/lp/$slug': typeof LpSlugRoute
+  '/p/$token': typeof PTokenRoute
   '/pos-venda/$token': typeof PosVendaTokenRoute
+  '/proposta-online/$token': typeof PropostaOnlineTokenRoute
   '/site/contato': typeof SiteContatoRoute
   '/site/demo': typeof SiteDemoRoute
+  '/site/inventario': typeof SiteInventarioRoute
   '/site/precos': typeof SitePrecosRoute
   '/site/privacidade': typeof SitePrivacidadeRoute
   '/site/recursos': typeof SiteRecursosRoute
   '/site/termos': typeof SiteTermosRoute
   '/site/': typeof SiteIndexRoute
+  '/api/admin/reset-password': typeof ApiAdminResetPasswordRoute
+  '/api/public/inventory-assets': typeof ApiPublicInventoryAssetsRoute
+  '/api/social/publish-due': typeof ApiSocialPublishDueRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/hooks/notificacoes-job': typeof ApiPublicHooksNotificacoesJobRoute
   '/api/public/hooks/sync-cnpj': typeof ApiPublicHooksSyncCnpjRoute
@@ -584,12 +711,14 @@ export interface FileRouteTypes {
     | '/comissoes'
     | '/configuracoes'
     | '/contratos'
+    | '/copiloto-comercial'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
     | '/historico'
     | '/historico-veiculacao'
     | '/influenciadores'
+    | '/inventario'
     | '/landing-pages'
     | '/layouts'
     | '/lixeira'
@@ -598,16 +727,22 @@ export interface FileRouteTypes {
     | '/metas'
     | '/minha-conta'
     | '/monitoramento'
+    | '/nova-campanha'
+    | '/ooh-intelligence'
     | '/owner'
     | '/parceiros'
+    | '/pedidos-insercao'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
+    | '/planejamento'
     | '/produtos'
     | '/projetos-especiais'
     | '/propostas'
+    | '/rede-inventario'
     | '/relatorio-sincronizacao'
     | '/relatorios'
+    | '/sales-copilot'
     | '/site'
     | '/sitemap.xml'
     | '/social-media'
@@ -619,14 +754,20 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/landing-pages/$id'
     | '/lp/$slug'
+    | '/p/$token'
     | '/pos-venda/$token'
+    | '/proposta-online/$token'
     | '/site/contato'
     | '/site/demo'
+    | '/site/inventario'
     | '/site/precos'
     | '/site/privacidade'
     | '/site/recursos'
     | '/site/termos'
     | '/site/'
+    | '/api/admin/reset-password'
+    | '/api/public/inventory-assets'
+    | '/api/social/publish-due'
     | '/lovable/email/suppression'
     | '/api/public/hooks/notificacoes-job'
     | '/api/public/hooks/sync-cnpj'
@@ -647,12 +788,14 @@ export interface FileRouteTypes {
     | '/comissoes'
     | '/configuracoes'
     | '/contratos'
+    | '/copiloto-comercial'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
     | '/historico'
     | '/historico-veiculacao'
     | '/influenciadores'
+    | '/inventario'
     | '/landing-pages'
     | '/layouts'
     | '/lixeira'
@@ -661,16 +804,22 @@ export interface FileRouteTypes {
     | '/metas'
     | '/minha-conta'
     | '/monitoramento'
+    | '/nova-campanha'
+    | '/ooh-intelligence'
     | '/owner'
     | '/parceiros'
+    | '/pedidos-insercao'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
+    | '/planejamento'
     | '/produtos'
     | '/projetos-especiais'
     | '/propostas'
+    | '/rede-inventario'
     | '/relatorio-sincronizacao'
     | '/relatorios'
+    | '/sales-copilot'
     | '/sitemap.xml'
     | '/social-media'
     | '/tarefas'
@@ -681,14 +830,20 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/landing-pages/$id'
     | '/lp/$slug'
+    | '/p/$token'
     | '/pos-venda/$token'
+    | '/proposta-online/$token'
     | '/site/contato'
     | '/site/demo'
+    | '/site/inventario'
     | '/site/precos'
     | '/site/privacidade'
     | '/site/recursos'
     | '/site/termos'
     | '/site'
+    | '/api/admin/reset-password'
+    | '/api/public/inventory-assets'
+    | '/api/social/publish-due'
     | '/lovable/email/suppression'
     | '/api/public/hooks/notificacoes-job'
     | '/api/public/hooks/sync-cnpj'
@@ -709,12 +864,14 @@ export interface FileRouteTypes {
     | '/comissoes'
     | '/configuracoes'
     | '/contratos'
+    | '/copiloto-comercial'
     | '/crm'
     | '/documentacao'
     | '/financeiro'
     | '/historico'
     | '/historico-veiculacao'
     | '/influenciadores'
+    | '/inventario'
     | '/landing-pages'
     | '/layouts'
     | '/lixeira'
@@ -723,16 +880,22 @@ export interface FileRouteTypes {
     | '/metas'
     | '/minha-conta'
     | '/monitoramento'
+    | '/nova-campanha'
+    | '/ooh-intelligence'
     | '/owner'
     | '/parceiros'
+    | '/pedidos-insercao'
     | '/permuta'
     | '/pi'
     | '/pi-anexos'
+    | '/planejamento'
     | '/produtos'
     | '/projetos-especiais'
     | '/propostas'
+    | '/rede-inventario'
     | '/relatorio-sincronizacao'
     | '/relatorios'
+    | '/sales-copilot'
     | '/site'
     | '/sitemap.xml'
     | '/social-media'
@@ -744,14 +907,20 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/landing-pages/$id'
     | '/lp/$slug'
+    | '/p/$token'
     | '/pos-venda/$token'
+    | '/proposta-online/$token'
     | '/site/contato'
     | '/site/demo'
+    | '/site/inventario'
     | '/site/precos'
     | '/site/privacidade'
     | '/site/recursos'
     | '/site/termos'
     | '/site/'
+    | '/api/admin/reset-password'
+    | '/api/public/inventory-assets'
+    | '/api/social/publish-due'
     | '/lovable/email/suppression'
     | '/api/public/hooks/notificacoes-job'
     | '/api/public/hooks/sync-cnpj'
@@ -773,12 +942,14 @@ export interface RootRouteChildren {
   ComissoesRoute: typeof ComissoesRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   ContratosRoute: typeof ContratosRoute
+  CopilotoComercialRoute: typeof CopilotoComercialRoute
   CrmRoute: typeof CrmRoute
   DocumentacaoRoute: typeof DocumentacaoRoute
   FinanceiroRoute: typeof FinanceiroRoute
   HistoricoRoute: typeof HistoricoRoute
   HistoricoVeiculacaoRoute: typeof HistoricoVeiculacaoRoute
   InfluenciadoresRoute: typeof InfluenciadoresRoute
+  InventarioRoute: typeof InventarioRoute
   LandingPagesRoute: typeof LandingPagesRouteWithChildren
   LayoutsRoute: typeof LayoutsRoute
   LixeiraRoute: typeof LixeiraRoute
@@ -787,16 +958,22 @@ export interface RootRouteChildren {
   MetasRoute: typeof MetasRoute
   MinhaContaRoute: typeof MinhaContaRoute
   MonitoramentoRoute: typeof MonitoramentoRoute
+  NovaCampanhaRoute: typeof NovaCampanhaRoute
+  OohIntelligenceRoute: typeof OohIntelligenceRoute
   OwnerRoute: typeof OwnerRoute
   ParceirosRoute: typeof ParceirosRoute
+  PedidosInsercaoRoute: typeof PedidosInsercaoRoute
   PermutaRoute: typeof PermutaRoute
   PiRoute: typeof PiRoute
   PiAnexosRoute: typeof PiAnexosRoute
+  PlanejamentoRoute: typeof PlanejamentoRoute
   ProdutosRoute: typeof ProdutosRoute
   ProjetosEspeciaisRoute: typeof ProjetosEspeciaisRoute
   PropostasRoute: typeof PropostasRoute
+  RedeInventarioRoute: typeof RedeInventarioRoute
   RelatorioSincronizacaoRoute: typeof RelatorioSincronizacaoRoute
   RelatoriosRoute: typeof RelatoriosRoute
+  SalesCopilotRoute: typeof SalesCopilotRoute
   SiteRoute: typeof SiteRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SocialMediaRoute: typeof SocialMediaRoute
@@ -807,7 +984,12 @@ export interface RootRouteChildren {
   AssinarTokenRoute: typeof AssinarTokenRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   LpSlugRoute: typeof LpSlugRoute
+  PTokenRoute: typeof PTokenRoute
   PosVendaTokenRoute: typeof PosVendaTokenRoute
+  PropostaOnlineTokenRoute: typeof PropostaOnlineTokenRoute
+  ApiAdminResetPasswordRoute: typeof ApiAdminResetPasswordRoute
+  ApiPublicInventoryAssetsRoute: typeof ApiPublicInventoryAssetsRoute
+  ApiSocialPublishDueRoute: typeof ApiSocialPublishDueRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksNotificacoesJobRoute: typeof ApiPublicHooksNotificacoesJobRoute
   ApiPublicHooksSyncCnpjRoute: typeof ApiPublicHooksSyncCnpjRoute
@@ -819,277 +1001,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/veiculos': {
-      id: '/veiculos'
-      path: '/veiculos'
-      fullPath: '/veiculos'
-      preLoaderRoute: typeof VeiculosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/usuarios': {
-      id: '/usuarios'
-      path: '/usuarios'
-      fullPath: '/usuarios'
-      preLoaderRoute: typeof UsuariosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tarefas': {
-      id: '/tarefas'
-      path: '/tarefas'
-      fullPath: '/tarefas'
-      preLoaderRoute: typeof TarefasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/social-media': {
-      id: '/social-media'
-      path: '/social-media'
-      fullPath: '/social-media'
-      preLoaderRoute: typeof SocialMediaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/site': {
-      id: '/site'
-      path: '/site'
-      fullPath: '/site'
-      preLoaderRoute: typeof SiteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/relatorios': {
-      id: '/relatorios'
-      path: '/relatorios'
-      fullPath: '/relatorios'
-      preLoaderRoute: typeof RelatoriosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/relatorio-sincronizacao': {
-      id: '/relatorio-sincronizacao'
-      path: '/relatorio-sincronizacao'
-      fullPath: '/relatorio-sincronizacao'
-      preLoaderRoute: typeof RelatorioSincronizacaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/propostas': {
-      id: '/propostas'
-      path: '/propostas'
-      fullPath: '/propostas'
-      preLoaderRoute: typeof PropostasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/projetos-especiais': {
-      id: '/projetos-especiais'
-      path: '/projetos-especiais'
-      fullPath: '/projetos-especiais'
-      preLoaderRoute: typeof ProjetosEspeciaisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/produtos': {
-      id: '/produtos'
-      path: '/produtos'
-      fullPath: '/produtos'
-      preLoaderRoute: typeof ProdutosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pi-anexos': {
-      id: '/pi-anexos'
-      path: '/pi-anexos'
-      fullPath: '/pi-anexos'
-      preLoaderRoute: typeof PiAnexosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pi': {
-      id: '/pi'
-      path: '/pi'
-      fullPath: '/pi'
-      preLoaderRoute: typeof PiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/permuta': {
-      id: '/permuta'
-      path: '/permuta'
-      fullPath: '/permuta'
-      preLoaderRoute: typeof PermutaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/parceiros': {
-      id: '/parceiros'
-      path: '/parceiros'
-      fullPath: '/parceiros'
-      preLoaderRoute: typeof ParceirosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/owner': {
-      id: '/owner'
-      path: '/owner'
-      fullPath: '/owner'
-      preLoaderRoute: typeof OwnerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/monitoramento': {
-      id: '/monitoramento'
-      path: '/monitoramento'
-      fullPath: '/monitoramento'
-      preLoaderRoute: typeof MonitoramentoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/minha-conta': {
-      id: '/minha-conta'
-      path: '/minha-conta'
-      fullPath: '/minha-conta'
-      preLoaderRoute: typeof MinhaContaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/metas': {
-      id: '/metas'
-      path: '/metas'
-      fullPath: '/metas'
-      preLoaderRoute: typeof MetasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/materiais-apoio': {
-      id: '/materiais-apoio'
-      path: '/materiais-apoio'
-      fullPath: '/materiais-apoio'
-      preLoaderRoute: typeof MateriaisApoioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lixeira': {
-      id: '/lixeira'
-      path: '/lixeira'
-      fullPath: '/lixeira'
-      preLoaderRoute: typeof LixeiraRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/layouts': {
-      id: '/layouts'
-      path: '/layouts'
-      fullPath: '/layouts'
-      preLoaderRoute: typeof LayoutsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/landing-pages': {
-      id: '/landing-pages'
-      path: '/landing-pages'
-      fullPath: '/landing-pages'
-      preLoaderRoute: typeof LandingPagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/influenciadores': {
-      id: '/influenciadores'
-      path: '/influenciadores'
-      fullPath: '/influenciadores'
-      preLoaderRoute: typeof InfluenciadoresRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/historico-veiculacao': {
-      id: '/historico-veiculacao'
-      path: '/historico-veiculacao'
-      fullPath: '/historico-veiculacao'
-      preLoaderRoute: typeof HistoricoVeiculacaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/historico': {
-      id: '/historico'
-      path: '/historico'
-      fullPath: '/historico'
-      preLoaderRoute: typeof HistoricoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/financeiro': {
-      id: '/financeiro'
-      path: '/financeiro'
-      fullPath: '/financeiro'
-      preLoaderRoute: typeof FinanceiroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documentacao': {
-      id: '/documentacao'
-      path: '/documentacao'
-      fullPath: '/documentacao'
-      preLoaderRoute: typeof DocumentacaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/crm': {
-      id: '/crm'
-      path: '/crm'
-      fullPath: '/crm'
-      preLoaderRoute: typeof CrmRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contratos': {
-      id: '/contratos'
-      path: '/contratos'
-      fullPath: '/contratos'
-      preLoaderRoute: typeof ContratosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/configuracoes': {
-      id: '/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/configuracoes'
-      preLoaderRoute: typeof ConfiguracoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/comissoes': {
-      id: '/comissoes'
-      path: '/comissoes'
-      fullPath: '/comissoes'
-      preLoaderRoute: typeof ComissoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clientes': {
-      id: '/clientes'
-      path: '/clientes'
-      fullPath: '/clientes'
-      preLoaderRoute: typeof ClientesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/centralizadores': {
-      id: '/centralizadores'
-      path: '/centralizadores'
-      fullPath: '/centralizadores'
-      preLoaderRoute: typeof CentralizadoresRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calendario': {
-      id: '/calendario'
-      path: '/calendario'
-      fullPath: '/calendario'
-      preLoaderRoute: typeof CalendarioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/briefings': {
-      id: '/briefings'
-      path: '/briefings'
-      fullPath: '/briefings'
-      preLoaderRoute: typeof BriefingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/assinaturas': {
-      id: '/assinaturas'
-      path: '/assinaturas'
-      fullPath: '/assinaturas'
-      preLoaderRoute: typeof AssinaturasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agencias': {
-      id: '/agencias'
-      path: '/agencias'
-      fullPath: '/agencias'
-      preLoaderRoute: typeof AgenciasRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$slug': {
@@ -1099,95 +1015,333 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/agencias': {
+      id: '/agencias'
+      path: '/agencias'
+      fullPath: '/agencias'
+      preLoaderRoute: typeof AgenciasRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/site/': {
-      id: '/site/'
-      path: '/'
-      fullPath: '/site/'
-      preLoaderRoute: typeof SiteIndexRouteImport
-      parentRoute: typeof SiteRoute
-    }
-    '/site/termos': {
-      id: '/site/termos'
-      path: '/termos'
-      fullPath: '/site/termos'
-      preLoaderRoute: typeof SiteTermosRouteImport
-      parentRoute: typeof SiteRoute
-    }
-    '/site/recursos': {
-      id: '/site/recursos'
-      path: '/recursos'
-      fullPath: '/site/recursos'
-      preLoaderRoute: typeof SiteRecursosRouteImport
-      parentRoute: typeof SiteRoute
-    }
-    '/site/privacidade': {
-      id: '/site/privacidade'
-      path: '/privacidade'
-      fullPath: '/site/privacidade'
-      preLoaderRoute: typeof SitePrivacidadeRouteImport
-      parentRoute: typeof SiteRoute
-    }
-    '/site/precos': {
-      id: '/site/precos'
-      path: '/precos'
-      fullPath: '/site/precos'
-      preLoaderRoute: typeof SitePrecosRouteImport
-      parentRoute: typeof SiteRoute
-    }
-    '/site/demo': {
-      id: '/site/demo'
-      path: '/demo'
-      fullPath: '/site/demo'
-      preLoaderRoute: typeof SiteDemoRouteImport
-      parentRoute: typeof SiteRoute
-    }
-    '/site/contato': {
-      id: '/site/contato'
-      path: '/contato'
-      fullPath: '/site/contato'
-      preLoaderRoute: typeof SiteContatoRouteImport
-      parentRoute: typeof SiteRoute
-    }
-    '/pos-venda/$token': {
-      id: '/pos-venda/$token'
-      path: '/pos-venda/$token'
-      fullPath: '/pos-venda/$token'
-      preLoaderRoute: typeof PosVendaTokenRouteImport
+    '/assinaturas': {
+      id: '/assinaturas'
+      path: '/assinaturas'
+      fullPath: '/assinaturas'
+      preLoaderRoute: typeof AssinaturasRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lp/$slug': {
-      id: '/lp/$slug'
-      path: '/lp/$slug'
-      fullPath: '/lp/$slug'
-      preLoaderRoute: typeof LpSlugRouteImport
+    '/briefings': {
+      id: '/briefings'
+      path: '/briefings'
+      fullPath: '/briefings'
+      preLoaderRoute: typeof BriefingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/landing-pages/$id': {
-      id: '/landing-pages/$id'
-      path: '/$id'
-      fullPath: '/landing-pages/$id'
-      preLoaderRoute: typeof LandingPagesIdRouteImport
-      parentRoute: typeof LandingPagesRoute
-    }
-    '/email/unsubscribe': {
-      id: '/email/unsubscribe'
-      path: '/email/unsubscribe'
-      fullPath: '/email/unsubscribe'
-      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+    '/calendario': {
+      id: '/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof CalendarioRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/assinar/$token': {
-      id: '/assinar/$token'
-      path: '/assinar/$token'
-      fullPath: '/assinar/$token'
-      preLoaderRoute: typeof AssinarTokenRouteImport
+    '/centralizadores': {
+      id: '/centralizadores'
+      path: '/centralizadores'
+      fullPath: '/centralizadores'
+      preLoaderRoute: typeof CentralizadoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes': {
+      id: '/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof ClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/comissoes': {
+      id: '/comissoes'
+      path: '/comissoes'
+      fullPath: '/comissoes'
+      preLoaderRoute: typeof ComissoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contratos': {
+      id: '/contratos'
+      path: '/contratos'
+      fullPath: '/contratos'
+      preLoaderRoute: typeof ContratosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/copiloto-comercial': {
+      id: '/copiloto-comercial'
+      path: '/copiloto-comercial'
+      fullPath: '/copiloto-comercial'
+      preLoaderRoute: typeof CopilotoComercialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/crm': {
+      id: '/crm'
+      path: '/crm'
+      fullPath: '/crm'
+      preLoaderRoute: typeof CrmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documentacao': {
+      id: '/documentacao'
+      path: '/documentacao'
+      fullPath: '/documentacao'
+      preLoaderRoute: typeof DocumentacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/historico': {
+      id: '/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof HistoricoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/historico-veiculacao': {
+      id: '/historico-veiculacao'
+      path: '/historico-veiculacao'
+      fullPath: '/historico-veiculacao'
+      preLoaderRoute: typeof HistoricoVeiculacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/influenciadores': {
+      id: '/influenciadores'
+      path: '/influenciadores'
+      fullPath: '/influenciadores'
+      preLoaderRoute: typeof InfluenciadoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventario': {
+      id: '/inventario'
+      path: '/inventario'
+      fullPath: '/inventario'
+      preLoaderRoute: typeof InventarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landing-pages': {
+      id: '/landing-pages'
+      path: '/landing-pages'
+      fullPath: '/landing-pages'
+      preLoaderRoute: typeof LandingPagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/layouts': {
+      id: '/layouts'
+      path: '/layouts'
+      fullPath: '/layouts'
+      preLoaderRoute: typeof LayoutsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lixeira': {
+      id: '/lixeira'
+      path: '/lixeira'
+      fullPath: '/lixeira'
+      preLoaderRoute: typeof LixeiraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/materiais-apoio': {
+      id: '/materiais-apoio'
+      path: '/materiais-apoio'
+      fullPath: '/materiais-apoio'
+      preLoaderRoute: typeof MateriaisApoioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/metas': {
+      id: '/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof MetasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/minha-conta': {
+      id: '/minha-conta'
+      path: '/minha-conta'
+      fullPath: '/minha-conta'
+      preLoaderRoute: typeof MinhaContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monitoramento': {
+      id: '/monitoramento'
+      path: '/monitoramento'
+      fullPath: '/monitoramento'
+      preLoaderRoute: typeof MonitoramentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nova-campanha': {
+      id: '/nova-campanha'
+      path: '/nova-campanha'
+      fullPath: '/nova-campanha'
+      preLoaderRoute: typeof NovaCampanhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ooh-intelligence': {
+      id: '/ooh-intelligence'
+      path: '/ooh-intelligence'
+      fullPath: '/ooh-intelligence'
+      preLoaderRoute: typeof OohIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner': {
+      id: '/owner'
+      path: '/owner'
+      fullPath: '/owner'
+      preLoaderRoute: typeof OwnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parceiros': {
+      id: '/parceiros'
+      path: '/parceiros'
+      fullPath: '/parceiros'
+      preLoaderRoute: typeof ParceirosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pedidos-insercao': {
+      id: '/pedidos-insercao'
+      path: '/pedidos-insercao'
+      fullPath: '/pedidos-insercao'
+      preLoaderRoute: typeof PedidosInsercaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/permuta': {
+      id: '/permuta'
+      path: '/permuta'
+      fullPath: '/permuta'
+      preLoaderRoute: typeof PermutaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pi': {
+      id: '/pi'
+      path: '/pi'
+      fullPath: '/pi'
+      preLoaderRoute: typeof PiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pi-anexos': {
+      id: '/pi-anexos'
+      path: '/pi-anexos'
+      fullPath: '/pi-anexos'
+      preLoaderRoute: typeof PiAnexosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planejamento': {
+      id: '/planejamento'
+      path: '/planejamento'
+      fullPath: '/planejamento'
+      preLoaderRoute: typeof PlanejamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/produtos': {
+      id: '/produtos'
+      path: '/produtos'
+      fullPath: '/produtos'
+      preLoaderRoute: typeof ProdutosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projetos-especiais': {
+      id: '/projetos-especiais'
+      path: '/projetos-especiais'
+      fullPath: '/projetos-especiais'
+      preLoaderRoute: typeof ProjetosEspeciaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/propostas': {
+      id: '/propostas'
+      path: '/propostas'
+      fullPath: '/propostas'
+      preLoaderRoute: typeof PropostasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rede-inventario': {
+      id: '/rede-inventario'
+      path: '/rede-inventario'
+      fullPath: '/rede-inventario'
+      preLoaderRoute: typeof RedeInventarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorio-sincronizacao': {
+      id: '/relatorio-sincronizacao'
+      path: '/relatorio-sincronizacao'
+      fullPath: '/relatorio-sincronizacao'
+      preLoaderRoute: typeof RelatorioSincronizacaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sales-copilot': {
+      id: '/sales-copilot'
+      path: '/sales-copilot'
+      fullPath: '/sales-copilot'
+      preLoaderRoute: typeof SalesCopilotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/site': {
+      id: '/site'
+      path: '/site'
+      fullPath: '/site'
+      preLoaderRoute: typeof SiteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/social-media': {
+      id: '/social-media'
+      path: '/social-media'
+      fullPath: '/social-media'
+      preLoaderRoute: typeof SocialMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tarefas': {
+      id: '/tarefas'
+      path: '/tarefas'
+      fullPath: '/tarefas'
+      preLoaderRoute: typeof TarefasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/usuarios': {
+      id: '/usuarios'
+      path: '/usuarios'
+      fullPath: '/usuarios'
+      preLoaderRoute: typeof UsuariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/veiculos': {
+      id: '/veiculos'
+      path: '/veiculos'
+      fullPath: '/veiculos'
+      preLoaderRoute: typeof VeiculosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/aprovar-diretoria/$token': {
@@ -1197,6 +1351,132 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AprovarDiretoriaTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assinar/$token': {
+      id: '/assinar/$token'
+      path: '/assinar/$token'
+      fullPath: '/assinar/$token'
+      preLoaderRoute: typeof AssinarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landing-pages/$id': {
+      id: '/landing-pages/$id'
+      path: '/$id'
+      fullPath: '/landing-pages/$id'
+      preLoaderRoute: typeof LandingPagesIdRouteImport
+      parentRoute: typeof LandingPagesRoute
+    }
+    '/lp/$slug': {
+      id: '/lp/$slug'
+      path: '/lp/$slug'
+      fullPath: '/lp/$slug'
+      preLoaderRoute: typeof LpSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$token': {
+      id: '/p/$token'
+      path: '/p/$token'
+      fullPath: '/p/$token'
+      preLoaderRoute: typeof PTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pos-venda/$token': {
+      id: '/pos-venda/$token'
+      path: '/pos-venda/$token'
+      fullPath: '/pos-venda/$token'
+      preLoaderRoute: typeof PosVendaTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/proposta-online/$token': {
+      id: '/proposta-online/$token'
+      path: '/proposta-online/$token'
+      fullPath: '/proposta-online/$token'
+      preLoaderRoute: typeof PropostaOnlineTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/site/': {
+      id: '/site/'
+      path: '/'
+      fullPath: '/site/'
+      preLoaderRoute: typeof SiteIndexRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/site/contato': {
+      id: '/site/contato'
+      path: '/contato'
+      fullPath: '/site/contato'
+      preLoaderRoute: typeof SiteContatoRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/site/demo': {
+      id: '/site/demo'
+      path: '/demo'
+      fullPath: '/site/demo'
+      preLoaderRoute: typeof SiteDemoRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/site/inventario': {
+      id: '/site/inventario'
+      path: '/inventario'
+      fullPath: '/site/inventario'
+      preLoaderRoute: typeof SiteInventarioRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/site/precos': {
+      id: '/site/precos'
+      path: '/precos'
+      fullPath: '/site/precos'
+      preLoaderRoute: typeof SitePrecosRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/site/privacidade': {
+      id: '/site/privacidade'
+      path: '/privacidade'
+      fullPath: '/site/privacidade'
+      preLoaderRoute: typeof SitePrivacidadeRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/site/recursos': {
+      id: '/site/recursos'
+      path: '/recursos'
+      fullPath: '/site/recursos'
+      preLoaderRoute: typeof SiteRecursosRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/site/termos': {
+      id: '/site/termos'
+      path: '/termos'
+      fullPath: '/site/termos'
+      preLoaderRoute: typeof SiteTermosRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/api/admin/reset-password': {
+      id: '/api/admin/reset-password'
+      path: '/api/admin/reset-password'
+      fullPath: '/api/admin/reset-password'
+      preLoaderRoute: typeof ApiAdminResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/inventory-assets': {
+      id: '/api/public/inventory-assets'
+      path: '/api/public/inventory-assets'
+      fullPath: '/api/public/inventory-assets'
+      preLoaderRoute: typeof ApiPublicInventoryAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/social/publish-due': {
+      id: '/api/social/publish-due'
+      path: '/api/social/publish-due'
+      fullPath: '/api/social/publish-due'
+      preLoaderRoute: typeof ApiSocialPublishDueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
       path: '/lovable/email/suppression'
@@ -1204,32 +1484,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lovable/email/transactional/send': {
-      id: '/lovable/email/transactional/send'
-      path: '/lovable/email/transactional/send'
-      fullPath: '/lovable/email/transactional/send'
-      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/pi-share/$token': {
-      id: '/api/public/pi-share/$token'
-      path: '/api/public/pi-share/$token'
-      fullPath: '/api/public/pi-share/$token'
-      preLoaderRoute: typeof ApiPublicPiShareTokenRouteImport
+    '/api/public/hooks/notificacoes-job': {
+      id: '/api/public/hooks/notificacoes-job'
+      path: '/api/public/hooks/notificacoes-job'
+      fullPath: '/api/public/hooks/notificacoes-job'
+      preLoaderRoute: typeof ApiPublicHooksNotificacoesJobRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/sync-cnpj': {
@@ -1239,11 +1498,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncCnpjRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/notificacoes-job': {
-      id: '/api/public/hooks/notificacoes-job'
-      path: '/api/public/hooks/notificacoes-job'
-      fullPath: '/api/public/hooks/notificacoes-job'
-      preLoaderRoute: typeof ApiPublicHooksNotificacoesJobRouteImport
+    '/api/public/pi-share/$token': {
+      id: '/api/public/pi-share/$token'
+      path: '/api/public/pi-share/$token'
+      fullPath: '/api/public/pi-share/$token'
+      preLoaderRoute: typeof ApiPublicPiShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1264,6 +1544,7 @@ const LandingPagesRouteWithChildren = LandingPagesRoute._addFileChildren(
 interface SiteRouteChildren {
   SiteContatoRoute: typeof SiteContatoRoute
   SiteDemoRoute: typeof SiteDemoRoute
+  SiteInventarioRoute: typeof SiteInventarioRoute
   SitePrecosRoute: typeof SitePrecosRoute
   SitePrivacidadeRoute: typeof SitePrivacidadeRoute
   SiteRecursosRoute: typeof SiteRecursosRoute
@@ -1274,6 +1555,7 @@ interface SiteRouteChildren {
 const SiteRouteChildren: SiteRouteChildren = {
   SiteContatoRoute: SiteContatoRoute,
   SiteDemoRoute: SiteDemoRoute,
+  SiteInventarioRoute: SiteInventarioRoute,
   SitePrecosRoute: SitePrecosRoute,
   SitePrivacidadeRoute: SitePrivacidadeRoute,
   SiteRecursosRoute: SiteRecursosRoute,
@@ -1295,12 +1577,14 @@ const rootRouteChildren: RootRouteChildren = {
   ComissoesRoute: ComissoesRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   ContratosRoute: ContratosRoute,
+  CopilotoComercialRoute: CopilotoComercialRoute,
   CrmRoute: CrmRoute,
   DocumentacaoRoute: DocumentacaoRoute,
   FinanceiroRoute: FinanceiroRoute,
   HistoricoRoute: HistoricoRoute,
   HistoricoVeiculacaoRoute: HistoricoVeiculacaoRoute,
   InfluenciadoresRoute: InfluenciadoresRoute,
+  InventarioRoute: InventarioRoute,
   LandingPagesRoute: LandingPagesRouteWithChildren,
   LayoutsRoute: LayoutsRoute,
   LixeiraRoute: LixeiraRoute,
@@ -1309,16 +1593,22 @@ const rootRouteChildren: RootRouteChildren = {
   MetasRoute: MetasRoute,
   MinhaContaRoute: MinhaContaRoute,
   MonitoramentoRoute: MonitoramentoRoute,
+  NovaCampanhaRoute: NovaCampanhaRoute,
+  OohIntelligenceRoute: OohIntelligenceRoute,
   OwnerRoute: OwnerRoute,
   ParceirosRoute: ParceirosRoute,
+  PedidosInsercaoRoute: PedidosInsercaoRoute,
   PermutaRoute: PermutaRoute,
   PiRoute: PiRoute,
   PiAnexosRoute: PiAnexosRoute,
+  PlanejamentoRoute: PlanejamentoRoute,
   ProdutosRoute: ProdutosRoute,
   ProjetosEspeciaisRoute: ProjetosEspeciaisRoute,
   PropostasRoute: PropostasRoute,
+  RedeInventarioRoute: RedeInventarioRoute,
   RelatorioSincronizacaoRoute: RelatorioSincronizacaoRoute,
   RelatoriosRoute: RelatoriosRoute,
+  SalesCopilotRoute: SalesCopilotRoute,
   SiteRoute: SiteRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SocialMediaRoute: SocialMediaRoute,
@@ -1329,7 +1619,12 @@ const rootRouteChildren: RootRouteChildren = {
   AssinarTokenRoute: AssinarTokenRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   LpSlugRoute: LpSlugRoute,
+  PTokenRoute: PTokenRoute,
   PosVendaTokenRoute: PosVendaTokenRoute,
+  PropostaOnlineTokenRoute: PropostaOnlineTokenRoute,
+  ApiAdminResetPasswordRoute: ApiAdminResetPasswordRoute,
+  ApiPublicInventoryAssetsRoute: ApiPublicInventoryAssetsRoute,
+  ApiSocialPublishDueRoute: ApiSocialPublishDueRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksNotificacoesJobRoute: ApiPublicHooksNotificacoesJobRoute,
   ApiPublicHooksSyncCnpjRoute: ApiPublicHooksSyncCnpjRoute,

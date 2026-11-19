@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ImportDropdown } from "@/components/ImportDropdown";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Handshake,
+  Network,
   Plus,
   Upload,
   Search,
@@ -52,8 +54,22 @@ import {
   Instagram,
   Linkedin,
   Facebook,
+  LayoutGrid,
+  Table as TableIcon,
+  FolderSync,
+  Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { LogoImg } from "@/components/LogoImg";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { UniversalAnexosModal } from "@/components/anexos/UniversalAnexosModal";
 import {
   listParceiros,
@@ -61,14 +77,25 @@ import {
   SEGMENTOS_MIDIA,
   type Parceiro,
 } from "@/lib/parceiros.functions";
+import {
+  PERFIS_COMERCIAIS,
+  type PerfilComercialEntidade,
+} from "@/types/representacao-comercial.types";
 import { ParceiroFormDialog } from "@/components/ParceiroFormDialog";
 import { ImportarProdutosDialog } from "@/components/ImportarProdutosDialog";
 import { ImportarMidiaKitDialog } from "@/components/ImportarMidiaKitDialog";
+import { ImportarInventarioLoteModal } from "@/components/ImportarInventarioLoteModal";
+import { DriveSyncResultModal } from "@/components/DriveSyncResultModal";
+import { DriveSyncPreviewModal } from "@/components/DriveSyncPreviewModal";
+import { sincronizarDriveParceiros, gerarPreviaDriveSync } from "@/lib/drive-sync.functions";
+import type { DriveSyncSummary, DrivePreviewReport } from "@/types/drive-sync.types";
 import { useUserRoles } from "@/hooks/use-roles";
 import { downloadModeloProdutosExcel } from "@/lib/exportar-modelo-produtos";
+import { CircuitosBundlesManager } from "@/components/circuitos/CircuitosBundlesManager";
+import { ParceiroProdutosModal } from "@/components/ParceiroProdutosModal";
 
 export const Route = createFileRoute("/parceiros")({
-  head: () => ({ meta: [{ title: "Parceiros de Mídia — Mídia.OS" }] }),
+  head: () => ({ meta: [{ title: "Rede de Parceiros & Inventário — Mídia.OS" }] }),
   component: ParceirosPage,
 });
 
@@ -83,21 +110,65 @@ export function ParceirosPage() {
   const [search, setSearch] = useState("");
   const [segmentoFiltro, setSegmentoFiltro] = useState<string>("todos");
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativos" | "inativos">("todos");
+  const [perfilFiltro, setPerfilFiltro] = useState<string>("todos");
+  const [viewMode, setViewMode] = useState<"cards" | "tabela">("cards");
 
   // Dialogs
   const [formOpen, setFormOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Partial<Parceiro> | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importParceiroId, setImportParceiroId] = useState<string | undefined>(undefined);
+  const [importLoteOpen, setImportLoteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Parceiro | null>(null);
   const [anexoParceiro, setAnexoParceiro] = useState<Parceiro | null>(null);
   const [midiaKitOpen, setMidiaKitOpen] = useState(false);
   const [midiaKitParceiroId, setMidiaKitParceiroId] = useState<string | undefined>(undefined);
+  const [driveSyncOpen, setDriveSyncOpen] = useState(false);
+  const [driveSyncSummary, setDriveSyncSummary] = useState<DriveSyncSummary | null>(null);
+  const [drivePreviewOpen, setDrivePreviewOpen] = useState(false);
+  const [drivePreviewReport, setDrivePreviewReport] = useState<DrivePreviewReport | null>(null);
+  const [circuitosManagerOpen, setCircuitosManagerOpen] = useState(false);
+  const [previewParceiro, setPreviewParceiro] = useState<Parceiro | null>(null);
+
+  const syncDriveFn = useServerFn(sincronizarDriveParceiros);
+  const previewDriveFn = useServerFn(gerarPreviaDriveSync);
+
+  // Mutação para carregar Prévia Interativa (Zero Gravação no Banco)
+  const previewDriveMut = useMutation({
+    mutationFn: () => previewDriveFn(),
+    onSuccess: (report) => {
+      setDrivePreviewReport(report);
+      setDrivePreviewOpen(true);
+      toast.success("Prévia dinâmica do Google Drive carregada com sucesso!", {
+        description: `${report.resumo.total_arquivos_descobertos} arquivos analisados em ${report.resumo.total_parceiros_identificados} parceiros.`,
+      });
+    },
+    onError: (e: Error) => {
+      toast.error(e.message || "Erro ao carregar prévia do Google Drive");
+    },
+  });
 
   // Queries
   const { data: parceiros = [], isLoading } = useQuery<Parceiro[]>({
     queryKey: ["parceiros"],
     queryFn: () => listFn(),
+  });
+
+  // Mutação de sincronização com o Google Drive
+  const syncDriveMut = useMutation({
+    mutationFn: () => syncDriveFn(),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["parceiros"] });
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+      setDriveSyncSummary(res);
+      setDriveSyncOpen(true);
+      toast.success("Sincronização com o Google Drive concluída!", {
+        description: res.mensagem,
+      });
+    },
+    onError: (e: Error) => {
+      toast.error(e.message || "Erro ao sincronizar com Google Drive");
+    },
   });
 
   // Mutação de exclusão
@@ -134,9 +205,13 @@ export function ParceirosPage() {
         (statusFiltro === "ativos" && p.ativo) ||
         (statusFiltro === "inativos" && !p.ativo);
 
-      return matchSearch && matchSegmento && matchStatus;
+      const matchPerfil =
+        perfilFiltro === "todos" ||
+        ((p as any).perfil_comercial || "VEICULO_EXIBIDOR") === perfilFiltro;
+
+      return matchSearch && matchSegmento && matchStatus && matchPerfil;
     });
-  }, [parceiros, search, segmentoFiltro, statusFiltro]);
+  }, [parceiros, search, segmentoFiltro, statusFiltro, perfilFiltro]);
 
   // Métricas
   const stats = useMemo(() => {
@@ -167,7 +242,7 @@ export function ParceirosPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Parceiros de Mídia
+                Rede de Parceiros & Inventário Representado
                 <Badge
                   variant="secondary"
                   className="text-xs bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300"
@@ -176,55 +251,64 @@ export function ParceirosPage() {
                 </Badge>
               </h1>
               <p className="text-sm text-muted-foreground">
-                Gestão comercial de fornecedores de mídia, remuneração acordada sobre vendas e
-                importação de inventário.
+                Gestão integrada dos parceiros e veículos de comunicação que compõem sua rede de inventário representado.
               </p>
             </div>
           </div>
 
           {canManage && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 border-slate-200 dark:border-slate-800"
-                onClick={() => {
-                  downloadModeloProdutosExcel("modelo-importacao-produtos-cliente.xlsx");
-                  toast.success("Modelo de planilha (.xlsx) baixado com sucesso!");
-                }}
-                title="Baixar planilha modelo (.xlsx) para preenchimento de produtos e pontos"
-              >
-                <Download className="size-4 text-emerald-600" />
-                Baixar Modelo (.xlsx)
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-2 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/50"
-                onClick={() => handleOpenImport()}
-              >
-                <FileSpreadsheet className="size-4 text-purple-600" />
-                Importar Planilha
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 shadow-xs"
-                onClick={() => {
+            <div className="flex items-center flex-wrap gap-2.5">
+              {/* Atalho Direto para Rede de Inventário */}
+              <Link to="/rede-inventario">
+                <Button
+                  variant="outline"
+                  className="gap-2 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 font-medium"
+                  title="Acessar a visão integrada da Rede de Inventário"
+                >
+                  <Network className="size-4 text-purple-600" />
+                  <span>Rede de Inventário</span>
+                </Button>
+              </Link>
+
+              {/* Dropdown Consolidado: Importar Dados */}
+              <ImportDropdown
+                buttonLabel="Importar Dados"
+                onImportBatch={() => setImportLoteOpen(true)}
+                onImportMediaKit={() => {
                   setMidiaKitParceiroId(undefined);
                   setMidiaKitOpen(true);
                 }}
-                title="Cadastrar parceiro e produtos a partir de PDF (Mídia Kit) ou Planilha (Excel/CSV)"
-              >
-                <Sparkles className="size-4 text-indigo-600" />
-                Importar PDF ou Excel (IA)
-              </Button>
+                onImportSpreadsheet={() => handleOpenImport()}
+                onSyncGoogleDrive={() => previewDriveMut.mutate()}
+                isSyncingDrive={previewDriveMut.isPending}
+                onDownloadTemplate={() => {
+                  downloadModeloProdutosExcel("modelo-importacao-produtos-cliente.xlsx");
+                  toast.success("Modelo de planilha (.xlsx) baixado!");
+                }}
+              />
+
+              {/* Botão de Produtos e Circuitos */}
               <Button
-                className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                variant="outline"
+                className="gap-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-medium"
+                onClick={() => setCircuitosManagerOpen(true)}
+                title="Gerenciar pacotes de circuitos fechados e produtos dos veículos parceiros"
+              >
+                <Layers className="size-4 text-blue-600" />
+                <span>Produtos e Circuitos</span>
+              </Button>
+
+              {/* Botão Primário Fixo no Topo: Novo Veículo/Parceiro */}
+              <Button
+                className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-sm font-semibold"
                 onClick={() => {
                   setEditingParceiro(null);
                   setFormOpen(true);
                 }}
+                title="Cadastrar um novo veículo de comunicação / parceiro comercial"
               >
                 <Plus className="size-4" />
-                Novo Parceiro
+                <span>Novo Veículo / Parceiro</span>
               </Button>
             </div>
           )}
@@ -259,7 +343,7 @@ export function ParceirosPage() {
           <Card className="border-border/60 shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Produtos / Mídias</p>
+                <p className="text-xs font-medium text-muted-foreground">Inventário na Rede</p>
                 <h3 className="text-2xl font-bold mt-1 text-purple-600">{stats.totalProdutos}</h3>
               </div>
               <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600">
@@ -332,7 +416,63 @@ export function ParceirosPage() {
                   Inativos ({stats.total - stats.ativos})
                 </button>
               </div>
+
+              {/* Alternador de Visualização Cards / Tabela */}
+              <div className="inline-flex rounded-lg border bg-muted/40 p-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("cards")}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    viewMode === "cards"
+                      ? "bg-background text-primary shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Visualização em Cards"
+                >
+                  <LayoutGrid className="size-3.5" />
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("tabela")}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                    viewMode === "tabela"
+                      ? "bg-background text-primary shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Visualização em Tabela"
+                >
+                  <TableIcon className="size-3.5" />
+                  Tabela
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* Perfil Comercial Filtros */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-xs font-semibold text-muted-foreground mr-1 shrink-0">Perfil Comercial:</span>
+            <Badge
+              variant={perfilFiltro === "todos" ? "default" : "outline"}
+              className="cursor-pointer text-xs shrink-0 select-none"
+              onClick={() => setPerfilFiltro("todos")}
+            >
+              Todos os Perfis
+            </Badge>
+            {PERFIS_COMERCIAIS.map((p) => (
+              <Badge
+                key={p.value}
+                variant={perfilFiltro === p.value ? "default" : "outline"}
+                className={`cursor-pointer text-xs shrink-0 select-none transition-colors ${
+                  perfilFiltro === p.value
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "hover:bg-muted text-muted-foreground"
+                }`}
+                onClick={() => setPerfilFiltro(perfilFiltro === p.value ? "todos" : p.value)}
+              >
+                {p.label}
+              </Badge>
+            ))}
           </div>
 
           {/* Segmentos de Mídia Chips */}
@@ -400,6 +540,150 @@ export function ParceirosPage() {
               )}
             </div>
           </Card>
+        ) : viewMode === "tabela" ? (
+          <Card className="border-border/70 overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="w-14 text-center">Logo</TableHead>
+                    <TableHead>Veículo / Parceiro</TableHead>
+                    <TableHead>Tipo de Mídia</TableHead>
+                    <TableHead>CNPJ</TableHead>
+                    <TableHead className="text-center">Inventário na Rede</TableHead>
+                    <TableHead className="text-right">Comissão Padrão</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Cidade / UF</TableHead>
+                    <TableHead className="text-right pr-4">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtrados.map((parceiro) => (
+                    <TableRow key={parceiro.id} className="hover:bg-muted/30">
+                      <TableCell className="text-center">
+                        <div className="size-9 rounded-lg bg-muted/60 border border-border flex items-center justify-center overflow-hidden mx-auto shadow-xs">
+                          {parceiro.logo_url ? (
+                            <LogoImg
+                              stored={parceiro.logo_url}
+                              alt={parceiro.nome_fantasia || parceiro.razao_social}
+                              className="size-full object-contain p-1 bg-white"
+                            />
+                          ) : (
+                            <span className="font-bold text-[10px] text-purple-700 dark:text-purple-300">
+                              {(parceiro.nome_fantasia || parceiro.razao_social).slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-bold text-xs text-foreground">
+                          {parceiro.nome_fantasia || parceiro.razao_social}
+                        </div>
+                        {parceiro.nome_fantasia && (
+                          <div className="text-[11px] text-muted-foreground truncate max-w-[200px]">
+                            {parceiro.razao_social}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 items-start">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800 font-medium"
+                          >
+                            {parceiro.tipo_veiculo || "Painel OOH/DOOH"}
+                          </Badge>
+                          {parceiro.allows_circuit_bundles && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 font-semibold"
+                            >
+                              ⚡ Circuitos Habilitados
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-[11px] text-muted-foreground">
+                        {parceiro.cnpj || "—"}
+                      </TableCell>
+                      <TableCell className="text-center font-bold text-xs text-purple-700 dark:text-purple-300">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewParceiro(parceiro)}
+                          className="hover:underline cursor-pointer px-1.5 py-0.5 rounded hover:bg-purple-100 dark:hover:bg-purple-950/60 transition-colors"
+                          title="Clique para visualizar o inventário deste parceiro na rede"
+                        >
+                          {parceiro.produtos_count || 0} na Rede
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                        {parceiro.comissao_padrao_percentual || parceiro.comissao_padrao_pct || 20}%
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={parceiro.status === "ativo" || parceiro.ativo ? "default" : "secondary"}
+                          className={`text-[10px] ${
+                            parceiro.status === "em_negociacao"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 font-semibold"
+                              : parceiro.status === "inativo" || !parceiro.ativo
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold"
+                          }`}
+                        >
+                          {parceiro.status === "em_negociacao"
+                            ? "Em Negociação"
+                            : parceiro.ativo || parceiro.status === "ativo"
+                              ? "Ativo"
+                              : "Inativo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {parceiro.cidade ? `${parceiro.cidade}${parceiro.uf ? `/${parceiro.uf}` : ""}` : "—"}
+                      </TableCell>
+                      <TableCell className="text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => {
+                              setEditingParceiro(parceiro);
+                              setFormOpen(true);
+                            }}
+                          >
+                            <Pencil className="size-3.5 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setAnexoParceiro(parceiro)}
+                          >
+                            <Paperclip className="size-3.5 mr-1 text-blue-600" />
+                            Anexos
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" asChild>
+                            <Link
+                              to="/produtos"
+                              search={{
+                                parceiro_id: parceiro.id,
+                                parceiro: parceiro.nome_fantasia || parceiro.razao_social,
+                                view: "tabela",
+                              } as any}
+                            >
+                              Mídias
+                              <ExternalLink className="size-3 ml-1" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtrados.map((parceiro) => {
@@ -417,10 +701,20 @@ export function ParceirosPage() {
                     {/* Header do Card: Status & Ações */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3">
-                        <div className="size-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 flex items-center justify-center font-bold text-purple-700 dark:text-purple-300 text-sm border border-purple-200 dark:border-purple-800">
-                          {parceiro.nome_fantasia
-                            ? parceiro.nome_fantasia.slice(0, 2).toUpperCase()
-                            : parceiro.razao_social.slice(0, 2).toUpperCase()}
+                        <div className="size-11 rounded-xl bg-muted/60 flex items-center justify-center font-bold text-purple-700 dark:text-purple-300 text-sm border border-purple-200 dark:border-purple-800 overflow-hidden shrink-0 shadow-xs">
+                          {parceiro.logo_url ? (
+                            <LogoImg
+                              stored={parceiro.logo_url}
+                              alt={parceiro.nome_fantasia || parceiro.razao_social}
+                              className="size-full object-contain p-1 bg-white"
+                            />
+                          ) : (
+                            <span>
+                              {parceiro.nome_fantasia
+                                ? parceiro.nome_fantasia.slice(0, 2).toUpperCase()
+                                : parceiro.razao_social.slice(0, 2).toUpperCase()}
+                            </span>
+                          )}
                         </div>
                         <div className="min-w-0">
                           <h4
@@ -445,16 +739,44 @@ export function ParceirosPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-col items-end gap-1 shrink-0">
                         <Badge
-                          variant={parceiro.ativo ? "default" : "secondary"}
+                          variant="outline"
+                          className="text-[10px] bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800 font-medium"
+                        >
+                          {parceiro.tipo_veiculo || "Painel OOH/DOOH"}
+                        </Badge>
+                        {(parceiro as any).perfil_comercial && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 font-semibold"
+                          >
+                            {PERFIS_COMERCIAIS.find((p) => p.value === (parceiro as any).perfil_comercial)?.label || "Veículo"}
+                          </Badge>
+                        )}
+                        {parceiro.allows_circuit_bundles && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800 font-semibold"
+                          >
+                            ⚡ Circuitos Habilitados
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={parceiro.status === "ativo" || parceiro.ativo ? "default" : "secondary"}
                           className={`text-[10px] ${
-                            parceiro.ativo
-                              ? "bg-emerald-100 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                              : "bg-muted text-muted-foreground"
+                            parceiro.status === "em_negociacao"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 font-semibold"
+                              : parceiro.status === "inativo" || !parceiro.ativo
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-semibold"
                           }`}
                         >
-                          {parceiro.ativo ? "Ativo" : "Inativo"}
+                          {parceiro.status === "em_negociacao"
+                            ? "Em Negociação"
+                            : parceiro.ativo || parceiro.status === "ativo"
+                              ? "Ativo"
+                              : "Inativo"}
                         </Badge>
 
                         {canManage && (
@@ -465,6 +787,10 @@ export function ParceirosPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setPreviewParceiro(parceiro)}>
+                                <Layers className="size-3.5 mr-2 text-purple-600" />
+                                Ver Inventário na Rede
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
                                   setEditingParceiro(parceiro);
@@ -684,14 +1010,32 @@ export function ParceirosPage() {
 
                     {/* Inventário e Ações de Rodapé */}
                     <div className="pt-2 border-t flex items-center justify-between gap-2 mt-auto">
-                      <div className="flex items-center gap-1.5">
+                      <div
+                        className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setPreviewParceiro(parceiro)}
+                        title="Clique para visualizar o inventário deste parceiro na rede"
+                      >
                         <Layers className="size-3.5 text-purple-600" />
-                        <span className="font-semibold text-foreground">
-                          {parceiro.produtos_count || 0} produto(s)
+                        <span className="font-semibold text-foreground underline decoration-dotted underline-offset-2">
+                          {parceiro.produtos_count || 0} na Rede
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-foreground hover:bg-muted font-medium"
+                          onClick={() => {
+                            setEditingParceiro(parceiro);
+                            setFormOpen(true);
+                          }}
+                          title="Editar cadastro e condições do parceiro"
+                        >
+                          <Pencil className="size-3.5 mr-1 text-purple-600" />
+                          Editar
+                        </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -715,7 +1059,14 @@ export function ParceirosPage() {
                         </Button>
 
                         <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
-                          <Link to="/produtos" search={{ parceiro: parceiro.razao_social } as any}>
+                          <Link
+                            to="/produtos"
+                            search={{
+                              parceiro_id: parceiro.id,
+                              parceiro: parceiro.nome_fantasia || parceiro.razao_social,
+                              view: "tabela",
+                            } as any}
+                          >
                             Ver Produtos
                             <ExternalLink className="size-3 ml-1" />
                           </Link>
@@ -733,12 +1084,12 @@ export function ParceirosPage() {
       {/* Modal Universal de Anexos do Parceiro */}
       {anexoParceiro && (
         <UniversalAnexosModal
-          open={!!anexoParceiro}
-          onOpenChange={(open) => !open && setAnexoParceiro(null)}
+          isOpen={!!anexoParceiro}
+          onClose={() => setAnexoParceiro(null)}
           entidadeTipo="parceiro"
           entidadeId={anexoParceiro.id}
-          titulo={`Documentos & Mídia Kit — ${anexoParceiro.nome_fantasia || anexoParceiro.razao_social}`}
-          descricao="Gerencie Mídia Kits em PDF, tabelas de preço, propostas, contratos assinados e materiais técnicos deste parceiro."
+          entidadeNome={anexoParceiro.nome_fantasia || anexoParceiro.razao_social}
+          tituloCustomizado={`Documentos & Mídia Kit — ${anexoParceiro.nome_fantasia || anexoParceiro.razao_social}`}
         />
       )}
 
@@ -771,6 +1122,25 @@ export function ParceirosPage() {
         }}
       />
 
+      {/* Modal de Importação em Lote & Pasta com IA Gemini 2.5 Flash */}
+      <ImportarInventarioLoteModal
+        open={importLoteOpen}
+        onOpenChange={setImportLoteOpen}
+        parceiroInicialId={midiaKitParceiroId}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ["parceiros"] });
+          qc.invalidateQueries({ queryKey: ["produtos"] });
+        }}
+      />
+
+      {/* Modal de Pré-visualização Instantânea dos Produtos do Parceiro */}
+      <ParceiroProdutosModal
+        open={!!previewParceiro}
+        onOpenChange={(open) => !open && setPreviewParceiro(null)}
+        parceiro={previewParceiro}
+        onOpenImport={handleOpenImport}
+      />
+
       {/* Dialog de Confirmação de Exclusão */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
@@ -793,6 +1163,26 @@ export function ParceirosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Resultados da Sincronização Google Drive Legada */}
+      <DriveSyncResultModal
+        open={driveSyncOpen}
+        onOpenChange={setDriveSyncOpen}
+        summary={driveSyncSummary}
+      />
+
+      {/* Modal de Prévia Interativa e Dinâmica Google Drive (Strictly Read-Only) */}
+      <DriveSyncPreviewModal
+        open={drivePreviewOpen}
+        onOpenChange={setDrivePreviewOpen}
+        report={drivePreviewReport}
+      />
+
+      {/* Modal de Gestão de Circuitos e Bundles */}
+      <CircuitosBundlesManager
+        open={circuitosManagerOpen}
+        onOpenChange={setCircuitosManagerOpen}
+      />
     </AppShell>
   );
 }

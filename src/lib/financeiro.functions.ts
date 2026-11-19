@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+import { isMasterEmail } from "@/lib/master-user";
+
 export type TipoTransacao = "entrada" | "saida";
 export type StatusTransacao = "pendente" | "pago" | "cancelado" | "agendado";
 
@@ -87,15 +89,41 @@ const TransacaoSchema = z.object({
   observacoes: z.string().max(1000).optional().nullable(),
 });
 
+/**
+ * Função interna para verificar identidade segura no servidor.
+ * Não confia em cabeçalhos ou dados injetados pelo cliente.
+ */
+async function resolveServerAuthContext(supabase: any, userId: string) {
+  const [{ data: userAuth }, { data: prof }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("profiles")
+      .select("tenant_id, role, is_superadmin")
+      .eq("id", userId)
+      .maybeSingle(),
+  ]);
+
+  const isMaster =
+    isMasterEmail(userAuth?.user?.email) ||
+    prof?.is_superadmin === true ||
+    String(prof?.role).toUpperCase() === "MASTER" ||
+    userAuth?.user?.user_metadata?.role === "MASTER" ||
+    userAuth?.user?.user_metadata?.is_superadmin === true;
+
+  const tenantId = prof?.tenant_id ?? null;
+
+  return { isMaster, tenantId, email: userAuth?.user?.email };
+}
+
 export const listTransacoesFinanceiras = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: prof } = await context.supabase
-      .from("profiles")
-      .select("tenant_id")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const tenantId = prof?.tenant_id;
+    const { isMaster, tenantId } = await resolveServerAuthContext(context.supabase, context.userId);
+
+    // SEGURANÇA: Se não for Master da Plataforma e não possuir tenant_id válido, bloqueia acesso imediatamente
+    if (!isMaster && !tenantId) {
+      throw new Error("Acesso negado: Usuário sem empresa associada no servidor.");
+    }
 
     try {
       let query = context.supabase
@@ -110,18 +138,18 @@ export const listTransacoesFinanceiras = createServerFn({ method: "GET" })
         )
         .order("data_vencimento", { ascending: false });
 
-      if (tenantId) {
+      if (!isMaster) {
         query = query.eq("tenant_id", tenantId);
       }
 
       const { data, error } = await query;
       if (error) {
-        // Fallback caso a tabela ainda não exista no schema local
         console.warn("Tabela financeiro_transacoes:", error.message);
         return [];
       }
       return (data ?? []) as TransacaoFinanceira[];
-    } catch {
+    } catch (err: any) {
+      if (err?.message?.includes("Acesso negado")) throw err;
       return [];
     }
   });
@@ -130,12 +158,24 @@ export const upsertTransacaoFinanceira = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => TransacaoSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { data: prof } = await context.supabase
-      .from("profiles")
-      .select("tenant_id")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const tenantId = prof?.tenant_id;
+    const { isMaster, tenantId } = await resolveServerAuthContext(context.supabase, context.userId);
+
+    if (!isMaster && !tenantId) {
+      throw new Error("Acesso negado: Impossível salvar transação sem vínculo de empresa.");
+    }
+
+    // Se estiver editando uma transação existente, valida que pertence ao mesmo tenant
+    if (data.id && !isMaster) {
+      const { data: existente } = await context.supabase
+        .from("financeiro_transacoes")
+        .select("id, tenant_id")
+        .eq("id", data.id)
+        .maybeSingle();
+
+      if (!existente || existente.tenant_id !== tenantId) {
+        throw new Error("Acesso negado: Transação não pertence à sua organização.");
+      }
+    }
 
     const payload = {
       ...data,
@@ -204,6 +244,25 @@ export const deleteTransacaoFinanceira = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const { isMaster, tenantId } = await resolveServerAuthContext(context.supabase, context.userId);
+
+    if (!isMaster && !tenantId) {
+      throw new Error("Acesso negado: Impossível excluir transação sem vínculo de empresa.");
+    }
+
+    // Valida no servidor se a transação a ser excluída pertence ao tenant do usuário
+    if (!isMaster) {
+      const { data: existente } = await context.supabase
+        .from("financeiro_transacoes")
+        .select("id, tenant_id")
+        .eq("id", data.id)
+        .maybeSingle();
+
+      if (!existente || existente.tenant_id !== tenantId) {
+        throw new Error("Acesso negado: Transação não encontrada ou pertencente a outra empresa.");
+      }
+    }
+
     const { error } = await context.supabase
       .from("financeiro_transacoes")
       .delete()
@@ -224,21 +283,21 @@ export type DicaFinanceira = {
 export const getDicasFinanceiras = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: prof } = await context.supabase
-      .from("profiles")
-      .select("tenant_id")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const tenantId = prof?.tenant_id;
+    const { isMaster, tenantId } = await resolveServerAuthContext(context.supabase, context.userId);
 
-    // Busca transações e PIs para embasar as dicas reais
+    if (!isMaster && !tenantId) {
+      return [];
+    }
+
+    // Busca transações e PIs para embasar as dicas reais estritamente com filtro de tenant
     let qTrans = context.supabase.from("financeiro_transacoes").select("*");
-    if (tenantId) qTrans = qTrans.eq("tenant_id", tenantId);
+    if (!isMaster) qTrans = qTrans.eq("tenant_id", tenantId);
     const { data: transacoes = [] } = await qTrans;
 
     let qPis = context.supabase
       .from("pi_financeiro")
       .select("*, pi:pi_id(numero, valor_negociado)");
+    if (!isMaster) qPis = qPis.eq("tenant_id", tenantId);
     const { data: piFin = [] } = await qPis;
 
     const items = transacoes || [];

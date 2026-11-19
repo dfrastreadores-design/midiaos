@@ -1,0 +1,29 @@
+--- diagnostico_auditoria_pos_falhas_01B1_v5.sql
++++ diagnostico_auditoria_pos_falhas_01B1_v6.sql
+@@ -168,7 +168,7 @@
+     END::text AS status_catalogo,
+     CASE 
+       WHEN con.match_count = 0 THEN 'Constraint não encontrada para a tabela, tipo, colunas locais, tabela referenciada e regras relacionais esperadas'
+-      WHEN con.match_count > 1 THEN 'Foram encontradas ' || con.match_count || ' constraints compatíveis: [' || array_to_string(con.connames, ', ') || ']. Requer averiguação de duplicidade no banco.'
++      WHEN con.match_count > 1 THEN 'Foram encontradas ' || con.match_count::text || ' constraints compatíveis: [' || array_to_string(con.connames, ', ') || ']. Requer averiguação de duplicidade no banco.'
+       ELSE
+         'Nome real: ' || con.connames[1] ||
+         ' | Tipo: ' || CASE con.contypes[1] WHEN 'p' THEN 'PRIMARY KEY' WHEN 'f' THEN 'FOREIGN KEY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' ELSE con.contypes[1] END ||
+@@ -270,7 +270,7 @@
+     END::text AS status_catalogo,
+     CASE 
+       WHEN tf.tipo = 'TRIGGER' AND trg.tgname IS NOT NULL THEN
+-        'Trigger: ' || trg.tgname || ', Habilitado: ' || trg.tgenabled || ', Função disparada: ' || (SELECT proname FROM pg_proc WHERE oid = trg.tgfoid)
++        'Trigger: ' || trg.tgname::text || ', Habilitado: ' || (CASE trg.tgenabled WHEN 'O' THEN 'SIM (origin/default)' WHEN 'D' THEN 'NÃO (disabled)' WHEN 'R' THEN 'RÉPLICA' WHEN 'A' THEN 'SEMPRE' ELSE trg.tgenabled::text END) || ', Função disparada: ' || COALESCE((SELECT proname::text FROM pg_proc WHERE oid = trg.tgfoid), '<DESCONHECIDA>')
+       WHEN tf.tipo = 'FUNCTION' AND prc.proname IS NOT NULL THEN
+         'Função: ' || prc.proname || '(), Retorno: ' || format_type(prc.prorettype, NULL)
+       ELSE 'Objeto não encontrado'
+@@ -353,7 +353,7 @@
+     END::text AS status_catalogo,
+     CASE 
+       WHEN p.match_count = 0 THEN 'Política RLS não encontrada no catálogo'
+-      WHEN p.match_count > 1 THEN 'Foram encontradas ' || p.match_count || ' políticas homônimas no catálogo'
++      WHEN p.match_count > 1 THEN 'Foram encontradas ' || p.match_count::text || ' políticas homônimas no catálogo'
+       ELSE
+         'Cmd: ' || (CASE p.polcmds[1] WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' WHEN '*' THEN 'ALL' END) ||
+         ' (Esperado: ' || (CASE pol.expected_cmd WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' WHEN '*' THEN 'ALL' END) || ')' ||

@@ -1,0 +1,1 @@
+ALTER TABLE public.emissoras ADD COLUMN IF NOT EXISTS logo_url text;

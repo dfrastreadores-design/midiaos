@@ -1,0 +1,183 @@
+================================================================================
+  MIDIA OS v2.6.0 & MÓDULO PROSPECT FASE 1 — PACOTE DE IMPLANTAÇÃO STAGING
+================================================================================
+
+Este pacote contém os scripts SQL oficiais para a inicialização e homologação do
+Midia OS v2.6.0 e a instalação das 6 tabelas auxiliares do Prospect (Fase 1).
+
+--------------------------------------------------------------------------------
+1. IDENTIFICAÇÃO DOS AMBIENTES E VERIFICAÇÃO MANDATÓRIA
+--------------------------------------------------------------------------------
+
+[STAGING AUTORIZADO]
+- Project ID : wsologhmptielhhnbgob
+- URL        : https://wsologhmptielhhnbgob.supabase.co
+- Painel     : https://supabase.com/dashboard/project/wsologhmptielhhnbgob/sql
+
+[PRODUÇÃO BLOQUEADA — NUNCA EXECUTAR NESTE PROJETO]
+- Project ID : tvniawyweymutjiybxyo
+- URL        : https://midiaos.online
+- ATENÇÃO    : É expressamente proibido rodar qualquer comando neste ambiente.
+
+>> ANTES DE CLICAR EM "RUN", CONFIRME O PROJECT ID NO CANTO SUPERIOR ESQUERDO DO
+   PAINEL DO SUPABASE: ELE DEVE SER EXCLUSIVAMENTE "wsologhmptielhhnbgob".
+
+--------------------------------------------------------------------------------
+2. ORDEM RIGOROSA DE EXECUÇÃO
+--------------------------------------------------------------------------------
+
+Execute os cinco arquivos, um por vez, exatamente na seguinte ordem:
+
++-------+-------------------------------------------------------+-------------+
+| Etapa | Arquivo SQL                                           | Tipo        |
++-------+-------------------------------------------------------+-------------+
+| 1     | 01_midiaos_v260_core_schema.sql                       | DDL/DML     |
+| 2     | 02_midiaos_v260_post_migrations.sql                   | DDL/Hotfix  |
+| 3     | verificacao_sistema_completo.sql                      | Consulta    |
+| 4     | 20261101230000_modulo_prospect_fase1_seis_tabelas.sql | DDL/RLS     |
+| 5     | verificacao_fase1_prospect.sql                        | Consulta    |
++-------+-------------------------------------------------------+-------------+
+
+--------------------------------------------------------------------------------
+3. DETALHAMENTO DE CADA ETAPA E RESULTADOS ESPERADOS
+--------------------------------------------------------------------------------
+
+================================================================================
+ETAPA 1: 01_midiaos_v260_core_schema.sql (305 KB / ~7.121 linhas)
+================================================================================
+- O que faz:
+  Inicializa o schema-base do Midia OS reunindo as Migrations 1 a 152:
+  * Criação dos 12 tipos ENUM canônicos.
+  * Criação das tabelas core (tenants, profiles, user_roles, clientes, agencias,
+    propostas, proposta_itens, pis, pi_itens, briefings, produtos, auditoria).
+  * Criação de funções de segurança e RLS (current_tenant_id, is_admin).
+  * Inserção controlada do Tenant Raiz "TV Brasília" (ID: a711a129-330c-46bf-943a-531cedd4f2ff).
+  * Políticas RLS com zero privilégios indevidos ao papel 'anon'.
+
+- Resultado esperado no Supabase SQL Editor:
+  "Success. No rows returned" (execução concluída sem mensagens de erro).
+
+- Repetição:
+  NÃO repetir se retornar sucesso. Caso ocorra erro de interrupção no meio, o
+  script utiliza blocos idempotentes (IF NOT EXISTS), mas a reexecução parcial
+  deve ser precedida da análise da causa do erro.
+
+================================================================================
+ETAPA 2: 02_midiaos_v260_post_migrations.sql (304 KB / ~7.143 linhas)
+================================================================================
+- O que faz:
+  Aplica as evoluções das Migrations 153 a 208 e o Hotfix 211:
+  * Módulo Universal de Assinaturas Eletrônicas (assinaturas_documentos, hashes SHA-256).
+  * Hub Social Media (social_media_posts, métricas).
+  * Representação Comercial de Veículos e Parceiros (contratos, comissões).
+  * Geolocalização de Rotas e Inventário.
+  * Checking e Comprovação de Veiculação de PIs (pi_checking_events).
+  * Estratégias de IA de Mídia e Copiloto Comercial Gemini.
+  * Hotfix 211 integrado: Ajuste de RLS em produto_tipos (acesso a itens globais
+    com tenant_id NULL e inserção restrita ao tenant).
+
+- Resultado esperado no Supabase SQL Editor:
+  "Success. No rows returned" (execução concluída sem mensagens de erro).
+
+- Repetição:
+  NÃO repetir se retornar sucesso. O script é idempotente, porém não deve ser
+  executado em duplicidade sem necessidade.
+
+================================================================================
+ETAPA 3: verificacao_sistema_completo.sql (17 KB / Consulta SELECT)
+================================================================================
+- O que faz:
+  Audita 35 itens cruciais em 10 categorias: extensões, enums, tabelas core,
+  módulos v2.6.0, RLS ativado, volume de políticas, triggers/funções, índices,
+  segurança contra o papel anon e presença do tenant padrão.
+
+- Resultado esperado no Supabase SQL Editor:
+  Uma tabela com 4 colunas: categoria, item, status, detalhe.
+  TODAS as 35 linhas DEVEM apresentar a coluna status = 'APROVADO'.
+  Zero linhas com 'PENDENTE' ou 'REPROVADO'.
+
+- Se houver 'PENDENTE':
+  Verifique qual item falhou e reavalie os logs das Etapas 1 e 2 antes de avançar.
+  NÃO avance para a Etapa 4 enquanto houver itens 'PENDENTE'.
+
+================================================================================
+ETAPA 4: 20261101230000_modulo_prospect_fase1_seis_tabelas.sql (24 KB)
+================================================================================
+- O que faz:
+  Instala EXCLUSIVAMENTE as seis tabelas auxiliares do módulo Prospect Fase 1:
+  1. prospect_settings
+  2. prospect_searches
+  3. prospect_companies
+  4. prospect_campaigns
+  5. prospect_interactions
+  6. prospect_blocklist
+  * Habilita RLS em todas as seis tabelas.
+  * Aplica políticas do Modelo A (OWN): Executivos enxergam apenas seus próprios leads.
+  * Utiliza o papel canônico 'executivo'.
+  * Instala a RPC transferir_lead_carteira() com checagem de caller ativo (v_caller_ativo IS TRUE).
+  * Instala triggers de proteção contra adulteração de colunas restritas.
+  * Cria constraints de unicidade de opt-out e idempotência de interações/webhooks.
+  * ZERO alteração em tabelas-base do Midia OS e ZERO registro manual em schema_migrations.
+
+- Resultado esperado no Supabase SQL Editor:
+  "Success. No rows returned" (execução concluída sem mensagens de erro).
+
+- Repetição:
+  NÃO repetir automaticamente após concluída com sucesso.
+
+================================================================================
+ETAPA 5: verificacao_fase1_prospect.sql (10 KB / Consulta SELECT)
+================================================================================
+- O que faz:
+  Executa a auditoria conclusiva da Fase 1 do módulo Prospect:
+  * 6 tabelas auxiliares confirmadas.
+  * RLS ativo em 100% das 6 tabelas.
+  * Políticas de isolamento para executivos e administradores ativas.
+  * Triggers de proteção e RPC de transferência operacionais.
+  * Constraints de unicidade (CNPJ, Opt-Out, Idempotência de despacho e webhook).
+  * Chaves estrangeiras com tenants verificadas.
+  * Ausência de 7ª tabela (prospect_webhook_events não criada).
+
+- Resultado esperado no Supabase SQL Editor:
+  Uma tabela com colunas: categoria, item, status, detalhe.
+  TODAS as 22 linhas DEVEM apresentar status = 'APROVADO'.
+  Zero linhas com status 'PENDENTE' ou 'REPROVADO'.
+
+--------------------------------------------------------------------------------
+4. O QUE FAZER SE OCORRER ERRO
+--------------------------------------------------------------------------------
+
+1. Timeout no Editor do Supabase (Query Timeout):
+   - Os arquivos 01 e 02 possuem ~300 KB cada. Se a conexão de rede oscilar e o
+     navegador acusar timeout de interface, recarregue o editor e execute
+     a query de verificação (Etapa 3) para confirmar se os objetos foram criados.
+   - O PostgreSQL no Supabase aplica transações atômicas por comando ou bloco.
+
+2. Erro de sintaxe ou objeto já existente:
+   - Todos os arquivos utilizam "CREATE ... IF NOT EXISTS", "OR REPLACE" e
+     "DROP ... IF EXISTS", projetados para tolerar reexecução.
+   - Caso receba mensagem de erro específica, anote:
+     a) O código do erro (ex.: 42P07, 23505).
+     b) A linha informada no editor.
+     c) O nome do objeto em conflito.
+
+3. Falha na Etapa 3 ou Etapa 5:
+   - Se a Etapa 3 apontar 'PENDENTE', NÃO execute a Etapa 4.
+   - Se a Etapa 5 apontar 'PENDENTE', a Fase 1 precisará de ajuste cirúrgico antes
+     da homologação funcional.
+
+--------------------------------------------------------------------------------
+5. LIMITES OPERACIONAIS DE HOMOLOGAÇÃO
+--------------------------------------------------------------------------------
+
+Durante a homologação em Staging:
+- MODO HOMOLOGAÇÃO OBRIGATÓRIO: HOMOLOGACAO_MODE=true e HOMOLOGACAO_DADOS_FICTICIOS=true.
+- PROIBIDO disparar mensagens reais por WhatsApp (Z-API/Evolution) ou E-mail (SendGrid/Resend).
+- PROIBIDO rodar workers de disparo em background ou cron jobs de envio contínuo.
+- PROIBIDO deploy do código da aplicação em produção.
+- PROIBIDO avançar para a Fase 2 (disparos automáticos) antes da conclusão da homologação.
+
+================================================================================
+FIM DAS INSTRUÇÕES — PACOTE PRONTO PARA EXECUÇÃO
+================================================================================
+

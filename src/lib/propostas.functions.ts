@@ -52,6 +52,7 @@ const PropostaSchema = z.object({
   campanha: z.string().min(1).max(200),
   validade: z.string().nullable().optional(),
   observacao: z.string().max(2000).nullable().optional(),
+  publico_interesse: z.string().max(1000).nullable().optional(),
   status: z.enum(["rascunho", "enviada", "aprovada", "recusada", "convertida", "finalizada"]),
   valor_tabela: z.number(),
   valor_desconto: z.number(),
@@ -66,23 +67,42 @@ export const listPropostas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: roleRows } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+    const [{ data: userAuth }, { data: prof }, { data: roleRows }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id, role, is_superadmin")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+    ]);
 
-    const { data: userAuth } = await supabase.auth.getUser();
-    const isSuper = isMasterEmail(userAuth?.user?.email);
+    const isSuper =
+      isMasterEmail(userAuth?.user?.email) ||
+      prof?.is_superadmin === true ||
+      String(prof?.role).toUpperCase() === "MASTER";
+    const tenantId = prof?.tenant_id ?? null;
+
+    if (!isSuper && !tenantId) {
+      throw new Error("Acesso negado: Usuário sem empresa associada no servidor.");
+    }
+
+    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
     const hasBroadRole =
-      isSuper || roles.some((r: string) => ["admin", "diretoria", "super_admin"].includes(r));
+      isSuper ||
+      roles.some((r: string) =>
+        ["admin", "master_empresa", "diretoria", "super_admin"].includes(r),
+      );
 
     let query = supabase.from("propostas").select("*");
-    if (!hasBroadRole) {
-      // Executivo / Parceiro: restringe às propostas de sua autoria, atribuição ou parceria
-      query = query.or(
-        `executivo_id.eq.${userId},created_by.eq.${userId},executivo_parceiro_id.eq.${userId}`,
-      );
+    if (!isSuper) {
+      query = query.eq("tenant_id", tenantId);
+      if (!hasBroadRole) {
+        // Executivo / Parceiro: restringe às propostas de sua autoria, atribuição ou parceria
+        query = query.or(
+          `executivo_id.eq.${userId},created_by.eq.${userId},executivo_parceiro_id.eq.${userId}`,
+        );
+      }
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });
@@ -158,6 +178,44 @@ export const getProposta = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .single();
     if (error) throw new Error(error.message);
+
+    // Validação de segurança no servidor para visualização individual da proposta
+    const [{ data: userAuth }, { data: prof }, { data: roleRows }] = await Promise.all([
+      context.supabase.auth.getUser(),
+      context.supabase
+        .from("profiles")
+        .select("tenant_id, role, is_superadmin")
+        .eq("id", context.userId)
+        .maybeSingle(),
+      context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
+    ]);
+
+    const isMaster =
+      isMasterEmail(userAuth?.user?.email) ||
+      prof?.is_superadmin === true ||
+      String(prof?.role).toUpperCase() === "MASTER";
+    const tenantId = prof?.tenant_id ?? null;
+
+    if (!isMaster) {
+      if (prop.tenant_id && tenantId && prop.tenant_id !== tenantId) {
+        throw new Error("Acesso negado: Proposta pertence a outra organização.");
+      }
+
+      const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+      const hasBroadRole = roles.some((r: string) =>
+        ["admin", "master_empresa", "diretoria", "super_admin"].includes(r),
+      );
+
+      if (!hasBroadRole) {
+        const isAuthorOrAssigned =
+          prop.executivo_id === context.userId ||
+          prop.created_by === context.userId ||
+          (prop as any).executivo_parceiro_id === context.userId;
+        if (!isAuthorOrAssigned) {
+          throw new Error("Acesso negado: Proposta fora da sua carteira comercial autorizada.");
+        }
+      }
+    }
 
     // Obter dados da organização emissora da proposta (White-label Nexo vs Neutro)
     let org: any = null;
@@ -327,17 +385,72 @@ export const upsertProposta = createServerFn({ method: "POST" })
     await assertAnyRole(supabase as never, userId, ["admin", "executivo", "diretoria"]);
     const { itens, id, ...rest } = data;
     let propId = id;
+
+    // Obter perfil e papéis confiáveis do usuário
+    const [{ data: userAuth }, { data: prof }, { data: roleRows }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId),
+    ]);
+
+    const isMaster = isMasterEmail(userAuth?.user?.email);
+    const tenantId = prof?.tenant_id ?? null;
+    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+    const hasBroadRole =
+      isMaster ||
+      roles.some((r: string) =>
+        ["admin", "master_empresa", "diretoria", "super_admin"].includes(r),
+      );
+
+    if (!isMaster && !tenantId) {
+      throw new Error("Acesso negado: Usuário sem empresa associada no servidor.");
+    }
+
     if (propId) {
+      // 1. Validar tenant e titularidade antes de atualizar proposta existente
+      const { data: existente, error: fetchErr } = await supabase
+        .from("propostas")
+        .select("id, tenant_id, executivo_id, created_by")
+        .eq("id", propId)
+        .maybeSingle();
+
+      if (fetchErr) throw new Error(fetchErr.message);
+      if (!existente) throw new Error("Proposta não encontrada.");
+
+      if (!isMaster) {
+        if (existente.tenant_id && existente.tenant_id !== tenantId) {
+          throw new Error("Acesso negado: Proposta pertence a outra organização.");
+        }
+        if (!hasBroadRole) {
+          const isOwner =
+            existente.executivo_id === userId ||
+            existente.created_by === userId ||
+            (existente as any).executivo_parceiro_id === userId;
+          if (!isOwner) {
+            throw new Error("Acesso negado: Você não pode alterar uma proposta de outro executivo.");
+          }
+        }
+      }
+
       const { error } = await supabase
         .from("propostas")
-        .update(rest as never)
+        .update({ ...rest, ...(tenantId ? { tenant_id: tenantId } : {}) } as never)
         .eq("id", propId);
       if (error) throw new Error(error.message);
       await supabase.from("proposta_itens").delete().eq("proposta_id", propId);
     } else {
       const { data: created, error } = await supabase
         .from("propostas")
-        .insert({ ...rest, executivo_id: rest.executivo_id || userId, created_by: userId } as never)
+        .insert({
+          ...rest,
+          executivo_id: rest.executivo_id || userId,
+          created_by: userId,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+        } as never)
         .select("id, numero, briefing_id")
         .single();
       if (error) throw new Error(error.message);
@@ -391,6 +504,8 @@ export const upsertProposta = createServerFn({ method: "POST" })
     }
     return { id: propId };
   });
+
+export const saveProposta = upsertProposta;
 
 export const deleteProposta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Menu,
   CheckSquare,
+  ChevronDown,
   ChevronRight,
   BookOpen,
   Percent,
@@ -36,8 +37,15 @@ import {
   Smartphone,
   Tablet,
   Trash2,
+  MapPin,
+  Brain,
+  Bot,
+  Palette,
+  Layers,
+  Network,
+  Briefcase,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { InstallAppDialog } from "@/components/InstallAppDialog";
 import { AppDownloadBanner } from "@/components/AppDownloadBanner";
@@ -68,54 +76,93 @@ import { useActingAsExecutivo, setActingAsExecutivo } from "@/hooks/use-acting-a
 import { ImpersonateDialog } from "@/components/ImpersonateDialog";
 import { UserCheck } from "lucide-react";
 import logoMidiaOS from "@/assets/logo-midiaos.png";
+import { MasterCompanySelector } from "@/components/MasterCompanySelector";
 import { useTenantBranding } from "@/hooks/use-tenant-branding";
 import { useTenantModulos } from "@/hooks/use-tenant-modulos";
 import { useCurrentOrg } from "@/hooks/use-current-org";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { SessionExpiredDialog } from "@/components/SessionExpiredDialog";
-import { useQuery } from "@tanstack/react-query";
-import { getInicio } from "@/lib/inicio.functions";
 import { Badge } from "@/components/ui/badge";
 
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+export type NavCategoria =
+  | "Dashboard"
+  | "Comercial"
+  | "Planejamento"
+  | "Inventário"
+  | "Operação"
+  | "Financeiro"
+  | "Administração"
+  | "Ferramentas de IA";
+
+export const CATEGORIA_LABELS: Record<NavCategoria, string> = {
+  Dashboard: "🏠 Dashboard",
+  Comercial: "💼 Comercial",
+  Planejamento: "🎯 Planejamento",
+  Inventário: "📍 Inventário",
+  Operação: "⚙️ Operação",
+  Financeiro: "💰 Financeiro",
+  Administração: "🛠️ Administração",
+  "Ferramentas de IA": "✨ Ferramentas de IA",
+};
+
 const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, modulo: null },
-  { to: "/centralizadores", label: "Centralizadores & Planejadores", icon: Compass, modulo: "centralizadores" },
-  { to: "/owner", label: "Painel do Proprietário", icon: ShieldCheck, modulo: null },
-  { to: "/monitoramento", label: "Monitoramento", icon: Activity, modulo: null },
-  { to: "/crm", label: "Funil CRM", icon: KanbanSquare, modulo: "crm" },
-  { to: "/tarefas", label: "Tarefas", icon: CheckSquare, modulo: null },
-  { to: "/clientes", label: "Clientes", icon: Users, modulo: null },
-  { to: "/agencias", label: "Agências", icon: Building2, modulo: null },
-  { to: "/produtos", label: "Produtos", icon: Package, modulo: null },
-  { to: "/parceiros", label: "Parceiros de Mídia", icon: Handshake, modulo: null },
-  { to: "/pi", label: "Pedidos de Inserção", icon: FileText, modulo: "pi" },
-  { to: "/historico-veiculacao", label: "Histórico de Veiculação", icon: Radio, modulo: "pi" },
-  { to: "/propostas", label: "Propostas", icon: FileText, modulo: "propostas" },
-  { to: "/contratos", label: "Contratos", icon: FileSignature, modulo: null },
-  { to: "/assinaturas", label: "Central de Assinaturas", icon: FileSignature, modulo: "assinaturas" },
-  // { to: "/briefings", label: "Briefing de Proposta", icon: FileText, modulo: "briefings" },
+  // 🏠 Dashboard
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, modulo: null, categoria: "Dashboard" as const },
+  { to: "/owner", label: "Painel do Proprietário", icon: ShieldCheck, modulo: null, categoria: "Dashboard" as const },
+  { to: "/monitoramento", label: "Monitoramento", icon: Activity, modulo: null, categoria: "Dashboard" as const },
 
-  { to: "/financeiro", label: "Financeiro", icon: Wallet, modulo: "financeiro" },
-  { to: "/comissoes", label: "Comissões", icon: Percent, modulo: "comissoes" },
-  { to: "/relatorios", label: "Relatórios", icon: BarChart3, modulo: "relatorios" },
-  { to: "/materiais-apoio", label: "Material de Apoio", icon: FolderOpen, modulo: null },
-  { to: "/landing-pages", label: "Landing Pages", icon: FileSignature, modulo: "landing_pages" },
-  { to: "/influenciadores", label: "Influenciadores", icon: Sparkles, modulo: "influenciadores" },
-  { to: "/social-media", label: "Redes Sociais & Tráfego", icon: Share2, modulo: null },
-  { to: "/usuarios", label: "Usuários", icon: ShieldCheck, modulo: null },
-  { to: "/relatorio-sincronizacao", label: "Sincronização CNPJ", icon: RefreshCw, modulo: null },
-  { to: "/layouts", label: "Layouts (PI/Propostas)", icon: Settings, modulo: null },
-  { to: "/configuracoes", label: "Configurações", icon: Settings, modulo: null },
-  { to: "/lixeira", label: "Lixeira", icon: Trash2, modulo: null },
+  // 💼 Comercial
+  { to: "/clientes", label: "Clientes", icon: Users, modulo: null, categoria: "Comercial" as const },
+  { to: "/agencias", label: "Agências", icon: Building2, modulo: null, categoria: "Comercial" as const },
+  { to: "/propostas", label: "Propostas Comerciais", icon: FileText, modulo: "propostas", categoria: "Comercial" as const },
+  { to: "/crm", label: "CRM", icon: KanbanSquare, modulo: "crm", categoria: "Comercial" as const },
 
-  { to: "/documentacao", label: "Manual do Sistema", icon: BookOpen, modulo: null },
+  // 🎯 Planejamento
+  { to: "/planejamento", label: "Campanhas", icon: Compass, modulo: null, categoria: "Planejamento" as const },
+  { to: "/nova-campanha", label: "Criar Campanha", icon: Sparkles, modulo: null, categoria: "Planejamento" as const },
+  { to: "/centralizadores", label: "Estratégias & Metas", icon: Target, modulo: "centralizadores", categoria: "Planejamento" as const },
+
+  // 📍 Inventário
+  { to: "/produtos", label: "Produtos & Pontos", icon: Package, modulo: null, categoria: "Inventário" as const },
+  { to: "/rede-inventario", label: "Circuitos & Rede", icon: Network, modulo: null, categoria: "Inventário" as const },
+  { to: "/parceiros", label: "Parceiros & Veículos", icon: Handshake, modulo: null, categoria: "Inventário" as const },
+
+  // ⚙️ Operação
+  { to: "/pi", label: "Pedidos de Inserção (PI)", icon: FileText, modulo: "pi", categoria: "Operação" as const },
+  { to: "/pi?tab=checking", label: "Checking & Comprovação", icon: CheckSquare, modulo: "pi", categoria: "Operação" as const },
+  { to: "/contratos", label: "Contratos", icon: FileSignature, modulo: null, categoria: "Operação" as const },
+  { to: "/historico-veiculacao", label: "Veiculação", icon: Radio, modulo: "pi", categoria: "Operação" as const },
+  { to: "/assinaturas", label: "Central de Assinaturas", icon: FileSignature, modulo: "assinaturas", categoria: "Operação" as const },
+
+  // 💰 Financeiro
+  { to: "/financeiro", label: "Faturamento", icon: Wallet, modulo: "financeiro", categoria: "Financeiro" as const },
+  { to: "/comissoes", label: "Comissões", icon: Percent, modulo: "comissoes", categoria: "Financeiro" as const },
+  { to: "/financeiro?tab=dre", label: "DRE Gerencial", icon: BarChart3, modulo: "financeiro", categoria: "Financeiro" as const },
+  { to: "/relatorios", label: "Relatórios", icon: BarChart3, modulo: "relatorios", categoria: "Financeiro" as const },
+
+  // 🛠️ Administração
+  { to: "/usuarios", label: "Usuários", icon: ShieldCheck, modulo: null, categoria: "Administração" as const },
+  { to: "/usuarios?tab=permissoes", label: "Permissões", icon: ShieldCheck, modulo: null, categoria: "Administração" as const },
+  { to: "/configuracoes?tab=branding", label: "White Label", icon: Palette, modulo: null, categoria: "Administração" as const },
+  { to: "/configuracoes", label: "Configurações", icon: Settings, modulo: null, categoria: "Administração" as const },
+  { to: "/lixeira", label: "Lixeira", icon: Trash2, modulo: null, categoria: "Administração" as const },
+  { to: "/documentacao", label: "Apresentação & Manual", icon: BookOpen, modulo: null, categoria: "Administração" as const },
+
+  // ✨ Ferramentas de IA
+  { to: "/copiloto-comercial", label: "Mídia.OS Intelligence", icon: Brain, modulo: null, categoria: "Ferramentas de IA" as const },
+  { to: "/ooh-intelligence", label: "OOH Intelligence", icon: Compass, modulo: null, categoria: "Ferramentas de IA" as const },
+  { to: "/sales-copilot", label: "Sales Copilot", icon: Briefcase, modulo: null, categoria: "Ferramentas de IA" as const },
+  { to: "/centralizadores?tab=ia", label: "Planejamento com IA", icon: Sparkles, modulo: "centralizadores", categoria: "Ferramentas de IA" as const },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <AuthGuard>
-      <AppShellInner>{children}</AppShellInner>
-    </AuthGuard>
+    <ErrorBoundary>
+      <AuthGuard>
+        <AppShellInner>{children}</AppShellInner>
+      </AuthGuard>
+    </ErrorBoundary>
   );
 }
 
@@ -125,6 +172,12 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const { can, loading: rolesLoading, isSuperAdmin, isAdmin } = useUserRoles();
   const actingAs = useActingAsExecutivo();
   const [impersonateOpen, setImpersonateOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [installDialogOpen, setInstallDialogOpen] = useState(false);
+  const { logoSrc: tenantLogo, nome: tenantNome } = useTenantBranding();
+  const { isNexo, nome: orgNome, siteUrl: orgSiteUrl } = useCurrentOrg();
+  const { hasModulo } = useTenantModulos();
+
   const displayName =
     (user?.user_metadata?.nome as string) || user?.email?.split("@")[0] || "Usuário";
   const initials = displayName
@@ -133,34 +186,95 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const { data: inicioData } = useQuery({
-    queryKey: ["inicio"],
-    queryFn: () => getInicio(),
-    staleTime: 5 * 60_000,
-  });
-  const { hasModulo } = useTenantModulos();
-  const visibleNav = nav
-    .filter((item) => {
-      if (item.to === "/lixeira") return isAdmin;
-      const canAccess = can(item.to);
-      const hasMod = item.modulo == null || hasModulo(item.modulo);
-      return canAccess && hasMod;
-    })
-    .map((item) => {
-      if (isNexo) {
-        if (item.to === "/produtos") {
-          return { ...item, label: "Soluções Próprias & Parceiros" };
+
+  const visibleNav = useMemo(() => {
+    return nav
+      .filter((item) => {
+        const basePath = item.to.split("?")[0];
+        if (basePath === "/owner" || basePath === "/monitoramento") return isSuperAdmin;
+        if (basePath === "/lixeira") return isAdmin;
+        const canAccess = can(basePath);
+        const hasMod = item.modulo == null || hasModulo(item.modulo);
+        return canAccess && hasMod;
+      })
+      .map((item) => {
+        if (isNexo) {
+          if (item.to === "/produtos") {
+            return { ...item, label: "Soluções Próprias & Parceiros" };
+          }
+          if (item.to === "/centralizadores") {
+            return { ...item, label: "Planejamento 360° & Radar DF" };
+          }
         }
-        if (item.to === "/centralizadores") {
-          return { ...item, label: "Planejamento 360° & Radar DF" };
-        }
+        return item;
+      });
+  }, [can, hasModulo, isAdmin, isSuperAdmin, isNexo]);
+
+  const navSections = useMemo(() => {
+    const list: { title: NavCategoria; items: typeof visibleNav }[] = [];
+    for (const item of visibleNav) {
+      let group = list.find((g) => g.title === item.categoria);
+      if (!group) {
+        group = { title: item.categoria, items: [] };
+        list.push(group);
       }
-      return item;
-    });
-  const matchedNavItem = nav.find(
-    (item) =>
-      item.to === location.pathname || (item.to !== "/" && location.pathname.startsWith(item.to)),
-  );
+      group.items.push(item);
+    }
+    return list;
+  }, [visibleNav]);
+
+  const isItemActive = (to: string) => {
+    // Normalização defensiva: TanStack Router pode expor search como objeto (Record<string, unknown>)
+    // ou searchStr como string. Tratamos todos os formatos com segurança.
+    const rawSearch = (location as any)?.searchStr ?? location?.search;
+    let searchString = "";
+    if (typeof rawSearch === "string") {
+      searchString = rawSearch.startsWith("?") ? rawSearch.slice(1) : rawSearch;
+    } else if (rawSearch && typeof rawSearch === "object") {
+      try {
+        searchString = new URLSearchParams(rawSearch as Record<string, string>).toString();
+      } catch {
+        searchString = "";
+      }
+    } else if (typeof window !== "undefined" && window.location?.search) {
+      searchString = window.location.search.startsWith("?")
+        ? window.location.search.slice(1)
+        : window.location.search;
+    }
+
+    if (to === "/") {
+      return location.pathname === "/" && !searchString;
+    }
+    if (to.includes("?")) {
+      const [path, search] = to.split("?");
+      if (location.pathname !== path) return false;
+      const params = new URLSearchParams(search);
+      const currentParams = new URLSearchParams(searchString);
+      for (const [key, val] of params.entries()) {
+        if (currentParams.get(key) !== val) return false;
+      }
+      return true;
+    }
+    if (location.pathname === to) {
+      const hasSpecificQueryMatch = nav.some(
+        (other) =>
+          other.to.includes("?") &&
+          other.to.startsWith(to + "?") &&
+          searchString.includes(other.to.split("?")[1]),
+      );
+      if (hasSpecificQueryMatch) return false;
+      return true;
+    }
+    return location.pathname.startsWith(to + "/");
+  };
+
+  const matchedNavItem = nav.find((item) => {
+    const basePath = item.to.split("?")[0];
+    return (
+      basePath === location.pathname ||
+      (basePath !== "/" && location.pathname.startsWith(basePath))
+    );
+  });
 
   const blocked =
     !rolesLoading &&
@@ -168,13 +282,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
       (location.pathname.startsWith("/owner") || location.pathname.startsWith("/monitoramento"))) ||
       !can(location.pathname) ||
       (matchedNavItem
-        ? !can(matchedNavItem.to) ||
+        ? !can(matchedNavItem.to.split("?")[0]) ||
           (matchedNavItem.modulo != null && !hasModulo(matchedNavItem.modulo))
         : false));
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [installDialogOpen, setInstallDialogOpen] = useState(false);
-  const { logoSrc: tenantLogo, nome: tenantNome } = useTenantBranding();
-  const { isNexo, nome: orgNome, siteUrl: orgSiteUrl } = useCurrentOrg();
+
   const brandLogo = tenantLogo ?? logoMidiaOS;
   const brandAlt = tenantNome ?? "mídia.OS";
 
@@ -216,51 +327,58 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                   {tenantNome || (
                     <>
                       Mídia<span className="text-gold">.</span>OS
+                      <Badge className="text-[9px] bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white border-none py-0 px-1 ml-1 font-bold">
+                        4.0
+                      </Badge>
                     </>
                   )}
                 </div>
-                <div className="text-[10px] uppercase tracking-widest font-bold text-sidebar/40 truncate">
-                  {isSuperAdmin
-                    ? "👑 Gestão Global"
-                    : tenantNome
-                      ? "Espaço da Empresa"
-                      : "Premium Suite"}
+                <div className="text-[10px] uppercase tracking-widest font-bold text-sidebar/50 truncate flex items-center gap-1">
+                  <Sparkles className="size-2.5 text-purple-600 animate-pulse" />
+                  <span>AI Media Operating System</span>
                 </div>
               </>
             )}
           </div>
         </div>
 
-        <nav className="flex-1 px-4 py-8 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-border/50">
-          {visibleNav.map((item) => {
-            const active =
-              location.pathname === item.to ||
-              (item.to !== "/" && location.pathname.startsWith(item.to));
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "group flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-300 relative overflow-hidden",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-primary shadow-sm"
-                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "size-4.5 transition-transform duration-300 group-hover:scale-110",
-                    active
-                      ? "text-sidebar-primary"
-                      : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70",
-                  )}
-                />
-                <span className="flex-1">{item.label}</span>
-                {active && <ChevronRight className="size-3 text-sidebar-primary/50" />}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto scrollbar-thin scrollbar-thumb-sidebar-border/50">
+          {navSections.map((section) => (
+            <div key={section.title} className="space-y-1">
+              <div className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-sidebar-foreground/45 select-none">
+                {CATEGORIA_LABELS[section.title] ?? section.title}
+              </div>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const active = isItemActive(item.to);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "group flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 relative overflow-hidden",
+                        active
+                          ? "bg-sidebar-accent text-sidebar-primary shadow-xs font-bold"
+                          : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "size-4 shrink-0 transition-transform duration-200 group-hover:scale-105",
+                          active
+                            ? "text-sidebar-primary"
+                            : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/75",
+                        )}
+                      />
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {active && <ChevronRight className="size-3 text-sidebar-primary/60 shrink-0" />}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Promo card: App Mobile Android & iOS */}
@@ -377,7 +495,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
 
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 bg-background/50 relative">
-        <header className="sticky top-0 z-30 pt-[max(var(--sat),0px)] bg-background/85 backdrop-blur-xl border-b border-border/40 px-3 sm:px-6 lg:px-10 flex items-center justify-between gap-2 min-h-[3.75rem] lg:h-20 transition-all">
+        <header className="sticky top-0 z-30 pt-[max(var(--sat),0px)] bg-background/90 backdrop-blur-xl border-b border-border/50 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 h-16 transition-all">
           <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
               <SheetTrigger asChild>
@@ -420,35 +538,42 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
 
-                <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin overscroll-contain">
-                  {visibleNav.map((item) => {
-                    const active =
-                      location.pathname === item.to ||
-                      (item.to !== "/" && location.pathname.startsWith(item.to));
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => setMobileNavOpen(false)}
-                        className={cn(
-                          "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 min-h-[44px]",
-                          active
-                            ? "bg-sidebar-accent text-sidebar-primary shadow-sm font-bold"
-                            : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
-                        )}
-                      >
-                        <Icon
-                          className={cn(
-                            "size-4.5 shrink-0",
-                            active ? "text-sidebar-primary" : "text-sidebar-foreground/50",
-                          )}
-                        />
-                        <span className="flex-1 truncate">{item.label}</span>
-                        {active && <span className="size-1.5 rounded-full bg-primary" />}
-                      </Link>
-                    );
-                  })}
+                <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto scrollbar-thin overscroll-contain">
+                  {navSections.map((section) => (
+                    <div key={section.title} className="space-y-1">
+                      <div className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-sidebar-foreground/45 select-none">
+                        {CATEGORIA_LABELS[section.title] ?? section.title}
+                      </div>
+                      <div className="space-y-0.5">
+                        {section.items.map((item) => {
+                          const active = isItemActive(item.to);
+                          const Icon = item.icon;
+                          return (
+                            <Link
+                              key={item.to}
+                              to={item.to}
+                              onClick={() => setMobileNavOpen(false)}
+                              className={cn(
+                                "group flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 min-h-[38px]",
+                                active
+                                  ? "bg-sidebar-accent text-sidebar-primary shadow-xs font-bold"
+                                  : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/40",
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  "size-4 shrink-0",
+                                  active ? "text-sidebar-primary" : "text-sidebar-foreground/50",
+                                )}
+                              />
+                              <span className="flex-1 truncate">{item.label}</span>
+                              {active && <span className="size-1.5 rounded-full bg-primary" />}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </nav>
 
                 <div className="p-6 border-t border-sidebar-border/30 bg-sidebar/30 backdrop-blur-sm">
@@ -503,156 +628,150 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
             <div className="lg:hidden flex items-center gap-2 min-w-0">
-              <img src={brandLogo} alt={brandAlt} className="h-7 w-auto shrink-0 object-contain" />
+              <img src={brandLogo} alt={brandAlt} className="h-6 w-auto shrink-0 object-contain" />
               <div className="flex flex-col min-w-0">
-                <span className="font-display font-bold text-xs sm:text-sm truncate">
+                <span className="font-display font-bold text-xs truncate">
                   {isNexo ? "NEXO Mídia" : "Mídia.OS"}
                 </span>
-                {isNexo ? (
-                  <span className="text-[9px] text-sky-600 font-semibold truncate hidden sm:inline">
-                    Hub de Negócios 360°
-                  </span>
-                ) : (
-                  <span className="text-[9px] text-muted-foreground font-medium truncate hidden sm:inline">
-                    Inteligência Comercial
-                  </span>
-                )}
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {matchedNavItem?.label || "Painel"}
+                </span>
               </div>
             </div>
-            <div className="hidden lg:flex items-center gap-3">
-              <div className="h-5 w-1 bg-gold/30 rounded-full" />
-              {isNexo ? (
-                <div className="flex items-center gap-2.5">
-                  <a
-                    href={orgSiteUrl || "https://nexomidiaerepresentacao.com.br"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 hover:opacity-85 transition-opacity"
-                    title="Visitar Nexo Mídia e Representação (nexomidiaerepresentacao.com.br)"
-                  >
-                    <span className="text-sm font-bold text-foreground tracking-tight">
-                      NEXO Mídia e Representação
-                    </span>
-                    <span className="text-muted-foreground/40 font-normal">|</span>
-                    <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
-                      Hub de Negócios & Soluções Estratégicas em Mídia
-                    </span>
-                  </a>
-                  <Badge
-                    variant="outline"
-                    className="bg-sky-500/10 text-sky-600 border-sky-500/30 text-[10px] px-2 py-0.5 font-bold"
-                  >
-                    DF & Entorno
-                  </Badge>
-                  <span className="hidden xl:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700">
-                    Mídia.OS • Plataforma Oficial de Inteligência Comercial
-                  </span>
-                </div>
-              ) : (
-                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 select-none">
-                  {tenantNome ? `Empresa: ${tenantNome}` : "Comercial Engine"}
-                </h2>
-              )}
+
+            {/* Desktop Clean Breadcrumb */}
+            <div className="hidden lg:flex items-center gap-2 min-w-0">
+              <span className="text-xs font-medium text-muted-foreground">
+                {matchedNavItem?.categoria || "Sistema"}
+              </span>
+              <ChevronRight className="size-3 text-muted-foreground/40 shrink-0" />
+              <h1 className="text-sm font-bold text-foreground tracking-tight truncate">
+                {matchedNavItem?.label || (isNexo ? "NEXO Mídia e Representação" : "Painel")}
+              </h1>
               {isSuperAdmin && (
-                <Badge
-                  variant="outline"
-                  className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs px-2.5 py-0.5 font-bold flex items-center gap-1"
-                >
-                  👑 Super Admin Global
-                </Badge>
+                <div className="ml-2 pl-2 border-l border-border/60">
+                  <MasterCompanySelector />
+                </div>
               )}
             </div>
-            {(() => {
-              const now = new Date();
-              const h = now.getHours();
-              const saud = h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
-              const dataFmt = now.toLocaleDateString("pt-BR", {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              });
-              return (
-                <div className="hidden md:flex flex-col leading-tight ml-2 min-w-0">
-                  <span className="text-xs font-semibold text-foreground truncate">
-                    {saud}, {displayName.split(" ")[0]}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground/70 capitalize truncate">
-                    {dataFmt}
-                  </span>
-                </div>
-              );
-            })()}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 shrink-0">
-            <div className="hidden sm:block flex-1">
-              <GlobalSearch />
-            </div>
-            <div className="h-6 w-px bg-border/40 mx-1 hidden sm:block" />
+          {/* Busca Global Centralizada */}
+          <div className="hidden md:flex flex-1 max-w-sm lg:max-w-md mx-auto">
+            <GlobalSearch />
+          </div>
 
-            {/* Botão Baixar App / Instalar */}
+          {/* Ações da Direita */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Link Manual / Documentação */}
             <Button
-              type="button"
-              variant="outline"
+              asChild
+              variant="ghost"
               size="sm"
-              onClick={() => setInstallDialogOpen(true)}
-              className="h-9 px-2.5 sm:px-3 rounded-xl border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all shrink-0"
-              title="Instalar App Mídia.OS no Android ou iOS (iPhone)"
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-lg gap-1.5 hidden xl:inline-flex"
             >
-              <Smartphone className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="hidden sm:inline">App Android & iOS</span>
-              <span className="sm:hidden text-[11px] font-bold">App</span>
-              <span className="hidden md:inline-flex text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-600 text-white font-extrabold uppercase tracking-wider">
-                Instalar
-              </span>
+              <Link to="/documentacao" title="Manual e Apresentação do Sistema">
+                <BookOpen className="size-3.5 text-sky-600 dark:text-sky-400" />
+                <span>Manual</span>
+              </Link>
             </Button>
 
+            {/* Botão App Mobile */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setInstallDialogOpen(true)}
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground rounded-lg gap-1.5 hidden xl:inline-flex"
+              title="Instalar App no Celular ou Tablet"
+            >
+              <Smartphone className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>App Mobile</span>
+            </Button>
+
+            {/* Notificações */}
             <NotificacoesBell />
-            <div className="h-6 w-px bg-border/40 mx-1 hidden sm:block" />
-            <HoverCard openDelay={150} closeDelay={100}>
-              <HoverCardTrigger asChild>
-                <Link
-                  to="/minha-conta"
-                  className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
+
+            <div className="h-5 w-px bg-border/60 mx-1 hidden sm:block" />
+
+            {/* Perfil do Usuário com Dropdown profissional */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 p-1 pl-1.5 rounded-xl hover:bg-muted/60 transition-colors outline-hidden cursor-pointer"
                 >
-                  <Avatar className="size-8 shadow-sm border border-border/40">
-                    <AvatarFallback className="bg-gold text-white font-bold text-[11px]">
+                  <Avatar className="size-8 border border-border/60 shadow-2xs">
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="hidden sm:block text-right min-w-0 max-w-[180px]">
-                    <div className="text-xs font-bold truncate leading-tight">{displayName}</div>
-                    <div className="text-[10px] text-muted-foreground truncate leading-tight">
-                      {user?.email}
-                    </div>
+                  <div className="hidden sm:flex flex-col min-w-0 max-w-[120px] text-left leading-none">
+                    <span className="text-xs font-semibold text-foreground truncate">{displayName.split(" ")[0]}</span>
+                    <span className="text-[10px] text-muted-foreground truncate mt-0.5">{tenantNome || "Nexo Mídia"}</span>
                   </div>
-                </Link>
-              </HoverCardTrigger>
-              <HoverCardContent align="end" className="w-72">
-                <div className="space-y-2">
-                  <div className="text-xs uppercase tracking-wider text-primary font-medium flex items-center gap-1.5">
-                    <Sparkles className="size-3.5" /> Mensagem do dia
-                  </div>
-                  <p className="text-sm italic text-muted-foreground leading-relaxed">
-                    {inicioData?.frase ?? "Carregando…"}
-                  </p>
-                  <div className="pt-2 border-t border-border/40 space-y-2">
-                    <div>
-                      <div className="text-xs font-semibold truncate">{displayName}</div>
-                      <div className="text-[10px] text-muted-foreground truncate">{user?.email}</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setInstallDialogOpen(true)}
-                      className="w-full text-left text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5 py-1 px-1.5 rounded-lg hover:bg-emerald-500/10 transition-colors"
-                    >
-                      <Smartphone className="size-3.5" /> Baixar App no Android / iOS
-                    </button>
-                  </div>
+                  <ChevronDown className="size-3 text-muted-foreground/60 hidden sm:block" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-1.5 rounded-xl shadow-lg border border-border/80">
+                <div className="px-2.5 py-2">
+                  <p className="text-xs font-bold text-foreground truncate">{displayName}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{user?.email}</p>
                 </div>
-              </HoverCardContent>
-            </HoverCard>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                  <Link to="/minha-conta" className="flex items-center gap-2">
+                    <UserCog className="size-4 text-muted-foreground" />
+                    <span>Meu Perfil</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setInstallDialogOpen(true)}
+                  className="rounded-lg cursor-pointer flex items-center gap-2"
+                >
+                  <Smartphone className="size-4 text-emerald-600" />
+                  <span>Instalar App Mobile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                  <Link to="/documentacao" className="flex items-center gap-2">
+                    <BookOpen className="size-4 text-sky-600" />
+                    <span>Manual & Documentação</span>
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setImpersonateOpen(true)}
+                      className="rounded-lg cursor-pointer flex items-center gap-2"
+                    >
+                      <UserCheck className="size-4 text-muted-foreground" />
+                      <span>Trocar de Perfil</span>
+                    </DropdownMenuItem>
+                    {actingAs && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setActingAsExecutivo(null);
+                          window.location.reload();
+                        }}
+                        className="rounded-lg cursor-pointer flex items-center gap-2 text-amber-700"
+                      >
+                        <UserCheck className="size-4" />
+                        <span>Sair do modo "atuar como"</span>
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => signOut()}
+                  className="rounded-lg cursor-pointer flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                  <LogOut className="size-4" />
+                  <span>Sair do Sistema</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <div className="sm:hidden px-3 py-2 border-b border-border/40 bg-background/60 backdrop-blur-xl">

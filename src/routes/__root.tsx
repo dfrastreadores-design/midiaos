@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { GlobalSpotlightCommand } from "@/components/GlobalSpotlightCommand";
 
 import appCss from "../styles.css?url";
 
@@ -321,19 +322,46 @@ function RootComponent() {
         if (isChunkErr(msg)) tryReload();
       });
 
-      // Registra o Service Worker para suporte a PWA (instalação no celular, tablet e computador)
+      // Registra o Service Worker para suporte a PWA com cache-busting ativo
       if (
         ("serviceWorker" in navigator && window.location.protocol === "https:") ||
         window.location.hostname === "localhost"
       ) {
+        const swUrl = `/sw.js?v=midiaos-v8-20261013`;
         navigator.serviceWorker
-          .register("/sw.js")
+          .register(swUrl, { updateViaCache: "none" })
           .then((reg) => {
             console.log("Mídia.OS PWA Service Worker registrado:", reg.scope);
+
+            // Força verificação imediata de atualizações no servidor
+            reg.update().catch(() => {});
+
+            // Se um novo worker for detectado, envia sinal para ativação imediata
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing;
+              if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+                    console.log("[PWA] Nova versão disponível. Ativando imediatamente...");
+                    installingWorker.postMessage({ type: "SKIP_WAITING" });
+                  }
+                };
+              }
+            };
           })
           .catch((err) => {
             console.warn("Falha ao registrar Service Worker PWA:", err);
           });
+
+        // Quando o controller mudar após o skipWaiting, recarrega limpo uma única vez
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            console.log("[PWA] Controller atualizado. Sincronizando sessão...");
+            window.location.reload();
+          }
+        });
       }
     }
   }
@@ -341,6 +369,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <GlobalSpotlightCommand />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );

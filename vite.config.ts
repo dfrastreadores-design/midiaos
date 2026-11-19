@@ -17,7 +17,7 @@ export default defineConfig({
   },
   vite: {
     build: {
-      sourcemap: true,
+      sourcemap: false,
     },
   },
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -36,8 +36,22 @@ import {
   Facebook,
   AlertCircle,
   Sparkles,
+  Upload,
+  Trash2,
+  Image as ImageIcon,
+  FileSpreadsheet,
+  FileText,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { LogoImg } from "@/components/LogoImg";
+import {
+  TIPOS_VEICULO_LIST,
+  STATUS_PARTNER_CONFIG,
+  PERFIS_COMERCIAIS,
+  type PerfilComercialEntidade,
+} from "@/types/representacao-comercial.types";
 import {
   upsertParceiro,
   SEGMENTOS_MIDIA,
@@ -45,15 +59,25 @@ import {
   type Parceiro,
 } from "@/lib/parceiros.functions";
 import { enriquecerParceiroPorUrl } from "@/lib/parceiro-scraper.functions";
-import { fetchCnpj, formatCNPJ, onlyDigits } from "@/lib/cnpj";
+import { fetchCnpj, fetchCpfCnpj, formatCNPJ, formatCpfCnpj, onlyDigits } from "@/lib/cnpj";
 import { lookupCep, formatCEP } from "@/lib/geocode.functions";
 import { traduzirErro } from "@/lib/error-translator";
+import { cn } from "@/lib/utils";
 import {
   FormFieldError,
   errorLabelClass,
   errorInputClass,
   scrollToFirstError,
 } from "@/lib/form-errors";
+import { ModalPreviewImportacaoMidiaKit } from "@/components/parceiros/ModalPreviewImportacaoMidiaKit";
+import { processarArquivoImportacao } from "@/lib/documento-importer";
+import {
+  extrairProdutosDeMidiaKit,
+  salvarProdutosExtraidosMidiaKit,
+  type ResultadoExtracaoMidiaKit,
+  type ProdutoExtraidoMidiaKit,
+  type RegraDescontoExtraida,
+} from "@/lib/midia-kit-ai.functions";
 
 type Props = {
   open: boolean;
@@ -73,13 +97,25 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
   const [enriching, setEnriching] = useState(false);
   const [customSegmento, setCustomSegmento] = useState("");
 
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [wasValidated, setWasValidated] = useState(false);
+
+  // Estados de Importação Inteligente de Mídia Kit (Excel / PDF)
+  const fileMidiaKitRef = useRef<HTMLInputElement>(null);
+  const [processingFile, setProcessingFile] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [resultadoExtracao, setResultadoExtracao] = useState<ResultadoExtracaoMidiaKit | null>(null);
+  const [savingImport, setSavingImport] = useState(false);
 
   const [form, setForm] = useState<Partial<Parceiro>>({
     razao_social: "",
     nome_fantasia: "",
     cnpj: "",
+    logo_url: "",
+    tipo_veiculo: "Painel OOH/DOOH",
+    status: "ativo",
+    comissao_padrao_percentual: 20.0,
     site: "",
     instagram: "",
     linkedin: "",
@@ -100,42 +136,260 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
     cep: "",
     observacoes: "",
     ativo: true,
+    media_kit_defenses: [],
+    commercial_discounts_rules: [],
   });
 
   useEffect(() => {
     if (open) {
       setErrors({});
       setWasValidated(false);
+      setResultadoExtracao(null);
+      setPreviewModalOpen(false);
       setForm(
-        initial || {
-          razao_social: "",
-          nome_fantasia: "",
-          cnpj: "",
-          site: "",
-          instagram: "",
-          linkedin: "",
-          facebook: "",
-          segmentos: [],
-          modelo_remuneracao: "comissao_percentual",
-          comissao_padrao_pct: 20.0,
-          prazo_repasse: "30 dias após emissão da fatura",
-          condicoes_comerciais: "",
-          contato_nome: "",
-          contato_email: "",
-          contato_telefone: "",
-          chave_pix: "",
-          dados_bancarios: "",
-          endereco: "",
-          cidade: "",
-          uf: "",
-          cep: "",
-          observacoes: "",
-          ativo: true,
-        },
+        initial
+          ? {
+              ...initial,
+              logo_url: initial.logo_url ?? "",
+              tipo_veiculo: initial.tipo_veiculo ?? "Painel OOH/DOOH",
+              perfil_comercial: (initial.perfil_comercial as any) ?? "VEICULO_EXIBIDOR",
+              status: initial.status ?? (initial.ativo === false ? "inativo" : "ativo"),
+              comissao_padrao_percentual:
+                initial.comissao_padrao_percentual ?? initial.comissao_padrao_pct ?? 20.0,
+              comissao_padrao_pct:
+                initial.comissao_padrao_pct ?? initial.comissao_padrao_percentual ?? 20.0,
+              media_kit_defenses: initial.media_kit_defenses ?? [],
+              commercial_discounts_rules: initial.commercial_discounts_rules ?? [],
+              allows_circuit_bundles: initial.allows_circuit_bundles ?? false,
+            }
+          : {
+              razao_social: "",
+              nome_fantasia: "",
+              cnpj: "",
+              logo_url: "",
+              tipo_veiculo: "Painel OOH/DOOH",
+              perfil_comercial: "VEICULO_EXIBIDOR",
+              status: "ativo",
+              comissao_padrao_percentual: 20.0,
+              site: "",
+              instagram: "",
+              linkedin: "",
+              facebook: "",
+              segmentos: [],
+              modelo_remuneracao: "comissao_percentual",
+              comissao_padrao_pct: 20.0,
+              prazo_repasse: "30 dias após emissão da fatura",
+              condicoes_comerciais: "",
+              contato_nome: "",
+              contato_email: "",
+              contato_telefone: "",
+              chave_pix: "",
+              dados_bancarios: "",
+              endereco: "",
+              cidade: "",
+              uf: "",
+              cep: "",
+              observacoes: "",
+              ativo: true,
+              allows_circuit_bundles: false,
+              media_kit_defenses: [],
+              commercial_discounts_rules: [],
+            },
       );
       setCustomSegmento("");
     }
   }, [open, initial]);
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("O arquivo de logo deve ter no máximo 5MB");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `partner_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+      let bucket = "partner-logos";
+      let { error } = await supabase.storage.from(bucket).upload(path, file, {
+        upsert: true,
+        contentType: file.type,
+      });
+      if (error) {
+        bucket = "client-logos";
+        const r2 = await supabase.storage.from(bucket).upload(path, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+        if (r2.error) throw r2.error;
+      }
+      const { data: pubData } = supabase.storage.from(bucket).getPublicUrl(path);
+      const url = pubData?.publicUrl || path;
+      set({ logo_url: url });
+      toast.success("Logomarca do veículo parceiro enviada com sucesso!");
+    } catch (err: any) {
+      toast.error(`Erro no upload: ${err?.message || "Tente novamente"}`);
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleUploadMidiaKit = async (file: File) => {
+    if (!file) return;
+    if (file.size > 30 * 1024 * 1024) {
+      toast.error("O arquivo deve ter no máximo 30MB.");
+      return;
+    }
+
+    setProcessingFile(true);
+    try {
+      // 1. Processar arquivo (detecta se é XLSX/CSV tabular ou PDF)
+      const docRes = await processarArquivoImportacao(file);
+      if (!docRes.sucesso) {
+        toast.error(docRes.erro || "Falha ao ler conteúdo do arquivo.");
+        return;
+      }
+
+      // 2. Extrair dados estruturados (Produtos, Métricas, Defesas, Descontos)
+      let extracaoRes: ResultadoExtracaoMidiaKit;
+      if (docRes.dadosTabela && docRes.dadosTabela.length > 0) {
+        extracaoRes = await extrairProdutosDeMidiaKit({
+          tipo: "planilha",
+          dadosTabela: docRes.dadosTabela,
+          nomeArquivo: file.name,
+          partnerId: form.id,
+        });
+      } else {
+        extracaoRes = await extrairProdutosDeMidiaKit({
+          tipo: "pdf",
+          texto: docRes.textoExtraido,
+          nomeArquivo: file.name,
+          partnerId: form.id,
+        });
+      }
+
+      if (!extracaoRes.sucesso || extracaoRes.produtos.length === 0) {
+        toast.error(
+          extracaoRes.erro ||
+            "Não foi possível identificar produtos ou pontos de mídia no arquivo. Verifique o formato.",
+        );
+        return;
+      }
+
+      // Pre-preencher campos do formulário caso estejam vazios e detectados no Mídia Kit
+      if (extracaoRes.parceiroDetectado) {
+        const pd = extracaoRes.parceiroDetectado;
+        setForm((prev) => ({
+          ...prev,
+          razao_social: prev.razao_social || pd.razao_social || "",
+          nome_fantasia: prev.nome_fantasia || pd.nome_fantasia || pd.razao_social || "",
+          cnpj: prev.cnpj || pd.cnpj || "",
+          cidade: prev.cidade || pd.cidade || "",
+          uf: prev.uf || pd.uf || "",
+          site: prev.site || pd.site || "",
+          tipo_veiculo: (prev.tipo_veiculo as any) || (pd.tipo_veiculo as any) || "Painel OOH/DOOH",
+          media_kit_defenses: Array.from(
+            new Set([...(prev.media_kit_defenses || []), ...extracaoRes.defesasComerciais]),
+          ),
+          commercial_discounts_rules:
+            extracaoRes.regrasDesconto?.length > 0
+              ? extracaoRes.regrasDesconto
+              : prev.commercial_discounts_rules,
+        }));
+      }
+
+      setResultadoExtracao(extracaoRes);
+      setPreviewModalOpen(true);
+      toast.success(
+        `Mídia Kit lido com sucesso! ${extracaoRes.produtos.length} produtos e ${extracaoRes.defesasComerciais.length} defesas comerciais identificados.`,
+      );
+    } catch (err: any) {
+      toast.error(`Erro ao analisar arquivo: ${err?.message || "Arquivo corrompido ou protegido"}`);
+    } finally {
+      setProcessingFile(false);
+      if (fileMidiaKitRef.current) {
+        fileMidiaKitRef.current.value = "";
+      }
+    }
+  };
+
+  const handleConfirmarImportacao = async (
+    produtosSelecionados: ProdutoExtraidoMidiaKit[],
+    defesas: string[],
+    regras: RegraDescontoExtraida[],
+  ) => {
+    setSavingImport(true);
+    try {
+      let partnerId = form.id;
+
+      // Se o parceiro ainda não foi cadastrado no banco, salvar primeiro
+      if (!partnerId) {
+        const razao =
+          form.razao_social?.trim() ||
+          resultadoExtracao?.parceiroDetectado?.razao_social ||
+          resultadoExtracao?.parceiroDetectado?.nome_fantasia ||
+          `Veículo Parceiro ${new Date().toLocaleDateString("pt-BR")}`;
+
+        const partnerPayload = {
+          ...form,
+          razao_social: razao,
+          nome_fantasia:
+            form.nome_fantasia || resultadoExtracao?.parceiroDetectado?.nome_fantasia || razao,
+          cidade: form.cidade || resultadoExtracao?.parceiroDetectado?.cidade || "",
+          uf: form.uf || resultadoExtracao?.parceiroDetectado?.uf || "",
+          site: form.site || resultadoExtracao?.parceiroDetectado?.site || "",
+          media_kit_defenses: defesas,
+          commercial_discounts_rules: regras,
+        };
+
+        const novoParceiro = await upsertFn({ data: partnerPayload });
+        partnerId = novoParceiro.id;
+        setForm((prev) => ({
+          ...prev,
+          ...novoParceiro,
+          media_kit_defenses: defesas,
+          commercial_discounts_rules: regras,
+        }));
+      } else {
+        // Atualiza defesas no state local do formulário
+        setForm((prev) => ({
+          ...prev,
+          media_kit_defenses: defesas,
+          commercial_discounts_rules: regras,
+        }));
+      }
+
+      // Persiste os produtos no catálogo e as defesas no registro do parceiro
+      const resPersist = await salvarProdutosExtraidosMidiaKit({
+        partnerId,
+        produtos: produtosSelecionados,
+        defesas,
+        regrasDesconto: regras,
+      });
+
+      if (!resPersist.sucesso) {
+        toast.error(resPersist.erro || "Falha ao gravar inventário importado.");
+        return;
+      }
+
+      toast.success(
+        `Importação concluída com sucesso! ${resPersist.totalSalvos} produtos/pontos e ${defesas.length} defesas registradas.`,
+      );
+
+      qc.invalidateQueries({ queryKey: ["parceiros"] });
+      qc.invalidateQueries({ queryKey: ["partners"] });
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+      qc.invalidateQueries({ queryKey: ["media-catalog"] });
+
+      setPreviewModalOpen(false);
+    } catch (err: any) {
+      toast.error(`Erro ao salvar importação: ${err?.message || "Tente novamente"}`);
+    } finally {
+      setSavingImport(false);
+    }
+  };
 
   const set = (patch: Partial<Parceiro>) => setForm((prev) => ({ ...prev, ...patch }));
 
@@ -158,27 +412,34 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
   const handleBuscarCnpj = async () => {
     const raw = form.cnpj || "";
     const digits = onlyDigits(raw);
-    if (digits.length !== 14) {
-      toast.error("Informe um CNPJ válido com 14 dígitos.");
+    if (digits.length !== 11 && digits.length !== 14) {
+      toast.error("Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) para consulta.");
       return;
     }
     setSearchingCnpj(true);
     try {
-      const data = await fetchCnpj(digits);
-      set({
-        cnpj: formatCNPJ(digits),
-        razao_social: data.razaoSocial || form.razao_social,
-        nome_fantasia: data.nomeFantasia || form.nome_fantasia || data.razaoSocial,
-        contato_email: data.email || form.contato_email,
-        contato_telefone: data.telefone || form.contato_telefone,
-        endereco: [data.logradouro, data.numero, data.bairro].filter(Boolean).join(", "),
-        cidade: data.cidade || form.cidade,
-        uf: data.estado || form.uf,
-        cep: data.cep ? formatCEP(data.cep) : form.cep,
-      });
-      toast.success("Dados da empresa carregados da Receita Federal!");
+      const data = await fetchCpfCnpj(digits);
+      if (data.tipo === "PJ") {
+        set({
+          cnpj: formatCNPJ(digits),
+          razao_social: data.razaoSocial || form.razao_social,
+          nome_fantasia: data.nomeFantasia || form.nome_fantasia || data.razaoSocial,
+          contato_email: data.email || form.contato_email,
+          contato_telefone: data.telefone || form.contato_telefone,
+          endereco: [data.logradouro, data.numero, data.bairro].filter(Boolean).join(", "),
+          cidade: data.cidade || form.cidade,
+          uf: data.estado || form.uf,
+          cep: data.cep ? formatCEP(data.cep) : form.cep,
+        });
+        toast.success("Dados da empresa carregados da Receita Federal!");
+      } else {
+        set({
+          cnpj: data.cpf || digits,
+        });
+        toast.success("CPF validado na Receita Federal!");
+      }
     } catch (err: any) {
-      toast.error(traduzirErro(err) || "Erro ao consultar CNPJ na Receita Federal.");
+      toast.error(traduzirErro(err) || "Erro ao consultar Receita Federal.");
     } finally {
       setSearchingCnpj(false);
     }
@@ -287,7 +548,15 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        onEscapeKeyDown={(e) => {
+          e.stopPropagation();
+        }}
+        onPointerDownOutside={(e) => {
+          e.stopPropagation();
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Handshake className="size-5 text-primary" />
@@ -332,6 +601,145 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
           className={`space-y-4 pt-2 ${wasValidated ? "was-validated" : ""}`}
         >
 
+          {/* Importação Rápida de Inventário & Argumentos (Mídia Kit) */}
+          <div className="rounded-xl border-2 border-dashed border-primary/30 p-4 bg-primary/5 space-y-3 relative overflow-hidden transition-colors hover:border-primary/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary animate-pulse" />
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Importação Rápida de Inventário & Argumentos (Mídia Kit)
+                  </h3>
+                  <Badge variant="outline" className="text-[10px] bg-background border-primary/20 text-primary">
+                    Excel & PDF via IA
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Carregue planilhas de inventário (.xlsx, .xls, .csv) ou o Mídia Kit institucional (.pdf).
+                  O Mídia.OS extrai automaticamente produtos, telas, métricas de fluxo e defesas comerciais com preview.
+                </p>
+              </div>
+
+              <div>
+                <input
+                  ref={fileMidiaKitRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadMidiaKit(file);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  disabled={processingFile}
+                  onClick={() => fileMidiaKitRef.current?.click()}
+                  className="gap-2 shrink-0 shadow-sm font-medium"
+                >
+                  {processingFile ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Analisando Mídia Kit...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="size-4" />
+                      Importar Planilha / PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] text-muted-foreground border-t border-border/40">
+              <span className="flex items-center gap-1">
+                <FileSpreadsheet className="size-3.5 text-emerald-600" />
+                Planilhas OOH/DOOH (Preços & Formatos)
+              </span>
+              <span className="flex items-center gap-1">
+                <FileText className="size-3.5 text-rose-500" />
+                Mídia Kits em PDF (Métricas & Defesas)
+              </span>
+              {Array.isArray(form.media_kit_defenses) && form.media_kit_defenses.length > 0 && (
+                <span className="flex items-center gap-1 text-primary font-medium sm:ml-auto">
+                  <CheckCircle2 className="size-3.5 text-primary" />
+                  {form.media_kit_defenses.length} argumentos de defesa cadastrados
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Logomarca do Veículo Parceiro */}
+          <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
+            <Label className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
+              <ImageIcon className="size-3.5 text-primary" />
+              Logomarca do Veículo / Exibidor Parceiro
+            </Label>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="size-20 rounded-xl border border-dashed border-border bg-background flex items-center justify-center overflow-hidden shrink-0 relative group shadow-xs">
+                {form.logo_url ? (
+                  <div className="size-full flex items-center justify-center p-1.5 bg-white">
+                    <LogoImg
+                      stored={form.logo_url}
+                      alt={form.nome_fantasia || form.razao_social || "Logo"}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center p-2 text-muted-foreground">
+                    <Building2 className="size-7 mx-auto opacity-40 mb-1" />
+                    <span className="text-[10px] block font-medium">Sem logo</span>
+                  </div>
+                )}
+                {uploadingLogo && (
+                  <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                    <Loader2 className="size-5 animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-1.5 text-center sm:text-left">
+                <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                  <label
+                    htmlFor="logo-partner-upload"
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs"
+                  >
+                    <Upload className="size-3.5" />
+                    {uploadingLogo ? "Enviando..." : form.logo_url ? "Alterar Logomarca" : "Enviar Logomarca"}
+                  </label>
+                  <input
+                    id="logo-partner-upload"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    disabled={uploadingLogo}
+                    onChange={handleUploadLogo}
+                  />
+
+                  {form.logo_url && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs text-destructive hover:bg-destructive/10 border-destructive/30 gap-1"
+                      onClick={() => set({ logo_url: "" })}
+                    >
+                      <Trash2 className="size-3.5" />
+                      Remover
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  PNG, JPG, WebP ou SVG (máx. 5MB). A logomarca será exibida nos cards, no catálogo e nas propostas comerciais enviadas aos anunciantes.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Identificação e CNPJ */}
           <div className="rounded-xl border p-3.5 bg-muted/20 space-y-3">
             <Label className="text-xs font-semibold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
@@ -342,17 +750,17 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div data-field="cnpj">
                 <Label htmlFor="parceiro-cnpj" className={errorLabelClass(!!errors.cnpj, "text-xs")}>
-                  CNPJ
+                  CNPJ / CPF
                 </Label>
                 <div className="flex gap-1.5 mt-1">
                   <Input
                     id="parceiro-cnpj"
                     name="cnpj"
                     error={errors.cnpj}
-                    placeholder="00.000.000/0000-00"
+                    placeholder="00.000.000/0000-00 ou CPF"
                     value={form.cnpj ?? ""}
                     onChange={(e) => {
-                      set({ cnpj: formatCNPJ(e.target.value) });
+                      set({ cnpj: formatCpfCnpj(e.target.value) });
                       if (errors.cnpj) {
                         setErrors((prev) => {
                           const next = { ...prev };
@@ -376,17 +784,20 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                     className="shrink-0 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
                     disabled={searchingCnpj}
                     onClick={handleBuscarCnpj}
-                    title="Puxar dados da Receita Federal"
+                    title="Puxar dados da Receita Federal e preencher automaticamente"
                   >
                     {searchingCnpj ? (
                       <Loader2 className="size-3.5 animate-spin" />
                     ) : (
                       <Search className="size-3.5" />
                     )}
-                    Receita
+                    <span>Buscar Receita</span>
                   </Button>
                 </div>
                 <FormFieldError message={errors.cnpj} />
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Digite e clique em Buscar Receita para preencher razão social, endereço e contato.
+                </p>
               </div>
 
               <div>
@@ -426,6 +837,68 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                   }}
                 />
                 <FormFieldError message={errors.razao_social} />
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium">Perfil Comercial da Entidade *</Label>
+                <Select
+                  value={form.perfil_comercial || "VEICULO_EXIBIDOR"}
+                  onValueChange={(v) => set({ perfil_comercial: v as PerfilComercialEntidade })}
+                >
+                  <SelectTrigger className="mt-1 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PERFIS_COMERCIAIS.map((p) => (
+                      <SelectItem key={p.value} value={p.value} className="text-xs">
+                        <span className="font-semibold">{p.label}</span>
+                        <span className="block text-[10px] text-muted-foreground">{p.desc}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium">Tipo de Veículo / Mídia Principal *</Label>
+                <Select
+                  value={form.tipo_veiculo || "Painel OOH/DOOH"}
+                  onValueChange={(v) => set({ tipo_veiculo: v })}
+                >
+                  <SelectTrigger className="mt-1 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIPOS_VEICULO_LIST.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo} className="text-xs">
+                        {tipo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium">Status da Parceria</Label>
+                <Select
+                  value={(form.status as any) || (form.ativo ? "ativo" : "inativo")}
+                  onValueChange={(v) => set({ status: v as any, ativo: v === "ativo" })}
+                >
+                  <SelectTrigger className="mt-1 text-xs bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativo" className="text-xs text-emerald-600 font-medium">
+                      ● Ativo (Inventário disponível)
+                    </SelectItem>
+                    <SelectItem value="em_negociacao" className="text-xs text-amber-600 font-medium">
+                      ● Em Negociação (Contrato pendente)
+                    </SelectItem>
+                    <SelectItem value="inativo" className="text-xs text-slate-500 font-medium">
+                      ● Inativo (Pausado temporariamente)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
@@ -583,6 +1056,43 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
                 />
               </div>
             </div>
+          </div>
+
+          {/* Venda de Circuitos Completos / Bundles com Desconto */}
+          <div className="rounded-xl border p-3.5 bg-blue-50/40 dark:bg-blue-950/20 border-blue-500/30 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <Label className="text-xs font-semibold flex items-center gap-1.5 text-blue-900 dark:text-blue-300 uppercase tracking-wider">
+                  <Sparkles className="size-3.5 text-blue-600 dark:text-blue-400" />
+                  Venda de Circuitos Completos (Bundles / Combos)
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Permitir que este parceiro comercialize pacotes fechados com desconto especial para o cliente final.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] font-semibold transition-colors",
+                    form.allows_circuit_bundles
+                      ? "bg-blue-500/10 text-blue-600 border-blue-300 dark:text-blue-400"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {form.allows_circuit_bundles ? "Circuitos Habilitados" : "Apenas Venda Unitária"}
+                </Badge>
+                <Switch
+                  checked={Boolean(form.allows_circuit_bundles)}
+                  onCheckedChange={(checked) => set({ allows_circuit_bundles: checked })}
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {form.allows_circuit_bundles
+                ? "✓ Parceiro autorizado a vender circuitos completos com preço de pacote ou desconto percentual/nominal agregado. Na remoção de qualquer item obrigatório, o sistema desarma o desconto e recalcula preços de tabela avulsos."
+                : "✕ Parceiro restrito à venda de pontos avulsos. Os combos/circuitos com desconto não serão disponibilizados no catálogo para este parceiro."}
+            </p>
           </div>
 
           {/* Contato & Dados Financeiros do Parceiro */}
@@ -837,6 +1347,17 @@ export function ParceiroFormDialog({ open, onOpenChange, initial, onSuccess }: P
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Modal de Conferência e Preview de Importação de Mídia Kit */}
+      <ModalPreviewImportacaoMidiaKit
+        open={previewModalOpen}
+        onOpenChange={setPreviewModalOpen}
+        resultado={resultadoExtracao}
+        nomeParceiro={form.nome_fantasia || form.razao_social || "Parceiro"}
+        onConfirmar={handleConfirmarImportacao}
+        loading={savingImport}
+      />
     </Dialog>
   );
 }
+

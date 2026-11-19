@@ -7,6 +7,19 @@ import { CalcItemOut, CalcTotals } from "@/components/PriceCalculator";
 import { toast } from "sonner";
 import { useActingAsExecutivo } from "@/hooks/use-acting-as";
 import { useFormErrors, type FieldErrors } from "@/lib/form-errors";
+import { useFormDraft } from "@/hooks/use-form-draft";
+
+interface PropostaDraftData {
+  clienteId: string;
+  agenciaId: string;
+  executivoId: string;
+  executivoParceiroId: string;
+  clienteAvulso: string;
+  campanha: string;
+  validade: string;
+  observacao: string;
+  items: CalcItemOut[];
+}
 
 export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void) {
   const qc = useQueryClient();
@@ -18,6 +31,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
   const [executivoParceiroId, setExecutivoParceiroId] = useState("");
   const [clienteAvulso, setClienteAvulso] = useState("");
   const [campanha, setCampanha] = useState("");
+  const [publicoInteresse, setPublicoInteresse] = useState("");
   const [validade, setValidade] = useState("");
   const [observacao, setObservacao] = useState("");
   const [items, setItems] = useState<CalcItemOut[]>([]);
@@ -29,20 +43,97 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
   });
   const [isLoading, setIsLoading] = useState(false);
   const [loadedBriefingId, setLoadedBriefingId] = useState<string | null>(null);
+  const isNewProposal = !initial?.id && !initial?.isCopy;
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  const { loadDraft, saveDraft, clearDraft } = useFormDraft<PropostaDraftData>({
+    draftKey: "nova_proposta_form",
+    initialData: {
+      clienteId: "",
+      agenciaId: "",
+      executivoId: "",
+      executivoParceiroId: "",
+      clienteAvulso: "",
+      campanha: "",
+      validade: "",
+      observacao: "",
+      items: [],
+    },
+    enabled: isNewProposal,
+  });
+
+  // Salva rascunho automaticamente a cada alteração
+  useEffect(() => {
+    if (!isNewProposal) return;
+    if (campanha || clienteId || agenciaId || items.length > 0 || observacao) {
+      saveDraft({
+        clienteId,
+        agenciaId,
+        executivoId,
+        executivoParceiroId,
+        clienteAvulso,
+        campanha,
+        validade,
+        observacao,
+        items,
+      });
+    }
+  }, [
+    isNewProposal,
+    clienteId,
+    agenciaId,
+    executivoId,
+    executivoParceiroId,
+    clienteAvulso,
+    campanha,
+    validade,
+    observacao,
+    items,
+    saveDraft,
+  ]);
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftRestored(false);
+    setClienteId("");
+    setAgenciaId("");
+    setExecutivoId(actingAs ?? "");
+    setExecutivoParceiroId("");
+    setClienteAvulso("");
+    setCampanha("");
+    setValidade("");
+    setObservacao("");
+    setItems([]);
+    toast.info("Rascunho descartado.");
+  };
 
   useEffect(() => {
     if (!initial) {
-      // Reset form
-      setClienteId("");
-      setAgenciaId("");
-      setExecutivoId(actingAs ?? "");
-      setExecutivoParceiroId("");
-      setClienteAvulso("");
-      setCampanha("");
-      setValidade("");
-      setObservacao("");
-      setItems([]);
-      setLoadedBriefingId(null);
+      const saved = loadDraft();
+      if (saved && (saved.campanha || saved.clienteId || (saved.items && saved.items.length > 0))) {
+        setClienteId(saved.clienteId || "");
+        setAgenciaId(saved.agenciaId || "");
+        setExecutivoId(saved.executivoId || actingAs || "");
+        setExecutivoParceiroId(saved.executivoParceiroId || "");
+        setClienteAvulso(saved.clienteAvulso || "");
+        setCampanha(saved.campanha || "");
+        setValidade(saved.validade || "");
+        setObservacao(saved.observacao || "");
+        setItems(saved.items || []);
+        setDraftRestored(true);
+      } else {
+        // Reset form
+        setClienteId("");
+        setAgenciaId("");
+        setExecutivoId(actingAs ?? "");
+        setExecutivoParceiroId("");
+        setClienteAvulso("");
+        setCampanha("");
+        setValidade("");
+        setObservacao("");
+        setItems([]);
+        setLoadedBriefingId(null);
+      }
       return;
     }
 
@@ -58,6 +149,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
             setExecutivoParceiroId((p as any).executivo_parceiro_id ?? "");
             setClienteAvulso(p.cliente_avulso ?? "");
             setCampanha(p.campanha ?? "");
+            setPublicoInteresse((p as any).publico_interesse ?? "");
             setValidade(p.validade ?? "");
             setObservacao(p.observacao ?? "");
             setItems(p.itens || []);
@@ -75,6 +167,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
         setExecutivoParceiroId(initial?.executivo_parceiro_id ?? "");
         setClienteAvulso(initial?.cliente_avulso ?? "");
         setCampanha(initial?.campanha ?? "");
+        setPublicoInteresse(initial?.publico_interesse ?? "");
         setValidade(initial?.validade ?? "");
         setObservacao(initial?.observacao ?? "");
         setItems(initial?.itens || []);
@@ -109,6 +202,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
           executivo_parceiro_id: executivoParceiroId || null,
           cliente_avulso: clienteAvulso.trim() || null,
           campanha: campanha.trim(),
+          publico_interesse: publicoInteresse.trim() || null,
           validade: validadeFinal,
           observacao: mergeObservacao(observacao, obsProdutos),
           status,
@@ -123,6 +217,7 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
       });
     },
     onSuccess: () => {
+      clearDraft();
       toast.success("Proposta salva");
       qc.invalidateQueries({ queryKey: ["propostas"] });
       if (initial?.id) {
@@ -174,6 +269,8 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
       setClienteAvulso,
       campanha,
       setCampanha,
+      publicoInteresse,
+      setPublicoInteresse,
       validade,
       setValidade,
       observacao,
@@ -183,6 +280,8 @@ export function usePropostaForm(initial: any, onOpenChange: (v: boolean) => void
       totals,
       setTotals,
       isLoading,
+      draftRestored,
+      handleDiscardDraft,
     },
     save,
     isSaving: saveMutation.isPending,

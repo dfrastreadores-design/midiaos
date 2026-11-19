@@ -1,0 +1,2 @@
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS emissora_id uuid REFERENCES public.emissoras(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_produtos_emissora ON public.produtos(emissora_id);

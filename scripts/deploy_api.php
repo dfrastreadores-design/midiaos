@@ -7,8 +7,8 @@
 header('Content-Type: application/json; charset=utf-8');
 
 // Token de segurança estático
-$authSecret = 'midiaos_deploy_sec_9938210491823712';
-$providedToken = $_GET['token'] ?? $_POST['token'] ?? $_SERVER['HTTP_X_DEPLOY_TOKEN'] ?? '';
+$authSecret = 'midiaos_sec_1f0bc7fa7464023df90a652715c83e85f1366459d8c27e336fc00013c345709c';
+$providedToken = $_SERVER['HTTP_X_DEPLOY_TOKEN'] ?? $_POST['token'] ?? $_GET['token'] ?? '';
 
 if (!hash_equals($authSecret, (string)$providedToken)) {
     http_response_code(403);
@@ -59,86 +59,38 @@ if ($action === 'upload') {
     }
 }
 
-if ($action === 'patch') {
-    $patchedFiles = [];
-
-    // 1. Corrige bundle SSR
-    $ssrFile = $hbuildsNodejs . '/server/_ssr/router-BQIgfEe0.mjs';
-    if (file_exists($ssrFile)) {
-        $c = file_get_contents($ssrFile);
-        $r = str_replace('icon: Trash2, modulo: null', 'icon: Trash2$1, modulo: null', $c);
-        if ($c !== $r) {
-            file_put_contents($ssrFile, $r);
-            $patchedFiles[] = $ssrFile;
+if ($action === 'sync_env') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        echo json_encode(['error' => 'Método não permitido']);
+        exit;
+    }
+    $rawEnv = file_get_contents('php://input');
+    if (!empty($rawEnv)) {
+        if (!file_exists($hbuildsNodejs)) {
+            @mkdir($hbuildsNodejs, 0755, true);
         }
+        @file_put_contents($hbuildsNodejs . '/.env', $rawEnv);
+        if (file_exists($pubHtml . '/.env')) @unlink($pubHtml . '/.env');
+        if (file_exists($pubHtml . '/.output/.env')) @unlink($pubHtml . '/.output/.env');
+        echo json_encode(['success' => true, 'message' => 'Variáveis de ambiente sincronizadas no diretório seguro do Node.js']);
+        exit;
+    } else {
+        http_response_code(400);
+        echo json_encode(['error' => 'Conteúdo do .env vazio']);
+        exit;
     }
+}
 
-    // 2. Corrige bundle client-side (index-9YO_f6Z8.js)
-    $clientFiles = [
-        $pubHtml . '/assets/index-9YO_f6Z8.js',
-        $pubHtml . '/public/assets/index-9YO_f6Z8.js',
-        $pubHtml . '/.output/public/assets/index-9YO_f6Z8.js',
-        $hbuildsNodejs . '/public/assets/index-9YO_f6Z8.js',
-    ];
-
-    // Encontra qualquer outra cópia em versions
-    $versionsDir = dirname(dirname($hbuildsNodejs)) . '/versions';
-    if (file_exists($versionsDir)) {
-        foreach (scandir($versionsDir) as $v) {
-            if ($v === '.' || $v === '..') continue;
-            $candidate = $versionsDir . '/' . $v . '/nodejs/public/assets/index-9YO_f6Z8.js';
-            if (file_exists($candidate) && !in_array($candidate, $clientFiles)) {
-                $clientFiles[] = $candidate;
-            }
-        }
-    }
-
-    foreach ($clientFiles as $f) {
-        if (file_exists($f)) {
-            $c = file_get_contents($f);
-            $r = str_replace('icon:Trash2,modulo:null', 'icon:LO,modulo:null', $c);
-            if ($c !== $r) {
-                file_put_contents($f, $r);
-                $patchedFiles[] = $f;
-            }
-        }
-    }
-
-    // 3. Garante que os assets de public/ estejam diretamente em public_html/
-    if (file_exists($pubHtml . '/public/assets') && !file_exists($pubHtml . '/assets')) {
-        @mkdir($pubHtml . '/assets', 0755, true);
-    }
-    if (file_exists($pubHtml . '/public/assets')) {
-        foreach (scandir($pubHtml . '/public/assets') as $a) {
-            if ($a === '.' || $a === '..') continue;
-            @copy($pubHtml . '/public/assets/' . $a, $pubHtml . '/assets/' . $a);
-        }
-    }
-
-    // 4. Reinicia passenger
-    $tmpDir = $hbuildsNodejs . '/tmp';
-    if (!file_exists($tmpDir)) @mkdir($tmpDir, 0755, true);
-    @file_put_contents($tmpDir . '/restart.txt', (string)time());
-
+// Ações 'cmd' e 'patch' foram permanentemente desativadas por política de segurança
+if ($action === 'cmd' || $action === 'patch') {
+    http_response_code(403);
     echo json_encode([
-        'success' => true,
-        'patched_count' => count($patchedFiles),
-        'patched_files' => $patchedFiles,
-        'timestamp' => date('c'),
+        'error' => 'Acesso negado: a funcionalidade solicitada foi desativada por diretriz de segurança.'
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-if ($action === 'cmd') {
-    $cmd = $_POST['cmd'] ?? $_GET['cmd'] ?? '';
-    if (empty($cmd)) {
-        echo json_encode(['error' => 'Comando não fornecido']);
-        exit;
-    }
-    $output = shell_exec($cmd . ' 2>&1');
-    echo json_encode(['cmd' => $cmd, 'output' => $output]);
-    exit;
-}
 
 if ($action === 'diag') {
     $hbuildsDir = '/home/u233352823/domains/midiaos.online/hbuilds';
@@ -235,9 +187,15 @@ if ($action === 'extract') {
         }
     }
 
-    // 3. Garante que .env esteja em hbuilds/current/nodejs
+    // 3. Garante que .env esteja em hbuilds/current/nodejs e seja removido da raiz pública
     if (file_exists($pubHtml . '/.env')) {
-        @copy($pubHtml . '/.env', $hbuildsNodejs . '/.env');
+        if (!file_exists($hbuildsNodejs . '/.env')) {
+            @copy($pubHtml . '/.env', $hbuildsNodejs . '/.env');
+        }
+        @unlink($pubHtml . '/.env');
+    }
+    if (file_exists($pubOutput . '/.env')) {
+        @unlink($pubOutput . '/.env');
     }
 
     // 3.1 Garante existência de preload-timestamp.js
@@ -250,7 +208,7 @@ if ($action === 'extract') {
         @file_put_contents($preloadFile, "// Mídia.OS Preload\nconsole.log('Mídia.OS Server boot:', new Date().toISOString());\n");
     }
 
-    // 3.2 Garante que .htaccess sempre tenha a configuração correta do Passenger e MIME types
+    // 3.2 Garante que .htaccess sempre tenha a configuração correta do Passenger, MIME types e bloqueio de arquivos sensíveis
     $htaccessFile = $pubHtml . '/.htaccess';
     $htaccessContent = "# Configurações do ambiente Node.js / Passenger (Hostinger)\n" .
         "PassengerAppRoot /home/u233352823/domains/midiaos.online/hbuilds/current/nodejs\n" .
@@ -269,7 +227,17 @@ if ($action === 'extract') {
         "<IfModule mod_mime.c>\n" .
         "  AddType application/javascript .js .mjs .cjs\n" .
         "  AddType text/css .css\n" .
-        "</IfModule>\n";
+        "</IfModule>\n\n" .
+        "# 🔒 Bloqueio estrito de arquivos ocultos e extensões sensíveis\n" .
+        "<FilesMatch \"(^\\.|\\.(env|bak|config|sql|log|zip|tar|gz|sh|md)$)\">\n" .
+        "  <IfModule mod_authz_core.c>\n" .
+        "    Require all denied\n" .
+        "  </IfModule>\n" .
+        "  <IfModule !mod_authz_core.c>\n" .
+        "    Order allow,deny\n" .
+        "    Deny from all\n" .
+        "  </IfModule>\n" .
+        "</FilesMatch>\n";
     @file_put_contents($htaccessFile, $htaccessContent);
 
     // 4. Cria diretório tmp e atualiza restart.txt para reiniciar o Passenger Node.js
@@ -300,6 +268,12 @@ if ($action === 'cleanup') {
     }
     foreach (glob($pubHtml . '/*.zip') as $f) {
         if (@unlink($f)) $removed[] = basename($f);
+    }
+    if (file_exists($pubHtml . '/.env')) {
+        if (@unlink($pubHtml . '/.env')) $removed[] = '.env';
+    }
+    if (file_exists($pubOutput . '/.env')) {
+        if (@unlink($pubOutput . '/.env')) $removed[] = '.output/.env';
     }
     echo json_encode([
         'success' => true,

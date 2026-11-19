@@ -1,0 +1,419 @@
+{
+  "metadata": {
+    "data_iso": "2026-10-03T21:27:54.987Z",
+    "timestamp": 1791062874987,
+    "url": "https://tvniawyweymutjiybxyo.supabase.co",
+    "versao": "1.0-producao"
+  },
+  "tabelas": {
+    "parceiros": [
+      {
+        "id": "d81cc6cd-a097-49bc-a467-e9759907009f",
+        "tenant_id": null,
+        "razao_social": "PO MIDIA, SERVICOS LOCACAO DE ESPACOS PUBLICIDADE DIGITAL LTDA",
+        "nome_fantasia": "PO MIDIA DIGITAL",
+        "cnpj": "37.313.540/0001-35",
+        "site": null,
+        "instagram": null,
+        "linkedin": null,
+        "facebook": null,
+        "redes_sociais": {},
+        "segmentos": [
+          "DOOH",
+          "Painéis Digitais de Rua",
+          "Telas em Elevadores Corporativos",
+          "Espaços Comerciais em Shoppings e Hotéis"
+        ],
+        "modelo_remuneracao": "comissao_percentual",
+        "comissao_padrao_pct": 20,
+        "prazo_repasse": null,
+        "condicoes_comerciais": null,
+        "contato_nome": null,
+        "contato_email": null,
+        "contato_telefone": "(61) 3315-8755",
+        "chave_pix": null,
+        "dados_bancarios": null,
+        "endereco": "AOS 2/8 - Lote 05 - Sala, Parte, Área Octogonal",
+        "cidade": "Brasília",
+        "uf": "DF",
+        "cep": "70660-900",
+        "observacoes": null,
+        "ativo": true,
+        "created_by": null,
+        "created_at": "2026-10-02T11:19:13.434562+00:00",
+        "updated_at": "2026-10-02T11:19:13.434562+00:00"
+      },
+      {
+        "id": "738f2bea-8a87-48e9-b095-e4fba0976230",
+        "tenant_id": null,
+        "razao_social": "[TESTE DE VALIDAÇÃO] Exibidor Mídia Digital 1790941265342",
+        "nome_fantasia": "Mídia Digital DF 1790941265342",
+        "cnpj": "88.41265342-11",
+        "site": "https://midiadigitaldf.com.br",
+        "instagram": "@midiadigitaldf",
+        "linkedin": null,
+        "facebook": null,
+        "redes_sociais": {},
+        "segmentos": [
+          "DOOH",
+          "Painéis Digitais de Rua",
+          "Front Lights"
+        ],
+        "modelo_remuneracao": "comissao_percentual",
+        "comissao_padrao_pct": 20,
+        "prazo_repasse": "30 dias após emissão da fatura",
+        "condicoes_comerciais": "Desconto padrão de agência 20%. Mínimo de 10 dias de veiculação.",
+        "contato_nome": "Carlos Gestor de Mídia",
+        "contato_email": "carlos_1790941265342@midiadigitaldf.com.br",
+        "contato_telefone": "(61) 99888-7766",
+        "chave_pix": "carlos@midiadigitaldf.com.br",
+        "dados_bancarios": "Banco do Brasil - Agência 1234 - C/C 56789-0",
+        "endereco": "SCS Quadra 04, Bloco A, Sala 301",
+        "cidade": "Brasília",
+        "uf": "DF",
+        "cep": "70304-000",
+        "observacoes": "Parceiro estratégico com telas no Eixo Monumental e Aeroporto.",
+        "ativo": true,
+        "created_by": null,
+        "created_at": "2026-10-02T11:41:05.579769+00:00",
+        "updated_at": "2026-10-02T11:41:05.579769+00:00"
+      },
+      {
+        "id": "d81b8e55-e499-4f5c-8caf-6b6c6edc2b9a",
+        "tenant_id": null,
+        "razao_social": "[TESTE DE VALIDAÇÃO] Exibidor Mídia Digital 1790941445247",
+        "nome_fantasia": "Mídia Digital DF 1790941445247",
+        "cnpj": "88.41445247-11",
+        "site": "https://midiadigitaldf.com.br",
+        "instagram": "@midiadigitaldf",
+        "linkedin": null,
+        "facebook": null,
+        "redes_sociais": {},
+        "segmentos": [
+          "DOOH",
+          "Painéis Digitais de Rua",
+          "Front Lights"
+        ],
+        "modelo_remuneracao": "comissao_percentual",
+        "comissao_padrao_pct": 20,
+        "prazo_repasse": "30 dias após emissão da fatura",
+        "condicoes_comerciais": "Desconto padrão de agência 20%. Mínimo de 10 dias de veiculação.",
+        "contato_nome": "Carlos Gestor de Mídia",
+        "contato_email": "carlos_1790941445247@midiadigitaldf.com.br",
+        "contato_telefone": "(61) 99888-7766",
+        "chave_pix": "carlos@midiadigitaldf.com.br",
+        "dados_bancarios": "Banco do Brasil - Agência 1234 - C/C 56789-0",
+        "endereco": "SCS Quadra 04, Bloco A, Sala 301",
+        "cidade": "Brasília",
+        "uf": "DF",
+        "cep": "70304-000",
+        "observacoes": "Parceiro estratégico com telas no Eixo Monumental e Aeroporto.",
+        "ativo": true,
+        "created_by": null,
+        "created_at": "2026-10-02T11:44:05.224119+00:00",
+        "updated_at": "2026-10-02T11:44:05.224119+00:00"
+      },
+      {
+        "id": "d5398274-7eea-4e3d-a704-162219504d8d",
+        "tenant_id": null,
+        "razao_social": "[TESTE DE VALIDAÇÃO] Exibidor Mídia Digital 1790941473058",
+        "nome_fantasia": "Mídia Digital DF 1790941473058",
+        "cnpj": "88.41473058-11",
+        "site": "https://midiadigitaldf.com.br",
+        "instagram": "@midiadigitaldf",
+        "linkedin": null,
+        "facebook": null,
+        "redes_sociais": {},
+        "segmentos": [
+          "DOOH",
+          "Painéis Digitais de Rua",
+          "Front Lights"
+        ],
+        "modelo_remuneracao": "comissao_percentual",
+        "comissao_padrao_pct": 20,
+        "prazo_repasse": "30 dias após emissão da fatura",
+        "condicoes_comerciais": "Desconto padrão de agência 20%. Mínimo de 10 dias de veiculação.",
+        "contato_nome": "Carlos Gestor de Mídia",
+        "contato_email": "carlos_1790941473058@midiadigitaldf.com.br",
+        "contato_telefone": "(61) 99888-7766",
+        "chave_pix": "carlos@midiadigitaldf.com.br",
+        "dados_bancarios": "Banco do Brasil - Agência 1234 - C/C 56789-0",
+        "endereco": "SCS Quadra 04, Bloco A, Sala 301",
+        "cidade": "Brasília",
+        "uf": "DF",
+        "cep": "70304-000",
+        "observacoes": "Parceiro estratégico com telas no Eixo Monumental e Aeroporto.",
+        "ativo": true,
+        "created_by": null,
+        "created_at": "2026-10-02T11:44:33.29621+00:00",
+        "updated_at": "2026-10-02T11:44:33.29621+00:00"
+      },
+      {
+        "id": "c1624cf8-6d10-40af-b849-9eba5428f5a8",
+        "tenant_id": null,
+        "razao_social": "[TESTE DE VALIDAÇÃO] Exibidor Mídia Digital 1790952410050",
+        "nome_fantasia": "Mídia Digital DF 1790952410050",
+        "cnpj": "88.52410050-11",
+        "site": "https://midiadigitaldf.com.br",
+        "instagram": "@midiadigitaldf",
+        "linkedin": null,
+        "facebook": null,
+        "redes_sociais": {},
+        "segmentos": [
+          "DOOH",
+          "Painéis Digitais de Rua",
+          "Front Lights"
+        ],
+        "modelo_remuneracao": "comissao_percentual",
+        "comissao_padrao_pct": 20,
+        "prazo_repasse": "30 dias após emissão da fatura",
+        "condicoes_comerciais": "Desconto padrão de agência 20%. Mínimo de 10 dias de veiculação.",
+        "contato_nome": "Carlos Gestor de Mídia",
+        "contato_email": "carlos_1790952410050@midiadigitaldf.com.br",
+        "contato_telefone": "(61) 99888-7766",
+        "chave_pix": "carlos@midiadigitaldf.com.br",
+        "dados_bancarios": "Banco do Brasil - Agência 1234 - C/C 56789-0",
+        "endereco": "SCS Quadra 04, Bloco A, Sala 301",
+        "cidade": "Brasília",
+        "uf": "DF",
+        "cep": "70304-000",
+        "observacoes": "Parceiro estratégico com telas no Eixo Monumental e Aeroporto.",
+        "ativo": true,
+        "created_by": null,
+        "created_at": "2026-10-02T14:46:50.084031+00:00",
+        "updated_at": "2026-10-02T14:46:50.084031+00:00"
+      },
+      {
+        "id": "1dd9900e-e346-41b1-9ec1-9a92501cac0c",
+        "tenant_id": null,
+        "razao_social": "[TESTE DE VALIDAÇÃO] Exibidor Mídia Digital 1790952793975",
+        "nome_fantasia": "Mídia Digital DF 1790952793975",
+        "cnpj": "88.52793975-11",
+        "site": "https://midiadigitaldf.com.br",
+        "instagram": "@midiadigitaldf",
+        "linkedin": null,
+        "facebook": null,
+        "redes_sociais": {},
+        "segmentos": [
+          "DOOH",
+          "Painéis Digitais de Rua",
+          "Front Lights"
+        ],
+        "modelo_remuneracao": "comissao_percentual",
+        "comissao_padrao_pct": 20,
+        "prazo_repasse": "30 dias após emissão da fatura",
+        "condicoes_comerciais": "Desconto padrão de agência 20%. Mínimo de 10 dias de veiculação.",
+        "contato_nome": "Carlos Gestor de Mídia",
+        "contato_email": "carlos_1790952793975@midiadigitaldf.com.br",
+        "contato_telefone": "(61) 99888-7766",
+        "chave_pix": "carlos@midiadigitaldf.com.br",
+        "dados_bancarios": "Banco do Brasil - Agência 1234 - C/C 56789-0",
+        "endereco": "SCS Quadra 04, Bloco A, Sala 301",
+        "cidade": "Brasília",
+        "uf": "DF",
+        "cep": "70304-000",
+        "observacoes": "Parceiro estratégico com telas no Eixo Monumental e Aeroporto.",
+        "ativo": true,
+        "created_by": null,
+        "created_at": "2026-10-02T14:53:13.999641+00:00",
+        "updated_at": "2026-10-02T14:53:13.999641+00:00"
+      },
+      {
+        "id": "406fb2e8-9b81-4c4c-926d-5a33d0be55fe",
+        "tenant_id": null,
+        "razao_social": "[TESTE DE VALIDAÇÃO] Exibidor Mídia Digital 1790958273964",
+        "nome_fantasia": "Mídia Digital DF 1790958273964",
+        "cnpj": "88.58273964-11",
+        "site": "https://midiadigitaldf.com.br",
+        "instagram": "@midiadigitaldf",
+        "linkedin": null,
+        "facebook": null,
+        "redes_sociais": {},
+        "segmentos": [
+          "DOOH",
+          "Painéis Digitais de Rua",
+          "Front Lights"
+        ],
+        "modelo_remuneracao": "comissao_percentual",
+        "comissao_padrao_pct": 20,
+        "prazo_repasse": "30 dias após emissão da fatura",
+        "condicoes_comerciais": "Desconto padrão de agência 20%. Mínimo de 10 dias de veiculação.",
+        "contato_nome": "Carlos Gestor de Mídia",
+        "contato_email": "carlos_1790958273964@midiadigitaldf.com.br",
+        "contato_telefone": "(61) 99888-7766",
+        "chave_pix": "carlos@midiadigitaldf.com.br",
+        "dados_bancarios": "Banco do Brasil - Agência 1234 - C/C 56789-0",
+        "endereco": "SCS Quadra 04, Bloco A, Sala 301",
+        "cidade": "Brasília",
+        "uf": "DF",
+        "cep": "70304-000",
+        "observacoes": "Parceiro estratégico com telas no Eixo Monumental e Aeroporto.",
+        "ativo": true,
+        "created_by": null,
+        "created_at": "2026-10-02T16:24:34.220162+00:00",
+        "updated_at": "2026-10-02T16:24:34.220162+00:00"
+      },
+      {
+        "id": "39411038-e229-41f5-8da8-32b9a10be509",
+        "tenant_id": null,
+        "razao_social": "[TESTE DE VALIDAÇÃO] Exibidor Mídia Digital 1790980737165",
+        "nome_fantasia": "Mídia Digital DF 1790980737165",
+        "cnpj": "88.80737165-11",
+        "site": "https://midiadigitaldf.com.br",
+        "instagram": "@midiadigitaldf",
+        "linkedin": null,
+        "facebook": null,
+        "redes_sociais": {},
+        "segmentos": [
+          "DOOH",
+          "Painéis Digitais de Rua",
+          "Front Lights"
+        ],
+        "modelo_remuneracao": "comissao_percentual",
+        "comissao_padrao_pct": 20,
+        "prazo_repasse": "30 dias após emissão da fatura",
+        "condicoes_comerciais": "Desconto padrão de agência 20%. Mínimo de 10 dias de veiculação.",
+        "contato_nome": "Carlos Gestor de Mídia",
+        "contato_email": "carlos_1790980737165@midiadigitaldf.com.br",
+        "contato_telefone": "(61) 99888-7766",
+        "chave_pix": "carlos@midiadigitaldf.com.br",
+        "dados_bancarios": "Banco do Brasil - Agência 1234 - C/C 56789-0",
+        "endereco": "SCS Quadra 04, Bloco A, Sala 301",
+        "cidade": "Brasília",
+        "uf": "DF",
+        "cep": "70304-000",
+        "observacoes": "Parceiro estratégico com telas no Eixo Monumental e Aeroporto.",
+        "ativo": true,
+        "created_by": null,
+        "created_at": "2026-10-02T22:38:56.732123+00:00",
+        "updated_at": "2026-10-02T22:38:56.732123+00:00"
+      }
+    ]
+  },
+  "resumo": {
+    "clientes": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.clientes' in the schema cache\"}",
+      "count": 0
+    },
+    "agencias": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.agencias' in the schema cache\"}",
+      "count": 0
+    },
+    "propostas": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.propostas' in the schema cache\"}",
+      "count": 0
+    },
+    "proposta_itens": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.proposta_itens' in the schema cache\"}",
+      "count": 0
+    },
+    "pis": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.pis' in the schema cache\"}",
+      "count": 0
+    },
+    "pi_itens": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.pi_itens' in the schema cache\"}",
+      "count": 0
+    },
+    "pi_historico": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.pi_historico' in the schema cache\"}",
+      "count": 0
+    },
+    "briefings": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.briefings' in the schema cache\"}",
+      "count": 0
+    },
+    "produtos": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.produtos' in the schema cache\"}",
+      "count": 0
+    },
+    "produto_tipos": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.produto_tipos' in the schema cache\"}",
+      "count": 0
+    },
+    "parceiros": {
+      "status": "ok",
+      "count": 8
+    },
+    "parceiro_tipos_midia": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.parceiro_tipos_midia' in the schema cache\"}",
+      "count": 0
+    },
+    "social_contas": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.social_contas' in the schema cache\"}",
+      "count": 0
+    },
+    "social_posts": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.social_posts' in the schema cache\"}",
+      "count": 0
+    },
+    "social_metricas": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.social_metricas' in the schema cache\"}",
+      "count": 0
+    },
+    "landing_pages": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.landing_pages' in the schema cache\"}",
+      "count": 0
+    },
+    "planos": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.planos' in the schema cache\"}",
+      "count": 0
+    },
+    "comissoes_regras": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.comissoes_regras' in the schema cache\"}",
+      "count": 0
+    },
+    "pos_venda_atendimentos": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.pos_venda_atendimentos' in the schema cache\"}",
+      "count": 0
+    },
+    "emissoras": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.emissoras' in the schema cache\"}",
+      "count": 0
+    },
+    "projetos_especiais": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.projetos_especiais' in the schema cache\"}",
+      "count": 0
+    },
+    "metas_executivo": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.metas_executivo' in the schema cache\"}",
+      "count": 0
+    },
+    "tenants": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.tenants' in the schema cache\"}",
+      "count": 0
+    },
+    "trash_items": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.trash_items' in the schema cache\"}",
+      "count": 0
+    },
+    "auditoria_alteracoes": {
+      "status": "erro",
+      "erro": "404 - {\"code\":\"PGRST205\",\"details\":null,\"hint\":null,\"message\":\"Could not find the table 'public.auditoria_alteracoes' in the schema cache\"}",
+      "count": 0
+    }
+  }
+}

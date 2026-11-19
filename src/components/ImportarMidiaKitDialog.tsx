@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -62,10 +62,22 @@ import { enriquecerParceiroPorUrl } from "@/lib/parceiro-scraper.functions";
 import {
   extrairProdutosDeMidiaKit,
   salvarProdutosExtraidosMidiaKit,
+  verificarDuplicidadesImportacao,
   extrairCoordenadasDeTextoOuUrl,
   extrairRotaEReferencia,
   type ProdutoExtraidoMidiaKit,
+  type ImagemExtraidaMidiaKit,
 } from "@/lib/midia-kit-ai.functions";
+import {
+  exportarProdutosMidiaKitExcel,
+  parsePlanilhaCorrigidaMidiaKit,
+  type ResultadoValidacaoPlanilha,
+} from "@/lib/midia-kit-excel";
+import { LoteAcoesBar, type FiltroProduto } from "@/components/importer/LoteAcoesBar";
+import { EdicaoLoteDialog, type DadosEdicaoLote } from "@/components/importer/EdicaoLoteDialog";
+import { PlanilhaPreviewDialog } from "@/components/importer/PlanilhaPreviewDialog";
+import { GaleriaFotosMidiaKit } from "@/components/importer/GaleriaFotosMidiaKit";
+import { ResumoValidacaoDialog } from "@/components/importer/ResumoValidacaoDialog";
 
 type Props = {
   open: boolean;
@@ -86,6 +98,7 @@ export function ImportarMidiaKitDialog({
   const listParceirosFn = useServerFn(listParceiros);
   const extrairFn = useServerFn(extrairProdutosDeMidiaKit);
   const salvarFn = useServerFn(salvarProdutosExtraidosMidiaKit);
+  const verificarDuplicidadesFn = useServerFn(verificarDuplicidadesImportacao);
   const geocodeAddressFn = useServerFn(geocodeAddress);
   const enriquecerFn = useServerFn(enriquecerParceiroPorUrl);
 
@@ -107,6 +120,30 @@ export function ImportarMidiaKitDialog({
   const [statusMsg, setStatusMsg] = useState("");
   const [produtosDetectados, setProdutosDetectados] = useState<ProdutoExtraidoMidiaKit[]>([]);
   const [resumoIa, setResumoIa] = useState("");
+  const [todasImagensExtraidas, setTodasImagensExtraidas] = useState<ImagemExtraidaMidiaKit[]>([]);
+  const [fotosPendentes, setFotosPendentes] = useState<ImagemExtraidaMidiaKit[]>([]);
+  const [mostrarGaleriaFotos, setMostrarGaleriaFotos] = useState(false);
+
+  // Estados de Edição em Lote, Filtros e Histórico de Desfazer (Undo)
+  const [historicoUndo, setHistoricoUndo] = useState<ProdutoExtraidoMidiaKit[][]>([]);
+  const [filtroAtivo, setFiltroAtivo] = useState<FiltroProduto>("todos");
+  const [busca, setBusca] = useState("");
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [itensPorPagina, setItensPorPagina] = useState(50);
+  const [modalEdicaoLoteOpen, setModalEdicaoLoteOpen] = useState(false);
+  const [modoEdicaoLote, setModoEdicaoLote] = useState<"edicao_lote" | "aplicar_padrao">("edicao_lote");
+  const [geocodificandoLote, setGeocodificandoLote] = useState(false);
+
+  // Estados para Planilha Corrigida (Excel/CSV)
+  const [modalPlanilhaPreviewOpen, setModalPlanilhaPreviewOpen] = useState(false);
+  const [resultadoPlanilha, setResultadoPlanilha] = useState<ResultadoValidacaoPlanilha | null>(null);
+  const [planilhaArquivoNome, setPlanilhaArquivoNome] = useState("");
+  const planilhaInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados para Resumo de Validação Pré-Cadastro
+  const [modalResumoValidacaoOpen, setModalResumoValidacaoOpen] = useState(false);
+  const [duplicidadesEncontradas, setDuplicidadesEncontradas] = useState<{ id: string; nome: string }[]>([]);
+  const [verificandoDuplicidades, setVerificandoDuplicidades] = useState(false);
 
   // Vínculo e dados cadastrais do parceiro
   const [tipoVinculo, setTipoVinculo] = useState<TipoVinculo>("novo");
@@ -320,28 +357,56 @@ export function ImportarMidiaKitDialog({
       setStatusMsg("Lendo e decodificando arquivos...");
       let textoPrincipal = "";
       let dadosPistas: any = {};
+      let base64Pdf: string | undefined;
+      const todasImgsExtraidas: any[] = [];
 
       if (midiaKitFile) {
-        const proc = await processarArquivoImportacao(midiaKitFile);
-        textoPrincipal = proc.textoCompleto;
-        dadosPistas = proc.parceiroDetectado || {};
+        // Se for PDF, prepara Base64 para envio multimodal direto à IA
+        if (midiaKitFile.name.toLowerCase().endsWith(".pdf")) {
+          try {
+            base64Pdf = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = () => resolve("");
+              reader.readAsDataURL(midiaKitFile);
+            });
+          } catch (b64Err) {
+            console.warn("Aviso ao ler Base64 do PDF:", b64Err);
+          }
+        }
+
+        try {
+          const proc = await processarArquivoImportacao(midiaKitFile);
+          textoPrincipal = proc.textoCompleto;
+          dadosPistas = proc.parceiroDetectado || {};
+          if (proc.imagensExtraidas && proc.imagensExtraidas.length > 0) {
+            todasImgsExtraidas.push(...proc.imagensExtraidas);
+          }
+        } catch (procErr: any) {
+          console.warn("Aviso na decodificação local do Mídia Kit:", procErr);
+          textoPrincipal = `Mídia Kit: ${midiaKitFile.name}`;
+        }
       }
 
       let textoSecundario = "";
       if (tabelaPrecosFile) {
-        const procSec = await processarArquivoImportacao(tabelaPrecosFile);
-        textoSecundario = procSec.textoCompleto;
-        if (!dadosPistas.cnpj && procSec.parceiroDetectado?.cnpj) {
-          dadosPistas.cnpj = procSec.parceiroDetectado.cnpj;
+        try {
+          const procSec = await processarArquivoImportacao(tabelaPrecosFile);
+          textoSecundario = procSec.textoCompleto;
+          if (!dadosPistas.cnpj && procSec.parceiroDetectado?.cnpj) {
+            dadosPistas.cnpj = procSec.parceiroDetectado.cnpj;
+          }
+          if (procSec.imagensExtraidas && procSec.imagensExtraidas.length > 0) {
+            todasImgsExtraidas.push(...procSec.imagensExtraidas);
+          }
+        } catch (procSecErr: any) {
+          console.warn("Aviso na tabela de preços:", procSecErr);
         }
       }
 
-      const textoFinal = textoPrincipal || textoSecundario;
-      if (!textoFinal || textoFinal.trim().length < 5) {
-        throw new Error("Não foi possível extrair dados dos arquivos enviados.");
-      }
+      const textoFinal = textoPrincipal || textoSecundario || "Mídia Kit Comercial";
 
-      setStatusMsg("Mídia.OS IA identificando parceiro, produtos, programas e preços...");
+      setStatusMsg("Mídia.OS IA identificando parceiro, produtos, programas, fotos e preços...");
       const targetParc = parceiros.find((p) => p.id === (parceiroId || parceiroInicialId));
 
       const res = await extrairFn({
@@ -349,6 +414,9 @@ export function ImportarMidiaKitDialog({
           texto: textoFinal,
           tabelaPrecosTexto: textoSecundario || undefined,
           parceiroNome: targetParc?.nome_fantasia || targetParc?.razao_social || dadosPistas.nome || undefined,
+          conteudoBase64: base64Pdf || undefined,
+          nomeArquivo: midiaKitFile?.name || tabelaPrecosFile?.name || undefined,
+          imagensExtraidas: todasImgsExtraidas.length > 0 ? todasImgsExtraidas : undefined,
         },
       });
 
@@ -364,12 +432,25 @@ export function ImportarMidiaKitDialog({
         toast.success(`${data.produtos.length} produtos e formatos identificados!`);
       }
 
-      // Distribui fotos já enviadas entre os produtos
-      const prodsWithFotos = (data.produtos || []).map((p: any, idx: number) => ({
-        ...p,
-        fotos: fotosUrls[idx] ? [fotosUrls[idx]] : p.fotos || [],
-        selecionado: true,
-      }));
+      if (data.imagensExtraidas) {
+        setTodasImagensExtraidas(data.imagensExtraidas);
+      }
+      if (data.fotosPendentes) {
+        setFotosPendentes(data.fotosPendentes);
+      }
+
+      // Distribui fotos já enviadas entre os produtos se houver
+      const prodsWithFotos = (data.produtos || []).map((p: any, idx: number) => {
+        let fotos = Array.isArray(p.fotos) && p.fotos.length > 0 ? p.fotos : [];
+        if (fotos.length === 0 && fotosUrls[idx]) {
+          fotos = [fotosUrls[idx]];
+        }
+        return {
+          ...p,
+          fotos,
+          selecionado: true,
+        };
+      });
 
       setProdutosDetectados(prodsWithFotos);
       setResumoIa(data.resumoApresentacao || "");
@@ -423,10 +504,14 @@ export function ImportarMidiaKitDialog({
 
   // Mutação para salvar os produtos e cadastrar/atualizar o parceiro atomicamente
   const salvarMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (params?: { apenasValidos?: boolean }) => {
       const selecionados = produtosDetectados.filter((p) => p.selecionado);
-      if (!selecionados.length) {
-        throw new Error("Selecione ao menos um produto para cadastrar.");
+      let alvos = selecionados;
+      if (params?.apenasValidos) {
+        alvos = selecionados.filter((p) => Boolean(p.nome && p.nome.trim().length > 0 && Number(p.valor_unit) > 0));
+      }
+      if (!alvos.length) {
+        throw new Error("Selecione ao menos um produto válido para cadastrar.");
       }
 
       // Validações do parceiro
@@ -471,19 +556,32 @@ export function ImportarMidiaKitDialog({
                   contato_email: parceiroForm.contato_email.trim() || null,
                 }
               : null,
-          produtos: selecionados.map((p) => ({
+          produtos: alvos.map((p) => ({
+            id: p.id || null,
             nome: p.nome,
             midia: p.midia,
             canal_macro: p.canal_macro || (["DOOH", "OOH", "Radio", "TV"].includes(p.midia) ? "OFF" : "ON"),
             plataforma_rede: p.plataforma_rede || null,
             tipo: p.tipo || null,
+            categoria_midia: p.categoria_midia || null,
+            tipo_cobranca: p.tipo_cobranca || null,
             programa: p.programa || null,
             faixa: p.faixa || null,
             duracao_segundos: p.duracao_segundos || 30,
             insercoes_padrao: p.insercoes_padrao || 1,
             valor_unit: Number(p.valor_unit) || 0,
-            formato: p.formato || null,
+            formato: p.formato || p.tipo || null,
             detalhes_venda: p.detalhes_venda || null,
+            cidade: p.cidade || null,
+            estado: p.estado || null,
+            endereco: p.endereco || null,
+            bairro: p.bairro || null,
+            regiao_administrativa: p.regiao_administrativa || null,
+            status_operacional: p.status_operacional || null,
+            precisao_geo: p.precisao_geo || null,
+            status_validacao: p.status_validacao || null,
+            valores_originais: p.valores_originais || null,
+            origem: p.origem || null,
             latitude: p.latitude != null ? Number(p.latitude) : null,
             longitude: p.longitude != null ? Number(p.longitude) : null,
             link_maps: p.link_maps || null,
@@ -498,11 +596,13 @@ export function ImportarMidiaKitDialog({
     },
     onSuccess: (res: any) => {
       toast.success(
-        `Sucesso! ${res.cadastrados} produto(s) cadastrado(s) para ${res.parceiroNome || "o inventário"}!`,
+        `Sucesso! ${res.cadastrados} cadastrado(s) e ${res.atualizados || 0} atualizado(s) para ${res.parceiroNome || "o inventário"}!`,
       );
       qc.invalidateQueries({ queryKey: ["produtos"] });
+      qc.invalidateQueries({ queryKey: ["produtos-planejamento"] });
       qc.invalidateQueries({ queryKey: ["parceiros"] });
       qc.invalidateQueries({ queryKey: ["painel-centralizadores"] });
+      setModalResumoValidacaoOpen(false);
       onOpenChange(false);
       resetState();
       onSuccess?.();
@@ -519,9 +619,16 @@ export function ImportarMidiaKitDialog({
     setFotosUpload([]);
     setFotosUrls([]);
     setProdutosDetectados([]);
+    setHistoricoUndo([]);
+    setFiltroAtivo("todos");
+    setBusca("");
+    setPaginaAtual(1);
     setStatusMsg("");
     setProdGeoModal(null);
     setMostrarEditarParceiro(false);
+    setModalResumoValidacaoOpen(false);
+    setModalEdicaoLoteOpen(false);
+    setModalPlanilhaPreviewOpen(false);
     setParceiroForm({
       cnpj: "",
       semCnpj: false,
@@ -537,17 +644,175 @@ export function ImportarMidiaKitDialog({
     });
   }
 
-  function handleToggleAll(checked: boolean) {
-    setProdutosDetectados((prev) => prev.map((p) => ({ ...p, selecionado: checked })));
+  // Abertura do modal de validação pré-cadastro com verificação de duplicidades
+  async function handleIniciarConfirmacaoCadastro() {
+    const selecionados = produtosDetectados.filter((p) => p.selecionado);
+    if (!selecionados.length) {
+      toast.warning("Selecione ao menos um produto para cadastrar.");
+      return;
+    }
+
+    if (tipoVinculo === "novo") {
+      if (!parceiroForm.razao_social.trim()) {
+        toast.error("Informe a Razão Social ou Nome do Parceiro antes de prosseguir.");
+        return;
+      }
+      if (!parceiroForm.semCnpj) {
+        const digits = onlyDigits(parceiroForm.cnpj);
+        if (digits.length !== 14) {
+          toast.error("Informe um CNPJ válido com 14 dígitos ou marque 'Parceiro sem CNPJ'.");
+          return;
+        }
+      }
+    } else if (tipoVinculo === "existente" && !parceiroId) {
+      toast.error("Selecione um parceiro cadastrado.");
+      return;
+    }
+
+    setVerificandoDuplicidades(true);
+    try {
+      const res = await verificarDuplicidadesFn({
+        data: {
+          parceiroId: tipoVinculo === "existente" ? parceiroId : null,
+          nomes: selecionados.map((p) => p.nome),
+        },
+      });
+      setDuplicidadesEncontradas(res.duplicidades || []);
+    } catch (errCheck) {
+      console.warn("Aviso ao verificar duplicidades:", errCheck);
+      setDuplicidadesEncontradas([]);
+    } finally {
+      setVerificandoDuplicidades(false);
+      setModalResumoValidacaoOpen(true);
+    }
+  }
+
+  // Contadores para os filtros rápidos
+  const contadoresFiltros = useMemo(() => {
+    return {
+      todos: produtosDetectados.length,
+      incompletos: produtosDetectados.filter(
+        (p) => !p.nome?.trim() || !p.valor_unit || Number(p.valor_unit) <= 0 || !p.cidade,
+      ).length,
+      sem_preco: produtosDetectados.filter((p) => !p.valor_unit || Number(p.valor_unit) <= 0).length,
+      sem_localizacao: produtosDetectados.filter(
+        (p) => !p.cidade && !p.endereco && !p.ponto_referencia,
+      ).length,
+      sem_foto: produtosDetectados.filter((p) => !p.fotos || p.fotos.length === 0).length,
+      pendentes_revisao: produtosDetectados.filter((p) => p.status_validacao === "pendente_revisao").length,
+      erros_validacao: produtosDetectados.filter((p) => !p.nome || p.nome.trim().length === 0).length,
+    };
+  }, [produtosDetectados]);
+
+  // Produtos filtrados por chip de status e busca textual
+  const produtosFiltrados = useMemo(() => {
+    return produtosDetectados.filter((p) => {
+      if (filtroAtivo === "apenas_selecionados" && !p.selecionado) return false;
+      if (filtroAtivo === "incompletos") {
+        const isIncompleto = !p.nome?.trim() || !p.valor_unit || Number(p.valor_unit) <= 0 || !p.cidade;
+        if (!isIncompleto) return false;
+      }
+      if (filtroAtivo === "sem_preco" && Number(p.valor_unit) > 0) return false;
+      if (filtroAtivo === "sem_localizacao" && (p.cidade || p.endereco || p.ponto_referencia)) return false;
+      if (filtroAtivo === "sem_foto" && p.fotos && p.fotos.length > 0) return false;
+      if (filtroAtivo === "pendentes_revisao" && p.status_validacao !== "pendente_revisao") return false;
+      if (filtroAtivo === "erros_validacao" && Boolean(p.nome && p.nome.trim().length > 0)) return false;
+
+      if (busca.trim()) {
+        const termo = busca.toLowerCase().trim();
+        const nomeMatch = p.nome.toLowerCase().includes(termo);
+        const cidadeMatch = (p.cidade || "").toLowerCase().includes(termo);
+        const endMatch = (p.endereco || "").toLowerCase().includes(termo);
+        const refMatch = (p.ponto_referencia || "").toLowerCase().includes(termo);
+        const midiaMatch = p.midia.toLowerCase().includes(termo);
+        const tipoMatch = (p.tipo || "").toLowerCase().includes(termo);
+        const bairroMatch = (p.bairro || "").toLowerCase().includes(termo);
+        const regiaoMatch = (p.regiao_administrativa || "").toLowerCase().includes(termo);
+        const slideMatch = String(p.origem?.pagina_ou_slide || "").includes(termo);
+
+        if (
+          !nomeMatch &&
+          !cidadeMatch &&
+          !endMatch &&
+          !refMatch &&
+          !midiaMatch &&
+          !tipoMatch &&
+          !bairroMatch &&
+          !regiaoMatch &&
+          !slideMatch
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [produtosDetectados, filtroAtivo, busca]);
+
+  // Paginação inteligente para performance com catálogos de centenas de produtos
+  const totalPaginas = Math.ceil(produtosFiltrados.length / itensPorPagina) || 1;
+  const produtosExibidos = useMemo(() => {
+    if (itensPorPagina >= 9999) return produtosFiltrados;
+    const inicio = (paginaAtual - 1) * itensPorPagina;
+    return produtosFiltrados.slice(inicio, inicio + itensPorPagina);
+  }, [produtosFiltrados, paginaAtual, itensPorPagina]);
+
+  function handleSelecionarTodos() {
+    setProdutosDetectados((prev) => prev.map((p) => ({ ...p, selecionado: true })));
+  }
+
+  function handleSelecionarNenhum() {
+    setProdutosDetectados((prev) => prev.map((p) => ({ ...p, selecionado: false })));
+  }
+
+  function handleSelecionarFiltrados() {
+    const idsFiltrados = new Set(produtosFiltrados.map((p) => p.id_temp));
+    setProdutosDetectados((prev) =>
+      prev.map((p) => (idsFiltrados.has(p.id_temp) ? { ...p, selecionado: true } : p)),
+    );
   }
 
   function handleUpdateProduto(id_temp: string, field: keyof ProdutoExtraidoMidiaKit, value: any) {
     setProdutosDetectados((prev) =>
-      prev.map((p) => (p.id_temp === id_temp ? { ...p, [field]: value } : p)),
+      prev.map((p) => {
+        if (p.id_temp !== id_temp) return p;
+        const originalVal = p.valores_originais?.[field];
+        const isDiferente = originalVal !== undefined && originalVal !== value;
+        const atualizado = {
+          ...p,
+          [field]: value,
+          editado_manualmente: p.editado_manualmente || isDiferente,
+        };
+
+        // Se alterou coordenadas manualmente, ajusta precisao
+        if (field === "latitude" || field === "longitude") {
+          if (atualizado.latitude != null && atualizado.longitude != null) {
+            atualizado.precisao_geo = "exata";
+          } else if (atualizado.cidade) {
+            atualizado.precisao_geo = "cidade_uf";
+          }
+        }
+
+        return atualizado;
+      }),
     );
   }
 
+  function handleRestaurarOriginal(id_temp: string) {
+    setProdutosDetectados((prev) =>
+      prev.map((p) => {
+        if (p.id_temp !== id_temp || !p.valores_originais) return p;
+        return {
+          ...p,
+          ...p.valores_originais,
+          editado_manualmente: false,
+        };
+      }),
+    );
+    toast.success("Valores originais extraídos restaurados!");
+  }
+
   function handleRemoverProduto(id_temp: string) {
+    setHistoricoUndo((prev) => [...prev, produtosDetectados.map((p) => ({ ...p }))]);
     setProdutosDetectados((prev) => prev.filter((p) => p.id_temp !== id_temp));
   }
 
@@ -558,18 +823,317 @@ export function ImportarMidiaKitDialog({
       midia: "DOOH",
       canal_macro: "OFF",
       tipo: "Inserção Comercial",
+      tipo_cobranca: "insercao",
       duracao_segundos: 10,
       insercoes_padrao: 1,
       valor_unit: 1000,
+      cidade: parceiroForm.cidade || "Brasília",
+      estado: parceiroForm.uf || "DF",
       selecionado: true,
+      status_validacao: "aprovado",
+      precisao_geo: "cidade_uf",
+      situacao_foto: "pendente",
+      origem_foto: "pendente",
       fotos: [],
+      editado_manualmente: true,
     };
     setProdutosDetectados((prev) => [...prev, novoProduto]);
   }
 
-  // Geocodificação automática por clique no preview
+  // APLICAÇÃO DE EDIÇÃO EM LOTE / PADRÕES
+  function handleAplicarEdicaoLote(dados: DadosEdicaoLote) {
+    const selecionados = produtosDetectados.filter((p) => p.selecionado);
+    if (!selecionados.length) return;
+
+    // Guarda snapshot para histórico de Undo
+    setHistoricoUndo((prev) => [...prev, produtosDetectados.map((p) => ({ ...p }))]);
+
+    setProdutosDetectados((prev) =>
+      prev.map((item) => {
+        if (!item.selecionado) return item;
+
+        const atualizado = { ...item };
+        const somenteVazios = dados.somente_campos_vazios;
+
+        if (dados.aplicar_midia) {
+          if (!somenteVazios || !atualizado.midia) {
+            atualizado.midia = dados.midia;
+            atualizado.editado_manualmente = true;
+          }
+        }
+
+        if (dados.aplicar_categoria_midia) {
+          if (!somenteVazios || !atualizado.categoria_midia) {
+            atualizado.categoria_midia = dados.categoria_midia;
+            atualizado.editado_manualmente = true;
+          }
+        }
+
+        if (dados.aplicar_tipo) {
+          if (!somenteVazios || !atualizado.tipo) {
+            atualizado.tipo = dados.tipo;
+            atualizado.editado_manualmente = true;
+          }
+        }
+
+        if (dados.aplicar_tipo_cobranca) {
+          if (!somenteVazios || !atualizado.tipo_cobranca) {
+            atualizado.tipo_cobranca = dados.tipo_cobranca;
+            atualizado.editado_manualmente = true;
+          }
+        }
+
+        if (dados.aplicar_cidade_uf) {
+          if (!somenteVazios || (!atualizado.cidade && !atualizado.estado)) {
+            atualizado.cidade = dados.cidade || atualizado.cidade;
+            atualizado.estado = dados.estado || atualizado.estado;
+            if (atualizado.precisao_geo !== "exata") {
+              atualizado.precisao_geo = "cidade_uf";
+            }
+            atualizado.editado_manualmente = true;
+          }
+        }
+
+        if (dados.aplicar_regiao_bairro) {
+          if (!somenteVazios || (!atualizado.regiao_administrativa && !atualizado.bairro)) {
+            atualizado.regiao_administrativa = dados.regiao_administrativa || atualizado.regiao_administrativa;
+            atualizado.bairro = dados.bairro || atualizado.bairro;
+            atualizado.editado_manualmente = true;
+          }
+        }
+
+        if (dados.aplicar_duracao_insercoes) {
+          if (!somenteVazios || !atualizado.duracao_segundos) {
+            atualizado.duracao_segundos = dados.duracao_segundos;
+            atualizado.insercoes_padrao = dados.insercoes_padrao;
+            atualizado.editado_manualmente = true;
+          }
+        }
+
+        if (dados.aplicar_status_validacao) {
+          atualizado.status_validacao = dados.status_validacao;
+          atualizado.editado_manualmente = true;
+        }
+
+        if (dados.aplicar_status_operacional) {
+          atualizado.status_operacional = dados.status_operacional;
+          atualizado.editado_manualmente = true;
+        }
+
+        if (dados.aplicar_canal_macro) {
+          atualizado.canal_macro = dados.canal_macro;
+          atualizado.editado_manualmente = true;
+        }
+
+        // Preço bruto: somente quando optado explicitamente
+        if (dados.substituir_preco_bruto) {
+          atualizado.valor_unit = Number(dados.valor_unit) || 0;
+          atualizado.editado_manualmente = true;
+        }
+
+        return atualizado;
+      }),
+    );
+
+    toast.success(`Alterações aplicadas a ${selecionados.length} produto(s) selecionado(s)!`);
+  }
+
+  // DESFAZER ÚLTIMA EDIÇÃO EM LOTE (UNDO)
+  function handleDesfazerLote() {
+    if (historicoUndo.length === 0) return;
+    const snapshotAnterior = historicoUndo[historicoUndo.length - 1];
+    setHistoricoUndo((prev) => prev.slice(0, prev.length - 1));
+    setProdutosDetectados(snapshotAnterior);
+    toast.success("Última edição em lote desfeita com sucesso!");
+  }
+
+  // GEOLOCALIZAÇÃO EM LOTE DOS SELECIONADOS
+  async function handleGeocodificarSelecionados() {
+    const selecionados = produtosDetectados.filter((p) => p.selecionado);
+    if (!selecionados.length) {
+      toast.warning("Selecione ao menos um produto para geocodificar.");
+      return;
+    }
+
+    const paraGeocodificar = selecionados.filter((p) => {
+      const q = p.ponto_referencia || p.endereco || p.faixa || p.nome;
+      return Boolean(q && q.trim().length >= 4);
+    });
+
+    if (!paraGeocodificar.length) {
+      toast.warning("Nenhum dos produtos selecionados possui endereço ou referência textual para geocodificação.");
+      return;
+    }
+
+    setHistoricoUndo((prev) => [...prev, produtosDetectados.map((p) => ({ ...p }))]);
+    setGeocodificandoLote(true);
+
+    let sucessos = 0;
+    let mantidosPraca = 0;
+
+    try {
+      for (const prod of paraGeocodificar) {
+        const partes = [prod.ponto_referencia || prod.endereco || prod.nome];
+        if (prod.bairro) partes.push(prod.bairro);
+        if (prod.cidade) partes.push(prod.cidade);
+        if (prod.estado) partes.push(prod.estado);
+        const query = partes.filter(Boolean).join(", ");
+
+        try {
+          const res = await geocodeAddressFn({ data: { address: query } });
+          if (res.ok && res.latitude != null && res.longitude != null) {
+            const link = `https://www.google.com/maps?q=${res.latitude},${res.longitude}`;
+            setProdutosDetectados((prev) =>
+              prev.map((item) =>
+                item.id_temp === prod.id_temp
+                  ? {
+                      ...item,
+                      latitude: res.latitude,
+                      longitude: res.longitude,
+                      link_maps: link,
+                      precisao_geo: "exata",
+                      ponto_referencia: item.ponto_referencia || res.endereco || item.ponto_referencia,
+                      editado_manualmente: true,
+                    }
+                  : item,
+              ),
+            );
+            sucessos++;
+          } else {
+            mantidosPraca++;
+            if (prod.cidade && prod.estado) {
+              setProdutosDetectados((prev) =>
+                prev.map((item) =>
+                  item.id_temp === prod.id_temp ? { ...item, precisao_geo: "cidade_uf" } : item,
+                ),
+              );
+            }
+          }
+        } catch {
+          mantidosPraca++;
+        }
+      }
+
+      if (sucessos > 0) {
+        toast.success(`${sucessos} produto(s) geocodificado(s) com precisão exata!`);
+      }
+      if (mantidosPraca > 0) {
+        toast.info(
+          `${mantidosPraca} produto(s) mantidos na precisão de praça (cidade/UF) por falta de endereço exato.`,
+        );
+      }
+    } finally {
+      setGeocodificandoLote(false);
+    }
+  }
+
+  // EXPORTAÇÃO E IMPORTAÇÃO DE PLANILHA CORRIGIDA
+  function handleExportarExcel(formato: "xlsx" | "csv") {
+    exportarProdutosMidiaKitExcel(produtosDetectados, nomeExibicaoParceiro, formato);
+    toast.success(`Planilha de produtos exportada em formato .${formato}!`);
+  }
+
+  async function handleImportarPlanilhaFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setPlanilhaArquivoNome(file.name);
+      const res = await parsePlanilhaCorrigidaMidiaKit(file, produtosDetectados);
+      setResultadoPlanilha(res);
+      setModalPlanilhaPreviewOpen(true);
+    } catch (err: any) {
+      toast.error(`Erro ao ler planilha: ${err.message || "Formato inválido"}`);
+    } finally {
+      if (planilhaInputRef.current) {
+        planilhaInputRef.current.value = "";
+      }
+    }
+  }
+
+  function handleConfirmarPlanilhaCorrigida() {
+    if (!resultadoPlanilha) return;
+    setHistoricoUndo((prev) => [...prev, produtosDetectados.map((p) => ({ ...p }))]);
+    setProdutosDetectados(resultadoPlanilha.produtosAtualizados);
+    setModalPlanilhaPreviewOpen(false);
+    toast.success(
+      `${resultadoPlanilha.alteracoes.length} produto(s) atualizado(s) com as correções da planilha!`,
+    );
+  }
+
+  // ASSOCIAÇÃO E UPLOAD DE FOTOGRAFIAS REAIS
+  async function handleAdicionarFotoManual(file: File, prodIdTemp?: string) {
+    const res = await uploadProdutoFoto(file);
+    if (!res?.url) throw new Error("Falha no upload da foto");
+
+    const novaImg: ImagemExtraidaMidiaKit = {
+      id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      nomeArquivo: file.name,
+      dataUrl: res.url,
+      tipoMime: file.type || "image/jpeg",
+      tamanhoBytes: file.size || 0,
+      slideOuPagina: null,
+      contextoTexto: "Foto real autorizada adicionada manualmente pelo usuário",
+      produtoIdAssociado: prodIdTemp || null,
+    };
+    setTodasImagensExtraidas((prev) => [novaImg, ...prev]);
+
+    if (prodIdTemp) {
+      setProdutosDetectados((prev) =>
+        prev.map((p) =>
+          p.id_temp === prodIdTemp
+            ? {
+                ...p,
+                fotos: Array.from(new Set([...(p.fotos || []), res.url])),
+                situacao_foto: "real_associada",
+                origem_foto: "upload_manual",
+                editado_manualmente: true,
+              }
+            : p,
+        ),
+      );
+    }
+  }
+
+  function handleAssociarFotoAProduto(
+    prodIdTemp: string,
+    fotoUrl: string,
+    origem: "documento" | "upload_manual",
+  ) {
+    setProdutosDetectados((prev) =>
+      prev.map((p) =>
+        p.id_temp === prodIdTemp
+          ? {
+              ...p,
+              fotos: Array.from(new Set([...(p.fotos || []), fotoUrl])),
+              situacao_foto: "real_associada",
+              origem_foto: origem,
+              editado_manualmente: true,
+            }
+          : p,
+      ),
+    );
+  }
+
+  function handleDesassociarFotoDeProduto(prodIdTemp: string, fotoUrl: string) {
+    setProdutosDetectados((prev) =>
+      prev.map((p) => {
+        if (p.id_temp !== prodIdTemp) return p;
+        const novasFotos = (p.fotos || []).filter((f) => f !== fotoUrl);
+        return {
+          ...p,
+          fotos: novasFotos,
+          situacao_foto: novasFotos.length > 0 ? "real_associada" : "pendente",
+          origem_foto: novasFotos.length > 0 ? p.origem_foto : "pendente",
+          editado_manualmente: true,
+        };
+      }),
+    );
+  }
+
+  // Geocodificação individual por clique no item da tabela
   async function handleBuscarCoordenadas(prod: ProdutoExtraidoMidiaKit) {
-    const query = prod.ponto_referencia || prod.faixa || prod.nome;
+    const query = prod.ponto_referencia || prod.endereco || prod.faixa || prod.nome;
     if (!query || query.trim().length < 4) {
       toast.warning("Endereço ou ponto de referência muito curto para buscar no mapa.");
       return;
@@ -582,6 +1146,7 @@ export function ImportarMidiaKitDialog({
         handleUpdateProduto(prod.id_temp, "latitude", res.latitude);
         handleUpdateProduto(prod.id_temp, "longitude", res.longitude);
         handleUpdateProduto(prod.id_temp, "link_maps", link);
+        handleUpdateProduto(prod.id_temp, "precisao_geo", "exata");
         if (!prod.ponto_referencia && res.endereco) {
           handleUpdateProduto(prod.id_temp, "ponto_referencia", res.endereco);
         }
@@ -729,11 +1294,11 @@ export function ImportarMidiaKitDialog({
                     Mídia Kit ou Planilha Principal *
                   </Label>
                   <p className="text-xs text-muted-foreground mt-1 mb-3 max-w-xs">
-                    Suporta <strong>PDF</strong> (Mídia Kit comercial, rate card) ou <strong>Excel/CSV</strong> (.xlsx, .xls, .csv).
+                    Suporta <strong>PDF</strong>, <strong>PowerPoint</strong> (.pptx), <strong>Word</strong> (.docx), <strong>Excel/CSV</strong> (.xlsx, .csv) e <strong>Fotos</strong> (.jpg, .png, .webp).
                   </p>
                   <Input
                     type="file"
-                    accept=".pdf,.xlsx,.xls,.csv,.txt"
+                    accept=".pdf,.pptx,.docx,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp,.txt"
                     onChange={(e) => setMidiaKitFile(e.target.files?.[0] || null)}
                     className="max-w-xs text-xs file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white"
                   />
@@ -754,11 +1319,11 @@ export function ImportarMidiaKitDialog({
                     Tabela de Preços / Tarifário (Opcional)
                   </Label>
                   <p className="text-xs text-muted-foreground mt-1 mb-3 max-w-xs">
-                    Envie caso a tabela de valores venha em um Excel ou PDF separado.
+                    Envie caso a tabela de valores venha em um Excel, PDF ou documento separado.
                   </p>
                   <Input
                     type="file"
-                    accept=".xlsx,.xls,.csv,.pdf,.txt"
+                    accept=".xlsx,.xls,.csv,.pdf,.docx,.txt"
                     onChange={(e) => setTabelaPrecosFile(e.target.files?.[0] || null)}
                     className="max-w-xs text-xs file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white"
                   />
@@ -1188,257 +1753,581 @@ export function ImportarMidiaKitDialog({
                 </div>
               )}
 
-              {/* BARRA DE TÍTULO DA TABELA DE PRODUTOS */}
-              <div className="flex items-center justify-between px-1">
-                <div>
-                  <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <span>{produtosDetectados.length} Produtos Encontrados</span>
-                    <Badge variant="outline" className="text-xs font-semibold">
-                      Total: R${" "}
-                      {valorTotalSelecionados.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                    </Badge>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Revise preços, formatos e fotos. Desmarque itens que não deseja incluir no catálogo.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs gap-1"
-                    onClick={handleAdicionarProdutoManual}
-                  >
-                    <Plus className="size-3.5" />
-                    Adicionar Produto
-                  </Button>
-                  <Badge variant="secondary" className="text-xs font-semibold">
-                    {totalSelecionados} de {produtosDetectados.length} selecionados
-                  </Badge>
-                </div>
-              </div>
+              {/* BARRA DE AÇÕES EM LOTE, FILTROS E BUSCA */}
+              <input
+                ref={planilhaInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={handleImportarPlanilhaFile}
+              />
 
-              {/* TABELA DE PRODUTOS */}
-              <div className="flex-1 overflow-y-auto border rounded-lg min-h-[220px]">
+              <LoteAcoesBar
+                totalProdutos={produtosDetectados.length}
+                totalSelecionados={totalSelecionados}
+                totalFiltrados={produtosFiltrados.length}
+                filtroAtivo={filtroAtivo}
+                onMudarFiltro={(f) => {
+                  setFiltroAtivo(f);
+                  setPaginaAtual(1);
+                }}
+                busca={busca}
+                onBuscaChange={(b) => {
+                  setBusca(b);
+                  setPaginaAtual(1);
+                }}
+                onSelecionarTodos={handleSelecionarTodos}
+                onSelecionarNenhum={handleSelecionarNenhum}
+                onSelecionarFiltrados={handleSelecionarFiltrados}
+                onAbrirEdicaoLote={() => {
+                  setModoEdicaoLote("edicao_lote");
+                  setModalEdicaoLoteOpen(true);
+                }}
+                onAbrirAplicarPadrao={() => {
+                  setModoEdicaoLote("aplicar_padrao");
+                  setModalEdicaoLoteOpen(true);
+                }}
+                onDesfazerLote={handleDesfazerLote}
+                podeDesfazer={historicoUndo.length > 0}
+                totalUndoDisponivel={historicoUndo.length}
+                onGeocodificarSelecionados={handleGeocodificarSelecionados}
+                geocodificandoLote={geocodificandoLote}
+                onExportarExcel={handleExportarExcel}
+                onImportarPlanilhaClick={() => planilhaInputRef.current?.click()}
+                totalFotosPendentes={
+                  produtosDetectados.filter((p) => !p.fotos || p.fotos.length === 0).length
+                }
+                onToggleGaleriaFotos={() => setMostrarGaleriaFotos(!mostrarGaleriaFotos)}
+                mostrarGaleriaFotos={mostrarGaleriaFotos}
+                contadoresFiltros={contadoresFiltros}
+              />
+
+              {/* GALERIA DE FOTOS DO MÍDIA KIT */}
+              {mostrarGaleriaFotos && todasImagensExtraidas.length > 0 && (
+                <GaleriaFotosMidiaKit
+                  imagensExtraidas={todasImagensExtraidas}
+                  produtos={produtosDetectados}
+                  onAssociarFotoAProduto={handleAssociarFotoAProduto}
+                  onDesassociarFotoDeProduto={handleDesassociarFotoDeProduto}
+                  onAdicionarFotoManual={handleAdicionarFotoManual}
+                />
+              )}
+
+              {/* GRADE DE PRODUTOS — EDIÇÃO DIRETA EM TABELA */}
+              <div className="flex-1 overflow-auto border rounded-xl min-h-[280px] bg-background">
                 <Table>
-                  <TableHeader className="bg-muted/50 sticky top-0 z-10 backdrop-blur">
+                  <TableHeader className="bg-muted/60 sticky top-0 z-10 backdrop-blur text-[11px]">
                     <TableRow>
                       <TableHead className="w-10">
                         <Checkbox
                           checked={
-                            totalSelecionados === produtosDetectados.length &&
-                            produtosDetectados.length > 0
+                            produtosFiltrados.length > 0 &&
+                            produtosFiltrados.every((p) => p.selecionado)
                           }
-                          onCheckedChange={(c) => handleToggleAll(Boolean(c))}
+                          onCheckedChange={(c) => {
+                            const ids = new Set(produtosFiltrados.map((p) => p.id_temp));
+                            setProdutosDetectados((prev) =>
+                              prev.map((p) => (ids.has(p.id_temp) ? { ...p, selecionado: Boolean(c) } : p)),
+                            );
+                          }}
                         />
                       </TableHead>
-                      <TableHead className="w-16">Foto</TableHead>
-                      <TableHead>Produto / Formato</TableHead>
-                      <TableHead className="w-28">Mídia / Canal</TableHead>
-                      <TableHead className="w-28">Duração / Inserções</TableHead>
-                      <TableHead className="w-52">Localização / Ponto</TableHead>
+                      <TableHead className="w-16">Foto Real</TableHead>
+                      <TableHead className="min-w-[220px]">Produto / Origem</TableHead>
+                      <TableHead className="w-32">Mídia & Categoria</TableHead>
+                      <TableHead className="w-32">Formato / Tipo</TableHead>
                       <TableHead className="w-28 text-right">Tabela Unit. (R$)</TableHead>
-                      <TableHead className="w-10"></TableHead>
+                      <TableHead className="w-32">Cobrança & Inserções</TableHead>
+                      <TableHead className="w-48">Cidade, UF & Bairro</TableHead>
+                      <TableHead className="w-52">Endereço & Referência</TableHead>
+                      <TableHead className="w-40">Geolocalização</TableHead>
+                      <TableHead className="w-28">Status Revisão</TableHead>
+                      <TableHead className="w-12 text-center"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {produtosDetectados.map((prod) => (
-                      <TableRow key={prod.id_temp} className={!prod.selecionado ? "opacity-50" : ""}>
-                        <TableCell>
-                          <Checkbox
-                            checked={prod.selecionado}
-                            onCheckedChange={(c) =>
-                              handleUpdateProduto(prod.id_temp, "selecionado", Boolean(c))
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {prod.fotos && prod.fotos.length > 0 ? (
-                            <img
-                              src={prod.fotos[0]}
-                              alt={prod.nome}
-                              className="w-10 h-10 object-cover rounded-md border"
-                            />
-                          ) : fotosUrls.length > 0 ? (
-                            <Select
-                              value=""
-                              onValueChange={(url) => handleUpdateProduto(prod.id_temp, "fotos", [url])}
-                            >
-                              <SelectTrigger className="h-8 w-12 p-0 flex justify-center">
-                                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {fotosUrls.map((fUrl, fIdx) => (
-                                  <SelectItem key={fIdx} value={fUrl}>
-                                    Foto #{fIdx + 1}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <div className="w-10 h-10 rounded-md bg-muted/60 flex items-center justify-center text-muted-foreground">
-                              <ImageIcon className="h-4 w-4 opacity-40" />
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            value={prod.nome}
-                            onChange={(e) => handleUpdateProduto(prod.id_temp, "nome", e.target.value)}
-                            className="h-8 text-xs font-semibold"
-                          />
-                          {prod.detalhes_venda && (
-                            <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">
-                              {prod.detalhes_venda}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Select
-                              value={prod.midia}
-                              onValueChange={(v) => handleUpdateProduto(prod.id_temp, "midia", v)}
-                            >
-                              <SelectTrigger className="h-7 text-[11px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="DOOH">DOOH</SelectItem>
-                                <SelectItem value="TV">TV</SelectItem>
-                                <SelectItem value="Radio">Rádio</SelectItem>
-                                <SelectItem value="Digital">Digital</SelectItem>
-                                <SelectItem value="OOH">OOH</SelectItem>
-                                <SelectItem value="Impresso">Impresso</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              value={prod.tipo || ""}
-                              onChange={(e) => handleUpdateProduto(prod.id_temp, "tipo", e.target.value)}
-                              className="h-7 text-[11px]"
-                              placeholder="Tipo / Formato"
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Input
-                              type="number"
-                              value={prod.duracao_segundos || 30}
-                              onChange={(e) =>
-                                handleUpdateProduto(prod.id_temp, "duracao_segundos", Number(e.target.value))
-                              }
-                              className="h-7 text-[11px]"
-                              title="Duração em Segundos"
-                            />
-                            <Input
-                              type="number"
-                              value={prod.insercoes_padrao || 1}
-                              onChange={(e) =>
-                                handleUpdateProduto(prod.id_temp, "insercoes_padrao", Number(e.target.value))
-                              }
-                              className="h-7 text-[11px]"
-                              title="Inserções Padrão"
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1 min-w-[180px]">
-                            {prod.latitude != null && prod.longitude != null ? (
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] font-mono gap-1 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500/40 py-0"
-                                  >
-                                    <MapPin className="size-3 text-emerald-600" />
-                                    {prod.latitude.toFixed(4)}, {prod.longitude.toFixed(4)}
-                                  </Badge>
-                                  <a
-                                    href={
-                                      prod.link_maps ||
-                                      `https://www.google.com/maps?q=${prod.latitude},${prod.longitude}`
-                                    }
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[11px] text-primary hover:underline inline-flex items-center gap-0.5"
-                                  >
-                                    <ExternalLink className="size-3" /> Ver
-                                  </a>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => openGeoModal(prod)}
-                                  className="text-[10px] text-muted-foreground hover:text-foreground underline block"
-                                >
-                                  Ajustar mapa
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <Input
-                                  value={prod.ponto_referencia || prod.faixa || ""}
-                                  onChange={(e) =>
-                                    handleUpdateProduto(prod.id_temp, "ponto_referencia", e.target.value)
-                                  }
-                                  placeholder="Endereço / Referência"
-                                  className="h-7 text-[11px]"
-                                />
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-6 text-[10px] px-1.5 gap-1 border-primary/30 text-primary"
-                                    disabled={geocodingId === prod.id_temp}
-                                    onClick={() => handleBuscarCoordenadas(prod)}
-                                  >
-                                    {geocodingId === prod.id_temp ? (
-                                      <Loader2 className="size-2.5 animate-spin" />
-                                    ) : (
-                                      <Search className="size-2.5" />
-                                    )}
-                                    Geolocalizar
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 text-[10px] px-1.5 text-muted-foreground"
-                                    onClick={() => openGeoModal(prod)}
-                                  >
-                                    Colar Link Maps
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={prod.valor_unit}
-                            onChange={(e) =>
-                              handleUpdateProduto(prod.id_temp, "valor_unit", Number(e.target.value))
-                            }
-                            className="h-8 text-xs text-right font-semibold text-emerald-600 dark:text-emerald-400"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleRemoverProduto(prod.id_temp)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                    {produtosExibidos.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={12} className="h-32 text-center text-muted-foreground">
+                          Nenhum produto encontrado com os filtros aplicados.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      produtosExibidos.map((prod) => {
+                        const isIncompleto =
+                          !prod.nome?.trim() || !prod.valor_unit || Number(prod.valor_unit) <= 0 || !prod.cidade;
+                        const temFoto = prod.fotos && prod.fotos.length > 0;
+                        const precoDiferente =
+                          prod.valores_originais?.valor_unit !== undefined &&
+                          Number(prod.valores_originais.valor_unit) !== Number(prod.valor_unit);
+
+                        return (
+                          <TableRow
+                            key={prod.id_temp}
+                            className={`text-xs transition-colors ${
+                              !prod.selecionado ? "opacity-50 bg-muted/10" : ""
+                            } ${isIncompleto ? "bg-amber-50/20 dark:bg-amber-950/10" : ""}`}
+                          >
+                            {/* 1. Seleção */}
+                            <TableCell className="align-top py-2.5">
+                              <Checkbox
+                                checked={prod.selecionado}
+                                onCheckedChange={(c) =>
+                                  handleUpdateProduto(prod.id_temp, "selecionado", Boolean(c))
+                                }
+                              />
+                            </TableCell>
+
+                            {/* 2. Foto Real */}
+                            <TableCell className="align-top py-2.5">
+                              <div className="space-y-1">
+                                {temFoto ? (
+                                  <div className="relative group/foto inline-block">
+                                    <img
+                                      src={prod.fotos![0]}
+                                      alt={prod.nome}
+                                      className="w-12 h-12 object-cover rounded-md border shadow-xs"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateProduto(prod.id_temp, "fotos", [])}
+                                      className="absolute -top-1 -right-1 bg-destructive text-white rounded-full size-4 flex items-center justify-center opacity-0 group-hover/foto:opacity-100 transition-opacity text-[10px]"
+                                      title="Remover foto do ponto"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : todasImagensExtraidas.length > 0 ? (
+                                  <Select
+                                    value=""
+                                    onValueChange={(url) =>
+                                      handleAssociarFotoAProduto(prod.id_temp, url, "documento")
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 w-14 p-0 flex justify-center text-[10px] bg-muted/40">
+                                      <ImageIcon className="h-4 w-4 text-primary" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {todasImagensExtraidas.map((img, idx) => (
+                                        <SelectItem key={img.id || idx} value={img.dataUrl} className="text-xs">
+                                          {img.slideOuPagina ? `Slide ${img.slideOuPagina}` : `Foto #${idx + 1}`} ({img.nomeArquivo})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <label className="cursor-pointer">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleAdicionarFotoManual(file, prod.id_temp);
+                                      }}
+                                    />
+                                    <div
+                                      className="w-11 h-11 rounded-md border border-dashed flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors text-[9px]"
+                                      title="Carregar foto real autorizada deste ponto"
+                                    >
+                                      <ImageIcon className="h-4 w-4 opacity-50" />
+                                      <span>+ Foto</span>
+                                    </div>
+                                  </label>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* 3. Produto & Origem */}
+                            <TableCell className="align-top py-2.5">
+                              <div className="space-y-1">
+                                <Input
+                                  value={prod.nome}
+                                  onChange={(e) =>
+                                    handleUpdateProduto(prod.id_temp, "nome", e.target.value)
+                                  }
+                                  className="h-8 text-xs font-semibold"
+                                  placeholder="Nome do produto ou ponto comercial"
+                                />
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {prod.editado_manualmente ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] py-0 px-1 bg-blue-50/70 text-blue-700 dark:text-blue-300 border-blue-300"
+                                      title={
+                                        prod.valores_originais?.nome
+                                          ? `Original: ${prod.valores_originais.nome}`
+                                          : "Modificado manualmente"
+                                      }
+                                    >
+                                      Editado
+                                    </Badge>
+                                  ) : (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] py-0 px-1 text-muted-foreground border-border/60"
+                                    >
+                                      Original
+                                    </Badge>
+                                  )}
+
+                                  {prod.origem?.pagina_ou_slide && (
+                                    <span className="text-[10px] text-muted-foreground font-mono">
+                                      Slide/Pág. {prod.origem.pagina_ou_slide}
+                                    </span>
+                                  )}
+
+                                  <Badge variant="secondary" className="text-[9px] py-0 px-1 text-muted-foreground">
+                                    {nomeExibicaoParceiro}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            {/* 4. Mídia & Categoria */}
+                            <TableCell className="align-top py-2.5">
+                              <div className="space-y-1">
+                                <Select
+                                  value={prod.midia}
+                                  onValueChange={(v) => handleUpdateProduto(prod.id_temp, "midia", v)}
+                                >
+                                  <SelectTrigger className="h-7 text-[11px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="DOOH">DOOH</SelectItem>
+                                    <SelectItem value="OOH">OOH</SelectItem>
+                                    <SelectItem value="TV">TV</SelectItem>
+                                    <SelectItem value="Radio">Rádio</SelectItem>
+                                    <SelectItem value="Digital">Digital</SelectItem>
+                                    <SelectItem value="Impresso">Impresso</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  value={prod.categoria_midia || ""}
+                                  onChange={(e) =>
+                                    handleUpdateProduto(prod.id_temp, "categoria_midia", e.target.value)
+                                  }
+                                  className="h-6 text-[10px]"
+                                  placeholder="Categoria (ex: ooh_dooh)"
+                                />
+                              </div>
+                            </TableCell>
+
+                            {/* 5. Formato / Tipo */}
+                            <TableCell className="align-top py-2.5">
+                              <Input
+                                value={prod.tipo || ""}
+                                onChange={(e) => handleUpdateProduto(prod.id_temp, "tipo", e.target.value)}
+                                className="h-7 text-[11px]"
+                                placeholder="Formato / Tipo"
+                              />
+                            </TableCell>
+
+                            {/* 6. Preço Bruto / Tabela Unit (R$) */}
+                            <TableCell className="align-top py-2.5 text-right">
+                              <div className="space-y-0.5">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={prod.valor_unit}
+                                  onChange={(e) =>
+                                    handleUpdateProduto(prod.id_temp, "valor_unit", Number(e.target.value))
+                                  }
+                                  className={`h-7 text-xs text-right font-semibold ${
+                                    Number(prod.valor_unit) > 0
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-destructive border-destructive"
+                                  }`}
+                                />
+                                {precoDiferente && (
+                                  <span className="text-[10px] text-muted-foreground block line-through">
+                                    Orig: R$ {Number(prod.valores_originais?.valor_unit || 0).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* 7. Cobrança & Inserções */}
+                            <TableCell className="align-top py-2.5">
+                              <div className="space-y-1">
+                                <Select
+                                  value={prod.tipo_cobranca || "insercao"}
+                                  onValueChange={(v) => handleUpdateProduto(prod.id_temp, "tipo_cobranca", v)}
+                                >
+                                  <SelectTrigger className="h-6 text-[10px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="insercao">Inserção</SelectItem>
+                                    <SelectItem value="mensal">Mensal</SelectItem>
+                                    <SelectItem value="diaria">Diária</SelectItem>
+                                    <SelectItem value="semanal">Semanal</SelectItem>
+                                    <SelectItem value="quinzenal">Bi-semana</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <div className="flex gap-1">
+                                  <Input
+                                    type="number"
+                                    value={prod.duracao_segundos || 30}
+                                    onChange={(e) =>
+                                      handleUpdateProduto(prod.id_temp, "duracao_segundos", Number(e.target.value))
+                                    }
+                                    className="h-6 text-[10px] w-1/2"
+                                    title="Duração em segundos"
+                                  />
+                                  <Input
+                                    type="number"
+                                    value={prod.insercoes_padrao || 1}
+                                    onChange={(e) =>
+                                      handleUpdateProduto(prod.id_temp, "insercoes_padrao", Number(e.target.value))
+                                    }
+                                    className="h-6 text-[10px] w-1/2"
+                                    title="Inserções padrão"
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            {/* 8. Cidade, UF & Bairro */}
+                            <TableCell className="align-top py-2.5">
+                              <div className="space-y-1">
+                                <div className="flex gap-1">
+                                  <Input
+                                    value={prod.cidade || ""}
+                                    onChange={(e) =>
+                                      handleUpdateProduto(prod.id_temp, "cidade", e.target.value)
+                                    }
+                                    placeholder="Cidade"
+                                    className="h-6 text-[10px] flex-1"
+                                  />
+                                  <Input
+                                    value={prod.estado || ""}
+                                    onChange={(e) =>
+                                      handleUpdateProduto(prod.id_temp, "estado", e.target.value.toUpperCase())
+                                    }
+                                    placeholder="UF"
+                                    maxLength={2}
+                                    className="h-6 text-[10px] w-12 font-mono uppercase"
+                                  />
+                                </div>
+                                <Input
+                                  value={prod.bairro || prod.regiao_administrativa || ""}
+                                  onChange={(e) =>
+                                    handleUpdateProduto(prod.id_temp, "bairro", e.target.value)
+                                  }
+                                  placeholder="Bairro / Região"
+                                  className="h-6 text-[10px]"
+                                />
+                              </div>
+                            </TableCell>
+
+                            {/* 9. Endereço & Referência */}
+                            <TableCell className="align-top py-2.5">
+                              <Input
+                                value={prod.endereco || prod.ponto_referencia || ""}
+                                onChange={(e) => {
+                                  handleUpdateProduto(prod.id_temp, "endereco", e.target.value);
+                                  handleUpdateProduto(prod.id_temp, "ponto_referencia", e.target.value);
+                                }}
+                                placeholder="Endereço / Referência"
+                                className="h-7 text-[11px]"
+                              />
+                            </TableCell>
+
+                            {/* 10. Geolocalização */}
+                            <TableCell className="align-top py-2.5">
+                              <div className="space-y-1">
+                                {prod.latitude != null && prod.longitude != null ? (
+                                  <div className="space-y-0.5">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9px] font-mono gap-1 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-400 py-0"
+                                    >
+                                      <MapPin className="size-2.5 text-emerald-600" />
+                                      {prod.latitude.toFixed(3)}, {prod.longitude.toFixed(3)}
+                                    </Badge>
+                                    <div className="flex items-center gap-1 text-[10px]">
+                                      <a
+                                        href={
+                                          prod.link_maps ||
+                                          `https://www.google.com/maps?q=${prod.latitude},${prod.longitude}`
+                                        }
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline inline-flex items-center gap-0.5"
+                                      >
+                                        <ExternalLink className="size-2.5" /> Maps
+                                      </a>
+                                      <span>•</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => openGeoModal(prod)}
+                                        className="text-muted-foreground hover:text-foreground underline"
+                                      >
+                                        Ajustar
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-1">
+                                    {prod.cidade && prod.estado ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[9px] text-sky-700 bg-sky-50 dark:bg-sky-950/20 border-sky-300 py-0"
+                                      >
+                                        Praça {prod.cidade}/{prod.estado}
+                                      </Badge>
+                                    ) : (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-[9px] text-amber-700 bg-amber-50 dark:bg-amber-950/20 border-amber-300 py-0"
+                                      >
+                                        Pendente
+                                      </Badge>
+                                    )}
+
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-5 text-[9px] px-1 gap-0.5 border-primary/30 text-primary"
+                                        disabled={geocodingId === prod.id_temp}
+                                        onClick={() => handleBuscarCoordenadas(prod)}
+                                      >
+                                        {geocodingId === prod.id_temp ? (
+                                          <Loader2 className="size-2 animate-spin" />
+                                        ) : (
+                                          <MapPin className="size-2" />
+                                        )}
+                                        Geolocalizar
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 text-[9px] px-1 text-muted-foreground"
+                                        onClick={() => openGeoModal(prod)}
+                                      >
+                                        Link
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* 11. Status Revisão */}
+                            <TableCell className="align-top py-2.5">
+                              <Select
+                                value={prod.status_validacao || "extraido"}
+                                onValueChange={(v: any) =>
+                                  handleUpdateProduto(prod.id_temp, "status_validacao", v)
+                                }
+                              >
+                                <SelectTrigger className="h-6 text-[10px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="aprovado">Aprovado</SelectItem>
+                                  <SelectItem value="pendente_revisao">Pendente</SelectItem>
+                                  <SelectItem value="incompleto">Incompleto</SelectItem>
+                                  <SelectItem value="extraido">Extraído</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+
+                            {/* 12. Ações */}
+                            <TableCell className="align-top py-2.5 text-center">
+                              <div className="flex items-center justify-center gap-0.5">
+                                {prod.editado_manualmente && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                    onClick={() => handleRestaurarOriginal(prod.id_temp)}
+                                    title="Restaurar valores originais extraídos do mídia kit"
+                                  >
+                                    ↺
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleRemoverProduto(prod.id_temp)}
+                                  title="Remover produto da importação"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* BARRA DE PAGINAÇÃO RESPONSIVA */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-xs border-t">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span>
+                    Exibindo {produtosExibidos.length} de {produtosFiltrados.length} produto(s) filtrado(s)
+                    {totalSelecionados > 0 && ` (${totalSelecionados} selecionados no total)`}
+                  </span>
+                  <span>•</span>
+                  <div className="flex items-center gap-1">
+                    <span>Por página:</span>
+                    <Select
+                      value={String(itensPorPagina)}
+                      onValueChange={(v) => {
+                        setItensPorPagina(Number(v));
+                        setPaginaAtual(1);
+                      }}
+                    >
+                      <SelectTrigger className="h-6 text-[10px] w-18">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                        <SelectItem value="9999">Todos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {totalPaginas > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      disabled={paginaAtual <= 1}
+                      onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
+                    >
+                      Anterior
+                    </Button>
+                    <span className="text-[11px] font-semibold text-foreground px-1">
+                      Página {paginaAtual} de {totalPaginas}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[11px] px-2"
+                      disabled={paginaAtual >= totalPaginas}
+                      onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
+                    >
+                      Próxima
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1477,19 +2366,24 @@ export function ImportarMidiaKitDialog({
                     Cancelar
                   </Button>
                   <Button
-                    onClick={() => salvarMutation.mutate()}
-                    disabled={salvarMutation.isPending || totalSelecionados === 0 || !parceiroPronto}
+                    onClick={handleIniciarConfirmacaoCadastro}
+                    disabled={
+                      salvarMutation.isPending ||
+                      verificandoDuplicidades ||
+                      totalSelecionados === 0 ||
+                      !parceiroPronto
+                    }
                     className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                   >
-                    {salvarMutation.isPending ? (
+                    {verificandoDuplicidades ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Cadastrando Parceiro & Produtos...
+                        Validando Inventário...
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4" />
-                        Confirmar e Cadastrar {totalSelecionados} Produtos em "{nomeExibicaoParceiro}"
+                        Revisar e Cadastrar {totalSelecionados} Produtos em "{nomeExibicaoParceiro}"
                       </>
                     )}
                   </Button>
@@ -1499,6 +2393,42 @@ export function ImportarMidiaKitDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* MODAL DE EDIÇÃO EM LOTE E APLICAR PADRÃO */}
+      <EdicaoLoteDialog
+        open={modalEdicaoLoteOpen}
+        onOpenChange={setModalEdicaoLoteOpen}
+        produtosSelecionados={produtosDetectados.filter((p) => p.selecionado)}
+        modo={modoEdicaoLote}
+        onConfirmar={handleAplicarEdicaoLote}
+      />
+
+      {/* MODAL DE PRÉVIA DE CORREÇÃO VIA PLANILHA */}
+      <PlanilhaPreviewDialog
+        open={modalPlanilhaPreviewOpen}
+        onOpenChange={setModalPlanilhaPreviewOpen}
+        resultado={resultadoPlanilha}
+        nomeArquivo={planilhaArquivoNome}
+        onConfirmarAplicacao={handleConfirmarPlanilhaCorrigida}
+        onReenviarPlanilha={() => planilhaInputRef.current?.click()}
+      />
+
+      {/* MODAL DE RESUMO E AUDITORIA PRÉ-CADASTRO */}
+      <ResumoValidacaoDialog
+        open={modalResumoValidacaoOpen}
+        onOpenChange={setModalResumoValidacaoOpen}
+        produtos={produtosDetectados}
+        nomeParceiro={nomeExibicaoParceiro}
+        totalFotosNoKit={todasImagensExtraidas.length}
+        totalFotosPendentes={
+          todasImagensExtraidas.filter(
+            (img) => !produtosDetectados.some((p) => p.fotos && p.fotos.includes(img.dataUrl)),
+          ).length
+        }
+        duplicidadesEncontradas={duplicidadesEncontradas}
+        isSaving={salvarMutation.isPending}
+        onConfirmarCadastro={(apenasValidos) => salvarMutation.mutate({ apenasValidos })}
+      />
 
       {/* Modal para Ajuste Manual de Pin, Coordenadas e Link do Google Maps */}
       <Dialog open={Boolean(prodGeoModal)} onOpenChange={(o) => !o && setProdGeoModal(null)}>

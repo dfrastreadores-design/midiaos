@@ -48,7 +48,7 @@ const MESES = [
   "Dezembro",
 ];
 
-function MetasPage() {
+export function MetasPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { isAdmin, roles, loading } = useUserRoles();
   const isDiretoria = roles.includes("diretoria");
   const canManage = isAdmin || isDiretoria;
@@ -77,30 +77,27 @@ function MetasPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (loading)
-    return (
-      <AppShell>
-        <p className="text-muted-foreground text-sm">Carregando…</p>
-      </AppShell>
-    );
-
-  if (!canManage) {
-    return (
-      <AppShell>
-        <div className="max-w-md mx-auto mt-20 text-center space-y-3">
-          <ShieldAlert className="size-12 mx-auto text-muted-foreground" />
-          <h1 className="text-xl font-semibold">Acesso restrito</h1>
-          <p className="text-sm text-muted-foreground">
-            Somente os perfis <strong>Admin</strong> e <strong>Diretoria</strong> podem lançar as
-            metas dos executivos.
-          </p>
-        </div>
-      </AppShell>
-    );
+  if (loading) {
+    const loadingView = <p className="text-muted-foreground text-sm p-4">Carregando…</p>;
+    return embedded ? loadingView : <AppShell>{loadingView}</AppShell>;
   }
 
-  return (
-    <AppShell>
+  if (!canManage) {
+    const restrictedView = (
+      <div className="max-w-md mx-auto my-12 text-center space-y-3 p-6 border rounded-xl bg-card">
+        <ShieldAlert className="size-12 mx-auto text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Acesso restrito</h2>
+        <p className="text-sm text-muted-foreground">
+          Somente os perfis <strong>Admin</strong> e <strong>Diretoria</strong> podem lançar as
+          metas dos executivos.
+        </p>
+      </div>
+    );
+    return embedded ? restrictedView : <AppShell>{restrictedView}</AppShell>;
+  }
+
+  const content = (
+    <div className="space-y-6">
       <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight flex items-center gap-2">
@@ -206,6 +203,11 @@ function MetasPage() {
           </Table>
         </CardContent>
       </Card>
-    </AppShell>
+    </div>
   );
+
+  if (embedded) return content;
+  return <AppShell>{content}</AppShell>;
 }
+
+export const MetasView = MetasPage;

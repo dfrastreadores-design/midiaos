@@ -1,0 +1,1 @@
+ALTER TABLE public.proposta_itens ADD COLUMN IF NOT EXISTS link_modelo text;

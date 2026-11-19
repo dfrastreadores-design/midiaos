@@ -135,12 +135,8 @@ export const registrarAprovacaoDiretoria = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { getRequestHeader } = await import("@tanstack/react-start/server");
-    const ip =
-      getRequestHeader("cf-connecting-ip") ||
-      getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ||
-      getRequestHeader("x-real-ip") ||
-      null;
+    const { getClientIp } = await import("@/lib/server-request.server");
+    const ip = getClientIp();
 
     const { data: aprov } = await supabaseAdmin
       .from("pi_aprovacoes_diretoria")

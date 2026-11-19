@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { isMasterEmail } from "@/lib/master-user";
+import { supabaseAdmin, hasServiceRoleKey } from "@/integrations/supabase/client.server";
+import { isMasterEmail, isNexoAdminEmail } from "@/lib/master-user";
 
 const RoleEnum = z.enum([
   "admin",
@@ -17,14 +17,27 @@ const RoleEnum = z.enum([
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data: userAuth } = await supabase.auth.getUser();
-  if (isMasterEmail(userAuth?.user?.email)) {
+  if (isMasterEmail(userAuth?.user?.email) || isNexoAdminEmail(userAuth?.user?.email)) {
+    return;
+  }
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("role, is_superadmin")
+    .eq("id", userId)
+    .maybeSingle();
+  if (
+    prof?.is_superadmin === true ||
+    prof?.role === "admin" ||
+    prof?.role === "master_empresa" ||
+    prof?.role === "diretoria"
+  ) {
     return;
   }
   const { data, error } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .in("role", ["admin", "super_admin"])
+    .in("role", ["admin", "super_admin", "master_empresa", "diretoria"])
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Apenas administradores podem executar esta ação");
@@ -74,12 +87,14 @@ export const listUsuarios = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    // Descobre se é o Super Admin exclusivo (rafaelrodrigo.as@gmail.com) e qual o tenant do solicitante
+    // Descobre se é o Super Admin exclusivo (rafaelrodrigo.as@gmail.com ou MASTER) e qual o tenant do solicitante
     const [{ data: userAuth }, { data: meProfile }] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from("profiles").select("tenant_id").eq("id", userId).maybeSingle(),
+      supabase.from("profiles").select("tenant_id, role, is_superadmin").eq("id", userId).maybeSingle(),
     ]);
-    const isSuper = isMasterEmail(userAuth?.user?.email);
+    const isSuper =
+      isMasterEmail(userAuth?.user?.email) ||
+      meProfile?.is_superadmin === true;
     const myTenant = (meProfile as any)?.tenant_id ?? null;
 
     let query = supabase.from("profiles").select("*").order("created_at", { ascending: false });
@@ -354,10 +369,56 @@ export const adminResetPassword = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertAdmin(supabase, userId);
 
+    let resetSuccess = false;
+    let lastError: string | null = null;
+
+    // Tentativa primária: Supabase Auth Admin API (updateUserById)
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
       password: data.password,
     });
-    if (error) throw new Error(error.message);
+
+    if (!error) {
+      resetSuccess = true;
+    } else {
+      lastError = error.message;
+
+      // Tentativa secundária: RPC com SECURITY DEFINER caso configurada
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc(
+        "admin_reset_user_password" as any,
+        {
+          target_user_id: data.user_id,
+          new_plain_password: data.password,
+        },
+      );
+
+      if (!rpcErr && (rpcRes as any)?.success) {
+        resetSuccess = true;
+      } else {
+        // Tentativa terciária: Enviar link de redefinição por e-mail para o usuário
+        const targetEmail = await getTargetEmail(data.user_id);
+        if (targetEmail) {
+          const { error: mailErr } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+            redirectTo: "https://midiaos.online/minha-conta",
+          });
+          if (!mailErr) {
+            resetSuccess = true;
+          }
+        }
+
+        if (!resetSuccess) {
+          if (error.message.includes("not allowed") || !hasServiceRoleKey()) {
+            lastError =
+              "A chave SUPABASE_SERVICE_ROLE_KEY não está configurada no servidor. Adicione a chave no arquivo .env para permitir a alteração direta de senhas.";
+          } else if (rpcErr && !rpcErr.message.includes("Could not find the function")) {
+            lastError = rpcErr.message;
+          }
+        }
+      }
+    }
+
+    if (!resetSuccess) {
+      throw new Error(lastError || "Falha ao redefinir senha do usuário");
+    }
 
     const actor = await getActor(supabase, userId);
     const targetEmail = await getTargetEmail(data.user_id);

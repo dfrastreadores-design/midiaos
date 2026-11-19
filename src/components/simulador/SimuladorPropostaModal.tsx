@@ -1,0 +1,1669 @@
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Calculator,
+  Plus,
+  Trash2,
+  Sparkles,
+  Handshake,
+  AlertTriangle,
+  DollarSign,
+  TrendingUp,
+  FileCheck2,
+  Save,
+  FileSpreadsheet,
+  Printer,
+  Search,
+  CheckCircle2,
+  Layers,
+  ArrowRight,
+  Upload,
+  Image as ImageIcon,
+  X,
+  Loader2,
+  FileText,
+} from "lucide-react";
+import { toast } from "sonner";
+import { formatBRL } from "@/lib/mock-data";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentOrg } from "@/hooks/use-current-org";
+import {
+  gerarPdfPropostaExecutivaCoBranding,
+  type PropostaApresentacao,
+} from "@/lib/proposta-presentation";
+import {
+  Proposal,
+  ProposalSimulationItemInput,
+  calculateItemFinancials,
+  calculateProposalTotals,
+} from "@/types/simulador-proposta.types";
+import {
+  saveProposal,
+  getProposalById,
+  convertProposalToPi,
+} from "@/lib/simulador-propostas.functions";
+import { listMediaCatalog, getDistinctPracasECidades } from "@/lib/representacao-comercial.functions";
+import { listClientes } from "@/lib/clientes.functions";
+import { MediaServiceCatalogItem, TIPOS_COBRANCA_LABELS } from "@/types/representacao-comercial.types";
+import { cn } from "@/lib/utils";
+import { Planejamento360Modal } from "@/components/planejamento360/Planejamento360Modal";
+import { type ItemPlano360 } from "@/lib/planejamento-360.functions";
+import { UFS_BRASIL } from "@/lib/df-regioes-inteligencia";
+import { listCircuitBundles } from "@/lib/circuitos-bundles.functions";
+import { CircuitBundle, calculateCircuitBundlePricing } from "@/types/circuitos-bundles.types";
+import { CircuitoBadgeCard } from "@/components/circuitos/CircuitoBadgeCard";
+
+interface SimuladorPropostaModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  proposalId?: string | null;
+  initialCatalogItem?: MediaServiceCatalogItem | null;
+  onSuccess?: () => void;
+}
+
+export function SimuladorPropostaModal({
+  open,
+  onOpenChange,
+  proposalId,
+  initialCatalogItem,
+  onSuccess,
+}: SimuladorPropostaModalProps) {
+  const qc = useQueryClient();
+
+  // Server functions
+  const saveProposalFn = useServerFn(saveProposal);
+  const getProposalFn = useServerFn(getProposalById);
+  const convertToPiFn = useServerFn(convertProposalToPi);
+  const fetchCatalogFn = useServerFn(listMediaCatalog);
+  const fetchClientesFn = useServerFn(listClientes);
+  const fetchPracasFn = useServerFn(getDistinctPracasECidades);
+
+  // Queries
+  const { data: catalogItems = [] } = useQuery({
+    queryKey: ["media_services_catalog"],
+    queryFn: () => fetchCatalogFn({ data: {} }),
+    enabled: open,
+  });
+
+  const { data: clientesList = [] } = useQuery({
+    queryKey: ["clientes_simulador"],
+    queryFn: () => fetchClientesFn(),
+    enabled: open,
+  });
+
+  const { data: pracasInfo } = useQuery({
+    queryKey: ["pracas_cidades_catalog"],
+    queryFn: () => fetchPracasFn(),
+    enabled: open,
+  });
+
+  // Circuit Bundles Query & State
+  const listBundlesFn = useServerFn(listCircuitBundles);
+  const [circuitModalOpen, setCircuitModalOpen] = useState(false);
+  const { data: availableBundles = [] } = useQuery({
+    queryKey: ["simulador_circuit_bundles"],
+    queryFn: () => listBundlesFn({ data: { only_active: true } }),
+    enabled: open,
+  });
+
+  const currentOrg = useCurrentOrg();
+
+  // State
+  const [documentType, setDocumentType] = useState<"completa" | "direta">("completa");
+  const [mediaLayout, setMediaLayout] = useState<"com_fotos" | "sem_fotos">("com_fotos");
+  const [clientName, setClientName] = useState("");
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [clientLogoUrl, setClientLogoUrl] = useState<string>("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [campaignTitle, setCampaignTitle] = useState("");
+  const [notes, setNotes] = useState("");
+  const [mediaDefense, setMediaDefense] = useState<string>("");
+  const [status, setStatus] = useState<string>("draft");
+  const [items, setItems] = useState<ProposalSimulationItemInput[]>([]);
+
+  // AI Plan 360 State
+  const [aiPlanOpen, setAiPlanOpen] = useState(false);
+
+  // Item Picker Modal State
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerUf, setPickerUf] = useState<string>("TODOS");
+  const [pickerCidade, setPickerCidade] = useState<string>("TODAS");
+
+  // Aplicar itens sugeridos pelo Planejamento 360° com IA
+  const handleApplyFromAiPlan = (itensSugeridos: ItemPlano360[], defesaComercial?: string) => {
+    if (!itensSugeridos || itensSugeridos.length === 0) return;
+    if (defesaComercial) {
+      setMediaDefense(defesaComercial);
+    }
+    const novosItens: ProposalSimulationItemInput[] = itensSugeridos.map((sug) => {
+      const matchCat = catalogItems.find(
+        (c) => c.id === sug.produto_id || c.nome_produto.toLowerCase() === sug.nome_produto.toLowerCase()
+      );
+      return {
+        media_service_id: matchCat?.id || (sug.produto_id.length > 20 ? sug.produto_id : undefined),
+        partner_id: matchCat?.partner_id,
+        product_name: sug.nome_produto,
+        is_own_product: sug.is_own_product ?? (sug.categoria === "Serviço Próprio" || !matchCat?.partner_id),
+        quantity: sug.insercoes || 1,
+        billing_type: (matchCat?.tipo_cobranca as any) || "insercao",
+        unit_price: sug.custo_unitario || (sug.custo_estimado / (sug.insercoes || 1)),
+        discount_type: "percent",
+        discount_value: 0,
+        agency_commission_percent: sug.is_own_product ? 100 : (matchCat?.comissao_parceiro_percentual ?? 20),
+        min_negotiated_unit_price: matchCat?.valor_negociado_minimo ? Number(matchCat.valor_negociado_minimo) : null,
+        partner: matchCat?.partner,
+        media_service: matchCat
+          ? {
+              id: matchCat.id,
+              categoria_midia: matchCat.categoria_midia,
+              cidade: matchCat.cidade,
+              estado: matchCat.estado,
+              imagem_url: matchCat.imagem_url,
+            }
+          : undefined,
+      };
+    });
+    setItems((prev) => [...prev, ...novosItens]);
+    toast.success(`${novosItens.length} itens do Plano Estratégico adicionados ao simulador!`);
+  };
+
+  // Aplicar Circuito Completo com Desconto
+  const handleApplyCircuitBundle = (bundle: CircuitBundle) => {
+    const partnerAllows = bundle.partner ? Boolean((bundle.partner as any).allows_circuit_bundles) : true;
+    const isExplicitlyAllowed = Boolean(
+      bundle.partner_id && bundle.allowed_partner_ids && bundle.allowed_partner_ids.includes(bundle.partner_id)
+    );
+    if (!partnerAllows && !isExplicitlyAllowed) {
+      toast.error("Parceiro não possui permissão para comercializar circuitos com desconto.");
+      return;
+    }
+
+    const bundleItems = bundle.items || [];
+    if (bundleItems.length === 0) {
+      toast.error("Este circuito não possui itens cadastrados.");
+      return;
+    }
+
+    const calcResult = calculateCircuitBundlePricing({
+      bundle,
+      currentItems: bundleItems.map((bi) => ({
+        media_service_id: bi.media_service_id,
+        product_name: bi.product_name,
+        quantity: bi.quantity,
+        unit_price: bi.unit_price,
+      })),
+      partnerAllowsBundles: partnerAllows,
+      partnerId: bundle.partner_id,
+    });
+
+    if (!calcResult.bundleApplied) {
+      toast.error(calcResult.reason || "Não foi possível aplicar o desconto do circuito.");
+      return;
+    }
+
+    const newSimulationItems: ProposalSimulationItemInput[] = calcResult.itemsCalculation.map((calcItem) => {
+      const matchCat = catalogItems.find(
+        (c) =>
+          (calcItem.media_service_id && c.id === calcItem.media_service_id) ||
+          c.nome_produto.toLowerCase().trim() === calcItem.product_name.toLowerCase().trim()
+      );
+
+      return {
+        media_service_id: calcItem.media_service_id || matchCat?.id || null,
+        partner_id: bundle.partner_id || matchCat?.partner_id || null,
+        product_name: calcItem.product_name,
+        is_own_product: false,
+        quantity: calcItem.quantity,
+        billing_type: (matchCat?.tipo_cobranca as any) || "insercao",
+        unit_price: calcItem.regularUnitPrice,
+        discount_type: "fixed",
+        discount_value: calcItem.discountVal,
+        agency_commission_percent:
+          matchCat?.comissao_parceiro_percentual ??
+          (bundle.partner as any)?.comissao_padrao_percentual ??
+          20,
+        min_negotiated_unit_price: matchCat?.valor_negociado_minimo
+          ? Number(matchCat.valor_negociado_minimo)
+          : null,
+        circuit_bundle_id: bundle.id,
+        bundle_discount_applied: true,
+        notes: `Integrado ao Circuito: ${bundle.name} (${bundle.code})`,
+        partner: bundle.partner as any,
+        media_service: matchCat
+          ? {
+              id: matchCat.id,
+              categoria_midia: matchCat.categoria_midia,
+              cidade: matchCat.cidade,
+              estado: matchCat.estado,
+              imagem_url: matchCat.imagem_url,
+            }
+          : undefined,
+      };
+    });
+
+    setItems((prev) => [...prev, ...newSimulationItems]);
+    setCircuitModalOpen(false);
+    toast.success(
+      `Circuito "${bundle.name}" adicionado! Desconto promocional de ${formatBRL(calcResult.discountAmount)} aplicado.`
+    );
+  };
+
+  // Loading existing proposal
+  useEffect(() => {
+    if (proposalId && open) {
+      getProposalFn({ data: { id: proposalId } })
+        .then((prop) => {
+          setClientName(prop.client_name || "");
+          setClientId(prop.client_id || null);
+          setClientLogoUrl(prop.client_logo_url || "");
+          setCampaignTitle(prop.campaign_title || "");
+          setNotes(prop.notes || "");
+          setMediaDefense(prop.media_defense || "");
+          setStatus(prop.status || "draft");
+          if (prop.items && prop.items.length > 0) {
+            setItems(
+              prop.items.map((it) => ({
+                id: it.id,
+                media_service_id: it.media_service_id,
+                partner_id: it.partner_id,
+                product_name: it.product_name,
+                is_own_product: it.is_own_product,
+                quantity: it.quantity,
+                billing_type: it.billing_type,
+                unit_price: it.unit_price,
+                discount_type: "fixed",
+                discount_value: it.discount,
+                agency_commission_percent: it.agency_commission_percent,
+                min_negotiated_unit_price: it.min_negotiated_unit_price,
+                notes: it.notes,
+                partner: it.partner,
+                media_service: it.media_service,
+              })),
+            );
+          }
+        })
+        .catch((err) => toast.error(err.message));
+    } else if (!proposalId && open) {
+      setClientName("");
+      setClientId(null);
+      setClientLogoUrl("");
+      setCampaignTitle("");
+      setNotes("");
+      setMediaDefense("");
+      setStatus("draft");
+
+      // Se foi aberto com um item de catálogo específico
+      if (initialCatalogItem) {
+        addItemFromCatalog(initialCatalogItem);
+      } else {
+        setItems([]);
+      }
+    }
+  }, [proposalId, open, initialCatalogItem]);
+
+  // Upload de logomarca do anunciante
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).");
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const fileName = `client-logo-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const path = `logos/${fileName}`;
+
+      const { error: upErr } = await supabase.storage
+        .from("partner-logos")
+        .upload(path, file, { contentType: file.type, upsert: true });
+
+      if (!upErr) {
+        const { data: pubData } = supabase.storage.from("partner-logos").getPublicUrl(path);
+        if (pubData?.publicUrl) {
+          setClientLogoUrl(pubData.publicUrl);
+          toast.success("Logomarca do anunciante enviada com sucesso!");
+          return;
+        }
+      }
+
+      // Fallback: codifica em base64 DataURL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setClientLogoUrl(base64);
+        toast.success("Logomarca carregada com sucesso!");
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      toast.error("Falha ao carregar logo: " + (err?.message || "erro"));
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // Função para adicionar item do catálogo
+  const addItemFromCatalog = (cat: MediaServiceCatalogItem) => {
+    const isOwn = Boolean(cat.is_own_product);
+    const commPercent = isOwn
+      ? 100
+      : cat.comissao_percentual_especifica ??
+        cat.partner?.comissao_padrao_percentual ??
+        20;
+
+    const newItem: ProposalSimulationItemInput = {
+      media_service_id: cat.id,
+      partner_id: isOwn ? null : cat.partner_id,
+      product_name: cat.nome_produto,
+      is_own_product: isOwn,
+      quantity: 1,
+      billing_type: cat.tipo_cobranca,
+      unit_price: Number(cat.valor_tabela) || 0,
+      discount_type: "percent",
+      discount_value: 0,
+      agency_commission_percent: commPercent,
+      min_negotiated_unit_price: cat.valor_negociado_minimo ? Number(cat.valor_negociado_minimo) : null,
+      partner: cat.partner,
+      media_service: {
+        id: cat.id,
+        categoria_midia: cat.categoria_midia,
+        cidade: cat.cidade,
+        estado: cat.estado,
+        imagem_url: cat.imagem_url,
+        impactos_estimados_mes: cat.impactos_estimados_mes,
+        insercoes_dia: cat.insercoes_dia,
+        partner: cat.partner,
+      } as any,
+    };
+
+    setItems((prev) => [...prev, newItem]);
+    setPickerOpen(false);
+  };
+
+  // Função para adicionar item livre / personalizado
+  const addCustomItem = () => {
+    const newItem: ProposalSimulationItemInput = {
+      product_name: "Espaço Publicitário Personalizado",
+      is_own_product: true,
+      quantity: 1,
+      billing_type: "insercao",
+      unit_price: 1000,
+      discount_type: "percent",
+      discount_value: 0,
+      agency_commission_percent: 100,
+      min_negotiated_unit_price: null,
+    };
+    setItems((prev) => [...prev, newItem]);
+  };
+
+  // Atualização de campos de um item com proteção de integridade do circuito
+  const updateItem = (index: number, updates: Partial<ProposalSimulationItemInput>) => {
+    const currentItem = items[index];
+
+    // Se o item faz parte de um circuito com desconto e teve a quantidade reduzida
+    if (
+      currentItem?.circuit_bundle_id &&
+      currentItem.bundle_discount_applied &&
+      updates.quantity !== undefined &&
+      Number(updates.quantity) < Number(currentItem.quantity)
+    ) {
+      const bundleId = currentItem.circuit_bundle_id;
+      setItems((prev) =>
+        prev.map((it, i) => {
+          if (it.circuit_bundle_id === bundleId) {
+            return {
+              ...it,
+              ...(i === index ? updates : {}),
+              circuit_bundle_id: null,
+              bundle_discount_applied: false,
+              discount_type: "percent" as const,
+              discount_value: 0,
+              notes: it.notes?.replace(/Integrado ao Circuito:.*/, "").trim() || undefined,
+            };
+          }
+          return i === index ? { ...it, ...updates } : it;
+        })
+      );
+      toast.warning(
+        "Quantidade do item do circuito reduzida abaixo do exigido. O desconto do pacote foi desarmado e os itens retornaram aos valores de tabela individual."
+      );
+      return;
+    }
+
+    setItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], ...updates };
+      return copy;
+    });
+  };
+
+  // Remoção de item com desarmamento automático de circuito
+  const removeItem = (index: number) => {
+    const itemToRemove = items[index];
+    const remainingItems = items.filter((_, i) => i !== index);
+
+    if (itemToRemove?.circuit_bundle_id && itemToRemove.bundle_discount_applied) {
+      const bundleId = itemToRemove.circuit_bundle_id;
+      const hasOtherBundleItems = remainingItems.some((it) => it.circuit_bundle_id === bundleId);
+      if (hasOtherBundleItems) {
+        // Desarma o desconto do bundle nos itens restantes e restaura preços de tabela avulsos
+        const unbundled = remainingItems.map((it) => {
+          if (it.circuit_bundle_id === bundleId) {
+            return {
+              ...it,
+              circuit_bundle_id: null,
+              bundle_discount_applied: false,
+              discount_type: "percent" as const,
+              discount_value: 0,
+              notes: it.notes?.replace(/Integrado ao Circuito:.*/, "").trim() || undefined,
+            };
+          }
+          return it;
+        });
+        setItems(unbundled);
+        toast.warning(
+          "Item obrigatório do circuito removido. O desconto promocional do pacote foi desarmado e os itens restantes retornaram aos valores de tabela individual."
+        );
+        return;
+      }
+    }
+
+    setItems(remainingItems);
+  };
+
+  // Cálculo dos itens e totais em tempo real
+  const computedItemsWithTotals = useMemo(() => {
+    const calculated = items.map((it) => {
+      const fin = calculateItemFinancials({
+        quantity: it.quantity,
+        unit_price: it.unit_price,
+        discount_type: it.discount_type,
+        discount_value: it.discount_value,
+        is_own_product: it.is_own_product,
+        agency_commission_percent: it.agency_commission_percent,
+        min_negotiated_unit_price: it.min_negotiated_unit_price,
+      });
+
+      return {
+        ...it,
+        fin,
+        gross_price: fin.grossPrice,
+        discount: fin.discountVal,
+        net_client_val: fin.netClientVal,
+        agency_commission_val: fin.agencyCommissionVal,
+        partner_payout_val: fin.partnerPayoutVal,
+      };
+    });
+
+    const totals = calculateProposalTotals(calculated);
+    return { calculated, totals };
+  }, [items]);
+
+  // Mutation: Salvar proposta
+  const saveMutation = useMutation({
+    mutationFn: (targetStatus?: string) =>
+      saveProposalFn({
+        data: {
+          id: proposalId || undefined,
+          client_name: clientName || "Cliente em Negociação",
+          client_id: clientId,
+          client_logo_url: clientLogoUrl || null,
+          campaign_title: campaignTitle || "Campanha Multiveículos",
+          media_defense: mediaDefense || null,
+          status: targetStatus || status,
+          notes,
+          items,
+        },
+      }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+      toast.success("Proposta comercial salva com sucesso!");
+      if (onSuccess) onSuccess();
+      onOpenChange(false);
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao salvar proposta"),
+  });
+
+  // Mutation: Gerar PI / Converter
+  const convertMutation = useMutation({
+    mutationFn: async () => {
+      // Primeiro garante o salvamento da proposta
+      const saved = await saveProposalFn({
+        data: {
+          id: proposalId || undefined,
+          client_name: clientName || "Cliente em Negociação",
+          client_id: clientId,
+          client_logo_url: clientLogoUrl || null,
+          campaign_title: campaignTitle || "Campanha Multiveículos",
+          media_defense: mediaDefense || null,
+          status: "approved",
+          notes,
+          items,
+        },
+      });
+
+      // Em seguida converte em PI
+      return convertToPiFn({
+        data: { proposal_id: saved.id },
+      });
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["proposals"] });
+      qc.invalidateQueries({ queryKey: ["pis"] });
+      toast.success(`Pedido de Inserção gerado com sucesso! (${res.pi_numero})`);
+      if (onSuccess) onSuccess();
+      onOpenChange(false);
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao converter em PI"),
+  });
+
+  // Exportar PDF Executivo Co-Branding
+  const handleExportExecutivePdf = async () => {
+    if (!clientName.trim()) {
+      toast.error("Informe o Nome / Razão Social do Anunciante antes de gerar o PDF.");
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("Adicione ao menos um espaço publicitário para gerar a proposta executiva.");
+      return;
+    }
+
+    setGeneratingPdf(true);
+    try {
+      const propApres: PropostaApresentacao = {
+        id: proposalId || "temp",
+        numero: proposalId?.slice(0, 8).toUpperCase() || "SIMULAÇÃO",
+        titulo: campaignTitle || "Plano Comercial Estratégico Multiveículos",
+        tipo_documento: documentType,
+        layout_midia: mediaLayout,
+        mostrar_fotos: mediaLayout === "com_fotos",
+        client_name: clientName,
+        client_logo_url: clientLogoUrl || null,
+        organizacao: currentOrg.org,
+        cliente: {
+          id: clientId || undefined,
+          nome_fantasia: clientName,
+          razao_social: clientName,
+          logo_url: clientLogoUrl || null,
+        },
+        valor_tabela: totals.totalGross,
+        valor_negociado: totals.totalNetClient,
+        valor_desconto: totals.totalDiscount,
+        total_insercoes: items.reduce((acc, it) => acc + (it.quantity || 1), 0),
+        itens: calculated.map((it) => {
+          const cid = it.media_service?.cidade || null;
+          const uf = it.media_service?.estado || null;
+          let endPonto: string | undefined = undefined;
+          if (cid && uf) {
+            endPonto = `${cid} / ${uf}`;
+          } else if (cid) {
+            endPonto = cid;
+          } else if (it.is_own_product) {
+            endPonto = "Cobertura Nacional";
+          }
+          const partnerObj = it.partner || (it as any).media_service?.partner;
+          return {
+            tipo: it.media_service?.categoria_midia || (it.is_own_product ? "Produto Próprio" : "Mídia Exterior"),
+            programa: it.product_name,
+            formato: TIPOS_COBRANCA_LABELS[it.billing_type] || it.billing_type,
+            insercoes_dia: it.quantity,
+            total_insercoes: it.quantity,
+            valor_unit: it.unit_price,
+            valor_tabela: it.gross_price,
+            desconto: it.fin.discountPercent,
+            valor_negociado: it.net_client_val,
+            cidade: cid,
+            estado: uf,
+            endereco_ponto: endPonto,
+            media_kit_defenses: partnerObj?.media_kit_defenses,
+            impactos_estimados_mes: (it as any).media_service?.impactos_estimados_mes,
+            insercoes_dia_catalogo: (it as any).media_service?.insercoes_dia,
+            nome_veiculo: undefined,
+          };
+        }),
+        observacoes: notes,
+        media_defense: mediaDefense || null,
+      };
+
+      await gerarPdfPropostaExecutivaCoBranding(propApres);
+      toast.success("PDF Executivo Co-Branding gerado com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao gerar PDF Co-Branding:", err);
+      toast.error("Erro ao gerar PDF: " + (err?.message || "falha na renderização"));
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  // Filtro de itens no modal de busca do catálogo
+  const filteredCatalogForPicker = useMemo(() => {
+    const q = pickerSearch.trim().toLowerCase();
+    return catalogItems.filter((it) => {
+      if (q) {
+        const matchesQuery =
+          it.nome_produto.toLowerCase().includes(q) ||
+          it.partner?.nome_fantasia?.toLowerCase().includes(q) ||
+          it.partner?.razao_social.toLowerCase().includes(q) ||
+          it.cidade?.toLowerCase().includes(q) ||
+          it.categoria_midia?.toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+      }
+      if (pickerUf !== "TODOS") {
+        if (pickerUf === "NACIONAL") {
+          if (!it.is_own_product && it.estado && it.estado !== "BR" && !it.estado.toLowerCase().includes("nacional")) {
+            return false;
+          }
+        } else {
+          if (it.estado && it.estado.toUpperCase() !== pickerUf.toUpperCase()) {
+            return false;
+          }
+        }
+      }
+      if (pickerCidade !== "TODAS") {
+        if (it.cidade && it.cidade.toLowerCase() !== pickerCidade.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [catalogItems, pickerSearch, pickerUf, pickerCidade]);
+
+  const { totals, calculated } = computedItemsWithTotals;
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[92vh] flex flex-col p-0 overflow-hidden bg-background">
+          {/* Header */}
+          <DialogHeader className="p-5 border-b bg-card/60 shrink-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Calculator className="w-5 h-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                    Simulador de Propostas & Rateio de Comissões
+                    <Badge variant="outline" className="text-xs bg-primary/5 text-primary">
+                      Multiveículos
+                    </Badge>
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    Monte pacotes publicitários integrados, simule descontos e calcule em tempo real
+                    as comissões retidas e repasses a veículos parceiros.
+                  </DialogDescription>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAiPlanOpen(true)}
+                  className="gap-1.5 text-xs h-9 bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Assistente 360° IA
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPickerOpen(true)}
+                  className="gap-1.5 text-xs h-9 border-primary/30 text-primary hover:bg-primary/10"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Adicionar do Catálogo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCircuitModalOpen(true)}
+                  className="gap-1.5 text-xs h-9 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 hover:bg-blue-500/20 font-medium"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  Circuitos / Combos
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addCustomItem}
+                  className="gap-1.5 text-xs h-9"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Item Avulso
+                </Button>
+              </div>
+            </div>
+
+            {/* Inputs Principais: Cliente e Campanha */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
+              <div>
+                <Label className="text-xs font-medium">Cliente / Anunciante *</Label>
+                <div className="flex gap-1.5 mt-1">
+                  <Input
+                    placeholder="Ex: Banco de Brasília, Óticas Diniz..."
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    className="h-8 text-xs bg-background"
+                  />
+                  {clientesList.length > 0 && (
+                    <Select
+                      value={clientId || ""}
+                      onValueChange={(val) => {
+                        setClientId(val);
+                        const c = (clientesList as any[]).find((x) => x.id === val);
+                        if (c) {
+                          setClientName(c.nome_fantasia || c.razao_social || c.nome);
+                          if (c.logo_url) {
+                            setClientLogoUrl(c.logo_url);
+                          }
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-24 text-[11px] shrink-0">
+                        <SelectValue placeholder="Clientes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(clientesList as any[]).map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.nome_fantasia || c.razao_social || c.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium">Título da Campanha</Label>
+                <Input
+                  placeholder="Ex: Campanha Institucional Q4 2026..."
+                  value={campaignTitle}
+                  onChange={(e) => setCampaignTitle(e.target.value)}
+                  className="h-8 text-xs mt-1 bg-background"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs font-medium">Status da Proposta</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="h-8 text-xs mt-1 bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Rascunho</SelectItem>
+                    <SelectItem value="sent">Enviada ao Cliente</SelectItem>
+                    <SelectItem value="approved">Aprovada</SelectItem>
+                    <SelectItem value="rejected">Recusada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Bloco de Co-Branding Executivo & Personalização Visual */}
+            <div className="mt-3 p-3 rounded-xl border border-border/80 bg-muted/20">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                {/* Upload & URL da Logo (md:col-span-6) */}
+                <div className="md:col-span-6 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                      <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                      Logomarca do Anunciante
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        (Opcional - Co-branding no PDF)
+                      </span>
+                    </Label>
+                    {clientLogoUrl && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setClientLogoUrl("")}
+                        className="h-5 px-1.5 text-[10px] text-destructive hover:bg-destructive/10"
+                      >
+                        <X className="w-3 h-3 mr-1" /> Remover Logo
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 items-center">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingLogo}
+                      className="h-8 text-xs gap-1.5 shrink-0 bg-background"
+                    >
+                      {uploadingLogo ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5" />
+                      )}
+                      {uploadingLogo ? "Enviando..." : "Carregar Imagem"}
+                    </Button>
+                    <Input
+                      placeholder="Ou cole o link direto da logomarca (https://...)"
+                      value={clientLogoUrl}
+                      onChange={(e) => setClientLogoUrl(e.target.value)}
+                      className="h-8 text-xs bg-background flex-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Card de Preview em Tempo Real do Co-Branding (md:col-span-6) */}
+                <div className="md:col-span-6">
+                  <div className="rounded-lg border border-primary/20 bg-card p-2.5 shadow-xs flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[9px] font-bold tracking-wider uppercase text-primary flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Preview do Co-Branding Executivo
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">
+                        PROPOSTA EXCLUSIVA DESENVOLVIDA PARA:
+                      </div>
+                      <div className="text-xs font-bold text-foreground truncate mt-0.5">
+                        {clientName || "Nome do Cliente Anunciante"}
+                      </div>
+                    </div>
+
+                    <div className="w-28 h-12 rounded border bg-muted/40 flex items-center justify-center p-1 overflow-hidden shrink-0">
+                      {clientLogoUrl ? (
+                        <img
+                          src={clientLogoUrl}
+                          alt="Logo Anunciante"
+                          className="max-h-full max-w-full object-contain"
+                          onError={() => {
+                            toast.error("Não foi possível carregar a prévia da logo pela URL.");
+                          }}
+                        />
+                      ) : (
+                        <div className="text-center px-1">
+                          <span className="text-[10px] font-bold text-muted-foreground line-clamp-1">
+                            {clientName ? clientName.slice(0, 14) : "SEM LOGO"}
+                          </span>
+                          <span className="text-[8px] text-muted-foreground/70 block">
+                            Tipografia Padrão
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Seletor de Modo de Proposta & Layout de Mídia */}
+            <div className="mt-3 p-3 rounded-xl border border-border/80 bg-background/60 shadow-2xs">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                {/* Tipo de Documento (md:col-span-7) */}
+                <div className="md:col-span-7 space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                    <FileText className="w-3.5 h-3.5 text-primary" />
+                    Escopo & Formato do Documento
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDocumentType("completa")}
+                      className={cn(
+                        "flex items-start gap-2.5 p-2 rounded-lg border text-left transition-all cursor-pointer",
+                        documentType === "completa"
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                          : "border-border/70 bg-card hover:bg-muted/40 text-muted-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="docType"
+                        checked={documentType === "completa"}
+                        onChange={() => setDocumentType("completa")}
+                        className="mt-0.5 text-primary focus:ring-primary shrink-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground leading-tight flex items-center gap-1">
+                          Apresentação Completa
+                          <Badge className="bg-primary/20 text-primary hover:bg-primary/20 text-[9px] px-1 py-0">
+                            Deck 8-10 pág
+                          </Badge>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                          Mídia Kit Institucional + Plano de Mídia + Defesa + Fechamento com Aceite
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDocumentType("direta")}
+                      className={cn(
+                        "flex items-start gap-2.5 p-2 rounded-lg border text-left transition-all cursor-pointer",
+                        documentType === "direta"
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                          : "border-border/70 bg-card hover:bg-muted/40 text-muted-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="docType"
+                        checked={documentType === "direta"}
+                        onChange={() => setDocumentType("direta")}
+                        className="mt-0.5 text-primary focus:ring-primary shrink-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground leading-tight">
+                          Proposta Comercial Direta
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                          Cotação executiva direta (Apenas Capa, Grade dos Espaços e Fechamento)
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Seletor de Layout das Mídias (md:col-span-5) */}
+                <div className="md:col-span-5 space-y-1.5">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                    <Sparkles className="w-3.5 h-3.5 text-secondary" />
+                    Layout da Grade de Mídia
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMediaLayout("com_fotos")}
+                      className={cn(
+                        "flex items-start gap-2 p-2 rounded-lg border text-left transition-all cursor-pointer",
+                        mediaLayout === "com_fotos"
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                          : "border-border/70 bg-card hover:bg-muted/40 text-muted-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="mediaLayout"
+                        checked={mediaLayout === "com_fotos"}
+                        onChange={() => setMediaLayout("com_fotos")}
+                        className="mt-0.5 text-primary focus:ring-primary shrink-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground leading-tight">
+                          Com Fotos dos Pontos
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          Cards com fotos reais, mapa e CPM
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setMediaLayout("sem_fotos")}
+                      className={cn(
+                        "flex items-start gap-2 p-2 rounded-lg border text-left transition-all cursor-pointer",
+                        mediaLayout === "sem_fotos"
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/30"
+                          : "border-border/70 bg-card hover:bg-muted/40 text-muted-foreground",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="mediaLayout"
+                        checked={mediaLayout === "sem_fotos"}
+                        onChange={() => setMediaLayout("sem_fotos")}
+                        className="mt-0.5 text-primary focus:ring-primary shrink-0 cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-[11px] font-bold text-foreground leading-tight">
+                          Sem Fotos
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
+                          Tabela executiva compacta
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Body: Tabela Interativa de Itens + Resumo Lateral */}
+          <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Tabela Interativa (Cols 1,2,3) */}
+            <div className="lg:col-span-3 space-y-4">
+              {/* Defesa Estratégica do Plano de Mídia (Mandatória no PDF) */}
+              <div className="p-3.5 rounded-xl border border-amber-300/70 bg-amber-500/5 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    Defesa Estratégica do Plano de Mídia & Blindagem de Marca
+                  </Label>
+                  <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300/80">
+                    Mandatória no PDF do Cliente
+                  </Badge>
+                </div>
+                <Textarea
+                  placeholder="Argumentação estratégica de autoridade, recall de marca e métricas de impacto extraídas dos veículos e simulador IA..."
+                  value={mediaDefense}
+                  onChange={(e) => setMediaDefense(e.target.value)}
+                  className="text-xs min-h-[64px] bg-background/90 resize-y leading-relaxed"
+                />
+              </div>
+              {items.length === 0 ? (
+                <div className="border-dashed border-2 rounded-xl py-16 text-center flex flex-col items-center justify-center space-y-3 bg-muted/20">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <Layers className="w-6 h-6" />
+                  </div>
+                  <h4 className="font-semibold text-sm text-foreground">
+                    Nenhum espaço publicitário adicionado à proposta
+                  </h4>
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Clique no botão abaixo para buscar no catálogo de veículos parceiros e produtos
+                    próprios da representação.
+                  </p>
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      onClick={() => setPickerOpen(true)}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Explorar Catálogo de Mídias
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={addCustomItem}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Criar Item Avulso
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="border rounded-xl overflow-hidden bg-card shadow-xs">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/40">
+                        <TableRow className="text-xs">
+                          <TableHead className="min-w-[200px]">Espaço / Veículo</TableHead>
+                          <TableHead className="w-[100px]">Qtd / Modelo</TableHead>
+                          <TableHead className="w-[110px]">Valor Tabela</TableHead>
+                          <TableHead className="w-[140px]">Desconto</TableHead>
+                          <TableHead className="w-[120px] text-right">Faturado Anunciante</TableHead>
+                          <TableHead className="w-[120px] text-right">Comissão Agência</TableHead>
+                          <TableHead className="w-[120px] text-right">Repasse Veículo</TableHead>
+                          <TableHead className="w-[45px] text-center"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {calculated.map((it, idx) => (
+                          <TableRow key={idx} className="text-xs hover:bg-muted/30">
+                            {/* Nome e Origem */}
+                            <TableCell className="align-top py-3">
+                              <div className="space-y-1">
+                                <Input
+                                  value={it.product_name}
+                                  onChange={(e) => updateItem(idx, { product_name: e.target.value })}
+                                  className="h-7 text-xs font-medium"
+                                  placeholder="Nome do Espaço"
+                                />
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {it.is_own_product ? (
+                                    <Badge className="bg-amber-600/90 text-white text-[9px] px-1.5 py-0 border-0 flex items-center gap-1">
+                                      <Sparkles className="w-2.5 h-2.5" />
+                                      Produto Próprio
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-purple-700/90 text-white text-[9px] px-1.5 py-0 border-0 flex items-center gap-1">
+                                      <Handshake className="w-2.5 h-2.5" />
+                                      {it.partner?.nome_fantasia ||
+                                        it.partner?.razao_social ||
+                                        "Veículo Parceiro"}
+                                    </Badge>
+                                  )}
+                                  {it.circuit_bundle_id && it.bundle_discount_applied && (
+                                    <Badge className="bg-blue-600 text-white text-[9px] px-1.5 py-0 border-0 flex items-center gap-1 shadow-xs">
+                                      <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                                      Circuito Fechado
+                                    </Badge>
+                                  )}
+                                  {it.fin.isBelowMinimum && (
+                                    <Badge
+                                      variant="destructive"
+                                      className="text-[9px] px-1.5 py-0 flex items-center gap-1 bg-rose-600 animate-pulse"
+                                      title={`Valor mínimo acordado: ${formatBRL(it.min_negotiated_unit_price || 0)}`}
+                                    >
+                                      <AlertTriangle className="w-2.5 h-2.5" />
+                                      Abaixo do Mínimo!
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            {/* Qtd & Tipo de Cobrança */}
+                            <TableCell className="align-top py-3">
+                              <div className="space-y-1">
+                                <Input
+                                  type="number"
+                                  min="0.1"
+                                  step="any"
+                                  value={it.quantity}
+                                  onChange={(e) =>
+                                    updateItem(idx, { quantity: Number(e.target.value) || 1 })
+                                  }
+                                  className="h-7 text-xs w-full"
+                                />
+                                <span className="text-[10px] text-muted-foreground block truncate">
+                                  {TIPOS_COBRANCA_LABELS[it.billing_type] || it.billing_type}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* Valor Unitário de Tabela */}
+                            <TableCell className="align-top py-3">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={it.unit_price}
+                                onChange={(e) =>
+                                  updateItem(idx, { unit_price: Number(e.target.value) || 0 })
+                                }
+                                className="h-7 text-xs"
+                              />
+                              <span className="text-[10px] text-muted-foreground block mt-1">
+                                Total: {formatBRL(it.gross_price)}
+                              </span>
+                            </TableCell>
+
+                            {/* Desconto */}
+                            <TableCell className="align-top py-3">
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={it.discount_value}
+                                  onChange={(e) =>
+                                    updateItem(idx, {
+                                      discount_value: Number(e.target.value) || 0,
+                                    })
+                                  }
+                                  className="h-7 text-xs flex-1"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-1.5 text-[10px] font-bold"
+                                  onClick={() =>
+                                    updateItem(idx, {
+                                      discount_type: it.discount_type === "percent" ? "fixed" : "percent",
+                                    })
+                                  }
+                                  title="Alternar entre % e R$"
+                                >
+                                  {it.discount_type === "percent" ? "%" : "R$"}
+                                </Button>
+                              </div>
+                              <span className="text-[10px] text-muted-foreground block mt-1">
+                                -{formatBRL(it.discount)} ({it.fin.discountPercent.toFixed(1)}%)
+                              </span>
+                            </TableCell>
+
+                            {/* Faturado ao Anunciante */}
+                            <TableCell className="align-top py-3 text-right">
+                              <div className="font-bold text-foreground text-xs sm:text-sm">
+                                {formatBRL(it.net_client_val)}
+                              </div>
+                              <span className="text-[10px] text-muted-foreground">
+                                Unit: {formatBRL(it.fin.effectiveUnitPrice)}
+                              </span>
+                            </TableCell>
+
+                            {/* Comissão da Agência */}
+                            <TableCell className="align-top py-3 text-right">
+                              <div className="font-bold text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
+                                {formatBRL(it.agency_commission_val)}
+                              </div>
+                              {it.is_own_product ? (
+                                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                                  100% In-House
+                                </span>
+                              ) : (
+                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={it.agency_commission_percent}
+                                    onChange={(e) =>
+                                      updateItem(idx, {
+                                        agency_commission_percent: Number(e.target.value) || 0,
+                                      })
+                                    }
+                                    className="w-10 h-5 text-[10px] text-right border rounded px-1 bg-background"
+                                  />
+                                  <span className="text-[10px] text-muted-foreground">%</span>
+                                </div>
+                              )}
+                            </TableCell>
+
+                            {/* Repasse ao Veículo Parceiro */}
+                            <TableCell className="align-top py-3 text-right">
+                              <div className="font-semibold text-purple-700 dark:text-purple-300 text-xs sm:text-sm">
+                                {formatBRL(it.partner_payout_val)}
+                              </div>
+                              <span className="text-[10px] text-muted-foreground">
+                                {it.is_own_product ? "Sem repasse" : "Líquido parceiro"}
+                              </span>
+                            </TableCell>
+
+                            {/* Excluir */}
+                            <TableCell className="align-top py-3 text-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                onClick={() => removeItem(idx)}
+                                title="Remover item da proposta"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Observações da Proposta */}
+              <div className="space-y-1.5 pt-2">
+                <Label className="text-xs font-medium">Condições Comerciais e Observações</Label>
+                <Textarea
+                  rows={2}
+                  placeholder="Ex: Prazo de pagamento em 28 DDL. Materiais devem ser entregues com 48h de antecedência..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="text-xs bg-background"
+                />
+              </div>
+            </div>
+
+            {/* Resumo Executivo em Tempo Real (Col 4 - Sticky Lateral) */}
+            <div className="lg:col-span-1 space-y-4">
+              <Card className="border-border/80 shadow-md bg-card sticky top-0 overflow-hidden">
+                <div className="h-2 w-full bg-gradient-to-r from-primary via-emerald-500 to-purple-600" />
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-sm font-bold flex items-center justify-between">
+                    <span>Resumo Financeiro</span>
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-1 space-y-3.5 text-xs">
+                  {/* Faturamento Bruto de Tabela */}
+                  <div className="flex items-center justify-between py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Valor Bruto Tabela</span>
+                    <span className="font-semibold">{formatBRL(totals.totalGross)}</span>
+                  </div>
+
+                  {/* Total de Descontos */}
+                  <div className="flex items-center justify-between py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Descontos Concedidos</span>
+                    <span className="font-semibold text-rose-600 dark:text-rose-400">
+                      -{formatBRL(totals.totalDiscount)}
+                    </span>
+                  </div>
+
+                  {/* Faturamento Total ao Anunciante */}
+                  <div className="p-2.5 rounded-lg bg-muted/60 space-y-0.5">
+                    <span className="text-[11px] text-muted-foreground uppercase font-medium block">
+                      Total Faturado ao Cliente
+                    </span>
+                    <div className="text-lg font-bold text-foreground">
+                      {formatBRL(totals.totalNetClient)}
+                    </div>
+                  </div>
+
+                  {/* Comissão Líquida da Representação (DESTAQUE MÁXIMO) */}
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/30 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                        Receita Líquida da Agência
+                      </span>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <div className="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">
+                      {formatBRL(totals.totalNetAgency)}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-1 text-emerald-700/90 dark:text-emerald-400 font-medium">
+                      <span>Margem Média:</span>
+                      <span className="font-bold">{totals.profitMarginPercent.toFixed(1)}%</span>
+                    </div>
+                  </div>
+
+                  {/* Repasse aos Veículos Parceiros */}
+                  <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 space-y-0.5">
+                    <span className="text-[11px] text-purple-700 dark:text-purple-300 font-medium block">
+                      Total Repasse aos Veículos
+                    </span>
+                    <div className="text-base font-bold text-purple-800 dark:text-purple-200">
+                      {formatBRL(totals.totalPayoutPartners)}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground block">
+                      Distribuído entre os veículos parceiros
+                    </span>
+                  </div>
+
+                  {/* Indicador de Saúde da Proposta */}
+                  <div className="pt-2 border-t border-border/50 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span>{items.length} espaços/veículos configurados</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Footer com Ações */}
+          <DialogFooter className="p-4 border-t bg-card/60 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="text-xs"
+            >
+              Cancelar
+            </Button>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportExecutivePdf}
+                disabled={generatingPdf || items.length === 0}
+                className="gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/10 flex-1 sm:flex-initial"
+                title={
+                  documentType === "completa"
+                    ? "Gera a Apresentação Institucional Completa e Mídia Kit com 8-10 slides"
+                    : "Gera a Proposta Comercial Direta para fechamento rápido"
+                }
+              >
+                {generatingPdf ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Printer className="w-3.5 h-3.5" />
+                )}
+                {documentType === "completa"
+                  ? "Exportar Apresentação Completa"
+                  : "Exportar Proposta Direta"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => saveMutation.mutate("draft")}
+                disabled={saveMutation.isPending || convertMutation.isPending}
+                className="gap-1.5 text-xs flex-1 sm:flex-initial"
+              >
+                <Save className="w-3.5 h-3.5" />
+                Salvar Rascunho
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => convertMutation.mutate()}
+                disabled={items.length === 0 || convertMutation.isPending || saveMutation.isPending}
+                className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex-1 sm:flex-initial"
+              >
+                <FileCheck2 className="w-3.5 h-3.5" />
+                {convertMutation.isPending ? "Gerando PI..." : "Gerar PI / Espelho"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE SELEÇÃO DINÂMICA DO CATÁLOGO DE MÍDIAS */}
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b space-y-3">
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Layers className="w-4 h-4 text-primary" />
+              Selecionar Espaço Publicitário do Catálogo
+            </DialogTitle>
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <div className="relative sm:col-span-6">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquise por nome, veículo parceiro..."
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  className="pl-9 text-xs h-8"
+                />
+              </div>
+              <div className="sm:col-span-3">
+                <Select
+                  value={pickerUf}
+                  onValueChange={(val) => {
+                    setPickerUf(val);
+                    setPickerCidade("TODAS");
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="UF / Âmbito" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    <SelectItem value="TODOS">Todos os Estados / Âmbitos</SelectItem>
+                    <SelectItem value="NACIONAL">Âmbito Nacional / Digital</SelectItem>
+                    {UFS_BRASIL.map((uf) => (
+                      <SelectItem key={uf} value={uf}>
+                        {uf}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="sm:col-span-3">
+                <Select
+                  value={pickerCidade}
+                  onValueChange={setPickerCidade}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Cidade" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    <SelectItem value="TODAS">Todas as Cidades</SelectItem>
+                    {(
+                      pickerUf !== "TODOS" && pickerUf !== "NACIONAL" && pracasInfo?.cidadesPorEstado?.[pickerUf]
+                        ? pracasInfo.cidadesPorEstado[pickerUf]
+                        : pracasInfo?.cidadesCadastradas || []
+                    ).map((cid: string) => (
+                      <SelectItem key={cid} value={cid}>
+                        {cid}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 divide-y">
+            {filteredCatalogForPicker.length === 0 ? (
+              <div className="py-12 text-center text-xs text-muted-foreground">
+                Nenhum espaço encontrado no catálogo com o filtro pesquisado.
+              </div>
+            ) : (
+              filteredCatalogForPicker.map((cat) => (
+                <div
+                  key={cat.id}
+                  onClick={() => addItemFromCatalog(cat)}
+                  className="py-3 px-2 flex items-center justify-between hover:bg-muted/50 rounded-lg cursor-pointer transition-colors group"
+                >
+                  <div className="space-y-1">
+                    <div className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">
+                      {cat.nome_produto}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {cat.is_own_product ? (
+                        <Badge className="bg-amber-600/90 text-white text-[9px] px-1.5 py-0">
+                          ⭐ Produto Próprio
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-purple-700/90 text-white text-[9px] px-1.5 py-0">
+                          🤝 {cat.partner?.nome_fantasia || cat.partner?.razao_social} •{" "}
+                          {cat.comissao_percentual_especifica ??
+                            cat.partner?.comissao_padrao_percentual ??
+                            0}
+                          % comissão
+                        </Badge>
+                      )}
+                      <span className="text-[10px] text-muted-foreground">
+                        {TIPOS_COBRANCA_LABELS[cat.tipo_cobranca] || cat.tipo_cobranca}
+                      </span>
+                      {cat.cidade && (
+                        <span className="text-[10px] text-muted-foreground">
+                          • {cat.cidade}/{cat.estado || ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="font-bold text-xs text-foreground">
+                      {cat.valor_tabela ? formatBRL(cat.valor_tabela) : "Sob Consulta"}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-[10px] text-primary gap-1 p-0 mt-0.5 group-hover:underline"
+                    >
+                      Adicionar <ArrowRight className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter className="p-3 border-t">
+            <Button variant="outline" size="sm" onClick={() => setPickerOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DO PLANEJAMENTO ESTRATÉGICO 360° COM IA */}
+      <Planejamento360Modal
+        open={aiPlanOpen}
+        onOpenChange={setAiPlanOpen}
+        clienteNome={clientName}
+        onAplicarAoPlano={handleApplyFromAiPlan}
+      />
+
+      {/* MODAL DE SELEÇÃO DE CIRCUITOS / BUNDLES */}
+      <Dialog open={circuitModalOpen} onOpenChange={setCircuitModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden bg-background">
+          <DialogHeader className="p-4 border-b bg-card">
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Sparkles className="size-4 text-blue-600" />
+              Circuitos e Combos Disponíveis
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Selecione um circuito fechado para aplicar condições especiais de desconto. Venda exclusiva para parceiros elegíveis.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {availableBundles.length === 0 ? (
+              <div className="py-12 text-center space-y-2">
+                <Layers className="size-8 text-muted-foreground/40 mx-auto" />
+                <p className="text-sm font-semibold">Nenhum circuito cadastrado ou disponível</p>
+                <p className="text-xs text-muted-foreground">
+                  Circuitos com desconto são liberados apenas quando o parceiro for autorizado ou possuir pacotes ativos.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {availableBundles.map((b) => {
+                  const partnerAllows = b.partner ? Boolean((b.partner as any).allows_circuit_bundles) : true;
+                  const isExplicitlyAllowed = Boolean(
+                    b.partner_id && b.allowed_partner_ids && b.allowed_partner_ids.includes(b.partner_id)
+                  );
+                  const isEligible = partnerAllows || isExplicitlyAllowed;
+
+                  return (
+                    <CircuitoBadgeCard
+                      key={b.id}
+                      bundle={b}
+                      isEligiblePartner={isEligible}
+                      onSelect={handleApplyCircuitBundle}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-3 border-t bg-card">
+            <Button variant="outline" size="sm" onClick={() => setCircuitModalOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

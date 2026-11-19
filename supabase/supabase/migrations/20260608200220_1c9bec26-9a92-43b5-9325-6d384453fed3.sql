@@ -1,0 +1,2 @@
+ALTER TABLE public.clientes ALTER COLUMN data_aniversario TYPE text USING to_char(data_aniversario, 'DD/MM');
+ALTER TABLE public.agencias ALTER COLUMN data_aniversario TYPE text USING to_char(data_aniversario, 'DD/MM');

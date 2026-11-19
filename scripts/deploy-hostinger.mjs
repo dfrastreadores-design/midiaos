@@ -4,7 +4,22 @@ import { execSync, spawnSync } from "node:child_process";
 import https from "node:https";
 import http from "node:http";
 
-const DEPLOY_TOKEN = "midiaos_deploy_sec_9938210491823712";
+// Token dinâmico lido das variáveis de ambiente / .env
+let DEPLOY_TOKEN = process.env.DEPLOY_TOKEN;
+if (!DEPLOY_TOKEN && fs.existsSync(".env")) {
+  const envText = fs.readFileSync(".env", "utf-8");
+  for (const l of envText.split("\n")) {
+    const t = l.trim();
+    if (t.startsWith("DEPLOY_TOKEN=")) {
+      DEPLOY_TOKEN = t.split("=")[1].trim().replace(/^['"]|['"]$/g, "");
+      break;
+    }
+  }
+}
+if (!DEPLOY_TOKEN) {
+  console.error("❌ DEPLOY_TOKEN não configurado no .env!");
+  process.exit(1);
+}
 const APP_URL = "https://midiaos.online";
 
 console.log("====================================================");
@@ -116,19 +131,6 @@ if (fs.existsSync(".htaccess")) {
   ]);
 }
 
-if (fs.existsSync(".env")) {
-  console.log("  -> Enviando .env...");
-  spawnSync("curl.exe", [
-    "-s",
-    "-k",
-    "-u",
-    `${ftpUser}:${ftpPass}`,
-    "-T",
-    ".env",
-    `ftp://${ftpHost}/.env`,
-  ]);
-}
-
 // 3.2 Enviar hostinger_deploy.zip (fluxo contínuo com progresso)
 console.log(`  -> Enviando hostinger_deploy.zip (${zipSizeMb} MB)...`);
 const uploadStart = Date.now();
@@ -156,28 +158,50 @@ console.log(`  ✅ Upload concluído em ${uploadElapsed}s!`);
 // [4/4] Disparo do deploy atômico no servidor
 console.log("\n⚡ [4/4] Executando extração e reiniciando aplicação no servidor...");
 
-function requestJson(url) {
+function requestJson(url, options = {}) {
   return new Promise((resolve, reject) => {
-    https
-      .get(url, { rejectUnauthorized: false }, (res) => {
-        let data = "";
-        res.on("data", (chunk) => {
-          data += chunk;
-        });
-        res.on("end", () => {
-          try {
-            resolve({ status: res.statusCode, body: JSON.parse(data) });
-          } catch {
-            resolve({ status: res.statusCode, raw: data });
-          }
-        });
-      })
-      .on("error", reject);
+    const urlObj = new URL(url);
+    const method = options.method || "GET";
+    const postBody = options.body || "";
+    const reqHeaders = {
+      "X-Deploy-Token": DEPLOY_TOKEN,
+      ...(options.headers || {}),
+    };
+    if (postBody) {
+      reqHeaders["Content-Length"] = Buffer.byteLength(postBody);
+    }
+    const reqOptions = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || (urlObj.protocol === "https:" ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method: method,
+      rejectUnauthorized: false,
+      headers: reqHeaders,
+    };
+    const client = urlObj.protocol === "https:" ? https : http;
+    const req = client.request(reqOptions, (res) => {
+      let data = "";
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+      res.on("end", () => {
+        try {
+          resolve({ status: res.statusCode, body: JSON.parse(data) });
+        } catch {
+          resolve({ status: res.statusCode, raw: data });
+        }
+      });
+    });
+    req.on("error", reject);
+    if (postBody) {
+      req.write(postBody);
+    }
+    req.end();
   });
 }
 
 try {
-  const triggerUrl = `${APP_URL}/deploy_api.php?token=${DEPLOY_TOKEN}&action=extract`;
+  const triggerUrl = `${APP_URL}/deploy_api.php?action=extract`;
   const result = await requestJson(triggerUrl);
 
   if (result.status === 200 && result.body && result.body.success) {
@@ -187,12 +211,29 @@ try {
       `  🔄 Passenger/Node.js reiniciado: ${result.body.passenger_restarted ? "SIM" : "OK"}`,
     );
 
+    // 4.1 Sincronização segura de variáveis de ambiente diretamente no diretório privado do Node.js
+    if (fs.existsSync(".env")) {
+      console.log("  -> Sincronizando variáveis de ambiente de forma segura no servidor...");
+      const envData = fs.readFileSync(".env", "utf8");
+      try {
+        const syncRes = await requestJson(`${APP_URL}/deploy_api.php?action=sync_env`, {
+          method: "POST",
+          body: envData,
+        });
+        if (syncRes.status === 200 && syncRes.body?.success) {
+          console.log("  ✅ Variáveis de ambiente sincronizadas no diretório seguro do Node.js com sucesso!");
+        }
+      } catch (syncErr) {
+        console.warn("  ⚠️ Aviso ao sincronizar variáveis de ambiente:", syncErr.message);
+      }
+    }
+
     // [5/5] Limpeza de arquivos temporários locais e remotos
     console.log("\n🧹 [5/5] Executando higienização pós-deploy (removendo zips temporários)...");
     
     // 5.1 Limpeza remota
     try {
-      const cleanUrl = `${APP_URL}/deploy_api.php?token=${DEPLOY_TOKEN}&action=cleanup`;
+      const cleanUrl = `${APP_URL}/deploy_api.php?action=cleanup`;
       const cleanRes = await requestJson(cleanUrl);
       if (cleanRes.status === 200 && cleanRes.body?.success) {
         console.log("  ✅ Arquivo hostinger_deploy.zip removido do servidor com sucesso!");

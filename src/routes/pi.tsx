@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import React, { useState } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PiEcosystemSection } from "@/components/pi/PiEcosystemSection";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,8 @@ import { CampanhaRateioDialog } from "@/components/CampanhaRateioDialog";
 import { ComprovantesExecucaoDialog } from "@/components/ComprovantesExecucaoDialog";
 import { getPrestacaoContas } from "@/lib/prestacao-contas.functions";
 import { useTenantBranding } from "@/hooks/use-tenant-branding";
-import { Handshake, FileCheck2 } from "lucide-react";
+import { Handshake, FileCheck2, DollarSign, Users, CheckCircle2, CheckSquare } from "lucide-react";
+import { EspelhoPiModal } from "@/components/pi/EspelhoPiModal";
 
 import {
   DropdownMenu,
@@ -325,6 +327,7 @@ export const Route = createFileRoute("/pi")({
     id: typeof search.id === "string" ? search.id : undefined,
     renovar: typeof search.renovar === "string" ? search.renovar : undefined,
     filtro: typeof search.filtro === "string" ? search.filtro : undefined,
+    tab: typeof search.tab === "string" ? search.tab : undefined,
   }),
   component: PIPage,
 });
@@ -395,16 +398,39 @@ type PiRow = {
 
   cliente?: { razao_social: string; nome_fantasia: string | null } | null;
   agencia?: { razao_social: string; nome_fantasia: string | null } | null;
+  parceiro?: { razao_social: string; nome_fantasia: string | null } | null;
+  tipo_pi?: "CLIENTE" | "PARCEIRO" | string | null;
+  status_veiculacao?: string | null;
+  parceiro_id?: string | null;
 };
 
 function PIPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const routeSearch = Route.useSearch();
+  const [secaoAtiva, setSecaoAtiva] = useState<"pi360" | "historico_classico" | "checking">(
+    routeSearch?.tab === "checking"
+      ? "checking"
+      : routeSearch?.tab === "historico"
+        ? "historico_classico"
+        : "pi360",
+  );
+
+  useEffect(() => {
+    if (routeSearch?.tab === "checking") {
+      setSecaoAtiva("checking");
+    } else if (routeSearch?.tab === "historico") {
+      setSecaoAtiva("historico_classico");
+    } else if (routeSearch?.tab === "pi360") {
+      setSecaoAtiva("pi360");
+    }
+  }, [routeSearch?.tab]);
   const [apenasRenovacao10d, setApenasRenovacao10d] = useState(
     routeSearch?.filtro === "renovacao_10d",
   );
   const [search, setSearch] = useState("");
+  const [tipoPiTab, setTipoPiTab] = useState<"todos" | "CLIENTE" | "PARCEIRO">("todos");
+  const [espelhoPiId, setEspelhoPiId] = useState<string | null>(null);
   const [fatFilter, setFatFilter] = useState<"todos" | "bruto" | "liquido">("todos");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [mesFilter, setMesFilter] = useState<string>("todos");
@@ -730,7 +756,14 @@ function PIPage() {
       const canSeeApproval = isAdmin || p.executivo_id === user?.id || isProducao;
       const matchRoleVisibility = !isWaitingApproval || canSeeApproval;
 
+      const piTipo = String((p as any).tipo_pi ?? "CLIENTE").toUpperCase();
+      const matchTipoPi =
+        tipoPiTab === "todos" ||
+        (tipoPiTab === "CLIENTE" && (piTipo === "CLIENTE" || piTipo === "PADRAO")) ||
+        (tipoPiTab === "PARCEIRO" && piTipo === "PARCEIRO");
+
       return (
+        matchTipoPi &&
         matchSearch &&
         matchFat &&
         matchStatus &&
@@ -813,26 +846,96 @@ function PIPage() {
             Pedidos de Inserção (PI)
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Numeração automática · cancelar/substituir · histórico
+            Ordens de compra formal · Checking pericial de veiculação · Liquidação bimodal e repasses
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setPdfOpen(true)}>
-            <Sparkles className="size-4 mr-2" />
-            Importar PDF (IA)
-          </Button>
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setPrefill(undefined);
-              setFormOpen(true);
-            }}
-          >
-            <Plus className="size-4 mr-2" />
-            Novo PI
-          </Button>
+        <div className="flex items-center gap-2">
+          <div className="bg-muted p-1 rounded-lg flex items-center border">
+            <button
+              type="button"
+              onClick={() => {
+                setSecaoAtiva("pi360");
+                navigate({ search: (p) => ({ ...p, tab: undefined }), replace: true });
+              }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                secaoAtiva === "pi360"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileCheck2 className="size-3.5 text-primary" />
+              PI 360° & Liquidação Bimodal
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSecaoAtiva("checking");
+                navigate({ search: (p) => ({ ...p, tab: "checking" }), replace: true });
+              }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                secaoAtiva === "checking"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <CheckSquare className="size-3.5 text-emerald-600" />
+              Checking & Comprovação
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSecaoAtiva("historico_classico");
+                navigate({ search: (p) => ({ ...p, tab: "historico" }), replace: true });
+              }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+                secaoAtiva === "historico_classico"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <HistoryIcon className="size-3.5" />
+              PIs Clássicos / Histórico
+            </button>
+          </div>
+          {secaoAtiva === "historico_classico" && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setPdfOpen(true)}>
+                <Sparkles className="size-4 mr-2" />
+                Importar PDF (IA)
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditing(null);
+                  setPrefill(undefined);
+                  setFormOpen(true);
+                }}
+              >
+                <Plus className="size-4 mr-2" />
+                Novo PI Clássico
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {secaoAtiva === "checking" ? (
+        <PiEcosystemSection
+          initialCheckingTab={true}
+          onVerClassicos={() => {
+            setSecaoAtiva("historico_classico");
+            navigate({ search: (p) => ({ ...p, tab: "historico" }), replace: true });
+          }}
+        />
+      ) : secaoAtiva === "pi360" ? (
+        <PiEcosystemSection
+          onVerClassicos={() => {
+            setSecaoAtiva("historico_classico");
+            navigate({ search: (p) => ({ ...p, tab: "historico" }), replace: true });
+          }}
+        />
+      ) : (
+        <>
 
       {(() => {
         const now = new Date();
@@ -915,6 +1018,44 @@ function PIPage() {
 
       <Card>
         <CardContent className="p-0">
+          {/* Abas Rápidas de Duplo Fluxo: Todos | Clientes (Faturamento) | Parceiros (Veiculação) */}
+          <div className="p-3 border-b bg-muted/20 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border/70">
+              <Button
+                variant={tipoPiTab === "todos" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setTipoPiTab("todos")}
+                className="h-8 text-xs font-semibold rounded-lg"
+              >
+                Todos ({rows.length})
+              </Button>
+              <Button
+                variant={tipoPiTab === "CLIENTE" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setTipoPiTab("CLIENTE")}
+                className="h-8 text-xs font-semibold rounded-lg gap-1.5"
+              >
+                <DollarSign className="size-3.5" />
+                PIs de Clientes (Faturamento)
+                <Badge variant="secondary" className="ml-1 text-[10px] py-0 px-1.5">
+                  {rows.filter((p: any) => !p.tipo_pi || p.tipo_pi?.toUpperCase() === "CLIENTE" || p.tipo_pi?.toUpperCase() === "PADRAO").length}
+                </Badge>
+              </Button>
+              <Button
+                variant={tipoPiTab === "PARCEIRO" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setTipoPiTab("PARCEIRO")}
+                className="h-8 text-xs font-semibold rounded-lg gap-1.5"
+              >
+                <Users className="size-3.5" />
+                PIs de Parceiros (Veiculação)
+                <Badge variant="secondary" className="ml-1 text-[10px] py-0 px-1.5">
+                  {rows.filter((p: any) => p.tipo_pi?.toUpperCase() === "PARCEIRO").length}
+                </Badge>
+              </Button>
+            </div>
+          </div>
+
           <div className="p-3 sm:p-4 border-b flex flex-wrap items-center gap-2 sm:gap-3">
             <Input
               placeholder="Buscar por nº, campanha, cliente, agência ou observação…"
@@ -1282,7 +1423,18 @@ function PIPage() {
                         className={p.status === "substituido" ? "opacity-60" : undefined}
                       >
                         <TableCell className="font-mono text-sm font-medium">
-                          <div>{p.numero}</div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{p.numero}</span>
+                            {p.tipo_pi === "PARCEIRO" ? (
+                              <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200 font-bold py-0">
+                                🤝 Parceiro
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] bg-sky-50 text-sky-700 border-sky-200 font-bold py-0">
+                                💼 Cliente
+                              </Badge>
+                            )}
+                          </div>
                           {p.substitui_pi_id && rows.find((r) => r.id === p.substitui_pi_id) && (
                             <button
                               type="button"
@@ -1381,6 +1533,15 @@ function PIPage() {
                             <Badge className={STATUS_COLOR[p.status]}>
                               {STATUS_LABEL[p.status] ?? p.status}
                             </Badge>
+                            {p.status_veiculacao === "veiculacao_autorizada" || ["aprovado", "emitido", "veiculado"].includes(p.status) ? (
+                              <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 text-[9px] w-fit font-bold">
+                                🟢 Veiculação Autorizada
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-300 text-[9px] w-fit font-bold">
+                                🟡 Aguardando PI
+                              </Badge>
+                            )}
                             {(() => {
                               let fimStr = p.periodo_fim;
                               if (!fimStr && p.mes_veiculacao && p.ano_veiculacao) {
@@ -1709,6 +1870,14 @@ function PIPage() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
+                                  title="Visualizar Espelho Profissional do PI (OOH)"
+                                  onClick={() => setEspelhoPiId(p.id)}
+                                >
+                                  <FileText className="size-4 text-primary" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
                                   title="Editar"
                                   onClick={handleEdit}
                                 >
@@ -1886,6 +2055,8 @@ function PIPage() {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
 
       <PiFormDialog
         key={editing?.id ?? (renovadoDeId ? `renovar-${renovadoDeId}` : "novo")}
@@ -2349,6 +2520,11 @@ function PIPage() {
         phone={whatsQr?.phone ?? ""}
         message={whatsQr?.message ?? ""}
         title={whatsQr?.title}
+      />
+      <EspelhoPiModal
+        open={!!espelhoPiId}
+        onOpenChange={(v) => !v && setEspelhoPiId(null)}
+        piId={espelhoPiId}
       />
     </AppShell>
   );

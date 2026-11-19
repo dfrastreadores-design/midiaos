@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -12,7 +11,8 @@ export const notificarPiReemitidoParaExecutivo = createServerFn({ method: "POST"
   .inputValidator((d: unknown) => z.object({ pi_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const request = getRequest();
+    const { safeGetRequest } = await import("@/lib/server-request.server");
+    const request = safeGetRequest();
 
     const { data: isAdmin } = await supabase
       .from("user_roles")

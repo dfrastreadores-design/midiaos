@@ -1,0 +1,1 @@
+ALTER TABLE public.agencias ADD COLUMN IF NOT EXISTS executivo_id uuid;

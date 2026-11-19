@@ -1,18 +1,35 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Info, Search, RefreshCw, AlertCircle, Clock, TrendingUp, DollarSign } from "lucide-react";
+import {
+  Info,
+  Search,
+  RefreshCw,
+  AlertCircle,
+  Clock,
+  TrendingUp,
+  DollarSign,
+  KanbanSquare,
+  CheckSquare,
+  Target,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getFunilCrm, stageLabels, type FunnelStage, type CrmCard } from "@/lib/crm.functions";
 import { formatBRL } from "@/lib/mock-data";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TarefasKanbanView } from "./tarefas";
+import { MetasView } from "./metas";
 
 export const Route = createFileRoute("/crm")({
-  head: () => ({ meta: [{ title: "Funil CRM — Mídia.OS" }] }),
+  head: () => ({ meta: [{ title: "CRM Comercial — Mídia.OS" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: typeof search.tab === "string" ? search.tab : undefined,
+  }),
   component: CRM,
 });
 
@@ -35,6 +52,22 @@ const STAGES: FunnelStage[] = [
 ];
 
 function CRM() {
+  const routeSearch = Route.useSearch();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<"funil" | "tarefas" | "metas">(
+    routeSearch?.tab === "tarefas"
+      ? "tarefas"
+      : routeSearch?.tab === "metas"
+        ? "metas"
+        : "funil",
+  );
+
+  useEffect(() => {
+    if (routeSearch?.tab === "tarefas") setActiveTab("tarefas");
+    else if (routeSearch?.tab === "metas") setActiveTab("metas");
+    else if (routeSearch?.tab === "funil") setActiveTab("funil");
+  }, [routeSearch?.tab]);
+
   const [search, setSearch] = useState("");
   const {
     data = [],
@@ -59,30 +92,68 @@ function CRM() {
 
   return (
     <AppShell>
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
-            Funil de Vendas
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Atualizado automaticamente conforme você usa o sistema — sem arrastar.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar cliente ou campanha…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 w-64"
-            />
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => {
+          const t = val as "funil" | "tarefas" | "metas";
+          setActiveTab(t);
+          navigate({
+            search: (p) => ({ ...p, tab: t === "funil" ? undefined : t }),
+            replace: true,
+          });
+        }}
+        className="w-full space-y-6"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-4 border-b pb-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-display font-semibold tracking-tight">
+              CRM Comercial & Pipeline
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Funil de oportunidades, tarefas operacionais em Kanban e metas comerciais.
+            </p>
           </div>
-          <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
-          </Button>
+          <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+            <TabsTrigger value="funil" className="flex items-center gap-1.5">
+              <KanbanSquare className="size-4" />
+              <span>Funil de Vendas</span>
+            </TabsTrigger>
+            <TabsTrigger value="tarefas" className="flex items-center gap-1.5">
+              <CheckSquare className="size-4" />
+              <span>Tarefas (Kanban)</span>
+            </TabsTrigger>
+            <TabsTrigger value="metas" className="flex items-center gap-1.5">
+              <Target className="size-4" />
+              <span>Metas Comerciais</span>
+            </TabsTrigger>
+          </TabsList>
         </div>
-      </div>
+
+        <TabsContent value="funil" className="mt-0 space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Estágios do Funil
+              </h2>
+              <p className="text-muted-foreground text-xs mt-0.5">
+                Atualizado automaticamente conforme você usa o sistema — sem arrastar.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar cliente ou campanha…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 w-64"
+                />
+              </div>
+              <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching}>
+                <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+          </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="bg-primary/5 border-primary/20">
@@ -246,6 +317,16 @@ function CRM() {
           );
         })}
       </div>
+        </TabsContent>
+
+        <TabsContent value="tarefas" className="mt-0">
+          <TarefasKanbanView embedded={true} />
+        </TabsContent>
+
+        <TabsContent value="metas" className="mt-0">
+          <MetasView embedded={true} />
+        </TabsContent>
+      </Tabs>
     </AppShell>
   );
 }

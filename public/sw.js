@@ -1,5 +1,5 @@
 // Service Worker — Mídia.OS PWA
-const CACHE_NAME = "midiaos-cache-v5";
+const CACHE_NAME = "midiaos-cache-v8";
 const STATIC_ASSETS = [
   "/favicon.png",
   "/pwa-192x192.png",
@@ -8,21 +8,31 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
+  // Ativação imediata do novo worker
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS).catch(() => {});
     }),
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)));
-    }),
+    caches
+      .keys()
+      .then((keys) => {
+        return Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_NAME) {
+              console.log("[SW] Removendo cache obsoleto:", key);
+              return caches.delete(key);
+            }
+          }),
+        );
+      })
+      .then(() => self.clients.claim()),
   );
-  self.clients.claim();
 });
 
 // Network-first strategy for data & navigation; cache-first fallback for static assets
@@ -128,6 +138,11 @@ self.addEventListener("push", (event) => {
 
 // Listener de Mensagens Internas enviadas pela aplicação React
 self.addEventListener("message", (event) => {
+  if (event.data && (event.data.type === "SKIP_WAITING" || event.data === "skipWaiting")) {
+    self.skipWaiting();
+    return;
+  }
+
   if (event.data && event.data.type === "SHOW_LOCAL_PUSH") {
     const { title, options } = event.data;
     const notificationOptions = {

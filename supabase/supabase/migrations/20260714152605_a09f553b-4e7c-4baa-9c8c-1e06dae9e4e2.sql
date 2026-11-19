@@ -1,0 +1,2 @@
+ALTER TABLE public.produtos DROP CONSTRAINT IF EXISTS produtos_veiculacao_tipo_check;
+ALTER TABLE public.produtos ADD CONSTRAINT produtos_veiculacao_tipo_check CHECK (veiculacao_tipo IN ('livre','dias_uteis','seg_sab','dias_fixos','dias_semana'));

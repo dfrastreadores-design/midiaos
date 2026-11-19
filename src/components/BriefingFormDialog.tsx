@@ -303,6 +303,17 @@ export function BriefingFormDialog({ open, onOpenChange, initial }: Props) {
                 </div>
               </div>
               <div>
+                <Label>Público de Interesse (Target)</Label>
+                <Input
+                  value={(form as any).publico_interesse ?? ""}
+                  onChange={(e) => set("publico_interesse" as any, e.target.value)}
+                  placeholder="Ex.: Classes A/B, tomadores de decisão, moradores de condomínios verticais, condutores em vias de grande fluxo"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Variável chave utilizada pelo motor de inteligência e defesas persuasivas da proposta.
+                </p>
+              </div>
+              <div>
                 <Label>Objetivo da campanha</Label>
                 <Textarea
                   rows={3}

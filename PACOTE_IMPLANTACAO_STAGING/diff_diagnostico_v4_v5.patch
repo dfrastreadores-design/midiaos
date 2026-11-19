@@ -1,0 +1,311 @@
+--- diagnostico_auditoria_pos_falhas_01B1_v4.sql
++++ diagnostico_auditoria_pos_falhas_01B1_v5.sql
+@@ -1,6 +1,6 @@
+ -- ==============================================================================
+--- MIDIA OS v2.6.0 — AUDITORIA READ-ONLY APÓS DUAS FALHAS DA 01B1 (VERSÃO V4)
+--- Arquivo: diagnostico_auditoria_pos_falhas_01B1_v4.sql
++-- MIDIA OS v2.6.0 — AUDITORIA READ-ONLY APÓS DUAS FALHAS DA 01B1 (VERSÃO V5)
++-- Arquivo: diagnostico_auditoria_pos_falhas_01B1_v5.sql
+ -- Ambiente: Supabase STAGING (Project ID: wsologhmptielhhnbgob) / PostgreSQL 17.11
+ --
+ -- NATUREZA: ESTRITAMENTE LEITURA (READ-ONLY)
+@@ -14,19 +14,20 @@
+ -- OBJETIVO:
+ --   1. Inspecionar exaustivamente todos os objetos e alterações declarados no lote
+ --      01B1 antes da linha 141 (ponto exato do erro 42701 em public.produtos.formato).
+---   2. CONSTRAINTS: Remoção de LIMIT 1. Validação simultânea e determinística de tabela,
+---      tipo, colunas locais, tabela e colunas referenciadas e regras ON DELETE. Para CHECK,
+---      comparação exata de expressões normalizadas, classificando como INCONCLUSIVO qualquer
+---      discrepância ou formato não normalizado, sem aprovações automáticas.
+---   3. POLÍTICAS RLS: Validação rigorosa de roles exatas ([authenticated]), comando e
+---      permissividade. Para expressões USING e WITH CHECK, validação exata quando viável
+---      ou classificação explícita como NÃO VALIDADO (sem aprovação por LIKE amplo).
+---   4. SÍNTESE: Esclarecimento técnico de que IF NOT EXISTS e ON CONFLICT não validam tipos,
+---      defaults ou nulabilidade de colunas pré-existentes. Não autorização da execução de 01B1.
+---   5. DEFENSIVA: Proteção de storage.buckets e storage.objects via query_to_xml() e to_regclass(),
+---      evitando erro 42P01 caso o schema ou tabelas de storage estejam ausentes.
++--   2. CONSTRAINTS: Sem LIMIT 1. Validação simultânea e determinística de tabela, tipo,
++--      colunas locais, tabela e colunas referenciadas e regras ON DELETE. Para CHECK,
++--      comparação exata de expressões normalizadas, classificando como INCONCLUSIVO
++--      qualquer discrepância ou formato não normalizado, sem aprovações heurísticas.
++--   3. POLÍTICAS RLS (V5): Validação estrita de roles ([authenticated]), comando e
++--      permissividade. Se expressão esperada estiver ausente -> DIVERGENTE; se for
++--      complexa sem comparação exata -> NÃO VALIDADO; se for exata e coincidir ->
++--      PRESENTE_COMPATÍVEL_EXATO. Zero aprovação automática de expressões complexas.
++--   4. STORAGE E DADOS (V5): Correção estrutural do XPath em query_to_xml() com inclusão
++--      do nó raiz <table> (/table/row/cnt/text() e /table/row/val/text()). Distinção estrita
++--      entre tabela ausente no catálogo, consulta sem resultado (XML vazio) e contagem real igual a zero.
++--   5. SÍNTESE: Esclarecimento técnico de que IF NOT EXISTS e ON CONFLICT não validam tipos,
++--      defaults ou nulabilidade de colunas preexistentes. Lote 01B1 categoricamente BLOQUEADO.
+ --   6. GRANTS: Deduplicação com DISTINCT na agregação e comparação de arrays completos.
+---   7. DADOS: Separação de contagem real (storage) e métricas estimadas do catálogo (tabelas de app).
+ -- ==============================================================================
+ 
+ WITH 
+@@ -302,7 +303,7 @@
+ ),
+ 
+ -- ------------------------------------------------------------------------------
+--- 6. POLÍTICAS RLS (Roles Exatas, Comando, Permissividade e Expressões sem LIKE Amplo)
++-- 6. POLÍTICAS RLS (Roles Exatas, Comando, Permissividade, Detecção de Ausência e Não Aprovação Heurística)
+ -- ------------------------------------------------------------------------------
+ audit_policies AS (
+   SELECT
+@@ -314,22 +315,41 @@
+     CASE 
+       WHEN p.match_count = 0 THEN 'AUSENTE'
+       WHEN p.match_count > 1 THEN 'DUPLICADA_OU_MÚLTIPLA'
++      
+       -- 1. Comando confere?
+       WHEN p.polcmds[1] <> pol.expected_cmd THEN 'DIVERGENTE_COMANDO'
++      
+       -- 2. Conjunto exato de roles confere? (Sem aceitar público ou papéis adicionais)
+       WHEN p.roles_array[1] <> ARRAY[pol.expected_role]::text[] THEN 'DIVERGENTE_ROLES'
++      
+       -- 3. Permissividade confere?
+       WHEN p.polpermissives[1] <> pol.expected_permissive THEN 'DIVERGENTE_PERMISSIVIDADE'
+-      -- 4. Validação de expressões determinísticas exatas (onde aplicável)
+-      WHEN pol.exact_using_expr IS NOT NULL AND regexp_replace(p.usings[1], '\s+', ' ', 'g') <> pol.exact_using_expr THEN 'DIVERGENTE_USING'
+-      WHEN pol.exact_using_expr IS NULL AND pol.has_using = false AND p.usings[1] <> '<NENHUM>' THEN 'DIVERGENTE_USING_INESPERADO'
+-      WHEN pol.exact_with_check_expr IS NOT NULL AND regexp_replace(p.with_checks[1], '\s+', ' ', 'g') <> pol.exact_with_check_expr THEN 'DIVERGENTE_WITH_CHECK'
+-      WHEN pol.exact_with_check_expr IS NULL AND pol.has_with_check = false AND p.with_checks[1] <> '<NENHUM>' THEN 'DIVERGENTE_WITH_CHECK_INESPERADO'
+-      -- 5. Para políticas onde a comparação exata foi executada com sucesso
+-      WHEN (pol.exact_using_expr IS NOT NULL OR pol.has_using = false) AND (pol.exact_with_check_expr IS NOT NULL OR pol.has_with_check = false)
++      
++      -- 4. Cláusula USING:
++      -- 4.1. Se USING é esperado, mas está ausente no catálogo -> DIVERGENTE_USING_AUSENTE
++      WHEN pol.has_using = true AND p.usings[1] = '<NENHUM>' THEN 'DIVERGENTE_USING_AUSENTE'
++      -- 4.2. Se USING NÃO é esperado, mas está presente no catálogo -> DIVERGENTE_USING_INESPERADO
++      WHEN pol.has_using = false AND p.usings[1] <> '<NENHUM>' THEN 'DIVERGENTE_USING_INESPERADO'
++      -- 4.3. Se possui comparação exata implementada e divergiu -> DIVERGENTE_USING_EXPRESSAO
++      WHEN pol.has_using = true AND pol.exact_using_expr IS NOT NULL AND regexp_replace(p.usings[1], '\s+', ' ', 'g') <> pol.exact_using_expr 
++        THEN 'DIVERGENTE_USING_EXPRESSAO'
++
++      -- 5. Cláusula WITH CHECK:
++      -- 5.1. Se WITH CHECK é esperado, mas está ausente no catálogo -> DIVERGENTE_WITH_CHECK_AUSENTE
++      WHEN pol.has_with_check = true AND p.with_checks[1] = '<NENHUM>' THEN 'DIVERGENTE_WITH_CHECK_AUSENTE'
++      -- 5.2. Se WITH CHECK NÃO é esperado, mas está presente no catálogo -> DIVERGENTE_WITH_CHECK_INESPERADO
++      WHEN pol.has_with_check = false AND p.with_checks[1] <> '<NENHUM>' THEN 'DIVERGENTE_WITH_CHECK_INESPERADO'
++      -- 5.3. Se possui comparação exata implementada e divergiu -> DIVERGENTE_WITH_CHECK_EXPRESSAO
++      WHEN pol.has_with_check = true AND pol.exact_with_check_expr IS NOT NULL AND regexp_replace(p.with_checks[1], '\s+', ' ', 'g') <> pol.exact_with_check_expr 
++        THEN 'DIVERGENTE_WITH_CHECK_EXPRESSAO'
++
++      -- 6. Se tanto USING quanto WITH CHECK possuem comparação exata (ou não são esperados) e passaram em todas as checagens acima:
++      WHEN (pol.exact_using_expr IS NOT NULL OR pol.has_using = false) 
++       AND (pol.exact_with_check_expr IS NOT NULL OR pol.has_with_check = false) 
+         THEN 'PRESENTE_COMPATÍVEL_EXATO'
+-      -- 6. Para expressões complexas onde comparação semântica exata não é estaticamente viável: NÃO VALIDADO
+-      ELSE 'NÃO VALIDADO (REQUER INSPEÇÃO VISUAL DA EXPRESSÃO)'
++
++      -- 7. Se as expressões esperadas estão presentes, mas são complexas (sem comparação exata implementada): NÃO VALIDADO
++      ELSE 'NÃO VALIDADO (EXPRESSÃO COMPLEXA / REQUER INSPEÇÃO VISUAL)'
+     END::text AS status_catalogo,
+     CASE 
+       WHEN p.match_count = 0 THEN 'Política RLS não encontrada no catálogo'
+@@ -349,12 +369,12 @@
+       -- pi_anexos (Linhas 35-69)
+       (1, 'public', 'pi_anexos', 'read pi_anexos', 'r', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 36', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Expressão complexa com subconsultas)'),
+       (2, 'public', 'pi_anexos', 'insert pi_anexos', 'a', 'authenticated', true, false, NULL::text, true, '(auth.uid() IS NOT NULL)', '01B1: Linha 58', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação exata WITH CHECK)'),
+-      (3, 'public', 'pi_anexos', 'update pi_anexos', 'w', 'authenticated', true, true, NULL::text, true, NULL::text, '01B1: Linha 62', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação visual USING e WITH CHECK)'),
+-      (4, 'public', 'pi_anexos', 'delete pi_anexos', 'd', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 67', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação visual USING)'),
++      (3, 'public', 'pi_anexos', 'update pi_anexos', 'w', 'authenticated', true, true, NULL::text, true, NULL::text, '01B1: Linha 62', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Expressão complexa USING e WITH CHECK)'),
++      (4, 'public', 'pi_anexos', 'delete pi_anexos', 'd', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 67', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Expressão complexa USING)'),
+       -- storage.objects para bucket pi-anexos (Linhas 75-86)
+       (5, 'storage', 'objects', 'pi-anexos read auth', 'r', 'authenticated', true, true, '(bucket_id = ''pi-anexos''::text)', false, NULL::text, '01B1: Linha 76', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação exata USING)'),
+       (6, 'storage', 'objects', 'pi-anexos insert auth', 'a', 'authenticated', true, false, NULL::text, true, '((bucket_id = ''pi-anexos''::text) AND (auth.uid() IS NOT NULL))', '01B1: Linha 80', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação exata WITH CHECK)'),
+-      (7, 'storage', 'objects', 'pi-anexos delete owner/admin', 'd', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 84', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Validação visual USING)'),
++      (7, 'storage', 'objects', 'pi-anexos delete owner/admin', 'd', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 84', 'Migration 20260528161435', 'HISTÓRICO_CONHECIDO (Expressão complexa USING)'),
+       -- pi_assinaturas_cliente (Linhas 113-122)
+       (8, 'public', 'pi_assinaturas_cliente', 'auth read pi_assin', 'r', 'authenticated', true, true, 'true', false, NULL::text, '01B1: Linha 114', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Validação exata USING true)'),
+       (9, 'public', 'pi_assinaturas_cliente', 'auth insert pi_assin', 'a', 'authenticated', true, false, NULL::text, true, '(auth.uid() = criado_por)', '01B1: Linha 117', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Validação exata WITH CHECK)'),
+@@ -364,7 +384,7 @@
+       (12, 'storage', 'objects', 'assin own write', 'a', 'authenticated', true, false, NULL::text, true, NULL::text, '01B1: Linha 127', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Expressão storage.foldername)'),
+       (13, 'storage', 'objects', 'assin own update', 'w', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 130', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Expressão storage.foldername)'),
+       (14, 'storage', 'objects', 'assin own delete', 'd', 'authenticated', true, true, NULL::text, false, NULL::text, '01B1: Linha 133', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Expressão storage.foldername)'),
+-      (15, 'storage', 'objects', 'assin admin all', '*', 'authenticated', true, true, NULL::text, true, NULL::text, '01B1: Linha 136', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Validação visual USING e WITH CHECK)')
++      (15, 'storage', 'objects', 'assin admin all', '*', 'authenticated', true, true, NULL::text, true, NULL::text, '01B1: Linha 136', 'Migration 20260602142716', 'HISTÓRICO_CONHECIDO (Expressão is_admin)')
+   ) AS pol(ordem, schema_name, table_name, policy_name, expected_cmd, expected_role, expected_permissive, has_using, exact_using_expr, has_with_check, exact_with_check_expr, declarado_em, origem_historica, classificacao)
+   LEFT JOIN LATERAL (
+     SELECT
+@@ -385,7 +405,7 @@
+ ),
+ 
+ -- ------------------------------------------------------------------------------
+--- 7. STORAGE, DADOS E RIGOR SOBRE INSERTS (Proteção Dinâmica contra 42P01)
++-- 7. STORAGE, DADOS E RIGOR SOBRE INSERTS (XPath Corrigido /table/row e Proteção contra 42P01)
+ -- ------------------------------------------------------------------------------
+ audit_storage_e_dados AS (
+   SELECT
+@@ -398,103 +418,121 @@
+     b.detalhes_estrutura::text AS detalhes_estrutura,
+     b.classificacao::text AS classificacao_origem
+   FROM (
+-    -- Bucket pi-anexos (Linha 71) - Protegido dinamicamente contra ausência de storage.buckets
++    -- 1. Bucket pi-anexos (Linha 71)
+     SELECT
+       1 AS ordem,
+       'storage.buckets -> pi-anexos'::text AS objeto,
+       '01B1: Linha 71'::text AS declarado_em,
+       'Migration 20260528161435'::text AS origem_historica,
+       CASE 
+-        WHEN to_regclass('storage.buckets') IS NOT NULL THEN
+-          CASE 
+-            WHEN COALESCE(((xpath('/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''pi-anexos''', true, false, '')))[1])::text, '0') = '1'
+-              THEN 'PRESENTE (CONTAGEM REAL: 1)'
+-            ELSE 'AUSENTE (CONTAGEM REAL: 0)'
+-          END
+-        ELSE 'TABELA storage.buckets AUSENTE NO BANCO'
++        WHEN to_regclass('storage.buckets') IS NULL THEN 'TABELA storage.buckets AUSENTE NO BANCO'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''pi-anexos''', true, false, '')))[1])::text IS NULL 
++          THEN 'CONSULTA_SEM_RESULTADO (XML vazio)'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''pi-anexos''', true, false, '')))[1])::text = '1'
++          THEN 'PRESENTE (CONTAGEM REAL: 1)'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''pi-anexos''', true, false, '')))[1])::text = '0'
++          THEN 'AUSENTE (CONTAGEM REAL: 0)'
++        ELSE 'RESULTADO_INESPERADO'
+       END::text AS status_catalogo,
+       CASE 
+-        WHEN to_regclass('storage.buckets') IS NOT NULL THEN
++        WHEN to_regclass('storage.buckets') IS NULL THEN 'Tabela storage.buckets inexistente no catálogo'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''pi-anexos''', true, false, '')))[1])::text = '1' THEN
+           COALESCE(
+-            ((xpath('/row/val/text()', query_to_xml('SELECT (''Bucket id: '' || id || '', name: '' || name || '', public: '' || public::text) AS val FROM storage.buckets WHERE id = ''pi-anexos''', true, false, '')))[1])::text,
+-            'Bucket pi-anexos não encontrado em storage.buckets'
++            ((xpath('/table/row/val/text()', query_to_xml('SELECT (''Bucket id: '' || id || '', name: '' || name || '', public: '' || public::text) AS val FROM storage.buckets WHERE id = ''pi-anexos''', true, false, '')))[1])::text,
++            'Bucket pi-anexos encontrado'
+           ) || ' | AVISO: A presença deste bucket NÃO comprova que o INSERT da 01B1 (Linha 71) foi executado nas falhas recentes, pois a migration histórica 20260528161435 já continha o mesmo INSERT ON CONFLICT DO NOTHING.'
+-        ELSE 'Tabela storage.buckets inexistente no catálogo'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''pi-anexos''', true, false, '')))[1])::text = '0' THEN
++          'Bucket pi-anexos não encontrado em storage.buckets (0 registros correspondentes)'
++        ELSE 'Consulta não retornou dados válidos do XML'
+       END::text AS detalhes_estrutura,
+       'INDÍCIO_HISTÓRICO (Origem da inserção indeterminável)'::text AS classificacao
+     FROM (SELECT 1) _
+     
+     UNION ALL
+     
+-    -- Arquivos no Bucket pi-anexos (storage.objects) - Protegido contra ausência de storage.objects
++    -- 2. Arquivos no Bucket pi-anexos (storage.objects)
+     SELECT
+       2,
+       'storage.objects (bucket pi-anexos)',
+       'Uso da aplicação',
+       'Migration 20260528161435',
+       CASE
+-        WHEN to_regclass('storage.objects') IS NOT NULL THEN 'CONTAGEM_REAL'
+-        ELSE 'TABELA storage.objects AUSENTE NO BANCO'
++        WHEN to_regclass('storage.objects') IS NULL THEN 'TABELA storage.objects AUSENTE NO BANCO'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''pi-anexos''', true, false, '')))[1])::text IS NULL
++          THEN 'CONSULTA_SEM_RESULTADO (XML vazio)'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''pi-anexos''', true, false, '')))[1])::text = '0'
++          THEN 'CONTAGEM_REAL (0 arquivos)'
++        ELSE 'CONTAGEM_REAL'
+       END::text,
+       CASE
+-        WHEN to_regclass('storage.objects') IS NOT NULL THEN
+-          'Total de arquivos em storage.objects para pi-anexos: ' || COALESCE(((xpath('/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''pi-anexos''', true, false, '')))[1])::text, '0')
+-        ELSE 'Tabela storage.objects inexistente no catálogo'
++        WHEN to_regclass('storage.objects') IS NULL THEN 'Tabela storage.objects inexistente no catálogo'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''pi-anexos''', true, false, '')))[1])::text IS NOT NULL THEN
++          'Total de arquivos em storage.objects para pi-anexos: ' || ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''pi-anexos''', true, false, '')))[1])::text
++        ELSE 'Consulta não retornou dados válidos do XML'
+       END::text,
+       'DADOS_ARMAZENAMENTO'::text
+     FROM (SELECT 1) _
+ 
+     UNION ALL
+     
+-    -- Bucket assinaturas (Linhas 123-138) - Protegido dinamicamente contra ausência de storage.buckets
++    -- 3. Bucket assinaturas (Linhas 123-138)
+     SELECT
+       3,
+       'storage.buckets -> assinaturas',
+       '01B1: Linhas 123-138 (Referência)',
+       'Migration 20260602142716',
+       CASE 
+-        WHEN to_regclass('storage.buckets') IS NOT NULL THEN
+-          CASE 
+-            WHEN COALESCE(((xpath('/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''assinaturas''', true, false, '')))[1])::text, '0') = '1'
+-              THEN 'PRESENTE (CONTAGEM REAL: 1)'
+-            ELSE 'AUSENTE (CONTAGEM REAL: 0)'
+-          END
+-        ELSE 'TABELA storage.buckets AUSENTE NO BANCO'
++        WHEN to_regclass('storage.buckets') IS NULL THEN 'TABELA storage.buckets AUSENTE NO BANCO'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''assinaturas''', true, false, '')))[1])::text IS NULL 
++          THEN 'CONSULTA_SEM_RESULTADO (XML vazio)'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''assinaturas''', true, false, '')))[1])::text = '1'
++          THEN 'PRESENTE (CONTAGEM REAL: 1)'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''assinaturas''', true, false, '')))[1])::text = '0'
++          THEN 'AUSENTE (CONTAGEM REAL: 0)'
++        ELSE 'RESULTADO_INESPERADO'
+       END::text,
+       CASE 
+-        WHEN to_regclass('storage.buckets') IS NOT NULL THEN
++        WHEN to_regclass('storage.buckets') IS NULL THEN 'Tabela storage.buckets inexistente no catálogo'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''assinaturas''', true, false, '')))[1])::text = '1' THEN
+           COALESCE(
+-            ((xpath('/row/val/text()', query_to_xml('SELECT (''Bucket id: '' || id || '', name: '' || name || '', public: '' || public::text) AS val FROM storage.buckets WHERE id = ''assinaturas''', true, false, '')))[1])::text,
+-            'Bucket assinaturas não encontrado em storage.buckets'
++            ((xpath('/table/row/val/text()', query_to_xml('SELECT (''Bucket id: '' || id || '', name: '' || name || '', public: '' || public::text) AS val FROM storage.buckets WHERE id = ''assinaturas''', true, false, '')))[1])::text,
++            'Bucket assinaturas encontrado'
+           ) || ' | Bucket referenciado nas políticas RLS de storage.'
+-        ELSE 'Tabela storage.buckets inexistente no catálogo'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.buckets WHERE id = ''assinaturas''', true, false, '')))[1])::text = '0' THEN
++          'Bucket assinaturas não encontrado em storage.buckets (0 registros correspondentes)'
++        ELSE 'Consulta não retornou dados válidos do XML'
+       END::text,
+       'HISTÓRICO_CONHECIDO'::text
+     FROM (SELECT 1) _
+ 
+     UNION ALL
+ 
+-    -- Arquivos no Bucket assinaturas (storage.objects) - Protegido contra ausência de storage.objects
++    -- 4. Arquivos no Bucket assinaturas (storage.objects)
+     SELECT
+       4,
+       'storage.objects (bucket assinaturas)',
+       'Uso da aplicação',
+       'Migration 20260602142716',
+       CASE
+-        WHEN to_regclass('storage.objects') IS NOT NULL THEN 'CONTAGEM_REAL'
+-        ELSE 'TABELA storage.objects AUSENTE NO BANCO'
++        WHEN to_regclass('storage.objects') IS NULL THEN 'TABELA storage.objects AUSENTE NO BANCO'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''assinaturas''', true, false, '')))[1])::text IS NULL
++          THEN 'CONSULTA_SEM_RESULTADO (XML vazio)'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''assinaturas''', true, false, '')))[1])::text = '0'
++          THEN 'CONTAGEM_REAL (0 arquivos)'
++        ELSE 'CONTAGEM_REAL'
+       END::text,
+       CASE
+-        WHEN to_regclass('storage.objects') IS NOT NULL THEN
+-          'Total de arquivos em storage.objects para assinaturas: ' || COALESCE(((xpath('/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''assinaturas''', true, false, '')))[1])::text, '0')
+-        ELSE 'Tabela storage.objects inexistente no catálogo'
++        WHEN to_regclass('storage.objects') IS NULL THEN 'Tabela storage.objects inexistente no catálogo'
++        WHEN ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''assinaturas''', true, false, '')))[1])::text IS NOT NULL THEN
++          'Total de arquivos em storage.objects para assinaturas: ' || ((xpath('/table/row/cnt/text()', query_to_xml('SELECT count(*) AS cnt FROM storage.objects WHERE bucket_id = ''assinaturas''', true, false, '')))[1])::text
++        ELSE 'Consulta não retornou dados válidos do XML'
+       END::text,
+       'DADOS_ARMAZENAMENTO'::text
+     FROM (SELECT 1) _
+ 
+     UNION ALL
+ 
+-    -- Registros em public.pi_anexos (MÉTRICA ESTIMADA DO CATÁLOGO)
++    -- 5. Registros em public.pi_anexos (MÉTRICA ESTIMADA DO CATÁLOGO)
+     SELECT
+       5,
+       'public.pi_anexos (contagem registros)',
+@@ -513,7 +551,7 @@
+ 
+     UNION ALL
+ 
+-    -- Registros em public.pi_assinaturas_cliente (MÉTRICA ESTIMADA DO CATÁLOGO)
++    -- 6. Registros em public.pi_assinaturas_cliente (MÉTRICA ESTIMADA DO CATÁLOGO)
+     SELECT
+       6,
+       'public.pi_assinaturas_cliente (contagem registros)',
+@@ -665,4 +703,3 @@
+ UNION ALL
+ SELECT * FROM audit_sintese
+ ORDER BY ordem;
+-

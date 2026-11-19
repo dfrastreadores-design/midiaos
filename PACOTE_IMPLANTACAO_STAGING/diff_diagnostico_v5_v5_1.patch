@@ -1,0 +1,50 @@
+--- diagnostico_auditoria_pos_falhas_01B1_v5.sql
++++ diagnostico_auditoria_pos_falhas_01B1_v5_1.sql
+@@ -84,7 +84,7 @@
+     END::text AS status_catalogo,
+     CASE 
+       WHEN isc.column_name IS NOT NULL THEN
+-        'Tipo: ' || isc.data_type || COALESCE('(' || isc.character_maximum_length || ')', '') ||
++        'Tipo: ' || isc.data_type || COALESCE('(' || isc.character_maximum_length::text || ')', '') ||
+         ', Nullable: ' || isc.is_nullable ||
+         ', Default: ' || COALESCE(isc.column_default, 'NONE')
+       ELSE 'Coluna não encontrada no catálogo' 
+@@ -168,7 +168,7 @@
+     END::text AS status_catalogo,
+     CASE 
+       WHEN con.match_count = 0 THEN 'Constraint não encontrada para a tabela, tipo, colunas locais, tabela referenciada e regras relacionais esperadas'
+-      WHEN con.match_count > 1 THEN 'Foram encontradas ' || con.match_count || ' constraints compatíveis: [' || array_to_string(con.connames, ', ') || ']. Requer averiguação de duplicidade no banco.'
++      WHEN con.match_count > 1 THEN 'Foram encontradas ' || con.match_count::text || ' constraints compatíveis: [' || array_to_string(con.connames, ', ') || ']. Requer averiguação de duplicidade no banco.'
+       ELSE
+         'Nome real: ' || con.connames[1] ||
+         ' | Tipo: ' || CASE con.contypes[1] WHEN 'p' THEN 'PRIMARY KEY' WHEN 'f' THEN 'FOREIGN KEY' WHEN 'u' THEN 'UNIQUE' WHEN 'c' THEN 'CHECK' ELSE con.contypes[1] END ||
+@@ -235,7 +235,7 @@
+     CASE 
+       WHEN pi.indexname IS NOT NULL THEN
+         'Definição: ' || pi.indexdef ||
+-        ', Válido: ' || (SELECT COALESCE(indisvalid::text, 'UNKNOWN') FROM pg_index WHERE indexrelid = to_regclass('public.' || pi.indexname))
++        ', Válido: ' || (SELECT COALESCE(indisvalid::text, 'UNKNOWN') FROM pg_index WHERE indexrelid = to_regclass('public.' || pi.indexname::text))
+       ELSE 'Índice não encontrado' 
+     END::text AS detalhes_estrutura,
+     i.classificacao::text AS classificacao_origem
+@@ -270,9 +270,9 @@
+     END::text AS status_catalogo,
+     CASE 
+       WHEN tf.tipo = 'TRIGGER' AND trg.tgname IS NOT NULL THEN
+-        'Trigger: ' || trg.tgname || ', Habilitado: ' || trg.tgenabled || ', Função disparada: ' || (SELECT proname FROM pg_proc WHERE oid = trg.tgfoid)
++        'Trigger: ' || trg.tgname::text || ', Habilitado: ' || trg.tgenabled::text || ', Função disparada: ' || (SELECT proname::text FROM pg_proc WHERE oid = trg.tgfoid)
+       WHEN tf.tipo = 'FUNCTION' AND prc.proname IS NOT NULL THEN
+-        'Função: ' || prc.proname || '(), Retorno: ' || format_type(prc.prorettype, NULL)
++        'Função: ' || prc.proname::text || '(), Retorno: ' || format_type(prc.prorettype, NULL)::text
+       ELSE 'Objeto não encontrado'
+     END::text AS detalhes_estrutura,
+     tf.classificacao::text AS classificacao_origem
+@@ -353,7 +353,7 @@
+     END::text AS status_catalogo,
+     CASE 
+       WHEN p.match_count = 0 THEN 'Política RLS não encontrada no catálogo'
+-      WHEN p.match_count > 1 THEN 'Foram encontradas ' || p.match_count || ' políticas homônimas no catálogo'
++      WHEN p.match_count > 1 THEN 'Foram encontradas ' || p.match_count::text || ' políticas homônimas no catálogo'
+       ELSE
+         'Cmd: ' || (CASE p.polcmds[1] WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' WHEN '*' THEN 'ALL' END) ||
+         ' (Esperado: ' || (CASE pol.expected_cmd WHEN 'r' THEN 'SELECT' WHEN 'a' THEN 'INSERT' WHEN 'w' THEN 'UPDATE' WHEN 'd' THEN 'DELETE' WHEN '*' THEN 'ALL' END) || ')' ||

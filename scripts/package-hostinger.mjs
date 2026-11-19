@@ -69,6 +69,7 @@ const EXCLUDED_EXTENSIONS = new Set([
 ]);
 
 const EXCLUDED_FILE_NAMES = new Set([
+  ".env",
   ".env.local",
   ".env.development",
   ".env.test",
@@ -88,8 +89,13 @@ function isExcluded(filePath) {
   return false;
 }
 
-// Criar diretório temporário de staging
-const stagingDir = path.join(process.env.TEMP || "./node_modules/.cache", "hostinger_staging_" + Date.now());
+// Criar diretório temporário de staging (prioriza disco D: para evitar ENOSPC no C:)
+const tempBase = fs.existsSync("D:\\Temp")
+  ? "D:\\Temp"
+  : fs.existsSync("D:\\midiaos_build")
+  ? "D:\\midiaos_build"
+  : process.env.TEMP || "./node_modules/.cache";
+const stagingDir = path.join(tempBase, "hostinger_staging_" + Date.now());
 if (fs.existsSync(stagingDir)) {
   fs.rmSync(stagingDir, { recursive: true, force: true });
 }
@@ -142,10 +148,6 @@ try {
     fs.copyFileSync("./.htaccess", path.join(stagingDir, ".htaccess"));
   }
 
-  if (fs.existsSync("./.env")) {
-    console.log("  -> Incluindo variáveis de ambiente de produção (.env)...");
-    fs.copyFileSync("./.env", path.join(stagingDir, ".env"));
-  }
 
   // 5. Auditoria e Varredura Sanitária no Staging (Garantir 0 vazamentos de arquivos proibidos)
   let purgedCount = 0;

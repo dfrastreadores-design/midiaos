@@ -1,0 +1,1 @@
+UPDATE auth.users SET banned_until = NULL WHERE email = 'rafaelrodrigo.as@gmail.com';

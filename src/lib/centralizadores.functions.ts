@@ -77,13 +77,26 @@ export const getPainelCentralizadores = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
 
     try {
-      // Obter tenant do usuário
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", userId)
-        .maybeSingle();
-      const tenantId = prof?.tenant_id;
+      // Obter tenant e privilégios do usuário no servidor
+      const [{ data: userAuth }, { data: prof }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase
+          .from("profiles")
+          .select("tenant_id, role, is_superadmin")
+          .eq("id", userId)
+          .maybeSingle(),
+      ]);
+
+      const isMaster =
+        isMasterEmail(userAuth?.user?.email) ||
+        prof?.is_superadmin === true ||
+        String(prof?.role).toUpperCase() === "MASTER";
+      const tenantId = prof?.tenant_id ?? null;
+
+      // Se não for Master e não possuir tenant, rejeita acesso para evitar vazamento global
+      if (!isMaster && !tenantId) {
+        throw new Error("Acesso negado: Usuário sem empresa associada no servidor.");
+      }
 
       // Consultas seguras ao banco de dados com schema real
       let qClientes = supabase.from("clientes").select("id", { count: "exact" });
@@ -95,7 +108,7 @@ export const getPainelCentralizadores = createServerFn({ method: "GET" })
       let qTransacoes = supabase.from("financeiro_transacoes").select("id, tipo, status, valor", { count: "exact" });
       let qComprovantes = supabase.from("pos_venda_anexos").select("id", { count: "exact" });
 
-      if (tenantId) {
+      if (!isMaster) {
         qClientes = qClientes.eq("tenant_id", tenantId);
         qParceiros = qParceiros.eq("tenant_id", tenantId);
         qProdutos = qProdutos.eq("tenant_id", tenantId);
@@ -328,7 +341,24 @@ export const gerarEstrategiaMidiaIA = createServerFn({ method: "POST" })
     if (tenantId) queryProdutos = queryProdutos.eq("tenant_id", tenantId);
     const { data: produtosDb } = await queryProdutos.limit(100);
 
-    const catalogoReal = produtosDb || [];
+    const todosProdutos = produtosDb || [];
+
+    // Filtrar catálogo considerando canais selecionados e produtos elegíveis
+    const canaisFiltro = (data.veiculos_preferenciais || []).map((v) => v.trim().toLowerCase());
+    const selecionadosIds = new Set(data.produtos_selecionados_ids || []);
+
+    const catalogoFiltrado = todosProdutos.filter((p) => {
+      if (selecionadosIds.size > 0 && !selecionadosIds.has(p.id)) {
+        return false;
+      }
+      if (canaisFiltro.length > 0) {
+        const midia = (p.midia || "").trim().toLowerCase();
+        return canaisFiltro.some((c) => c === midia || c.includes(midia) || midia.includes(c));
+      }
+      return true;
+    });
+
+    const catalogoReal = catalogoFiltrado.length > 0 ? catalogoFiltrado : todosProdutos;
 
     // 3. Tentar chamada à IA (Lovable Gateway / Gemini / OpenAI)
     const apiKey =
